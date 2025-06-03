@@ -4,7 +4,8 @@ import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
-  
+  const navigate = useNavigate(); 
+
   return (
     <div className="login-container container-fluid">
       <div className="login-card text-center container-fluid">
@@ -31,7 +32,14 @@ const Login = () => {
           </div>
 
           <div className="mb-5">
-            <a href="#" className="small fw-semibold">
+            <a
+              href="#" 
+              className="small fw-semibold"
+              onClick={(e) => {
+                e.preventDefault(); 
+                navigate("/forgotpassword"); 
+              }}
+            >
               Forgot password?
             </a>
           </div>
