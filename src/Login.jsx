@@ -4,8 +4,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
   return (
-    <div className="login-container">
-      <div className="login-card text-center">
+    <div className="login-container container-fluid">
+      <div className="login-card text-center container-fluid">
         <img
           src={logo}
           alt="EnviroCool Logo"
