@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom"; 
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
+  
   return (
     <div className="login-container container-fluid">
       <div className="login-card text-center container-fluid">
@@ -13,7 +15,7 @@ const Login = () => {
           width="300"
         />
 
-        <form className="login-form text-start">
+        <form className="login-form text-start" onSubmit={handleLogin}>
           <div className="mb-3">
             <label htmlFor="username" className="form-label">
               Username:
@@ -34,7 +36,10 @@ const Login = () => {
             </a>
           </div>
 
-          <button type="submit" className="btn login-btn w-100 rounded-3 fs-5 p-2">
+          <button
+            type="submit"
+            className="btn login-btn w-100 rounded-3 fs-5 p-2"
+          >
             Login
           </button>
         </form>
