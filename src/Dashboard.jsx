@@ -33,7 +33,7 @@ const Dashboard = () => {
         </div>
         {/* ADD DELIVERY BUTTON  */}
         <div className="text-end mx-4 my-5">
-            <button className="add-delivery rounded-3 px-5 py-2 fs-5">Add Delivery</button>
+            <button className="add-delivery rounded-2 px-5 py-2 fs-5">Add Delivery</button>
         </div>
         {/* DASHBOARD CONTENT  */}
         <div className="dashboard-content text-center mt-5 fs-4 border p-5">
