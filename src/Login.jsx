@@ -1,11 +1,14 @@
 import React from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   return (
-    <div className="login-container">
-      <div className="login-card text-center">
+    <div className="login-container container-fluid">
+      <div className="login-card text-center container-fluid">
         <img
           src={logo}
           alt="EnviroCool Logo"
@@ -29,12 +32,22 @@ const Login = () => {
           </div>
 
           <div className="mb-5">
-            <a href="#" className="small fw-semibold">
+            <a
+              href="#" // Use a valid href or omit it
+              className="small fw-semibold"
+              onClick={(e) => {
+                e.preventDefault(); 
+                navigate("/forgotpassword"); // Navigate to forgot password page
+              }}
+            >
               Forgot password?
             </a>
           </div>
 
-          <button type="submit" className="btn login-btn w-100 rounded-3 fs-5 p-2">
+          <button
+            type="submit"
+            className="btn login-btn w-100 rounded-3 fs-5 p-2"
+          >
             Login
           </button>
         </form>
