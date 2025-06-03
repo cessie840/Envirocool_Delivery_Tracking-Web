@@ -1,10 +1,10 @@
 import React from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate(); // Initialize useNavigate
 
   return (
     <div className="login-container container-fluid">
@@ -16,7 +16,7 @@ const Login = () => {
           width="300"
         />
 
-        <form className="login-form text-start" onSubmit={handleLogin}>
+        <form className="login-form text-start">
           <div className="mb-3">
             <label htmlFor="username" className="form-label">
               Username:
@@ -34,12 +34,12 @@ const Login = () => {
           <div className="mb-5">
             <a
               href="#" 
+              
               className="small fw-semibold"
               onClick={(e) => {
                 e.preventDefault(); 
-                navigate("/forgotpassword"); 
-              }}
-            >
+                navigate("/forgotpassword");
+              }} >
               Forgot password?
             </a>
           </div>
@@ -47,7 +47,9 @@ const Login = () => {
           <button
             type="submit"
             className="btn login-btn w-100 rounded-3 fs-5 p-2"
-          >
+            onClick={(e) =>
+              {navigate("/dashboard")}
+            } >
             Login
           </button>
         </form>
