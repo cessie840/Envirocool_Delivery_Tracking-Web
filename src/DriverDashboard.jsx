@@ -11,7 +11,7 @@ import {
 	FaHome,
 } from "react-icons/fa";
 
-const Dashboard = () => {
+const DriverDashboard = () => {
 	useEffect(() => {
 		document.title = "Driver Dashboard"; //OVERRIDES PAGE TITLE
 	}, []);
@@ -33,12 +33,6 @@ const Dashboard = () => {
 					</button>
 					<button className="nav-btn">
 						<FaClipboardList className="icon" /> DELIVERY DETAILS
-					</button>
-					<button className="nav-btn">
-						<FaTruck className="icon" /> MONITOR DELIVERY
-					</button>
-					<button className="nav-btn">
-						<FaChartBar className="icon" /> GENERATE REPORT
 					</button>
 					<button className="nav-btn">
 						<FaCog className="icon" /> SETTINGS
@@ -67,7 +61,7 @@ const Dashboard = () => {
 				</div>
 				{/* DASHBOARD CONTENT  */}
 				<div className="dashboard-content text-center mt-5 fs-4 border p-5">
-					<p>Analytics Here</p>
+					<p>Assigned Deliveries Here</p>
 				</div>
 			</main>
 		</div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
 import {
 	FaClipboardList,
@@ -11,10 +12,17 @@ import {
 	FaHome,
 } from "react-icons/fa";
 
-const Dashboard = () => {
+const AdminDashboard = () => {
+	//OVERRIDES TITLE
 	useEffect(() => {
-		document.title = "Admin Dashboard"; //OVERRIDES PAGE TITLE
+		document.title = "Admin Dashboard";
 	}, []);
+
+	//LOGOUT
+	const handleLogout = () => {
+		localStorage.removeItem("user");
+		navigate("/");
+	};
 	return (
 		<div className="dashboard-container d-flex vh-100">
 			{/* SIDEBAR  */}
@@ -43,7 +51,7 @@ const Dashboard = () => {
 					<button className="nav-btn">
 						<FaCog className="icon" /> SETTINGS
 					</button>
-					<button className="nav-btn logout">
+					<button className="nav-btn logout" onClick={handleLogout}>
 						<FaSignOutAlt className="icon" /> LOGOUT
 					</button>
 				</nav>
