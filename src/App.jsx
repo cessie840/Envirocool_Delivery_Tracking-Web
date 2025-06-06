@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./Login";
-import AdminDashboard from "./AdminDashboard";
-import OpsDashboard from "./OpsDashboard";
-import DriverDashboard from "./DriverDashboard";
+import LoginModule from "./Login";
+import AdminModule from "./AdminDashboard";
+import OperationalManagerModule from "./OpsDashboard";
+import DriverModule from "./DriverDashboard";
 import ForgotPass from "./ForgotPass";
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -10,28 +10,28 @@ function App() {
 	return (
 		<Router>
 			<Routes>
-				<Route path="/" element={<Login />} />
+				<Route path="/" element={<LoginModule />} />
 				<Route
-					path="/admindash"
+					path="/AdminDashboard"
 					element={
 						<ProtectedRoute role="admin">
-							<AdminDashboard />
+							<AdminModule />
 						</ProtectedRoute>
 					}
 				/>
 				<Route
-					path="/opsdash"
+					path="/OperationalManagerDashboard"
 					element={
 						<ProtectedRoute role="operationalmanager">
-							<OpsDashboard />
+							<OperationalManagerModule />
 						</ProtectedRoute>
 					}
 				/>
 				<Route
-					path="/driverdash"
+					path="/DriverDashboard"
 					element={
 						<ProtectedRoute role="driver">
-							<DriverDashboard />
+							<DriverModule />
 						</ProtectedRoute>
 					}
 				/>

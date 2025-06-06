@@ -1,11 +1,11 @@
 import React from "react";
 import { useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
+import "./loading-overlay.css";
 import {
 	FaClipboardList,
-	FaTruck,
-	FaChartBar,
 	FaCog,
 	FaSignOutAlt,
 	FaSearch,
@@ -13,7 +13,8 @@ import {
 } from "react-icons/fa";
 
 const DriverDashboard = () => {
-	const navigate = useNavigate(); // Initialize useNavigate
+	const navigate = useNavigate(); // Initialize navigate function
+	const [loading, setLoading] = useState(false); //Initialize loading screen function
 
 	//OVERRIDES TITLE
 	useEffect(() => {
@@ -22,8 +23,13 @@ const DriverDashboard = () => {
 
 	//LOGOUT
 	const handleLogout = () => {
-		localStorage.removeItem("user");
-		navigate("/");
+		setLoading(true);
+
+		setTimeout(() => {
+			setLoading(false);
+			localStorage.removeItem("user");
+			navigate("/");
+		}, 1200);
 	};
 	return (
 		<div className="dashboard-container d-flex vh-100">
@@ -50,6 +56,14 @@ const DriverDashboard = () => {
 					<button className="nav-btn logout" onClick={handleLogout}>
 						<FaSignOutAlt className="icon" /> LOGOUT
 					</button>
+					{/*LOADING SCREEN AFTER LOGOUT*/}
+					{loading && (
+						<div className="loading-overlay">
+							<div className="spinner-border text-primary" role="status">
+								<span className="visually-hidden">Loading...</span>
+							</div>
+						</div>
+					)}
 				</nav>
 			</aside>
 
