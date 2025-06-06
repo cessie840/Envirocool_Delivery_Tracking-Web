@@ -13,7 +13,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const Dashboard = () => {
+const MonitorDelivery = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ const Dashboard = () => {
           className="logo mb-4 img-fluid"
           width="250px"
         />
-        {/* NAVIGATIONS  */}
+        {/* NAVIGATION */}
         <nav className="nav-buttons">
           <button className="nav-btn" onClick={handleDashboard}>
             <FaHome className="icon" /> DASHBOARD
@@ -75,33 +75,34 @@ const Dashboard = () => {
         </nav>
       </aside>
 
-      {/* MAIN CONTENT  */}
+      {/* MAIN PANEL */}
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
-  <div className="w-100 text-center text-lg-start">
-    <h2 className="fs-1 fw-bold">Dashboard</h2>
-  </div>
-  <div className="search-bar position-relative me-3">
-    <input type="text" placeholder="Search..." />
-    <FaSearch className="search-icon" />
-  </div>
-</div>
+          <div className="w-100 text-center text-lg-start">
+            <h2 className="fs-1 fw-bold" onClick={handleAddDelivery}>
+              Delivery Form
+            </h2>
+          </div>
+          <div className="search-bar position-relative me-3">
+            <input type="text" placeholder="Search..." />
+            <FaSearch className="search-icon" />
+          </div>
+        </div>
         {/* ADD DELIVERY BUTTON  */}
         <div className="text-end mx-4 my-5">
           <button
             className="add-delivery rounded-2 px-5 py-2 fs-5"
-            onClick={handleAddDelivery}
-          >
+            onClick={handleAddDelivery} >
             Add Delivery
-          </button>
-        </div>
+          </button>        
+          </div>
         {/* DASHBOARD CONTENT  */}
         <div className="dashboard-content text-center mt-5 fs-4 border p-5">
-          <p>Analytics Here</p>
+            <p>Monitoring of Deliveries</p>
         </div>
       </main>
     </div>
   );
 };
 
-export default Dashboard;
+export default MonitorDelivery;
