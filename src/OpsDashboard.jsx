@@ -12,9 +12,18 @@ import {
 } from "react-icons/fa";
 
 const OpsDashboard = () => {
+	const navigate = useNavigate(); // Initialize useNavigate
+
+	//OVERRIDES TITLE
 	useEffect(() => {
 		document.title = "Operational Manager Dashboard"; //OVERRIDES PAGE TITLE
 	}, []);
+
+	//LOGOUT
+	const handleLogout = () => {
+		localStorage.removeItem("user");
+		navigate("/");
+	};
 	return (
 		<div className="dashboard-container d-flex vh-100">
 			{/* SIDEBAR  */}
@@ -37,7 +46,7 @@ const OpsDashboard = () => {
 					<button className="nav-btn">
 						<FaCog className="icon" /> SETTINGS
 					</button>
-					<button className="nav-btn logout">
+					<button className="nav-btn logout" onClick={handleLogout}>
 						<FaSignOutAlt className="icon" /> LOGOUT
 					</button>
 				</nav>
@@ -61,7 +70,7 @@ const OpsDashboard = () => {
 				</div>
 				{/* DASHBOARD CONTENT  */}
 				<div className="dashboard-content text-center mt-5 fs-4 border p-5">
-					<p>Analytics Here</p>
+					<p>Assign Deliveries Here</p>
 				</div>
 			</main>
 		</div>

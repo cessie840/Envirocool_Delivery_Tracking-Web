@@ -12,9 +12,18 @@ import {
 } from "react-icons/fa";
 
 const DriverDashboard = () => {
+	const navigate = useNavigate(); // Initialize useNavigate
+
+	//OVERRIDES TITLE
 	useEffect(() => {
 		document.title = "Driver Dashboard"; //OVERRIDES PAGE TITLE
 	}, []);
+
+	//LOGOUT
+	const handleLogout = () => {
+		localStorage.removeItem("user");
+		navigate("/");
+	};
 	return (
 		<div className="dashboard-container d-flex vh-100">
 			{/* SIDEBAR  */}
@@ -37,7 +46,7 @@ const DriverDashboard = () => {
 					<button className="nav-btn">
 						<FaCog className="icon" /> SETTINGS
 					</button>
-					<button className="nav-btn logout">
+					<button className="nav-btn logout" onClick={handleLogout}>
 						<FaSignOutAlt className="icon" /> LOGOUT
 					</button>
 				</nav>
