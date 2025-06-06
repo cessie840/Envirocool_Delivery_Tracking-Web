@@ -13,10 +13,6 @@ import DriverModule from "./DriverDashboard";
 import ProtectedRoute from "./ProtectedRoute";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-// If you have AdminModule or LoginModule components, import them like this:
-//  // ← Update this if needed
-// import LoginModule from "./LoginModule";     // ← Update this if needed
-
 function App() {
   return (
     <Router>
