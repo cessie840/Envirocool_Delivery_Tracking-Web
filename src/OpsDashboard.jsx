@@ -16,7 +16,7 @@ const OpsDashboard = () => {
 
 	//OVERRIDES TITLE
 	useEffect(() => {
-		document.title = "Operational Manager Dashboard"; //OVERRIDES PAGE TITLE
+		document.title = "Operational Manager Dashboard";
 	}, []);
 
 	//LOGOUT

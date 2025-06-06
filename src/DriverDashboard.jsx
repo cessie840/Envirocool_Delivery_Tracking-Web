@@ -16,7 +16,7 @@ const DriverDashboard = () => {
 
 	//OVERRIDES TITLE
 	useEffect(() => {
-		document.title = "Driver Dashboard"; //OVERRIDES PAGE TITLE
+		document.title = "Driver Dashboard";
 	}, []);
 
 	//LOGOUT
