@@ -55,6 +55,29 @@ if (!$found) {
     exit;
 }
 
+// Check if account is locked
+$lockCheckStmt = $conn->prepare("SELECT lock_until FROM $table WHERE $email_col = ?");
+$lockCheckStmt->bind_param("s", $emailInput);
+$lockCheckStmt->execute();
+$lockResult = $lockCheckStmt->get_result();
+
+if ($lockResult->num_rows === 1) {
+    $lockData = $lockResult->fetch_assoc();
+    $lockedUntil = $lockData['lock_until'];
+
+    if (!empty($lockedUntil) && strtotime($lockedUntil) > time()) {
+      echo json_encode([
+    "status" => "locked",
+    "message" => "Too many failed attempts. Try again after 1 hour."
+]);
+        $lockCheckStmt->close();
+        $conn->close();
+        exit;
+    }
+}
+$lockCheckStmt->close();
+
+
 $token = strtoupper(bin2hex(random_bytes(3))); // 6-character token
 $reset_expire = date("Y-m-d H:i:s", strtotime("+15 minutes"));
 $reset_requested_at = date("Y-m-d H:i:s");
@@ -64,7 +87,7 @@ switch ($table) {
         $updateStmt = $conn->prepare("UPDATE Admin SET ad_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE ad_email = ?");
         break;
     case "OperationalManager":
-        $updateStmt = $conn->prepare("UPDATE OperationalManager SET om_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE manager_email = ?");
+        $updateStmt = $conn->prepare("UPDATE OperationalManager SET   manager_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE manager_email = ?");
         break;
     // case "DeliveryPersonnel":
     //     $updateStmt = $conn->prepare("UPDATE DeliveryPersonnel SET dp_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE pers_email = ?");

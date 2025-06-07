@@ -44,6 +44,12 @@ const ForgotPassword = () => {
         case "email_failed":
           setErrorMessage("Failed to send reset email. Try again.");
           break;
+   case "locked":
+        setErrorMessage(data.message); 
+        setTimeout(() => {
+          navigate("/"); 
+        }, 3000); 
+        break;
         case "db_error":
           alert("Something went wrong. Try again later.");
           break;
@@ -70,29 +76,32 @@ const ForgotPassword = () => {
       const data = response.data;
       console.log("Verify response:", data);
 
-      switch (data.status) {
-        case "verified":
-          setStep(3);
-          break;
-        case "expired":
-          setErrorMessage("The code has expired. Please request a new one.");
-          setStep(1);
-          break;
-        case "invalid_code":
-          setErrorMessage(data.message);
-          break;
-        case "resend":
-          setErrorMessage(data.message);
-          setStep(1);
-          break;
-        case "not_found":
-          setErrorMessage("Email not found. Try again.");
-          setStep(1);
-          break;
-        default:
-          setErrorMessage("An unexpected error occurred.");
-          break;
-      }
+     switch (data.status) {
+  case "verified":
+    setStep(3);
+    break;
+  case "expired":
+    setErrorMessage("The code has expired. Please request a new one.");
+    setStep(1);
+    break;
+  case "invalid_code":
+    setErrorMessage(data.message); 
+    break;
+   case "locked":
+        setErrorMessage(data.message); 
+        setTimeout(() => {
+          navigate("/"); 
+        }, 3000); 
+        break;
+  case "not_found":
+    setErrorMessage("Email not found. Try again.");
+    setStep(1);
+    break;
+  default:
+    setErrorMessage("An unexpected error occurred.");
+    break;
+}
+
     } catch (error) {
       console.error("Verification error:", error);
       alert("Failed to verify code. Please try again.");
