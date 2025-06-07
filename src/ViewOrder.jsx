@@ -107,7 +107,7 @@ const Dashboard = () => {
         {/* ADD DELIVERY BUTTON  */}
         <div className="d-flex justify-content-between mx-4 my-5">
           <button
-            className="btn rounded-2 px-1 py-1 fs-4"
+            className="back btn rounded-2 px-1 py-1 fs-4"
             onClick={() => navigate(-1)} 
           >
             <FaArrowLeft className="me-2" />

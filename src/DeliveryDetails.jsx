@@ -122,8 +122,8 @@ const Dashboard = () => {
                 <td>200000</td>
                 <td>Ongoing</td>
                 <td>
-                  <button className="add-btn bg-success px-2 py-1 m-2 fw-normal fs-6" onClick={handleViewDelivery}>View</button>
-                  <button className="cancel-btn bg-danger px-2 py-1 m-2 fw-normal fs-6">Delete</button>
+                  <button className="bg-success px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3" onClick={handleViewDelivery}>View</button>
+                  <button className="bg-danger px-2 py-1 m-2 fw-normal fs-6  border-light rounded-3">Delete</button>
                 </td>
               </tr>
             </tbody>

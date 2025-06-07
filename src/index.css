@@ -132,7 +132,6 @@ body {
   color: white;
   border: none;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-
 }
 
 .add-delivery:hover{
@@ -327,9 +326,15 @@ input::placeholder {
     border: 1px solid #acacac;
   font-size: 1.2rem;
   background-color: white;
-
  }
 
+ .delivery-table button{
+  color: white;
+ }
+
+ .back:hover{
+  color: #d12525;
+ }
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {
@@ -409,8 +414,8 @@ input::placeholder {
     }
 
     .add-btn, .cancel-btn{
-      padding: 0.3rem 0.5rem !important;
-      font-size: 0.5rem !important;
+      padding: 0.5rem 0.8rem !important;
+      font-size: 1rem !important;
       margin: 0.1rem !important;
     }
 }
