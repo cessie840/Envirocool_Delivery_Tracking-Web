@@ -108,6 +108,9 @@ body {
   color: #008000;
 }
 
+/* .search-bar{
+  width: 250px;
+} */
 
 .search-bar input {
   width: 100%;
@@ -186,13 +189,12 @@ input::placeholder {
   font-weight: normal;
 }
 
-
 .form-check-input[type="radio"] {
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
+  width: 18px;
+  height: 20px;
+  border-radius: 60%;
   appearance: none;
-  border: 2px solid #7c7c7c;
+  border: 2px solid #9b9b9b;
   cursor: pointer;
 }
 
@@ -204,8 +206,12 @@ input::placeholder {
 .MOP {
   border: 1px solid #ccc;
   border-radius: 5px;
+  padding: 0.28rem;
 }
 
+.MOP label{
+  color: #4d4d4d !important;
+}
 .order-table {
   width: 100%;
   margin-top: 20px;
@@ -281,19 +287,19 @@ input::placeholder {
   color: #333;
 }
 
-.close-sidebar{
+/* .close-sidebar{
   background-color: #ffffff;
   border: 1px solid #aaa;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   color: #333;
   font-size: 1rem;
-}
+} */
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {
     width: 380px !important;
-    padding: 0.5rem !important;
+    padding: 1rem !important;
   }
 
   .text-left {
@@ -302,7 +308,7 @@ input::placeholder {
     margin-right: auto !important;
   }
 
-   .form-check{
+  .form-check {
     gap: 0.1rem;
     padding-left: 5px;
   }
@@ -312,14 +318,14 @@ input::placeholder {
 @media (max-width: 991px) {
   .sidebar {
     position: fixed;
-    height: 100vh;
+    height: 150vh;
     z-index: 1050;
     left: 0;
     top: 0;
     background: #fff;
     border-right: 1px solid #ddd;
     width: 350px;
-    padding: 1rem;
+    padding: 0.5rem;
     transform: translateX(0);
     transition: transform 0.3s ease;
   }
@@ -329,16 +335,32 @@ input::placeholder {
   }
 
   .main-panel {
-    margin-left: 0 !important;
+    margin: 0 !important;
+    padding: 1rem !important;
   }
 
-  .search-bar{
-    width: 300px;
+  .search-bar {
+    width: 170px !important;
   }
 
-  .form-check{
+  .search-bar input {
+    padding: 0.3rem;
+  }
+  .form-check {
     gap: 0.1rem;
     padding-left: 5px;
   }
- 
+
+  .add-delivery {
+    font-size: 1rem !important;
+    padding: 0.5rem !important;
+  }
+
+  h2.header {
+    font-size: 1.3rem !important;
+  }
+
+  .text-end{
+    margin: 1rem !important;
+  }
 }

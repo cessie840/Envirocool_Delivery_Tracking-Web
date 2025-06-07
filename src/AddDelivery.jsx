@@ -28,11 +28,6 @@ const AddDelivery = () => {
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
-      {/* TOGGLE BUTTON  */}
-      <button className="floating-toggle-btn d-lg-none" onClick={toggleSidebar}>
-        {isSidebarOpen ? <FaTimes /> : <FaBars />}
-      </button>
-
       {/* SIDEBAR */}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 ${
@@ -77,11 +72,14 @@ const AddDelivery = () => {
 
       {/* MAIN PANEL */}
       <main className="main-panel flex-grow-1 p-4">
+        {/* HEADER  */}
         <div className="dashboard-header d-flex justify-content-between align-items-center">
-          <div className="w-100 text-center text-lg-start">
-            <h2 className="fs-1 fw-bold" onClick={handleAddDelivery}>
-              Delivery Form
-            </h2>
+          {/* TOGGLE  BUTTON */}
+          <div className="d-flex align-items-center">
+            <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
+              {isSidebarOpen ? <FaTimes /> : <FaBars />}
+            </button>
+            <h2 className="fs-1 fw-bold m-0">Dashboard</h2>
           </div>
           <div className="search-bar position-relative me-3">
             <input type="text" placeholder="Search..." />

@@ -13,7 +13,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const DeliveryDetails = () => {
+const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
@@ -28,11 +28,6 @@ const DeliveryDetails = () => {
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
-      {/* TOGGLE BUTTON  */}
-      <button className="floating-toggle-btn d-lg-none" onClick={toggleSidebar}>
-        {isSidebarOpen ? <FaTimes /> : <FaBars />}
-      </button>
-
       {/* SIDEBAR */}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 ${
@@ -52,7 +47,7 @@ const DeliveryDetails = () => {
           className="logo mb-4 img-fluid"
           width="250px"
         />
-        {/* NAVIGATION */}
+        {/* NAVIGATIONS  */}
         <nav className="nav-buttons">
           <button className="nav-btn" onClick={handleDashboard}>
             <FaHome className="icon" /> DASHBOARD
@@ -75,14 +70,19 @@ const DeliveryDetails = () => {
         </nav>
       </aside>
 
-      {/* MAIN PANEL */}
+      {/* MAIN CONTENT  */}
       <main className="main-panel flex-grow-1 p-4">
+        {/* HEADER  */}
         <div className="dashboard-header d-flex justify-content-between align-items-center">
-          <div className="w-100 text-center text-lg-start">
-            <h2 className="fs-1 fw-bold" onClick={handleAddDelivery}>
-              Delivery Form
-            </h2>
+          {/* TOGGLE  BUTTON */}
+          <div className="d-flex align-items-center">
+            <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
+              {isSidebarOpen ? <FaTimes /> : <FaBars />}
+            </button>
+            <h2 className="header fs-1 fw-bold m-0">Delivery Details</h2>
           </div>
+
+          {/* SEARCH BAR */}
           <div className="search-bar position-relative me-3">
             <input type="text" placeholder="Search..." />
             <FaSearch className="search-icon" />
@@ -93,17 +93,18 @@ const DeliveryDetails = () => {
         <div className="text-end mx-4 my-5">
           <button
             className="add-delivery rounded-2 px-5 py-2 fs-5"
-            onClick={handleAddDelivery} >
+            onClick={handleAddDelivery}
+          >
             Add Delivery
-          </button>        
-          </div>
+          </button>
+        </div>
         {/* DASHBOARD CONTENT  */}
         <div className="dashboard-content text-center mt-5 fs-4 border p-5">
-            <p>Table of Delivery Details</p>
+          <p>Delivery Details</p>
         </div>
       </main>
     </div>
   );
 };
 
-export default DeliveryDetails;
+export default Dashboard;
