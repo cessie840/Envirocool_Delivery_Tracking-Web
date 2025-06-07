@@ -10,13 +10,28 @@ import {
   FaSearch,
   FaHome,
   FaBars,
-  FaTimes,
+  FaTimes, FaArrowLeft 
 } from "react-icons/fa";
 
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
+
+  const [orderDetails, setOrderDetails] = useState({
+    customerName: "Daniel Padila",
+    customerAddress: "123 Main St",
+    contactNumber: "09123456789",
+    paymentMode: "Cash On Delivery",
+    items: [
+      {
+        name: "Samsung S-Inverter Split Type Aircon",
+        quantity: 4,
+        price: 6000,
+      },
+    ],
+    totalCost: 20000,
+  });
 
   const handleAddDelivery = () => navigate("/add-delivery");
   const handleDashboard = () => navigate("/dashboard");
@@ -79,7 +94,7 @@ const Dashboard = () => {
             <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
               {isSidebarOpen ? <FaTimes /> : <FaBars />}
             </button>
-            <h2 className="fs-1 fw-bold m-0">Dashboard</h2>
+            <h2 className="fs-1 fw-bold m-0">View Order Details</h2>
           </div>
 
           {/* SEARCH BAR */}
@@ -90,17 +105,79 @@ const Dashboard = () => {
         </div>
 
         {/* ADD DELIVERY BUTTON  */}
-        <div className="text-end mx-4 my-5">
+        <div className="d-flex justify-content-between mx-4 my-5">
           <button
-            className="add-delivery rounded-2 px-5 py-2 fs-5"
+            className="btn rounded-2 px-1 py-1 fs-4"
+            onClick={() => navigate(-1)} 
+          >
+            <FaArrowLeft className="me-2" />
+          </button>
+
+          <button
+            className="add-delivery rounded-2 px-5 py-2 fs-5 rounded-3"
             onClick={handleAddDelivery}
           >
             Add Delivery
           </button>
         </div>
         {/* DASHBOARD CONTENT  */}
-        <div className="dashboard-content text-center mt-5 fs-4 border p-5">
-          <p>Analytics Here</p>
+        <div className="container mt-5">
+          <div className="card shadow-lg border-0 rounded-4">
+            <div className="card-body">
+              <h2 className="card-title text-center fw-bold text-success">
+                Transaction No. 000000001
+              </h2>
+              <hr />
+
+              {/* Customer Details */}
+              <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
+                <h5 className="text-success">Customer Details</h5>
+                <p>
+                  <strong>Name:</strong> {orderDetails.customerName}
+                </p>
+                <p>
+                  <strong>Address:</strong> {orderDetails.customerAddress}
+                </p>
+                <p>
+                  <strong>Contact:</strong> {orderDetails.contactNumber}
+                </p>
+                <p>
+                  <strong>Payment Mode:</strong> {orderDetails.paymentMode}
+                </p>
+              </div>
+
+              {/* Items Ordered */}
+              <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
+                <h5 className="text-success">Items Ordered</h5>
+                <ul className="list-group list-group-flush">
+                  {orderDetails.items.map((item, index) => (
+                    <li
+                      key={index}
+                      className="list-group-item d-flex justify-content-between"
+                    >
+                      <span>
+                        {item.name} x{item.quantity}
+                      </span>
+                      <span className="fw-bold">₱{item.price}</span>
+                    </li>
+                  ))}
+                </ul>
+                 <div className="text-end mt-4">
+                <h4 className="fw-bold text-success m-3">
+                  Total Cost: ₱{orderDetails.totalCost}
+                </h4>
+              </div>
+              </div>
+
+              {/* Total Cost */}
+             
+              <div className="buttons d-flex justify-content-center gap-5 mt-5">
+                <button className="add-btn bg-success px-5 rounded-3 border border-2">Update</button>
+                <button className="cancel-btn bg-danger px-5 rounded-3 border border-2">Delete</button>
+
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
