@@ -3,20 +3,25 @@ import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import {
   FaClipboardList,
-  FaTruck,
-  FaChartBar,
   FaCog,
   FaSignOutAlt,
   FaSearch,
-  FaHome,
+  FaUserPlus,
   FaBars,
-  FaTimes, FaArrowLeft 
+  FaTimes,
+  FaArrowLeft,
 } from "react-icons/fa";
+import { Modal, Button, Form } from "react-bootstrap";
 
-const Dashboard = () => {
+const OperationalDelivery = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const [showModal, setShowModal] = useState(false); // For modal visibility
+  const [selectedPersonnel, setSelectedPersonnel] = useState("");
   const navigate = useNavigate();
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const handleCloseModal = () => setShowModal(false);
+  const handleShowModal = () => setShowModal(true);
 
   const [orderDetails, setOrderDetails] = useState({
     customerName: "Daniel Padila",
@@ -33,11 +38,13 @@ const Dashboard = () => {
     totalCost: 20000,
   });
 
-  const handleAddDelivery = () => navigate("/add-delivery");
-  const handleDashboard = () => navigate("/dashboard");
-  const handleDeliveryDetails = () => navigate("/delivery-details");
-  const handleMonitorDelivery = () => navigate("/monitor-delivery");
-  const handleGenerateReport = () => navigate("/generate-report");
+  const handleAssignPersonnel = () => {
+    console.log("Assigned to:", selectedPersonnel);
+    setShowModal(false);
+  };
+
+  const handleCreateAccount = () => navigate("/create-personnel-account");
+  const handleDeliveryDetails = () => navigate("/operational-delivery-details");
   const handleSettings = () => navigate("/settings");
   const handleLogout = () => navigate("/");
 
@@ -64,17 +71,11 @@ const Dashboard = () => {
         />
         {/* NAVIGATIONS  */}
         <nav className="nav-buttons">
-          <button className="nav-btn" onClick={handleDashboard}>
-            <FaHome className="icon" /> DASHBOARD
+          <button className="nav-btn" onClick={handleCreateAccount}>
+            <FaUserPlus className="icon" /> CREATE DELIVERY PERSONNEL ACCOUNT
           </button>
           <button className="nav-btn" onClick={handleDeliveryDetails}>
             <FaClipboardList className="icon" /> DELIVERY DETAILS
-          </button>
-          <button className="nav-btn" onClick={handleMonitorDelivery}>
-            <FaTruck className="icon" /> MONITOR DELIVERY
-          </button>
-          <button className="nav-btn" onClick={handleGenerateReport}>
-            <FaChartBar className="icon" /> GENERATE REPORT
           </button>
           <button className="nav-btn" onClick={handleSettings}>
             <FaCog className="icon" /> SETTINGS
@@ -104,29 +105,21 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ADD DELIVERY BUTTON  */}
         <div className="d-flex justify-content-between mx-4 my-5">
           <button
             className="back btn rounded-2 px-1 py-1 fs-4"
-            onClick={() => navigate(-1)} 
+            onClick={() => navigate(-1)}
           >
             <FaArrowLeft className="me-2" />
-          </button>
-
-          <button
-            className="add-delivery rounded-2 px-5 py-2 fs-5 rounded-3"
-            onClick={handleAddDelivery}
-          >
-            Add Delivery
           </button>
         </div>
         {/* DASHBOARD CONTENT  */}
         <div className="container mt-5 w-75">
           <div className="card shadow-lg border-0 rounded-4">
-            <div className="card-body">
-              <h2 className="card-title text-center fw-bold text-success">
+            <div className="card-body border border-2 rounded-4">
+              <h3 className="card-title text-center fw-bold text-success">
                 Transaction No. 000000001
-              </h2>
+              </h3>
               <hr />
 
               {/* Customer Details */}
@@ -162,26 +155,59 @@ const Dashboard = () => {
                     </li>
                   ))}
                 </ul>
-                 <div className="text-end mt-4">
-                <h4 className="fw-bold text-success m-3">
-                  Total Cost: ₱{orderDetails.totalCost}
-                </h4>
-              </div>
+                <div className="text-end mt-4">
+                  <h4 className="fw-bold text-success m-3">
+                    Total Cost: ₱{orderDetails.totalCost}
+                  </h4>
+                </div>
               </div>
 
               {/* Total Cost */}
-             
-              <div className="buttons d-flex justify-content-center gap-5 mt-5">
-                <button className="add-btn bg-success px-5 rounded-3 border border-2">Update</button>
-                <button className="cancel-btn bg-danger px-5 rounded-3 border border-2">Delete</button>
 
+              <div className="buttons d-flex justify-content-center gap-5 mt-4 mb-2">
+                <button
+                  className="add-btn bg-success px-5 rounded-3"
+                  onClick={handleShowModal}
+                >
+                  Assign Delivery Personnel
+                </button>
               </div>
             </div>
           </div>
         </div>
+
+        <Modal show={showModal} onHide={handleCloseModal} centered>
+          <Modal.Header closeButton className="modal-header-custom">
+            <Modal.Title className="fw-bold text-success">
+              ASSIGN DELIVERY PERSONNEL
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="modal-body-custom">
+            <Form.Group className="mb-3">
+              <Form.Label>
+                <strong>Available Personnel:</strong>
+              </Form.Label>
+              <Form.Select
+                value={selectedPersonnel}
+                onChange={(e) => setSelectedPersonnel(e.target.value)}
+              >
+                <option value="">Select personnel...</option>
+                <option value="Juan Dela Cruz">Jessa Cariñaga</option>
+                <option value="Maria Santos">Princess Maniclang</option>
+                <option value="Pedro Reyes">Miriam Mulawin</option>
+                <option value="Pedro Reyes">Liezel Patiente</option>
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="success" className="add-btn bg-success px-4 py-1" onClick={handleAssignPersonnel}>
+              Assign
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </main>
     </div>
   );
 };
 
-export default Dashboard;
+export default OperationalDelivery;

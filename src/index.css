@@ -336,6 +336,64 @@ input::placeholder {
   color: #d12525;
  }
 
+ .card-body{
+  background-color: #ebf1eb;
+ }
+
+ /* OPERATIONAL MODAL  */
+ .modal-header-custom {
+  background-color: #e9f7ef;
+  border-bottom: 2px solid #d4edda;
+}
+
+.modal-body-custom {
+  background-color: #f8f9fa;
+}
+
+.search-bar input {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+/* PERSONNEL CREATE ACCOUNT  */
+.personnel-form-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+}
+
+.form-card {
+  background-color: white;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 900px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-card h2 {
+  color: #006400; 
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 2rem;
+}
+
+.form-card label{
+  color: #0c759d;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {

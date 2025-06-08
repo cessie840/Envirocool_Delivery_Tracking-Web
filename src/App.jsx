@@ -12,6 +12,9 @@ import Settings from "./Settings";
 import OperationalManagerModule from "./OpsDashboard";
 import DriverModule from "./DriverDashboard";
 import ProtectedRoute from "./ProtectedRoute";
+
+import OperationalDelivery from "./OperationalDelivery"
+import CreatePersonnelAccount from "./CreatePersonnelAccount";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 
@@ -28,6 +31,9 @@ function App() {
         <Route path="/monitor-delivery" element={<MonitorDelivery />} />
         <Route path="/generate-report" element={<GenerateReport />} />
         <Route path="/settings" element={<Settings />} />
+
+        <Route path="/operational-delivery-details" element={<OperationalDelivery />} />
+        <Route path="/create-personnel-account" element={<CreatePersonnelAccount />} />
 
         <Route
           path="/OperationalManagerDashboard"
