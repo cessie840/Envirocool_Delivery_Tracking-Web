@@ -19,9 +19,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const handleAddDelivery = () => navigate("/add-delivery");
-  const handleDashboard = () => navigate("/dashboard");
+  const handleDashboard = () => navigate("/admin-dashboard");
   const handleDeliveryDetails = () => navigate("/delivery-details");
-  const handleViewDelivery = () => navigate("/view-delivery")
+  const handleViewDelivery = () => navigate("/view-delivery");
   const handleMonitorDelivery = () => navigate("/monitor-delivery");
   const handleGenerateReport = () => navigate("/generate-report");
   const handleSettings = () => navigate("/settings");
@@ -101,33 +101,40 @@ const Dashboard = () => {
         </div>
         {/* DASHBOARD CONTENT  */}
         {/* <div className="dashboard-content text-center mt-5 fs-4 border p-5"> */}
-          <table className="delivery-table container-fluid">
-            <thead>
-              <tr>
-                <th>Transaction No.</th>
-                <th>Customer Name</th>
-                <th>Item Name</th>
-                <th>Item/s Ordered</th>
-                <th>Total Amount</th>
-                <th>Delivery Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>000000001</td>
-                <td>Daniel Padila</td>
-                <td>Samsung S-Inverter Split Type Aircon</td>
-                <td>4</td>
-                <td>200000</td>
-                <td>Ongoing</td>
-                <td>
-                  <button className="bg-success px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3" onClick={handleViewDelivery}>View</button>
-                  <button className="bg-danger px-2 py-1 m-2 fw-normal fs-6  border-light rounded-3">Delete</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <table className="delivery-table container-fluid">
+          <thead>
+            <tr>
+              <th>Transaction No.</th>
+              <th>Customer Name</th>
+              <th>Item Name</th>
+              <th>Item/s Ordered</th>
+              <th>Total Amount</th>
+              <th>Delivery Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>000000001</td>
+              <td>Daniel Padila</td>
+              <td>Samsung S-Inverter Split Type Aircon</td>
+              <td>4</td>
+              <td>200000</td>
+              <td>Ongoing</td>
+              <td>
+                <button
+                  className="bg-success px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
+                  onClick={handleViewDelivery}
+                >
+                  View
+                </button>
+                <button className="bg-danger px-2 py-1 m-2 fw-normal fs-6  border-light rounded-3">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
         {/* </div> */}
       </main>
     </div>

@@ -1,29 +1,42 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./Login";
 import AdminDashboard from "./AdminDashboard";
-import AdminModule from "./AdminDashboard";
 import ForgotPass from "./ForgotPass";
 import AddDelivery from "./AddDelivery";
 import DeliveryDetails from "./DeliveryDetails";
-import ViewDelivery from "./ViewOrder"
+import ViewDelivery from "./ViewOrder";
 import MonitorDelivery from "./MonitorDelivery";
 import GenerateReport from "./GenerateReport";
 import Settings from "./Settings";
-import OperationalManagerModule from "./OpsDashboard";
 import DriverModule from "./DriverDashboard";
-import ProtectedRoute from "./ProtectedRoute";
-
-import OperationalDelivery from "./OperationalDelivery"
+import OperationalDelivery from "./OperationalDelivery";
 import CreatePersonnelAccount from "./CreatePersonnelAccount";
+import ProtectedRoute from "./ProtectedRoute";
 import "bootstrap/dist/css/bootstrap.min.css";
-
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/operational-delivery-details"
+          element={
+            <ProtectedRoute role="operational-manager">
+              <OperationalDelivery />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/forgotpassword" element={<ForgotPass />} />
         <Route path="/add-delivery" element={<AddDelivery />} />
         <Route path="/delivery-details" element={<DeliveryDetails />} />
@@ -32,17 +45,11 @@ function App() {
         <Route path="/generate-report" element={<GenerateReport />} />
         <Route path="/settings" element={<Settings />} />
 
-        <Route path="/operational-delivery-details" element={<OperationalDelivery />} />
-        <Route path="/create-personnel-account" element={<CreatePersonnelAccount />} />
-
         <Route
-          path="/OperationalManagerDashboard"
-          element={
-            <ProtectedRoute role="operationalmanager">
-              <OperationalManagerModule />
-            </ProtectedRoute>
-          }
+          path="/create-personnel-account"
+          element={<CreatePersonnelAccount />}
         />
+
         <Route
           path="/DriverDashboard"
           element={
@@ -51,16 +58,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute role="admin">
-              <AdminModule />
-            </ProtectedRoute>
-          }
-        />
-       
       </Routes>
     </Router>
   );

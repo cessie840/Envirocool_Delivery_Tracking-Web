@@ -34,7 +34,7 @@ const Dashboard = () => {
   });
 
   const handleAddDelivery = () => navigate("/add-delivery");
-  const handleDashboard = () => navigate("/dashboard");
+  const handleDashboard = () => navigate("/admin-dashboard");
   const handleDeliveryDetails = () => navigate("/delivery-details");
   const handleMonitorDelivery = () => navigate("/monitor-delivery");
   const handleGenerateReport = () => navigate("/generate-report");

@@ -200,7 +200,11 @@ const OperationalDelivery = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="success" className="add-btn bg-success px-4 py-1" onClick={handleAssignPersonnel}>
+            <Button
+              variant="success"
+              className="add-btn bg-success px-4 py-1"
+              onClick={handleAssignPersonnel}
+            >
               Assign
             </Button>
           </Modal.Footer>

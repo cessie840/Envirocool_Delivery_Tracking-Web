@@ -18,7 +18,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Page Title 
+  // Page Title
   useEffect(() => {
     document.title = "Admin Dashboard";
   }, []);
@@ -28,7 +28,7 @@ const AdminDashboard = () => {
 
   // Navigation Hanlders
   const handleAddDelivery = () => navigate("/add-delivery");
-  const handleDashboard = () => navigate("/dashboard");
+  const handleDashboard = () => navigate("/admin-dashboard");
   const handleDeliveryDetails = () => navigate("/delivery-details");
   const handleMonitorDelivery = () => navigate("/monitor-delivery");
   const handleGenerateReport = () => navigate("/generate-report");
