@@ -31,7 +31,7 @@ function App() {
         <Route
           path="/operational-delivery-details"
           element={
-            <ProtectedRoute role="operational-manager">
+            <ProtectedRoute role="operationalmanager">
               <OperationalDelivery />
             </ProtectedRoute>
           }

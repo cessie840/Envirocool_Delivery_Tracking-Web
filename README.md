@@ -31,3 +31,18 @@ SET ad_password = '$2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W'
 WHERE ad_username = 'admin101';
 
 SELECT * FROM Admin;
+
+
+Admin Credentials:
+Username: admin101
+Password: admin111219#
+
+Operational Manager Credentials:
+Username: opsmanager101
+Password: Manager1111219#
+
+
+HASH PASSWORDS:
+ADMIN: $2y$10$4Hgbzve5mXF7M83xQeF1YeaBMhY9VzjeVJQCX5WPORAjMBEtZdrhK
+
+OPS: $2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W
