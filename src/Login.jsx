@@ -18,7 +18,7 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/Login.php",
+        "http://localhost/DeliveryTrackingSystem/login.php",
         {
           username,
           password,
