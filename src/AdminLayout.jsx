@@ -1,4 +1,3 @@
-// components/AdminLayout.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
@@ -13,14 +12,34 @@ import {
   FaBars,
   FaTimes,
 } from "react-icons/fa";
+import "./loading-overlay.css"; 
 
 const AdminLayout = ({ title, onAddClick, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [loading, setLoading] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    setLoading(true); 
+    setTimeout(() => {
+      setLoading(false);
+      localStorage.removeItem("user"); 
+      navigate("/");
+    }, 500); 
+  };
+
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
+      {/* LOADING OVERLAY */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Logging out...</span>
+          </div>
+        </div>
+      )}
+
       {/* SIDEBAR */}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 ${
@@ -34,6 +53,7 @@ const AdminLayout = ({ title, onAddClick, children }) => {
         >
           <FaTimes />
         </button>
+
         <img
           src={logo}
           alt="Envirocool Logo"
@@ -58,7 +78,7 @@ const AdminLayout = ({ title, onAddClick, children }) => {
           <button className="nav-btn" onClick={() => navigate("/settings")}>
             <FaCog className="icon" /> SETTINGS
           </button>
-          <button className="nav-btn logout" onClick={() => navigate("/")}>
+          <button className="nav-btn logout" onClick={handleLogout}>
             <FaSignOutAlt className="icon" /> LOGOUT
           </button>
         </nav>

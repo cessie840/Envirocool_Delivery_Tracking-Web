@@ -14,6 +14,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
 
   const handleLogin = async (e) => {
+    
     e.preventDefault();
     setLoading(true);
     try {
@@ -38,6 +39,7 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(user));
 
       // Redirect to dashboard
+       setTimeout(() => {
       switch (user.role) {
         case "admin":
           navigate("/admin-dashboard");
@@ -49,18 +51,26 @@ const Login = () => {
           navigate("/");
           break;
       }
-    } catch (error) {
-      alert(
-        "Login failed: " +
-          (error.response?.data?.error || "Invalid username or password.")
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    }, 500); 
+  } catch (error) {
+    alert(
+      "Login failed: " +
+        (error.response?.data?.error || "Invalid username or password.")
+    );
+    setLoading(false); 
+  }
+};
   //FRONTEND
-  return (
-    <div className="login-container container-fluid">
+return (
+    <div className="login-container container-fluid position-relative">
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
+
       <div className="login-card text-center container-fluid">
         <img
           src={logo}
@@ -110,20 +120,14 @@ const Login = () => {
               Forgot password?
             </a>
           </div>
-          {loading ? (
-            <div className="loading-overlay">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="submit"
-              className="btn login-btn w-100 rounded-3 fs-5 p-2"
-            >
-              Login
-            </button>
-          )}
+
+          <button
+            type="submit"
+            className="btn login-btn w-100 rounded-3 fs-5 p-2"
+            disabled={loading}
+          >
+            Login
+          </button>
         </form>
       </div>
     </div>

@@ -10,16 +10,36 @@ import {
   FaSignOutAlt,
   FaSearch,
 } from "react-icons/fa";
+import "./loading-overlay.css";
 
 const OperationalLayout = ({ children, title }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  const handleLogout = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      localStorage.removeItem("user");
+      navigate("/");
+    }, 500);
+  };
+
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
       {/* SIDEBAR */}
+
+      {/* LOADING OVERLAY  */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Logging out...</span>
+          </div>
+        </div>
+      )}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 ${
           isSidebarOpen ? "show" : "collapsed"
@@ -38,16 +58,25 @@ const OperationalLayout = ({ children, title }) => {
           width="250px"
         />
         <nav className="nav-buttons">
-          <button className="nav-btn" onClick={() => navigate("/create-personnel-account")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/create-personnel-account")}
+          >
             <FaUserPlus className="icon" /> CREATE DELIVERY PERSONNEL ACCOUNT
           </button>
-          <button className="nav-btn" onClick={() => navigate("/operational-delivery-details")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/operational-delivery-details")}
+          >
             <FaClipboardList className="icon" /> DELIVERY DETAILS
           </button>
-          <button className="nav-btn" onClick={() => navigate("/operational-settings")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/operational-settings")}
+          >
             <FaCog className="icon" /> SETTINGS
           </button>
-          <button className="nav-btn logout" onClick={() => navigate("/")}>
+          <button className="nav-btn logout" onClick={handleLogout}>
             <FaSignOutAlt className="icon" /> LOGOUT
           </button>
         </nav>
