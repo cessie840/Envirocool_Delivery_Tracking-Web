@@ -257,7 +257,7 @@ input::placeholder {
   background-color: #3eaa35;
   color: white;
   border: none;
-  padding: 0.7rem 1.5rem;
+  padding: 0.5rem 1.7rem;
   font-weight: bold;
   border-radius: 4px;
   cursor: pointer;
@@ -269,7 +269,7 @@ input::placeholder {
   background-color: #cc2e2e;
   color: white;
   border: none;
-  padding: 0.7rem 1rem;
+  padding: 0.5rem 1.2rem;
   font-weight: bold;
   border-radius: 4px;
   cursor: pointer;

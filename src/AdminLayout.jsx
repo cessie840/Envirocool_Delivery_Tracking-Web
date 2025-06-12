@@ -1,6 +1,7 @@
-import logo from "./assets/envirocool-logo.png";
-import { useNavigate } from "react-router-dom";
+// components/AdminLayout.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "./assets/envirocool-logo.png";
 import {
   FaClipboardList,
   FaTruck,
@@ -13,18 +14,10 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const Dashboard = () => {
+const AdminLayout = ({ title, onAddClick, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const navigate = useNavigate();
-
-  const handleAddDelivery = () => navigate("/add-delivery");
-  const handleDashboard = () => navigate("/admin-dashboard");
-  const handleDeliveryDetails = () => navigate("/delivery-details");
-  const handleMonitorDelivery = () => navigate("/monitor-delivery");
-  const handleGenerateReport = () => navigate("/generate-report");
-  const handleSettings = () => navigate("/settings");
-  const handleLogout = () => navigate("/");
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
@@ -40,46 +33,46 @@ const Dashboard = () => {
           onClick={toggleSidebar}
         >
           <FaTimes />
-        </button>{" "}
+        </button>
         <img
           src={logo}
           alt="Envirocool Logo"
           className="logo mb-4 img-fluid"
           width="250px"
         />
-        {/* NAVIGATIONS  */}
+
+        {/* NAVIGATION BUTTONS */}
         <nav className="nav-buttons">
-          <button className="nav-btn" onClick={handleDashboard}>
+          <button className="nav-btn" onClick={() => navigate("/admin-dashboard")}>
             <FaHome className="icon" /> DASHBOARD
           </button>
-          <button className="nav-btn" onClick={handleDeliveryDetails}>
+          <button className="nav-btn" onClick={() => navigate("/delivery-details")}>
             <FaClipboardList className="icon" /> DELIVERY DETAILS
           </button>
-          <button className="nav-btn" onClick={handleMonitorDelivery}>
+          <button className="nav-btn" onClick={() => navigate("/monitor-delivery")}>
             <FaTruck className="icon" /> MONITOR DELIVERY
           </button>
-          <button className="nav-btn" onClick={handleGenerateReport}>
+          <button className="nav-btn" onClick={() => navigate("/generate-report")}>
             <FaChartBar className="icon" /> GENERATE REPORT
           </button>
-          <button className="nav-btn" onClick={handleSettings}>
+          <button className="nav-btn" onClick={() => navigate("/settings")}>
             <FaCog className="icon" /> SETTINGS
           </button>
-          <button className="nav-btn logout" onClick={handleLogout}>
+          <button className="nav-btn logout" onClick={() => navigate("/")}>
             <FaSignOutAlt className="icon" /> LOGOUT
           </button>
         </nav>
       </aside>
 
-      {/* MAIN CONTENT  */}
+      {/* MAIN PANEL */}
       <main className="main-panel flex-grow-1 p-4">
-        {/* HEADER  */}
+        {/* HEADER */}
         <div className="dashboard-header d-flex justify-content-between align-items-center">
-          {/* TOGGLE  BUTTON */}
           <div className="d-flex align-items-center">
             <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
               {isSidebarOpen ? <FaTimes /> : <FaBars />}
             </button>
-            <h2 className="fs-1 fw-bold m-0">Generate Report</h2>
+            <h2 className="fs-1 fw-bold m-0">{title}</h2>
           </div>
 
           {/* SEARCH BAR */}
@@ -89,22 +82,23 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ADD DELIVERY BUTTON  */}
-        <div className="text-end mx-4 my-5">
-          <button
-            className="add-delivery rounded-2 px-5 py-2 fs-5"
-            onClick={handleAddDelivery}
-          >
-            Add Delivery
-          </button>
-        </div>
-        {/* DASHBOARD CONTENT  */}
-        <div className="dashboard-content text-center mt-5 fs-4 border p-5">
-          <p>Generate Report</p>
-        </div>
+        {/* ADD BUTTON */}
+        {onAddClick && (
+          <div className="text-end mx-4 my-5">
+            <button
+              className="add-delivery rounded-2 px-5 py-2 fs-5"
+              onClick={onAddClick}
+            >
+              Add Delivery
+            </button>
+          </div>
+        )}
+
+        {/* PAGE CONTENT */}
+        {children}
       </main>
     </div>
   );
 };
 
-export default Dashboard;
+export default AdminLayout;

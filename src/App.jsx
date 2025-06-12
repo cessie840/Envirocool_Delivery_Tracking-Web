@@ -2,16 +2,17 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./Login";
 import AdminDashboard from "./AdminDashboard";
 import ForgotPass from "./ForgotPass";
-import AddDelivery from "./AddDelivery";
-import DeliveryDetails from "./DeliveryDetails";
-import ViewDelivery from "./ViewOrder";
-import MonitorDelivery from "./MonitorDelivery";
-import GenerateReport from "./GenerateReport";
-import Settings from "./Settings";
+import AddDelivery from "./AdminAddDelivery";
+import DeliveryDetails from "./AdminDeliveryDetails";
+import ViewDelivery from "./AdminViewOrder";
+import MonitorDelivery from "./AdminMonitorDelivery";
+import GenerateReport from "./AdminGenerateReport";
+import Settings from "./AdminSettings";
 import DriverModule from "./DriverDashboard";
 import OperationalDelivery from "./OperationalDelivery";
 import CreatePersonnelAccount from "./CreatePersonnelAccount";
 import ProtectedRoute from "./ProtectedRoute";
+import OperationalSettings from "./OperationalSettings";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
@@ -44,6 +45,8 @@ function App() {
         <Route path="/monitor-delivery" element={<MonitorDelivery />} />
         <Route path="/generate-report" element={<GenerateReport />} />
         <Route path="/settings" element={<Settings />} />
+
+        <Route path="operational-settings" element={<OperationalSettings/>}></Route>
 
         <Route
           path="/create-personnel-account"
