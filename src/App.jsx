@@ -13,6 +13,7 @@ import OperationalDelivery from "./OperationalDelivery";
 import CreatePersonnelAccount from "./CreatePersonnelAccount";
 import ProtectedRoute from "./ProtectedRoute";
 import OperationalSettings from "./OperationalSettings";
+import RegisterAccount from "./RegisterAccount";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
@@ -47,6 +48,8 @@ function App() {
         <Route path="/settings" element={<Settings />} />
 
         <Route path="operational-settings" element={<OperationalSettings/>}></Route>
+        <Route path="/register-account" element={<RegisterAccount />} />
+
 
         <Route
           path="/create-personnel-account"

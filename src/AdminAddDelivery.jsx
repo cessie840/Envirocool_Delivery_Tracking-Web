@@ -13,7 +13,7 @@ const AddDelivery = () => {
   return (
     <AdminLayout title="Add Delivery">
       {/* MAIN CONTENT  */}
-      <div className="add-delivery-container mt-4 p-4 border rounded">
+      <div className="add-delivery-container mt-4 p-4 border rounded mx-auto">
         <div className="header-info mb-3">
           <p>
             <strong>Transaction No.:</strong> 00000001
