@@ -42,12 +42,12 @@ const CreatePersonnelAccount = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-     for (let key in formData) {
-    if (formData[key].trim() === "") {
-      setErrorMessage("All fields must be filled out.");
-      return;
+    for (let key in formData) {
+      if (formData[key].trim() === "") {
+        setErrorMessage("All fields must be filled out.");
+        return;
+      }
     }
-  }
 
     if (!/^09\d{9}$/.test(formData.contactNumber)) {
       setErrorMessage("Contact must start with 09 and have 11 digits.");
