@@ -4,22 +4,25 @@ import logo from "./assets/envirocool-logo.png";
 import {
   FaBars,
   FaTimes,
-  FaUserPlus,
+  FaUserFriends,
   FaClipboardList,
   FaCog,
   FaSignOutAlt,
   FaSearch,
 } from "react-icons/fa";
+import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
 const OperationalLayout = ({ children, title }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
@@ -30,9 +33,7 @@ const OperationalLayout = ({ children, title }) => {
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
-      {/* SIDEBAR */}
-
-      {/* LOADING OVERLAY  */}
+      {/* LOADING OVERLAY */}
       {loading && (
         <div className="loading-overlay">
           <div className="spinner-border text-primary" role="status">
@@ -40,6 +41,8 @@ const OperationalLayout = ({ children, title }) => {
           </div>
         </div>
       )}
+
+      {/* SIDEBAR */}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 ${
           isSidebarOpen ? "show" : "collapsed"
@@ -60,9 +63,9 @@ const OperationalLayout = ({ children, title }) => {
         <nav className="nav-buttons">
           <button
             className="nav-btn"
-            onClick={() => navigate("/create-personnel-account")}
+            onClick={() => navigate("/personnel-accounts")}
           >
-            <FaUserPlus className="icon" /> CREATE DELIVERY PERSONNEL ACCOUNT
+            <FaUserFriends className="icon" /> DELIVERY PERSONNEL ACCOUNTS
           </button>
           <button
             className="nav-btn"
@@ -76,7 +79,10 @@ const OperationalLayout = ({ children, title }) => {
           >
             <FaCog className="icon" /> SETTINGS
           </button>
-          <button className="nav-btn logout" onClick={handleLogout}>
+          <button
+            className="nav-btn logout"
+            onClick={() => setShowLogoutModal(true)}
+          >
             <FaSignOutAlt className="icon" /> LOGOUT
           </button>
         </nav>
@@ -99,6 +105,22 @@ const OperationalLayout = ({ children, title }) => {
 
         {children}
       </main>
+
+      {/* LOGOUT MODAL */}
+      <Modal show={showLogoutModal} onHide={() => setShowLogoutModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Logout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Are you sure you want to logout?</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmLogout}>
+            Logout
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

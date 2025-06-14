@@ -14,6 +14,7 @@ import CreatePersonnelAccount from "./CreatePersonnelAccount";
 import ProtectedRoute from "./ProtectedRoute";
 import OperationalSettings from "./OperationalSettings";
 import RegisterAccount from "./RegisterAccount";
+import PersonnelAccounts from "./PersonnelAccounts";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
@@ -49,12 +50,8 @@ function App() {
 
         <Route path="operational-settings" element={<OperationalSettings/>}></Route>
         <Route path="/register-account" element={<RegisterAccount />} />
-
-
-        <Route
-          path="/create-personnel-account"
-          element={<CreatePersonnelAccount />}
-        />
+        <Route path="/personnel-accounts" element={<PersonnelAccounts />} />
+        <Route path="/create-personnel-account" element={<CreatePersonnelAccount />} />
 
         <Route
           path="/DriverDashboard"

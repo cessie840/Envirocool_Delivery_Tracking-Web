@@ -72,7 +72,7 @@ const AddDelivery = () => {
           </form>
         </div>
         <div className="d-flex justify-content-end mt-4">
-          <button className="add-btn bg-success" onClick={() => navigate("/register-account")}>
+          <button className="btn btn-view" onClick={() => navigate("/register-account")}>
                        Proceed
                     </button>
         </div>

@@ -50,7 +50,7 @@ const AddDelivery = () => {
           </form>
         </div>
         <div className="d-flex justify-content-end mt-4">
-          <button type="submit" className="bg-success add-btn">
+          <button type="submit" className="btn bg-success add-btn rounded-3 px-3">
             Register
           </button>
         </div>

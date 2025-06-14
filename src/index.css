@@ -133,6 +133,7 @@ body {
   color: white;
   border: none;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  font-size: 1.1rem;
 }
 
 .add-delivery:hover{
@@ -259,9 +260,9 @@ input::placeholder {
 .add-btn {
   background-color: #3eaa35;
   color: white;
-  border: 1px solid #696969;
-  padding: 0.5rem 1.9rem;
-  font-weight: bold;
+  border: none;
+  padding: 5px 30px;
+  /* font-weight: bold; */
   border-radius: 4px;
   cursor: pointer;
   box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
@@ -270,23 +271,23 @@ input::placeholder {
 .cancel-btn {
   background-color: #cc2e2e;
   color: white;
-  border: 1px solid #696969;
-  padding: 0.5rem 1.2rem;
-  font-weight: bold;
+  border: none;
+  padding: 5px 25px;
   border-radius: 4px;
   cursor: pointer;
   box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
 }
 
 .add-btn:hover{
-  background-color: #4490a7 !important;
-  border: none;
+  background-color: #00aff0 !important;
 }
 
 .cancel-btn:hover{
-  background-color: #9e2731 !important; 
-    border: none;
+  background-color: #ff0015 !important; 
+}
 
+.btn:hover{
+  color: white;
 }
 
 .sidebar.collapsed {
@@ -416,6 +417,36 @@ input::placeholder {
 
 .required {
   color: red;
+}
+
+.compact-card{
+  background-color: #ffffff;
+  border: 1px solid #93c7db;
+}
+
+.btn-view{
+  background-color: #3089ac;
+  color: white;
+  border: none;
+  padding: 5px 25px;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-view:hover{
+  background-color: #00aff0;
+  color: white;
+}
+
+.dimmed-modal .modal-content {
+  filter: brightness(0.4);  
+  pointer-events: none;   
+}
+
+#personnel-view, #personnel-cancel{
+  font-size: 0.9rem;
+  padding: 3px 15px;
 }
 
 /* LARGER DEVICES */

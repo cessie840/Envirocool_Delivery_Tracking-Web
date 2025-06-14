@@ -38,12 +38,12 @@ const DeliveryDetails = () => {
             <td>Ongoing</td>
             <td>
               <button
-                className="bg-success px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
+                className="btn btn-view px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
                 onClick={handleViewDelivery}
               >
                 View
               </button>
-              <button className="bg-danger px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3">
+              <button className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3">
                 Delete
               </button>
             </td>
