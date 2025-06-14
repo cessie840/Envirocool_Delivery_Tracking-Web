@@ -14,6 +14,12 @@ import CreatePersonnelAccount from "./CreatePersonnelAccount";
 import ProtectedRoute from "./ProtectedRoute";
 import OperationalSettings from "./OperationalSettings";
 import RegisterAccount from "./RegisterAccount";
+import DriverDashboard from "./DriverDashboard";
+import OutForDelivery from "./OutForDelivery";
+import SuccessfulDelivery from "./SuccessfulDelivery";
+import FailedDeliveries from "./FailedDeliveries";
+import DriverProfileSettings from "./DriverProfileSettings";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
@@ -49,6 +55,12 @@ function App() {
 
         <Route path="operational-settings" element={<OperationalSettings/>}></Route>
         <Route path="/register-account" element={<RegisterAccount />} />
+        
+        <Route path="/driver-dashboard" element={<DriverDashboard />} />
+        <Route path="/out-for-delivery" element={<OutForDelivery />} />
+        <Route path="/successful-delivery" element={<SuccessfulDelivery />} />
+        <Route path="/failed-delivery" element={<FailedDeliveries />} />
+        <Route path="/driver-profile-settings" element={<DriverProfileSettings />} />
 
 
         <Route

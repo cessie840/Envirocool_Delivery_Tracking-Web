@@ -1,95 +1,156 @@
-import React from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "./assets/envirocool-logo.png";
-import "./loading-overlay.css";
 import {
-	FaClipboardList,
-	FaCog,
-	FaSignOutAlt,
-	FaSearch,
-	FaHome,
-} from "react-icons/fa";
+  Container,
+  Card,
+  Button,
+  Navbar,
+  Form,
+  InputGroup,
+  Offcanvas,
+  ListGroup,
+  Image,
+} from "react-bootstrap";
 
-const DriverDashboard = () => {
-	const navigate = useNavigate(); // Initialize navigate function
-	const [loading, setLoading] = useState(false); //Initialize loading screen function
+import Sidebar from "./DriverSidebar";
+import HeaderAndNav from "./DriverHeaderAndNav";
 
-	//OVERRIDES TITLE
-	useEffect(() => {
-		document.title = "Driver Dashboard";
-	}, []);
+{
+  /* EXAMPLE CONTENTS */
+}
+const mockDeliveries = [
+  {
+    transactionNo: "000000001",
+    customerName: "Dudong Batumbakal",
+    address: "Marinig, Cabuyao, Laguna",
+    contact: "09123456789",
+    paymentMode: "Cash On Delivery",
+    items: [
+      { name: "Item #1", qty: 1 },
+      { name: "Item #2", qty: 2 },
+    ],
+    unitCost: "₱5,899.75",
+    totalCost: "₱5,899.75",
+  },
+  {
+    transactionNo: "000000002",
+    customerName: "Dudong Batumbakal",
+    address: "Marinig, Cabuyao, Laguna",
+    contact: "09123456789",
+    paymentMode: "Cash On Delivery",
+    items: [
+      { name: "Item #1", qty: 1 },
+      { name: "Item #2", qty: 2 },
+    ],
+    unitCost: "₱5,899.75",
+    totalCost: "₱5,899.75",
+  },
+];
 
-	//LOGOUT
-	const handleLogout = () => {
-		setLoading(true);
+function DriverDashboard() {
+  const [showSidebar, setShowSidebar] = useState(false);
 
-		setTimeout(() => {
-			setLoading(false);
-			localStorage.removeItem("user");
-			navigate("/");
-		}, 1200);
-	};
-	return (
-		<div className="dashboard-container d-flex vh-100">
-			{/* SIDEBAR  */}
-			<aside className="sidebar d-flex flex-column align-items-center p-3">
-				{/* LOGO  */}
-				<img
-					src={logo}
-					alt="Envirocool Logo"
-					className="logo mb-4"
-					width="250px"
-				/>
-				{/* NAVIGATIONS  */}
-				<nav className="nav-buttons">
-					<button className="nav-btn">
-						<FaHome className="icon" /> DASHBOARD
-					</button>
-					<button className="nav-btn">
-						<FaClipboardList className="icon" /> DELIVERY DETAILS
-					</button>
-					<button className="nav-btn">
-						<FaCog className="icon" /> SETTINGS
-					</button>
-					<button className="nav-btn logout" onClick={handleLogout}>
-						<FaSignOutAlt className="icon" /> LOGOUT
-					</button>
-					{/*LOADING SCREEN AFTER LOGOUT*/}
-					{loading && (
-						<div className="loading-overlay">
-							<div className="spinner-border text-primary" role="status">
-								<span className="visually-hidden">Loading...</span>
-							</div>
-						</div>
-					)}
-				</nav>
-			</aside>
+  const [assignedDeliveries, setAssignedDeliveries] = useState(() => {
+    const saved = localStorage.getItem("assignedDeliveries");
+    return saved ? JSON.parse(saved) : mockDeliveries;
+  });
 
-			{/* MAIN CONTENT  */}
-			<main className="main-panel flex-grow-1 p-4">
-				<div className="dashboard-header d-flex justify-content-between align-items-center">
-					<h2 className="fs-2">Dashboard</h2>
-					{/* SEARCH BAR  */}
-					<div className="search-bar position-relative me-3">
-						<input type="text" placeholder="Search..." />
-						<FaSearch className="search-icon" />
-					</div>
-				</div>
-				{/* ADD DELIVERY BUTTON  */}
-				<div className="text-end mx-4 my-5">
-					<button className="add-delivery rounded-2 px-5 py-2 fs-5">
-						Add Delivery
-					</button>
-				</div>
-				{/* DASHBOARD CONTENT  */}
-				<div className="dashboard-content text-center mt-5 fs-4 border p-5">
-					<p>Assigned Deliveries Here</p>
-				</div>
-			</main>
-		</div>
-	);
-};
+  const [outForDelivery, setOutForDelivery] = useState(() => {
+    const saved = localStorage.getItem("outForDelivery");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const markAsOutForDelivery = (transactionNo) => {
+    const delivery = assignedDeliveries.find(
+      (d) => d.transactionNo === transactionNo
+    );
+    const updatedAssigned = assignedDeliveries.filter(
+      (d) => d.transactionNo !== transactionNo
+    );
+    const updatedOut = [...outForDelivery, delivery];
+
+    setAssignedDeliveries(updatedAssigned);
+    setOutForDelivery(updatedOut);
+
+    localStorage.setItem("assignedDeliveries", JSON.stringify(updatedAssigned));
+    localStorage.setItem("outForDelivery", JSON.stringify(updatedOut));
+  };
+
+  return (
+    <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
+      <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
+      <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
+
+      {/* ASSIGNED DELIVERIES*/}
+      <Container className="py-4">
+        <br />
+        <h2 className="text-center text-success fw-bold mb-3">
+          ASSIGNED DELIVERIES
+        </h2>
+        <br />
+        {assignedDeliveries.map((delivery, idx) => (
+          <Card
+            key={idx}
+            className="mb-4 p-3 border border-info rounded"
+            style={{ backgroundColor: "#eaf7f7" }}
+          >
+            <h5 className="text-center fw-bold text-dark mb-3">
+              TRANSACTION NO. {delivery.transactionNo}
+            </h5>
+            <div className="border p-3 rounded bg-white">
+              <div className="d-flex justify-content-between mb-1">
+                <strong>Customer Name:</strong>
+                <span>{delivery.customerName}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-1">
+                <strong>Address:</strong>
+                <span>{delivery.address}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-1">
+                <strong>Contact:</strong>
+                <span>{delivery.contact}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-1">
+                <strong>Payment:</strong>
+                <span>{delivery.paymentMode}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-1">
+                <strong>Items:</strong>
+                <div>
+                  {delivery.items.map((item, i) => (
+                    <div key={i}>
+                      {item.name} <strong>x{item.qty}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="d-flex justify-content-between mb-1">
+                <strong>Unit Cost:</strong>
+                <span>{delivery.unitCost}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-3">
+                <strong>Total Cost:</strong>
+                <span>{delivery.totalCost}</span>
+              </div>
+            </div>
+            <div className="d-flex justify-content-center gap-2 mt-3">
+              <Button
+                size="sm"
+                style={{
+                  backgroundColor: "#198754",
+                  borderColor: "#198754",
+                  borderRadius: "10px",
+                }}
+                onClick={() => markAsOutForDelivery(delivery.transactionNo)}
+              >
+                Out for Delivery
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </Container>
+    </div>
+  );
+}
 
 export default DriverDashboard;

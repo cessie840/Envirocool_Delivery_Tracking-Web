@@ -418,6 +418,20 @@ input::placeholder {
   color: red;
 }
 
+.custom-nav-item {
+  font-size: 1rem;
+  color: #116b8a;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.custom-nav-item:hover {
+  background-color: #e6f4f9;
+  color: #0d4f65;
+}
+
+
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {
