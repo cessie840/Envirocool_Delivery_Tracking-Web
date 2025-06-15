@@ -56,7 +56,7 @@ function App() {
         <Route
           path="/DriverDashboard"
           element={
-            <ProtectedRoute role="driver">
+            <ProtectedRoute role="deliverypersonnel">
               <DriverModule />
             </ProtectedRoute>
           }
