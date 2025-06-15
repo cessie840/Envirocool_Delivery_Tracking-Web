@@ -240,4 +240,4 @@ const CreatePersonnelAccount = () => {
   );
 };
 
-export default AddDelivery;
+export default CreatePersonnelAccount;
