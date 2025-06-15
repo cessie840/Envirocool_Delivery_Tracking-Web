@@ -1,7 +1,7 @@
 import logo from "./assets/envirocool-logo.png";
-import { useNavigate, useEffect } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FaClipboardList,
   FaCog,
@@ -36,7 +36,29 @@ const CreatePersonnelAccount = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "birthdate") {
+      const birthDate = new Date(value);
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      // Adjust age if birthday hasn't occurred yet this year
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        calculatedAge--;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        birthdate: value,
+        age: calculatedAge.toString(),
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -75,9 +97,7 @@ const CreatePersonnelAccount = () => {
 
       switch (data.status) {
         case "success":
-          alert(
-            `Account created successfully!\nUsername: ${data.username}\nProfile Pic: ${data.profile_picture}`
-          );
+          alert(`Delivery Personnel Account created successfully!`);
           navigate("/operational-delivery-details");
           break;
         case "email_exists":
@@ -254,7 +274,6 @@ const CreatePersonnelAccount = () => {
                         name="age"
                         value={formData.age}
                         onChange={handleChange}
-                        required
                       />
                     </Form.Group>
                   </Col>
