@@ -30,6 +30,13 @@ $tablesToCheck = [
         "expire_col" => "reset_expire",
         "attempt_col" => "attempts",
         "lock_col" => "lock_until"
+    ],
+    "DeliveryPersonnel" => [
+        "email_col" => "pers_email",
+        "token_col" => "pers_resetToken",
+        "expire_col" => "reset_expire",
+        "attempt_col" => "attempts",
+        "lock_col" => "lock_until"
     ]
 ];
 
@@ -53,14 +60,15 @@ foreach ($tablesToCheck as $table => $cols) {
         $lockUntil = $row[$cols['lock_col']];
 
         // Check if locked
-      if ($lockUntil && strtotime($lockUntil) > time()) {
-    echo json_encode([
-        "status" => "locked",
-        "message" => "Too many failed attempts. Try again after " . date("g:i A", strtotime($lockUntil))
-    ]);
-    $conn->close();
-    exit;
-}
+        if ($lockUntil && strtotime($lockUntil) > time()) {
+            echo json_encode([
+                "status" => "locked",
+                "message" => "Too many failed attempts. Try again after " . date("g:i A", strtotime($lockUntil))
+            ]);
+            $conn->close();
+            exit;
+        }
+
         if ($code === $dbToken) {
             // Valid code
             $clear = $conn->prepare("UPDATE $table SET {$cols['attempt_col']} = 0, {$cols['lock_col']} = NULL WHERE {$cols['email_col']} = ?");

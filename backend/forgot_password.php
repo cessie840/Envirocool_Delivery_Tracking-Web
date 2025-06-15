@@ -28,7 +28,7 @@ $table = "";
 $tablesToCheck = [
     "Admin" => ["username_col" => "ad_username", "email_col" => "ad_email"],
     "OperationalManager" => ["username_col" => "manager_username", "email_col" => "manager_email"],
-    // "DeliveryPersonnel" => ["username_col" => "pers_username", "email_col" => "pers_email"]
+    "DeliveryPersonnel" => ["username_col" => "pers_username", "email_col" => "pers_email"]
 ];
 
 foreach ($tablesToCheck as $tableName => $cols) {
@@ -89,9 +89,10 @@ switch ($table) {
     case "OperationalManager":
         $updateStmt = $conn->prepare("UPDATE OperationalManager SET   manager_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE manager_email = ?");
         break;
-    // case "DeliveryPersonnel":
-    //     $updateStmt = $conn->prepare("UPDATE DeliveryPersonnel SET dp_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE pers_email = ?");
-    //     break;
+   case "DeliveryPersonnel":
+    $updateStmt = $conn->prepare("UPDATE DeliveryPersonnel SET pers_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE pers_email = ?");
+    break;
+
 }
 
 $updateStmt->bind_param("ssss", $token, $reset_expire, $reset_requested_at, $emailInput);

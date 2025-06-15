@@ -20,7 +20,8 @@ $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 // Include correct email and password column names per table
 $tablesToCheck = [
     "Admin" => ["email" => "ad_email", "password" => "ad_password"],
-    "OperationalManager" => ["email" => "manager_email", "password" => "manager_password"]
+    "OperationalManager" => ["email" => "manager_email", "password" => "manager_password"],
+    "DeliveryPersonnel" => ["email" => "pers_email", "password" => "pers_password"]
 ];
 
 $updated = false;
