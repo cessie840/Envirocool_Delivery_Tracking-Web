@@ -54,68 +54,62 @@ const CreatePersonnelAccount = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 1. Check for empty fields
     for (let key in formData) {
       if (formData[key].trim() === "") {
-        setErrorMessage("All fields must be filled out.");
+        setErrorMessage(
+          `Please fill in your ${key.replace(/([A-Z])/g, " $1").toLowerCase()}.`
+        );
         return;
       }
     }
 
+    // 2. Contact Number Validation
     if (!/^09\d{9}$/.test(formData.contactNumber)) {
-      setErrorMessage("Contact must start with 09 and have 11 digits.");
+      setErrorMessage(
+        "Contact number must start with '09' and be exactly 11 digits."
+      );
       return;
     }
 
+    // 3. Email Validation
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setErrorMessage("Invalid email format.");
+      setErrorMessage(
+        "Please enter a valid email address (e.g., example@email.com)."
+      );
       return;
     }
 
+    // 4. Age Check
     if (parseInt(formData.age) < 18) {
-      setErrorMessage("Age must be at least 18.");
+      setErrorMessage("You must be at least 18 years old to register.");
       return;
     }
 
     try {
-      const res = await axios.post(
+      const response = await axios.post(
         "http://localhost/DeliveryTrackingSystem/create_delivery_personnel.php",
-        formData,
-        { headers: { "Content-Type": "application/json" } }
+        formData
       );
 
-      const data = res.data;
-      console.log("Response from PHP:", data);
+      console.log(response.data); // for debugging
 
-      switch (data.status) {
-        case "success":
-          alert("Delivery Personnel Account created successfully!");
-          navigate("/operational-delivery-details");
-          break;
-        case "email_exists":
-          setErrorMessage("Email is already registered.");
-          break;
-        case "invalid_email":
-          setErrorMessage("Invalid email format.");
-          break;
-        case "invalid_contact":
-          setErrorMessage("Invalid contact number format.");
-          break;
-        case "age_restriction":
-          setErrorMessage("Age must be 18 or above.");
-          break;
-        case "db_error":
-          setErrorMessage("Database error. Please try again.");
-          break;
-        default:
-          setErrorMessage(data.message || "Unknown error occurred.");
-          break;
+      if (response.data.status === "success") {
+        alert(`Account created!`);
+        navigate("/personnel-accounts");
+      } else {
+        // Use backend message or fallback
+        setErrorMessage(
+          response.data.message || "Registration failed due to a server error."
+        );
       }
-    } catch (err) {
-      console.error("Server error:", err);
-      setErrorMessage("Server connection failed.");
+    } catch (error) {
+      setErrorMessage(
+        "Unable to connect to the server. Please try again later."
+      );
+      console.error(error);
     }
   };
-
   return (
     <OperationalLayout title="Create Delivery Personnel Account">
       <div className="add-delivery-form-container mt-5 mx-auto">
@@ -137,6 +131,7 @@ const CreatePersonnelAccount = () => {
                   placeholder="First Name"
                 />
               </div>
+
               <div className="form-group">
                 <label htmlFor="lastName">
                   Last Name <span className="required">*</span>
@@ -150,18 +145,21 @@ const CreatePersonnelAccount = () => {
                   placeholder="Last Name"
                 />
               </div>
+
               <div className="form-group">
                 <label htmlFor="gender">
-                  Gender <span className="required">*</span>
+                  Sex <span className="required">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   id="gender"
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  placeholder="Gender"
-                />
+                >
+                  <option value="">Select Sex</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
               </div>
             </div>
 
@@ -227,13 +225,12 @@ const CreatePersonnelAccount = () => {
                 {errorMessage}
               </div>
             )}
-
-            <div className="d-flex justify-content-end mt-4">
-              <button type="submit" className="btn btn-view">
-                Proceed
-              </button>
-            </div>
           </form>
+        </div>
+        <div className="d-flex justify-content-end mt-4">
+          <button type="submit" className="btn btn-view" onClick={handleSubmit}>
+            Register
+          </button>
         </div>
       </div>
     </OperationalLayout>
