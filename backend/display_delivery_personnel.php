@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $conn->real_escape_string($data->username);
 
     // Soft delete by updating the status
-    $updateSql = "UPDATE DeliveryPersonnel SET status = 'deleted' WHERE pers_username = '$username'";
+    $updateSql = "UPDATE DeliveryPersonnel SET status = 'inactive' WHERE pers_username = '$username'";
     if ($conn->query($updateSql) === TRUE) {
         echo json_encode(["status" => "success", "message" => "Personnel hidden (soft deleted)."]);
     } else {
