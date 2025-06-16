@@ -48,7 +48,7 @@ $sql = "SELECT
             pers_email,
             pers_birth AS pers_password
         FROM DeliveryPersonnel
-        WHERE status = 'active'";
+        WHERE status = 'vailable'";
 
 $result = $conn->query($sql);
 
