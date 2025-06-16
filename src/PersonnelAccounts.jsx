@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import OperationalLayout from "./OperationalLayout";
 import { useNavigate } from "react-router-dom";
-import {  FaUserPlus } from "react-icons/fa";
+import { FaUserPlus, FaEye, FaEyeSlash } from "react-icons/fa";
 
 const PersonnelAccounts = () => {
   const navigate = useNavigate();
   const [personnel, setPersonnel] = useState([]);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
@@ -34,16 +35,24 @@ const PersonnelAccounts = () => {
     }
   };
 
+  const togglePasswordVisibility = (id) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   return (
     <OperationalLayout title="Delivery Personnel Accounts">
-     <div className="d-flex justify-content-end mx-4 my-5">
-  <button
-    className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
-    onClick={() => navigate("/create-personnel-account")}
-  >
-    <FaUserPlus /> Create Account
-  </button>
-</div>
+      <div className="d-flex justify-content-end mx-4 my-5">
+        <button
+          className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
+          onClick={() => navigate("/create-personnel-account")}
+        >
+          <FaUserPlus /> Create Account
+        </button>
+      </div>
+
       <div className="delivery-table table-responsive">
         <table className="table table-bordered text-center">
           <thead>
@@ -64,15 +73,31 @@ const PersonnelAccounts = () => {
                   </td>
                   <td>{person.pers_email}</td>
                   <td>{person.pers_username}</td>
-                  <td>{person.pers_password}</td>
-                  <td>
-                    <button id="personnel-view"
-                      className="btn btn-view btn-success me-2"
-                      onClick={() => handleEdit(person.id)}
+                  <td className="position-relative">
+                    <div className="text-center">
+                      <span
+                        className={
+                          visiblePasswords[person.id] ? "" : "password-dots"
+                        }
+                      >
+                        {visiblePasswords[person.id]
+                          ? person.pers_password
+                          : "•••••••••"}
+                      </span>
+                    </div>
+                    <span
+                      role="button"
+                      onClick={() => togglePasswordVisibility(person.id)}
+                      className="toggle-eye-icon"
                     >
-                      Edit
-                    </button>
-                    <button id="personnel-cancel"
+                      {visiblePasswords[person.id] ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </td>
+
+                  <td>
+                    
+                    <button
+                      id="personnel-cancel"
                       className="btn cancel-btn btn-danger"
                       onClick={() => handleDelete(person.id)}
                     >
