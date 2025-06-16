@@ -1,8 +1,19 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json");
-header("Access-Control-Allow-Methods: POST, GET");
+// Handle CORS preflight request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header("Access-Control-Allow-Origin: http://localhost:5173");
+    header("Access-Control-Allow-Headers: Content-Type");
+    header("Access-Control-Allow-Methods: POST, OPTIONS");
+    header("Access-Control-Max-Age: 86400");
+    http_response_code(200);
+    exit();
+}
+
+// Main POST headers
+header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json");
+
 
 include 'database.php';
 
@@ -17,22 +28,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $username = $conn->real_escape_string($data->username);
 
-    $deleteSql = "DELETE FROM DeliveryPersonnel WHERE pers_username = '$username'";
-    if ($conn->query($deleteSql) === TRUE) {
-        echo json_encode(["status" => "success", "message" => "Personnel deleted."]);
+    // Soft delete by updating the status
+    $updateSql = "UPDATE DeliveryPersonnel SET status = 'deleted' WHERE pers_username = '$username'";
+    if ($conn->query($updateSql) === TRUE) {
+        echo json_encode(["status" => "success", "message" => "Personnel hidden (soft deleted)."]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Failed to delete personnel."]);
+        echo json_encode(["status" => "error", "message" => "Failed to hide personnel."]);
     }
 
     exit; 
 }
 
+// DISPLAY ACCOUNTS
+
 $sql = "SELECT 
             pers_fname,
             pers_lname,
             pers_username,
-            pers_birth,
-            pers_email
+            pers_email,
+            pers_birth AS pers_password
         FROM DeliveryPersonnel
         WHERE status = 'active'";
 
