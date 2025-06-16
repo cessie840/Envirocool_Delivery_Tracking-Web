@@ -1,38 +1,25 @@
 import React, { useEffect, useState } from "react";
 import OperationalLayout from "./OperationalLayout";
 import { useNavigate } from "react-router-dom";
-import { FaUserPlus } from "react-icons/fa";
 import axios from "axios";
+import { FaUserPlus, FaEye, FaEyeSlash } from "react-icons/fa";
 
 const PersonnelAccounts = () => {
   const navigate = useNavigate();
   const [personnel, setPersonnel] = useState([]);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
 
     axios
-      .get(
-        "http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php"
-      )
+      .get("http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php")
       .then((response) => {
         setPersonnel(response.data);
       })
       .catch((error) => {
         console.error("Error fetching personnel:", error);
       });
-    // const sampleData = [
-    //   {
-    //     id: 1,
-    //     pers_fname: "Kuro",
-    //     pers_lname: "The Cat",
-    //     pers_username: "kurothecat",
-    //     pers_password: "ilovecatfood",
-    //     pers_email: "kuro.thecat@example.com",
-    //   },
-    // ];
-
-    // setPersonnel(sampleData);
   }, []);
 
   const handleEdit = (id) => {
@@ -45,6 +32,13 @@ const PersonnelAccounts = () => {
     }
   };
 
+  const togglePasswordVisibility = (id) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   return (
     <OperationalLayout title="Delivery Personnel Accounts">
       <div className="d-flex justify-content-end mx-4 my-5">
@@ -55,6 +49,7 @@ const PersonnelAccounts = () => {
           <FaUserPlus /> Create Account
         </button>
       </div>
+
       <div className="delivery-table table-responsive">
         <table className="table table-bordered text-center">
           <thead>
@@ -70,12 +65,25 @@ const PersonnelAccounts = () => {
             {personnel.length > 0 ? (
               personnel.map((person) => (
                 <tr key={person.id}>
-                  <td>
-                    {person.pers_fname} {person.pers_lname}
-                  </td>
+                  <td>{person.pers_fname} {person.pers_lname}</td>
                   <td>{person.pers_email}</td>
                   <td>{person.pers_username}</td>
-                  <td>{person.pers_birth}</td>
+                  <td className="position-relative">
+                    <div className="text-center">
+                      <span className={visiblePasswords[person.id] ? "" : "password-dots"}>
+                        {visiblePasswords[person.id]
+                          ? person.pers_password
+                          : "•••••••••"}
+                      </span>
+                    </div>
+                    <span
+                      role="button"
+                      onClick={() => togglePasswordVisibility(person.id)}
+                      className="toggle-eye-icon"
+                    >
+                      {visiblePasswords[person.id] ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </td>
                   <td>
                     <button
                       id="personnel-view"

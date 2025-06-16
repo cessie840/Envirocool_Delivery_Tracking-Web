@@ -332,11 +332,26 @@ input::placeholder {
   border: 1px solid #acacac;
   font-size: 0.9rem;
   background-color: white;
+  vertical-align: middle;
  }
 
  .delivery-table button{
   color: white;
  }
+
+ .password-dots {
+  font-size: 1.1rem;        /* larger dot size */
+  letter-spacing: 2px;
+}
+
+.toggle-eye-icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #000;
+}
 
  .back:hover{
   color: #d12525;
