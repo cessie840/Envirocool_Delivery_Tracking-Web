@@ -1,9 +1,9 @@
 <?php
 $host = 'localhost';
 $user = 'root';
-$password = 'kurothecat';
+$password = '091203';
 $database = 'DeliveryTrackingSystem';
-// $port = 3307;
+
 
 $conn = new mysqli($host, $user, $password, $database);
 
