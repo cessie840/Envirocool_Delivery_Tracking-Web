@@ -5,121 +5,145 @@ The purpose of this repository is to manage the version history for the developm
 CREATE DATABASE DeliveryTrackingSystem;
 USE DeliveryTrackingSystem;
 
-CREATE TABLE Admin(
-   ad_username VARCHAR(100) PRIMARY KEY, 
-   ad_password VARCHAR(100),
-   ad_fname VARCHAR(100),
-   ad_lname VARCHAR(100),
-   ad_email VARCHAR(100),
-   ad_phone VARCHAR(15)
+CREATE TABLE Admin (
+    ad_username VARCHAR(100) PRIMARY KEY,
+    ad_password VARCHAR(100),
+    ad_fname VARCHAR(100),
+    ad_lname VARCHAR(100),
+    ad_email VARCHAR(100),
+    ad_phone VARCHAR(15),
+    ad_resetToken VARCHAR(100),
+    reset_expire DATETIME,
+    reset_requested_at DATETIME,
+    attempts INT DEFAULT 0,
+    lock_until DATETIME DEFAULT NULL
 );
 
-CREATE TABLE OperationalManager(
-  manager_username VARCHAR(100) PRIMARY KEY,
-  manager_password VARCHAR(100),
-  manager_fname VARCHAR(100),
-  manager_lname VARCHAR(100),
-  manager_email VARCHAR(100),
-  manager_phone VARCHAR(15),
-  manager_resetToken VARCHAR(100),
-  reset_expire DATETIME,
-  reset_requested_at DATETIME
+CREATE TABLE OperationalManager (
+    manager_username VARCHAR(100) PRIMARY KEY,
+    manager_password VARCHAR(100),
+    manager_fname VARCHAR(100),
+    manager_lname VARCHAR(100),
+    manager_email VARCHAR(100),
+    manager_phone VARCHAR(15),
+    manager_resetToken VARCHAR(100),
+    reset_expire DATETIME,
+    reset_requested_at DATETIME,
+    attempts INT DEFAULT 0,
+    lock_until DATETIME DEFAULT NULL
 );
 
-CREATE TABLE DeliveryPersonnel(
-pers_id INT PRIMARY KEY,
-pers_username VARCHAR(100),
-pers_password VARCHAR(100),
-pers_fname VARCHAR(100),
-pers_lname VARCHAR(100),
-pers_age INT,
-pers_gender VARCHAR(100),
-pers_birth DATE,
-pers_phone VARCHAR(11),
-status VARCHAR(100),
-pres_resetToken VARCHAR(100),
-reset_expire DATETIME,
-reset_requested_at DATETIME
--- pers_truck INT,
--- assigned_by VARCHAR(100),
--- FOREIGN KEY (pers_truck) REFERENCES Truck(truck_id),
--- FOREIGN KEY (assigned_by) REFERENCES OperationalManager(manager_username)
+CREATE TABLE DeliveryPersonnel (
+    pers_username VARCHAR(100) PRIMARY KEY,
+    pers_password VARCHAR(100),
+    pers_fname VARCHAR(100),
+    pers_lname VARCHAR(100),
+    pers_age INT,
+    pers_gender VARCHAR(100),
+    pers_birth DATE,
+    pers_phone VARCHAR(11),
+    status ENUM('Active','Inactive') DEFAULT 'Active',
+    assignment_status ENUM('Available', 'Assigned') DEFAULT 'Available',
+    assigned_transaction_id INT DEFAULT NULL,
+    pers_resetToken VARCHAR(100),
+    reset_expire DATETIME,
+    reset_requested_at DATETIME,
+    pers_profile_pic VARCHAR(255) DEFAULT 'default-profile-pic.png',
+    pers_email VARCHAR(255),
+    attempts INT DEFAULT 0,
+    lock_until DATETIME DEFAULT NULL
 );
 
+CREATE TABLE Transactions (
+  transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_name VARCHAR(255),
+  customer_address TEXT,
+  customer_contact VARCHAR(20),
+  date_of_order DATE,
+  mode_of_payment ENUM('Cash', 'COD', 'Card'),
+  down_payment DECIMAL(10,2),
+  balance DECIMAL(10,2),
+  total DECIMAL(10,2),
+  status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) AUTO_INCREMENT = 100001;
 
-INSERT INTO Admin(ad_username,ad_password,ad_fname,ad_lname,ad_email,ad_phone) 
-VALUES('admin101','$2y$10$tGmA6pV6iB9qdkF3g4ZpBeLzHhMSqHzJRMZHx5NnLqlPYCHp/U2vC','Liezel','Paciente','pacienteliezel04@gmail.com','09486201591');
--- "password": "admin111219#"
+CREATE TABLE PurchaseOrder(
+  po_id INT PRIMARY KEY AUTO_INCREMENT,
+  transaction_id INT,
+  quantity INT,
+  description TEXT,
+  unit_cost DECIMAL(10,2),
+  total_cost DECIMAL(10,2),
+  FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
+) AUTO_INCREMENT = 500001;
+
+CREATE TABLE DeliveryAssignments (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id INT,
+    personnel_username VARCHAR(100),
+    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
+    FOREIGN KEY (personnel_username) REFERENCES DeliveryPersonnel(pers_username) ON DELETE SET NULL
+);
+
+INSERT INTO Admin (
+    ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone,
+    ad_resetToken, reset_expire, reset_requested_at,
+    attempts, lock_until
+) VALUES (
+    'admin101',
+    '$2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W',
+    'Liezel',
+    'Paciente',
+    'contactenvirocool@gmail.com',
+    '09486201591',
+    NULL, NULL, NULL,
+    0, NULL
+);
+ -- password: admin111219#
 
 INSERT INTO OperationalManager (
-  manager_username,
-  manager_password,
-  manager_fname,
-  manager_lname,
-  manager_email,
-  manager_phone
+    manager_username, manager_password, manager_fname, manager_lname,
+    manager_email, manager_phone,
+    manager_resetToken, reset_expire, reset_requested_at,
+    attempts, lock_until
 ) VALUES (
-  'opsmanager101',
-  '$2y$10$5jUwHh1mU7eNwZ9gIuF2oeCQi1X3Ej1eUXIppqzWfGL2Egxmh7zAy', -- hashed password
-  'Carlos',
-  'Reyes',
-  'carlos.reyes@gmail.com',
-  '09171234567'
+    'opsmanager101',
+    '$2y$10$GP4KbAkZKmnppOx5Z9Fuq.bRyZ84iB1YHrCAXnwnfosam1TaM9ffO',
+    'Carlos',
+    'Reyes',
+    'pacienteliezel04@gmail.com',
+    '09171234567',
+    NULL, NULL, NULL,
+    0, NULL
 );
 
+INSERT INTO Transactions (customer_name, customer_address, customer_contact, date_of_order, mode_of_payment, down_payment, balance, total)
+VALUES 
+('John Doe', '123 Main St, Cityville', '09123456789', '2025-06-16', 'Cash', 500.00, 1500.00, 2000.00),
+('Jane Smith', '456 Oak St, Townsville', '09234567890', '2025-06-17', 'Card', 1000.00, 2500.00, 3500.00),
+('Alice Brown', '789 Pine St, Villagetown', '09345678901', '2025-06-18', 'COD', 750.00, 1250.00, 2000.00);
 
+INSERT INTO PurchaseOrder (transaction_id, quantity, description, unit_cost)
+VALUES
+(100001, 7, 'USB-C Docking Station - Anker PowerExpand', 69.99),
 
-UPDATE Admin
-SET ad_password = '$2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W'
-WHERE ad_username = 'admin101';
+(100002, 3, 'Wireless Mouse - Logitech MX Master 3', 99.99),
+(100002, 2, 'Bluetooth Headphones - Sony WH-1000XM4', 299.99),
+(100002, 4, 'External SSD - Samsung T7 1TB', 120.00),
 
-UPDATE Admin
-SET ad_email = 'contactenvirocool@gmail.com'
-WHERE ad_username = 'admin101';
+(100003, 5, 'Laptop - Dell XPS 15', 1200.50),
+(100003, 6, 'Mechanical Keyboard - Keychron K6', 85.75),
+(100003, 2, 'Ergonomic Office Chair - Herman Miller Aeron', 999.00);
 
-UPDATE DeliveryPersonnel
-SET pers_email = 'killerxtreme12@gmail.com'
-WHERE pers_username = 'deliverypers005';
-
-UPDATE OperationalManager
-SET manager_email = 'pacienteliezel04@gmail.com'
-WHERE manager_username = 'opsmanager101';
-
-UPDATE OperationalManager
-SET manager_password = '$2y$10$GP4KbAkZKmnppOx5Z9Fuq.bRyZ84iB1YHrCAXnwnfosam1TaM9ffO'
-WHERE manager_username = 'opsmanager101';
-
-ALTER TABLE DeliveryPersonnel
-CHANGE COLUMN pres_resetToken pers_resetToken VARCHAR(100);
-
-
-ALTER TABLE Admin 
-ADD COLUMN ad_resetToken VARCHAR(100),
-ADD COLUMN reset_expire DATETIME,
-ADD COLUMN reset_requested_at DATETIME;
-
-
-
-ALTER TABLE Admin ADD COLUMN attempts INT DEFAULT 0;
-ALTER TABLE OperationalManager ADD COLUMN attempts INT DEFAULT 0;
-ALTER TABLE DeliveryPersonnel ADD COLUMN attempts INT DEFAULT 0;
-
-ALTER TABLE Admin ADD COLUMN lock_until DATETIME DEFAULT NULL;
-ALTER TABLE OperationalManager ADD COLUMN lock_until DATETIME DEFAULT NULL;
-ALTER TABLE DeliveryPersonnel ADD COLUMN lock_until DATETIME DEFAULT NULL;
-ALTER TABLE DeliveryPersonnel DROP COLUMN pers_id;
-
-ALTER TABLE DeliveryPersonnel 
-ADD COLUMN pers_profile_pic VARCHAR(255) DEFAULT 'default-profile-pic.png';
-
-ALTER TABLE DeliveryPersonnel 
-ADD COLUMN pers_email VARCHAR(255);
 
 SELECT * FROM Admin;
 SELECT * FROM OperationalManager;
 SELECT * FROM DeliveryPersonnel;
-
-
+SELECT * FROM Transactions;
+SELECT * FROM PurchaseOrder;
+SELECT * FROM DeliveryAssignments;
 
 
 Admin Credentials:
@@ -133,7 +157,5 @@ Password: Manager1111219#
 
 HASH PASSWORDS:
 ADMIN: $2y$10$4Hgbzve5mXF7M83xQeF1YeaBMhY9VzjeVJQCX5WPORAjMBEtZdrhK
-
 OPS: $2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W
-
 Delivery Personnel: Based on their birthdays like (2002-04-29) 
