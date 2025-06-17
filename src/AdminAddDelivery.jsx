@@ -71,7 +71,6 @@ const AddDelivery = () => {
 
     setForm(updatedForm);
   };
-  
 
   const handleItemChange = (e) => {
     const { name, value } = e.target;
@@ -104,10 +103,26 @@ const AddDelivery = () => {
       total: updatedItem.total_cost,
     }));
   };
-  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!/^09\d{9}$/.test(form.customer_contact)) {
+      alert("Contact number must start with '09' and be exactly 11 digits.");
+      return;
+    }
+
+    const quantity = parseInt(orderItem.quantity);
+    if (isNaN(quantity) || quantity < 1) {
+      alert("Quantity must be a number and at least 1.");
+      return;
+    }
+
+    const unitCost = parseFloat(orderItem.unit_cost);
+    if (isNaN(unitCost) || unitCost < 0) {
+      alert("Unit cost must be a non-negative number.");
+      return;
+    }
 
     const dataToSend = {
       ...form,
@@ -123,7 +138,6 @@ const AddDelivery = () => {
 
       alert("Delivery added successfully!");
 
-      // ✅ Reset form and fetch new IDs
       setForm({
         customer_name: "",
         customer_address: "",
@@ -274,6 +288,7 @@ const AddDelivery = () => {
                     <input
                       type="number"
                       name="quantity"
+                      min="1" //
                       placeholder="0"
                       value={orderItem.quantity}
                       onChange={handleItemChange}

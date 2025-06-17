@@ -48,7 +48,8 @@ function App() {
         <Route path="/forgotpassword" element={<ForgotPass />} />
         <Route path="/add-delivery" element={<AddDelivery />} />
         <Route path="/delivery-details" element={<DeliveryDetails />} />
-        <Route path="/view-delivery" element={<ViewDelivery />} />
+        <Route path="/view-delivery/:transaction_id" element={<ViewDelivery />} />
+
         <Route path="/monitor-delivery" element={<MonitorDelivery />} />
         <Route path="/generate-report" element={<GenerateReport />} />
         <Route path="/settings" element={<Settings />} />

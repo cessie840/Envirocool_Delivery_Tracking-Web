@@ -6,7 +6,7 @@ include 'database.php';
 
 $response = [];
 
-// Get the latest transaction_id
+
 $transactionQuery = "SELECT MAX(transaction_id) AS latest_transaction_id FROM Transactions";
 $transactionResult = mysqli_query($conn, $transactionQuery);
 
@@ -17,7 +17,7 @@ if ($transactionRow = mysqli_fetch_assoc($transactionResult)) {
     $response['transaction_id'] = 100001;
 }
 
-// Get the latest po_id
+
 $poQuery = "SELECT MAX(po_id) AS latest_po_id FROM PurchaseOrder";
 $poResult = mysqli_query($conn, $poQuery);
 
