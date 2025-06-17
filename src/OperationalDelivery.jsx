@@ -14,37 +14,51 @@ const OperationalDelivery = () => {
   useEffect(() => {
     document.title = "Operational Delivery";
     fetchOrders();
-    fetchPersonnel();
   }, []);
 
+  useEffect(() => {
+    if (showModal) {
+      fetchPersonnel();
+    }
+  }, [showModal]);
+
   const fetchOrders = async () => {
-  try {
-    const res = await axios.get("http://localhost/DeliveryTrackingSystem/fetch_delivery_orders.php");
-    console.log("Fetched Orders:", res.data);
-    setOrders(Array.isArray(res.data) ? res.data : []); // fallback if not array
-  } catch (error) {
-    console.error("Failed to fetch orders:", error);
-    setOrders([]); // ensure fallback on error
-  }
-};
+    try {
+      const res = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_orders.php"
+      );
 
-const fetchPersonnel = async () => {
-  try {
-    const res = await axios.get(
-      "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
-    );
-    console.log("Personnel fetched:", res.data); 
-    setPersonnelList(res.data);
-  } catch (error) {
-    console.error("Failed to fetch personnel:", error);
-  }
-};
+      console.log("Fetched Orders:", res.data);
+      setOrders(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Failed to fetch orders:", error);
+      setOrders([]); 
+    }
+  };
 
+  const fetchPersonnel = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
+      );
+
+      console.log("✅ Personnel fetched:", res.data); 
+      setPersonnelList(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("❌ Failed to fetch personnel:", error);
+      setPersonnelList([]); 
+    }
+  };
+
+  const handleOpenAssignModal = () => {
+    setSelectedPersonnel(""); 
+    setShowModal(true);
+  };
 
   const handleAssignPersonnel = async () => {
     try {
-      await axios.post(
-        "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
+      await axios.get(
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php",
         {
           orderId: selectedOrder.transaction_no,
           personnelUsername: selectedPersonnel,
@@ -53,7 +67,7 @@ const fetchPersonnel = async () => {
       alert("Personnel assigned!");
       setShowModal(false);
       setShowDetailModal(false);
-      fetchOrders(); // refresh orders list
+      fetchOrders();
     } catch (error) {
       console.error("Assignment failed:", error);
       alert("Assignment failed.");
@@ -78,7 +92,7 @@ const fetchPersonnel = async () => {
               <div key={index} className="col-md-6">
                 <div className="compact-card card shadow-sm rounded-2 p-3 m-2">
                   <h5 className="fw-bold text-success">
-                    Transaction #{order.transaction_no}
+                    Transaction No. {order.transaction_no}
                   </h5>
                   <p className="mb-2">
                     <strong>Customer:</strong> {order.customer_name}
@@ -163,7 +177,7 @@ const fetchPersonnel = async () => {
               <Button
                 variant="success"
                 className="btn-view"
-                onClick={() => setShowModal(true)}
+                onClick={handleOpenAssignModal}
               >
                 Assign Delivery Personnel
               </Button>
@@ -187,17 +201,18 @@ const fetchPersonnel = async () => {
             <Form.Select
               value={selectedPersonnel}
               onChange={(e) => setSelectedPersonnel(e.target.value)}
+              disabled={personnelList.length === 0}
             >
-              <option value="">Select personnel...</option>
-              {personnelList.length === 0 ? (
-                <option disabled>No available personnel</option>
-              ) : (
-                personnelList.map((p, i) => (
-                  <option key={i} value={p.pers_username}>
-                    {p.pers_fname} {p.pers_lname}
-                  </option>
-                ))
-              )}
+              <option value="">
+                {personnelList.length === 0
+                  ? "No available personnel"
+                  : "Select personnel..."}
+              </option>
+              {personnelList.map((p, i) => (
+                <option key={i} value={p.pers_username}>
+                  {p.pers_fname} {p.pers_lname}
+                </option>
+              ))}
             </Form.Select>
           </Form.Group>
         </Modal.Body>
