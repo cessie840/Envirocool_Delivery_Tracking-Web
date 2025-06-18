@@ -1,0 +1,57 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+
+*{
+  font-family: "outfit", sans-serif;
+}
+
+.settings-container {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid #3ba3cf;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.settings-tabs button {
+  padding: 10px 20px;
+  background-color: #b7d8e6;
+  color: #05445e;
+  border: 1px solid #67a2bb;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.settings-tabs button.active,
+.settings-tabs button:hover {
+  background-color: #189ab4;
+  color: #fff;
+}
+
+.title{
+    color: #06597c;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+p{
+    font-size: 1.1rem;
+}
+
+strong{
+    color: #0f5e05;
+}
+
+.form-control{
+    background-color: #e7f4fa;
+}
+
+

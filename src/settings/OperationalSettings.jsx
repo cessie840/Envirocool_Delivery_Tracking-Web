@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import OperationalLayout from "./OperationalLayout";
+import OperationalLayout from "../OperationalLayout";
 
 const Settings = () => {
   const navigate = useNavigate();
