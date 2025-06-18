@@ -97,8 +97,9 @@ const CreatePersonnelAccount = () => {
       if (response.data.status === "success") {
         alert(`Account created!`);
         navigate("/personnel-accounts");
+      } else if (response.data.status === "existing_account") {
+        setErrorMessage(response.data.message); // shows the message from PHP
       } else {
-        // Use backend message or fallback
         setErrorMessage(
           response.data.message || "Registration failed due to a server error."
         );

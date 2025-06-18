@@ -64,13 +64,16 @@ if ($age < 18) {
     exit();
 }
 
-// Check if email already exists
-$stmt = $conn->prepare("SELECT * FROM DeliveryPersonnel WHERE pers_email = ?");
-$stmt->bind_param("s", $email);
+// Check if account already exists by email AND first + last name
+$stmt = $conn->prepare("SELECT * FROM DeliveryPersonnel WHERE pers_email = ? OR (pers_fname = ? AND pers_lname = ?)");
+$stmt->bind_param("sss", $email, $fname, $lname);
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result->num_rows > 0) {
-echo json_encode(["status" => "email_exists", "message" => "This email is already in use."]);
+    echo json_encode([
+        "status" => "existing_account",
+        "message" => "An account with the same email or full name already exists."
+    ]);
     $stmt->close();
     exit();
 }
