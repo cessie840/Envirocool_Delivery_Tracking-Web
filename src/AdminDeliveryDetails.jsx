@@ -31,7 +31,7 @@ const DeliveryDetails = () => {
         .then((response) => {
           if (response.status === "success") {
             alert("Transaction deleted successfully");
-            fetchDeliveries(); //
+            fetchDeliveries();
           } else {
             alert("Failed to delete");
           }
@@ -44,9 +44,27 @@ const DeliveryDetails = () => {
   };
 
   const handleAddDelivery = () => navigate("/add-delivery");
-  const handleViewDelivery = (transaction_id) => {
-    navigate(`/view-delivery/${transaction_id}`);
-  };
+
+  const groupedDeliveries = deliveries.reduce((acc, item) => {
+    const id = item.transaction_id;
+
+    if (!acc[id]) {
+      acc[id] = {
+        transaction_id: id,
+        customer_name: item.customer_name,
+        total: item.total,
+        delivery_status: item.delivery_status,
+        items: [],
+      };
+    }
+
+    acc[id].items.push({
+      description: item.description,
+      quantity: item.quantity,
+    });
+
+    return acc;
+  }, {});
 
   return (
     <AdminLayout title="Delivery Details" onAddClick={handleAddDelivery}>
@@ -63,19 +81,27 @@ const DeliveryDetails = () => {
           </tr>
         </thead>
         <tbody>
-          {deliveries.map((item, index) => (
+          {Object.values(groupedDeliveries).map((group, index) => (
             <tr key={index}>
-              <td>{item.transaction_id}</td>
-              <td>{item.customer_name}</td>
-              <td>{item.description}</td>
-              <td>{item.quantity}</td>
-              <td>{item.total}</td>
-              <td>{item.delivery_status}</td>
+              <td>{group.transaction_id}</td>
+              <td>{group.customer_name}</td>
+              <td>
+                {group.items.map((item, idx) => (
+                  <div key={idx}>{item.description}</div>
+                ))}
+              </td>
+              <td>
+                {group.items.map((item, idx) => (
+                  <div key={idx}>{item.quantity}</div>
+                ))}
+              </td>
+              <td>{group.total}</td>
+              <td>{group.delivery_status}</td>
               <td>
                 <button
                   className="btn btn-view px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
                   onClick={() =>
-                    navigate(`/view-delivery/${item.transaction_id}`)
+                    navigate(`/view-delivery/${group.transaction_id}`)
                   }
                 >
                   View
@@ -83,7 +109,7 @@ const DeliveryDetails = () => {
 
                 <button
                   className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
-                  onClick={() => handleDelete(item.transaction_id)} // FIXED: Correct variable
+                  onClick={() => handleDelete(group.transaction_id)}
                 >
                   Delete
                 </button>
