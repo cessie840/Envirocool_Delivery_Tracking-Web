@@ -73,14 +73,14 @@ function App() {
           element={<DriverProfileSettings />}
         />
 
-        {/* <Route
-          path="/DriverDashboard"
-          element={
-            <ProtectedRoute role="deliverypersonnel">
-              <DriverModule />
-            </ProtectedRoute>
-          }
-        /> */}
+      <Route
+  path="/driver-dashboard"
+  element={
+    <ProtectedRoute role="deliverypersonnel">
+      <DriverDashboard />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </Router>
   );

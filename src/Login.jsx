@@ -56,7 +56,7 @@ const Login = () => {
           navigate("/operational-delivery-details");
           break;
         case "deliverypersonnel":
-          navigate("/DriverDashboard");
+          navigate("/driver-dashboard");
           break;
         default:
           navigate("/");
