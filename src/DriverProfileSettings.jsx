@@ -12,6 +12,7 @@ import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate } from "react-router-dom";
 import { FaEdit } from "react-icons/fa";
+import axios from "axios";
 
 function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -33,11 +34,33 @@ function DriverProfileSettings() {
   });
 
   useEffect(() => {
-    const storedProfile = localStorage.getItem("userProfile");
-    if (storedProfile) {
-      setProfile(JSON.parse(storedProfile));
-    }
-  }, []);
+  const storedProfile = localStorage.getItem("user");
+
+  if (storedProfile) {
+    const parsed = JSON.parse(storedProfile);
+
+    // Fetch complete data from the server
+    axios
+      .post("http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php", {
+        pers_username: parsed.pers_username,
+      })
+      .then((res) => {
+        if (res.data.success) {
+          const u = res.data.user;
+          setProfile({
+            Name: `${u.pers_fname} ${u.pers_lname}`,
+            username: u.pers_username,
+            Email: u.pers_email,
+            Contact: u.pers_phone,
+            profilePic: `http://localhost/DeliveryTrackingSystem/${u.pers_profile_pic}`,
+          });
+        } else {
+          console.warn("User not found:", res.data.message);
+        }
+      })
+      .catch((err) => console.error(err));
+  }
+}, []);
 
   const handleSave = () => {
     const updatedProfile = { ...profile, [modalField]: fieldValue };
@@ -128,12 +151,13 @@ function DriverProfileSettings() {
               />
             </label>
 
-            <h5 className="fw-bold mt-3 mb-1" style={{ color: "#116B8A" }}>
-              {profile.Name || "Full Name"}
-            </h5>
-            <p className="text-muted mb-1" style={{ fontSize: "0.9rem" }}>
-              ID: 50021
-            </p>
+           <h5 className="fw-bold mt-3 mb-1" style={{ color: "#116B8A" }}>
+  {profile.Name || "Full Name"}
+</h5>
+<p className="text-muted mb-1" style={{ fontSize: "0.9rem" }}>
+  ID: {profile.username || "User ID"}
+</p>
+
           </div>
 
           <div
