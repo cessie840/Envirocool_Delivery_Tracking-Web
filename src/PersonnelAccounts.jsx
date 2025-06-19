@@ -13,7 +13,9 @@ const PersonnelAccounts = () => {
     document.title = "Delivery Personnel Accounts";
 
     axios
-      .get("http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php")
+      .get(
+        "http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php"
+      )
       .then((response) => {
         setPersonnel(response.data);
       })
@@ -22,20 +24,35 @@ const PersonnelAccounts = () => {
       });
   }, []);
 
-  const handleEdit = (id) => {
-    alert(`Edit delivery personnel with ID: ${id}`);
-  };
+  const handleDelete = async (username) => {
+    if (!window.confirm("Are you sure you want to delete this account?"))
+      return;
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this account?")) {
-      alert(`Deleted delivery personnel with ID: ${id}`);
+    try {
+      const response = await axios.post(
+        "http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php",
+        { username }
+      );
+
+      if (response.data.status === "success") {
+        alert("Account deleted successfully.");
+        // Refresh personnel list
+        setPersonnel((prev) =>
+          prev.filter((p) => p.pers_username !== username)
+        );
+      } else {
+        alert(response.data.message || "Failed to delete the account.");
+      }
+    } catch (error) {
+      console.error("Deletion error:", error);
+      alert("An error occurred while deleting the account.");
     }
   };
 
-  const togglePasswordVisibility = (id) => {
+  const togglePasswordVisibility = (username) => {
     setVisiblePasswords((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [username]: !prev[username],
     }));
   };
 
@@ -64,38 +81,45 @@ const PersonnelAccounts = () => {
           <tbody>
             {personnel.length > 0 ? (
               personnel.map((person) => (
-                <tr key={person.id}>
-                  <td>{person.pers_fname} {person.pers_lname}</td>
+                <tr key={person.pers_username}>
+                  <td>
+                    {person.pers_fname} {person.pers_lname}
+                  </td>
                   <td>{person.pers_email}</td>
                   <td>{person.pers_username}</td>
                   <td className="position-relative">
                     <div className="text-center">
-                      <span className={visiblePasswords[person.id] ? "" : "password-dots"}>
-                        {visiblePasswords[person.id]
+                      <span
+                        className={
+                          visiblePasswords[person.pers_username]
+                            ? ""
+                            : "password-dots"
+                        }
+                      >
+                        {visiblePasswords[person.pers_username]
                           ? person.pers_password
                           : "•••••••••"}
                       </span>
                     </div>
                     <span
                       role="button"
-                      onClick={() => togglePasswordVisibility(person.id)}
+                      onClick={() =>
+                        togglePasswordVisibility(person.pers_username)
+                      }
                       className="toggle-eye-icon"
                     >
-                      {visiblePasswords[person.id] ? <FaEyeSlash /> : <FaEye />}
+                      {visiblePasswords[person.pers_username] ? (
+                        <FaEyeSlash />
+                      ) : (
+                        <FaEye />
+                      )}
                     </span>
                   </td>
                   <td>
                     <button
-                      id="personnel-view"
-                      className="btn btn-view btn-success me-2"
-                      onClick={() => handleEdit(person.id)}
-                    >
-                      Edit
-                    </button>
-                    <button
                       id="personnel-cancel"
                       className="btn cancel-btn btn-danger"
-                      onClick={() => handleDelete(person.id)}
+                      onClick={() => handleDelete(person.pers_username)}
                     >
                       Delete
                     </button>
