@@ -160,9 +160,8 @@ const AddDelivery = () => {
       });
 
       setOrderItems([
-  { quantity: "", description: "", unit_cost: "", total_cost: "" },
-]);
-
+        { quantity: "", description: "", unit_cost: "", total_cost: "" },
+      ]);
 
       fetchLatestIDs();
     } catch (error) {
@@ -342,13 +341,15 @@ const AddDelivery = () => {
                 ))}
               </tbody>
             </table>
-            <button
-              type="button"
-              className="btn btn-outline-primary mt-2"
-              onClick={addNewItem}
-            >
-              + Add Another Item
-            </button>
+            <div className="d-flex justify-content-end mt-2">
+              <button
+                type="button"
+                className="btn add-item"
+                onClick={addNewItem}
+              >
+                ✚ Add Another Item
+              </button>
+            </div>
 
             <div className="order-summary mt-4">
               <label>

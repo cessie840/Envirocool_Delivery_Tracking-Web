@@ -278,6 +278,16 @@ input::placeholder {
   box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
 }
 
+.add-item{
+  border: 1px solid #0c759d;
+  color: #0c759d;
+}
+
+.add-item:hover{
+  color: #006400 !important;
+  border: 1px solid #006400;
+}
+
 .add-btn:hover{
   background-color: #00aff0 !important;
 }
