@@ -289,7 +289,7 @@ const AddDelivery = () => {
               <thead>
                 <tr>
                   <th>Quantity</th>
-                  <th>Description</th>
+                  <th>Item Description</th>
                   <th>Unit Cost</th>
                   <th>Total Cost</th>
                 </tr>
@@ -301,6 +301,7 @@ const AddDelivery = () => {
                       <input
                         type="number"
                         name="quantity"
+                        placeholder="0"
                         className="form-control"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(index, e)}
@@ -311,6 +312,7 @@ const AddDelivery = () => {
                       <input
                         type="text"
                         name="description"
+                        placeholder="Description"
                         className="form-control"
                         value={item.description}
                         onChange={(e) => handleItemChange(index, e)}
@@ -321,6 +323,7 @@ const AddDelivery = () => {
                       <input
                         type="number"
                         name="unit_cost"
+                        placeholder="₱0.00"
                         className="form-control"
                         value={item.unit_cost}
                         onChange={(e) => handleItemChange(index, e)}
@@ -331,6 +334,7 @@ const AddDelivery = () => {
                       <input
                         type="number"
                         name="total_cost"
+                        placeholder="₱0.00"
                         className="form-control"
                         value={item.total_cost}
                         onChange={(e) => handleItemChange(index, e)}
@@ -389,7 +393,7 @@ const AddDelivery = () => {
                 />
               </label>
             </div>
-
+            <hr className="mt-4" />
             <div className="btn-group mx-3 mt-4 fs-6 gap-4">
               <button type="reset" className="cancel-btn bg-danger">
                 Cancel

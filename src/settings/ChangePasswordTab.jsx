@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { FaLock } from "react-icons/fa";
 
-const ChangePasswordTab = () => {
+const ChangePasswordTab = ({ role }) => {
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -27,23 +27,29 @@ const ChangePasswordTab = () => {
       return;
     }
 
+    const url =
+      role === "admin"
+        ? "http://localhost/DeliveryTrackingSystem/change_admin_password.php"
+        : "http://localhost/DeliveryTrackingSystem/change_operational_password.php";
+
     try {
-      const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/settings_change_password.php",
-        JSON.stringify(formData),
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      alert("Password changed successfully.");
-      setFormData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
+      const response = await axios.post(url, JSON.stringify(formData), {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+
+      if (response.data.success) {
+        alert("Password changed successfully.");
+        setFormData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        alert(response.data.error || "Password change failed.");
+      }
     } catch (error) {
       console.error("Password change failed:", error);
       alert(error.response?.data?.error || "Password change failed.");
@@ -54,7 +60,7 @@ const ChangePasswordTab = () => {
     <div className="settings p-4 rounded">
       <h4 className="title">
         <FaLock /> Change Password
-      </h4>{" "}
+      </h4>
       <p>Change your password here.</p>
       <hr />
       <div className="form-group mb-3">

@@ -1,29 +1,55 @@
 <?php
 session_start();
+
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 include 'database.php';
 
 if (!isset($_SESSION['ad_username'])) {
     http_response_code(401);
     echo json_encode(["error" => "Unauthorized"]);
-    exit;
+    exit();
 }
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$ad_fname = $data['ad_fname'];
-$ad_lname = $data['ad_lname'];
-$ad_email = $data['ad_email'];
-$ad_phone = $data['ad_phone'];
-$username = $_SESSION['ad_username'];
+$currentUsername = $_SESSION['ad_username'];
+$newUsername = $data['ad_username'];
 
-$sql = "UPDATE Admin SET ad_fname = ?, ad_lname = ?, ad_email = ?, ad_phone = ? WHERE ad_username = ?";
+$sql = "UPDATE Admin SET 
+            ad_username = ?, 
+            ad_fname = ?, 
+            ad_lname = ?, 
+            ad_email = ?, 
+            ad_phone = ? 
+        WHERE ad_username = ?";
+
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("sssss", $ad_fname, $ad_lname, $ad_email, $ad_phone, $username);
+$stmt->bind_param("ssssss", 
+    $newUsername, 
+    $data['ad_fname'], 
+    $data['ad_lname'], 
+    $data['ad_email'], 
+    $data['ad_phone'], 
+    $currentUsername
+);
 
 if ($stmt->execute()) {
-    echo json_encode(["success" => true]);
+    $_SESSION['ad_username'] = $newUsername; 
+    echo json_encode(["status" => "success"]);
 } else {
     http_response_code(500);
     echo json_encode(["error" => "Update failed"]);
 }
+
+$conn->close();
 ?>

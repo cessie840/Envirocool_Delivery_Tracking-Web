@@ -68,7 +68,7 @@ const DeliveryDetails = () => {
 
   return (
     <AdminLayout title="Delivery Details" onAddClick={handleAddDelivery}>
-      <table className="delivery-table container-fluid">
+      <table className="delivery-table container-fluid table-responsive">
         <thead>
           <tr>
             <th>Transaction No.</th>
