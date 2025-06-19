@@ -20,12 +20,9 @@ const AddDelivery = () => {
     total: "",
   });
 
-  const [orderItem, setOrderItem] = useState({
-    quantity: "",
-    description: "",
-    unit_cost: "",
-    total_cost: "",
-  });
+  const [orderItems, setOrderItems] = useState([
+    { quantity: "", description: "", unit_cost: "", total_cost: "" },
+  ]);
 
   useEffect(() => {
     document.title = "Add Delivery";
@@ -57,12 +54,17 @@ const AddDelivery = () => {
     // If down_payment is updated, recalculate balance and total
     if (name === "down_payment") {
       const downPayment = parseFloat(value);
-      const totalCost = parseFloat(orderItem.total_cost);
+
+      // Sum total cost from all items
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost);
+        return sum + (isNaN(cost) ? 0 : cost);
+      }, 0);
 
       if (!isNaN(downPayment) && !isNaN(totalCost)) {
         const balance = totalCost - downPayment;
         updatedForm.balance = balance.toFixed(2);
-        updatedForm.total = (downPayment + balance).toFixed(2);
+        updatedForm.total = totalCost.toFixed(2);
       } else {
         updatedForm.balance = "";
         updatedForm.total = "";
@@ -72,36 +74,40 @@ const AddDelivery = () => {
     setForm(updatedForm);
   };
 
-  const handleItemChange = (e) => {
+  const handleItemChange = (index, e) => {
     const { name, value } = e.target;
-    const updatedItem = {
-      ...orderItem,
-      [name]: value,
-    };
+    const items = [...orderItems];
+    items[index][name] = value;
 
-    // Auto-calculate total_cost when quantity and unit_cost are available
-    if (name === "quantity" || name === "unit_cost") {
-      const quantity = parseFloat(
-        name === "quantity" ? value : updatedItem.quantity
-      );
-      const unitCost = parseFloat(
-        name === "unit_cost" ? value : updatedItem.unit_cost
-      );
+    const quantity = parseFloat(items[index].quantity);
+    const unitCost = parseFloat(items[index].unit_cost);
 
-      if (!isNaN(quantity) && !isNaN(unitCost)) {
-        updatedItem.total_cost = (quantity * unitCost).toFixed(2);
-      } else {
-        updatedItem.total_cost = "";
-      }
+    if (!isNaN(quantity) && !isNaN(unitCost)) {
+      items[index].total_cost = (quantity * unitCost).toFixed(2);
     }
 
-    setOrderItem(updatedItem);
+    setOrderItems(items);
 
-    // Update total in form too
+    // Update total in form based on all items
+    const totalCostSum = items.reduce((sum, item) => {
+      const cost = parseFloat(item.total_cost);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
     setForm((prevForm) => ({
       ...prevForm,
-      total: updatedItem.total_cost,
+      total: totalCostSum.toFixed(2),
+      balance: (totalCostSum - parseFloat(prevForm.down_payment || 0)).toFixed(
+        2
+      ),
     }));
+  };
+
+  const addNewItem = () => {
+    setOrderItems([
+      ...orderItems,
+      { quantity: "", description: "", unit_cost: "", total_cost: "" },
+    ]);
   };
 
   const handleSubmit = async (e) => {
@@ -112,21 +118,25 @@ const AddDelivery = () => {
       return;
     }
 
-    const quantity = parseInt(orderItem.quantity);
-    if (isNaN(quantity) || quantity < 1) {
-      alert("Quantity must be a number and at least 1.");
-      return;
-    }
+    // Validate each item
+    for (const item of orderItems) {
+      const quantity = parseInt(item.quantity);
+      const unitCost = parseFloat(item.unit_cost);
 
-    const unitCost = parseFloat(orderItem.unit_cost);
-    if (isNaN(unitCost) || unitCost < 0) {
-      alert("Unit cost must be a non-negative number.");
-      return;
+      if (isNaN(quantity) || quantity < 1) {
+        alert("Each item's quantity must be a number and at least 1.");
+        return;
+      }
+
+      if (isNaN(unitCost) || unitCost < 0) {
+        alert("Each item's unit cost must be a non-negative number.");
+        return;
+      }
     }
 
     const dataToSend = {
       ...form,
-      order_items: [orderItem],
+      order_items: orderItems,
     };
 
     try {
@@ -149,18 +159,21 @@ const AddDelivery = () => {
         total: "",
       });
 
-      setOrderItem({
-        quantity: "",
-        description: "",
-        unit_cost: "",
-        total_cost: "",
-      });
+      setOrderItems([
+  { quantity: "", description: "", unit_cost: "", total_cost: "" },
+]);
+
 
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
       alert("Error saving delivery.");
     }
+  };
+
+  const dataToSend = {
+    ...form,
+    order_items: orderItems,
   };
 
   return (
@@ -283,53 +296,59 @@ const AddDelivery = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <input
-                      type="number"
-                      name="quantity"
-                      min="1" //
-                      placeholder="0"
-                      value={orderItem.quantity}
-                      onChange={handleItemChange}
-                      required
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      name="description"
-                      placeholder="Item description"
-                      value={orderItem.description}
-                      onChange={handleItemChange}
-                      required
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name="unit_cost"
-                      placeholder="₱0.00"
-                      step="0.01"
-                      value={orderItem.unit_cost}
-                      onChange={handleItemChange}
-                      required
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name="total_cost"
-                      placeholder="₱0.00"
-                      step="0.01"
-                      value={orderItem.total_cost}
-                      onChange={handleItemChange}
-                      required
-                    />
-                  </td>
-                </tr>
+                {orderItems.map((item, index) => (
+                  <tr key={index}>
+                    <td>
+                      <input
+                        type="number"
+                        name="quantity"
+                        className="form-control"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, e)}
+                        required
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        name="description"
+                        className="form-control"
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, e)}
+                        required
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name="unit_cost"
+                        className="form-control"
+                        value={item.unit_cost}
+                        onChange={(e) => handleItemChange(index, e)}
+                        required
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name="total_cost"
+                        className="form-control"
+                        value={item.total_cost}
+                        onChange={(e) => handleItemChange(index, e)}
+                        required
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+            <button
+              type="button"
+              className="btn btn-outline-primary mt-2"
+              onClick={addNewItem}
+            >
+              + Add Another Item
+            </button>
 
             <div className="order-summary mt-4">
               <label>
