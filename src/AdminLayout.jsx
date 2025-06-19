@@ -77,7 +77,7 @@ const AdminLayout = ({ title, onAddClick, children }) => {
           <button className="nav-btn" onClick={() => navigate("/generate-report")}>
             <FaChartBar className="icon" /> GENERATE REPORT
           </button>
-          <button className="nav-btn" onClick={() => navigate("/settings")}>
+          <button className="nav-btn" onClick={() => navigate("/admin-settings")}>
             <FaCog className="icon" /> SETTINGS
           </button>
           <button className="nav-btn logout" onClick={() => setShowLogoutModal(true)}>
