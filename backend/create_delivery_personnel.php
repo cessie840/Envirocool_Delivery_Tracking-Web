@@ -45,7 +45,7 @@ $birth   = trim($input['birthdate']); // Format should be YYYY-MM-DD
 $age     = intval($input['age']);
 $phone   = trim($input['contactNumber']);
 $email   = trim($input['email']);
-$profilePicName = 'default.png'; // Default profile picture
+$profilePicName = 'uploads/default-profile-pic.png';// Default profile picture
 $status = 'active';
 
 // Validate formats
