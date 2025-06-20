@@ -39,6 +39,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/admin-dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
         <Route path="/operational-delivery-details" element={<ProtectedRoute role="operationalmanager"><OperationalDelivery /></ProtectedRoute>} />
+        <Route path="/driver-dashboard" element={<ProtectedRoute role="deliverypersonnel"><DriverDashboard /></ProtectedRoute>}/>
         <Route path="/forgotpassword" element={<ForgotPass />} />
 
         {/* ADMIN ROUTES  */}
