@@ -18,18 +18,18 @@ $customer_name = $data['customer_name'];
 $customer_address = $data['customer_address'];
 $customer_contact = $data['customer_contact'];
 $mode_of_payment = $data['mode_of_payment'];
+$down_payment = (float)($data['down_payment'] ?? 0);
 $items = $data['items'] ?? [];
 
 $conn->begin_transaction();
 
 try {
-
     $total = 0;
     foreach ($items as $item) {
         $total += $item['quantity'] * $item['unit_cost'];
     }
-    $balance = $total; 
-    $down_payment = 0.00;
+
+    $balance = $total - $down_payment;
 
     $updateTrans = $conn->prepare("UPDATE Transactions SET customer_name=?, customer_address=?, customer_contact=?, mode_of_payment=?, total=?, down_payment=?, balance=? WHERE transaction_id=?");
     $updateTrans->bind_param("ssssdddi", $customer_name, $customer_address, $customer_contact, $mode_of_payment, $total, $down_payment, $balance, $transaction_id);
@@ -41,8 +41,8 @@ try {
         $unit_cost = (float)$item['unit_cost'];
         $total_cost = $quantity * $unit_cost;
 
-        $updateItem = $conn->prepare("UPDATE PurchaseOrder SET description=?, quantity=?, unit_cost=?, total_cost=? WHERE transaction_id=? AND description=?");
-        $updateItem->bind_param("siddis", $description, $quantity, $unit_cost, $total_cost, $transaction_id, $description);
+        $updateItem = $conn->prepare("UPDATE PurchaseOrder SET quantity=?, unit_cost=?, total_cost=? WHERE transaction_id=? AND description=?");
+        $updateItem->bind_param("iddis", $quantity, $unit_cost, $total_cost, $transaction_id, $description);
         $updateItem->execute();
     }
 

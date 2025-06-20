@@ -8,7 +8,7 @@ $transaction_id = $_GET['transaction_id'];
 
 $response = [];
 
-$sql_customer = "SELECT customer_name, customer_address, customer_contact, mode_of_payment 
+$sql_customer = "SELECT customer_name, customer_address, customer_contact, mode_of_payment, down_payment, balance, total 
                  FROM Transactions WHERE transaction_id = ?";
 $stmt = $conn->prepare($sql_customer);
 $stmt->bind_param("i", $transaction_id);
@@ -22,6 +22,9 @@ if ($result_customer->num_rows > 0) {
     $response['customer_address'] = $customer['customer_address'];
     $response['customer_contact'] = $customer['customer_contact'];
     $response['mode_of_payment'] = $customer['mode_of_payment'];
+    $response['down_payment'] = $customer['down_payment'];
+    $response['balance'] = $customer['balance'];
+    $response['total'] = $customer['total'];
 
     $sql_items = "SELECT description, quantity, unit_cost FROM PurchaseOrder WHERE transaction_id = ?";
     $stmt_items = $conn->prepare($sql_items);

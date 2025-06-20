@@ -10,6 +10,14 @@ const UpdateOrderModal = ({
   editableItems,
   setEditableItems,
 }) => {
+  const total = editableItems.reduce(
+    (sum, item) => sum + item.quantity * item.unit_cost,
+    0
+  );
+
+  const downPayment = parseFloat(formData.down_payment || 0);
+  const balance = total - downPayment;
+
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
       <Modal.Header closeButton className="bg-success" closeVariant="white">
@@ -24,7 +32,7 @@ const UpdateOrderModal = ({
             <h5 className="text-success fw-bold mb-3">Customer Information</h5>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Name</Form.Label>
+              <Form.Label>Name</Form.Label>
               <Form.Control
                 type="text"
                 name="customer_name"
@@ -34,7 +42,7 @@ const UpdateOrderModal = ({
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Address</Form.Label>
+              <Form.Label>Address</Form.Label>
               <Form.Control
                 type="text"
                 name="customer_address"
@@ -44,7 +52,7 @@ const UpdateOrderModal = ({
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Contact</Form.Label>
+              <Form.Label>Contact</Form.Label>
               <Form.Control
                 type="text"
                 name="customer_contact"
@@ -61,12 +69,45 @@ const UpdateOrderModal = ({
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Payment Mode</Form.Label>
+              <Form.Label>Payment Mode</Form.Label>
               <Form.Control
                 type="text"
                 name="mode_of_payment"
                 value={formData.mode_of_payment}
                 onChange={handleChange}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">Down Payment</Form.Label>
+              <Form.Control
+                type="number"
+                step="0.01"
+                name="down_payment"
+                value={formData.down_payment}
+                onChange={(e) => {
+                  const down = parseFloat(e.target.value) || 0;
+                  const total = editableItems.reduce(
+                    (sum, item) => sum + item.quantity * item.unit_cost,
+                    0
+                  );
+                  const updatedForm = {
+                    ...formData,
+                    down_payment: down,
+                    balance: (total - down).toFixed(2),
+                    total: total.toFixed(2),
+                  };
+                  setFormData(updatedForm);
+                }}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">Balance</Form.Label>
+              <Form.Control
+                type="number"
+                name="balance"
+                readOnly
+                value={formData.balance}
               />
             </Form.Group>
           </div>
@@ -80,7 +121,7 @@ const UpdateOrderModal = ({
                 className="p-3 mb-3 border rounded shadow-sm bg-light-subtle"
               >
                 <Form.Group className="mb-2">
-                  <Form.Label className="fw-semibold">Description</Form.Label>
+                  <Form.Label>Description</Form.Label>
                   <Form.Control
                     type="text"
                     value={item.description}
@@ -94,7 +135,7 @@ const UpdateOrderModal = ({
 
                 <div className="d-flex gap-3">
                   <Form.Group className="mb-2 flex-grow-1">
-                    <Form.Label className="fw-semibold">Quantity</Form.Label>
+                    <Form.Label>Quantity</Form.Label>
                     <Form.Control
                       type="number"
                       min={0}
@@ -109,7 +150,7 @@ const UpdateOrderModal = ({
                   </Form.Group>
 
                   <Form.Group className="mb-2 flex-grow-1">
-                    <Form.Label className="fw-semibold">Unit Cost</Form.Label>
+                    <Form.Label>Unit Cost</Form.Label>
                     <Form.Control
                       type="number"
                       step="0.01"
@@ -136,13 +177,7 @@ const UpdateOrderModal = ({
 
             <div className="text-end mt-3">
               <h5 className="fw-bold text-success">
-                Total Cost: ₱
-                {editableItems
-                  .reduce(
-                    (sum, item) => sum + item.quantity * item.unit_cost,
-                    0
-                  )
-                  .toLocaleString()}
+                Total Cost: ₱{total.toLocaleString()}
               </h5>
             </div>
           </div>

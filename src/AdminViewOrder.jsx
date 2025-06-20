@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
-import { Modal, Button, Form } from "react-bootstrap";
 import UpdateOrderModal from "./UpdateOrderModal";
 
 const ViewOrder = () => {
@@ -17,7 +16,11 @@ const ViewOrder = () => {
     customer_address: "",
     customer_contact: "",
     mode_of_payment: "",
+    down_payment: "",
+    balance: "",
+    total: "",
   });
+  
 
   useEffect(() => {
     document.title = "View Order Details";
@@ -32,21 +35,23 @@ const ViewOrder = () => {
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
           mode_of_payment: data.mode_of_payment,
+          down_payment: data.down_payment,
+          balance: data.balance,
+          total: data.total,
         });
       })
+
       .catch((err) => {
         console.error("Failed to fetch order:", err);
       });
   }, [transaction_id]);
 
   const handleUpdate = () => {
-    setEditableItems(JSON.parse(JSON.stringify(orderDetails.items))); // deep clone
+    setEditableItems(JSON.parse(JSON.stringify(orderDetails.items)));
     setShowModal(true);
   };
 
-  const handleClose = () => {
-    setShowModal(false);
-  };
+  const handleClose = () => setShowModal(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,20 +61,18 @@ const ViewOrder = () => {
   const handleSubmit = () => {
     const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
     if (hasInvalidQuantity) {
-      alert("One or more items have invalid quantity (must be at least 1).");
+      alert("One or more items have invalid quantity.");
       return;
     }
 
-    // 2. Contact Number Validation
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
       alert("Contact number must start with '09' and be exactly 11 digits.");
       return;
     }
+
     fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         transaction_id,
         ...formData,
@@ -125,6 +128,7 @@ const ViewOrder = () => {
         });
     }
   };
+
   return (
     <AdminLayout title="View Order Details">
       <div className="d-flex justify-content-start mt-4 ms-4">
@@ -132,7 +136,7 @@ const ViewOrder = () => {
           className="btn d-flex align-items-center gap-2 fs-4"
           onClick={() => navigate(-1)}
         >
-          <FaArrowLeft />
+          <FaArrowLeft /> Back
         </button>
       </div>
 
@@ -158,6 +162,18 @@ const ViewOrder = () => {
               <p>
                 <strong>Payment Mode:</strong> {orderDetails.mode_of_payment}
               </p>
+              <p>
+                <strong>Down Payment:</strong> ₱
+                {Number(orderDetails?.down_payment || 0).toLocaleString()}
+              </p>
+              <p>
+                <strong>Balance:</strong> ₱
+                {Number(orderDetails?.balance || 0).toLocaleString()}
+              </p>
+              <p>
+                <strong>Total:</strong> ₱
+                {Number(orderDetails?.total || 0).toLocaleString()}
+              </p>
             </div>
 
             <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
@@ -171,7 +187,7 @@ const ViewOrder = () => {
                     <div>
                       {item.description} x{item.quantity} <br />
                       <small className="text-muted">
-                        Unit Cost: ₱{item.unit_cost.toLocaleString()}
+                        Unit Cost: ₱{Number(item.unit_cost).toLocaleString()}
                       </small>
                     </div>
                     <strong>
@@ -180,8 +196,12 @@ const ViewOrder = () => {
                   </li>
                 ))}
               </ul>
-              <div className="text-end mt-4">
-                <h4 className="fw-bold text-success m-3">
+              <div className="d-flex justify-content-between align-items-center mt-4 px-3">
+                <h4 className="fw-bold text-danger">
+                  Balance: ₱
+                  {Number(orderDetails?.balance || 0).toLocaleString()}
+                </h4>
+                <h4 className="fw-bold text-success">
                   Total Cost: ₱{totalCost.toLocaleString()}
                 </h4>
               </div>
