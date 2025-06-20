@@ -87,6 +87,16 @@ CREATE TABLE DeliveryAssignments (
     FOREIGN KEY (personnel_username) REFERENCES DeliveryPersonnel(pers_username) ON DELETE SET NULL
 );
 
+CREATE TABLE DeliveryDetails (
+  delivery_id INT AUTO_INCREMENT PRIMARY KEY,
+  transaction_id INT,
+  po_id INT,
+  delivery_status ENUM('Pending', 'To Ship' ,'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
+  FOREIGN KEY (po_id) REFERENCES PurchaseOrder(po_id) ON DELETE CASCADE
+);
+
 INSERT INTO Admin (
     ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone,
     ad_resetToken, reset_expire, reset_requested_at,
@@ -144,6 +154,9 @@ SELECT * FROM DeliveryPersonnel;
 SELECT * FROM Transactions;
 SELECT * FROM PurchaseOrder;
 SELECT * FROM DeliveryAssignments;
+
+SELECT pers_username, pers_fname, pers_lname, status, assignment_status
+FROM DeliveryPersonnel;
 
 
 Admin Credentials:
