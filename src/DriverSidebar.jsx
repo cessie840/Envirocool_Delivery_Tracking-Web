@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Offcanvas, ListGroup } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Sidebar = ({ show, onHide }) => {
   const navigate = useNavigate();
@@ -12,17 +13,37 @@ const Sidebar = ({ show, onHide }) => {
   });
 
   useEffect(() => {
-    const storedProfile = localStorage.getItem("userProfile");
+    const storedProfile = localStorage.getItem("user");
+
     if (storedProfile) {
       const parsed = JSON.parse(storedProfile);
 
-      if (parsed.name && !parsed.fullName) {
-        parsed.fullName = parsed.name;
-        delete parsed.name;
-        localStorage.setItem("userProfile", JSON.stringify(parsed));
-      }
+      axios
+        .post(
+          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
+          {
+            pers_username: parsed.pers_username,
+          }
+        )
+        .then((response) => {
+          const data = response.data;
 
-      setProfile(parsed);
+          if (data.success) {
+            const user = data.user;
+            setProfile({
+              name: `${user.pers_fname} ${user.pers_lname}`,
+              email: user.pers_email,
+              contact: user.pers_phone,
+              profilePic: `http://localhost/DeliveryTrackingSystem/${user.pers_profile_pic}`,
+              userId: user.pers_username,
+            });
+          } else {
+            console.warn("User not a delivery personnel:", data.message);
+          }
+        })
+        .catch((error) => {
+          console.error("Axios error:", error);
+        });
     }
   }, []);
 
@@ -39,8 +60,8 @@ const Sidebar = ({ show, onHide }) => {
     }
   };
 
-  const userName = profile.Name;
-  const userId = "50021";
+  const userName = profile.name;
+  const userId = profile.userId;
 
   return (
     <Offcanvas
