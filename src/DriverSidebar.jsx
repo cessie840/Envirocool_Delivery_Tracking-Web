@@ -34,7 +34,7 @@ const Sidebar = ({ show, onHide }) => {
               name: `${user.pers_fname} ${user.pers_lname}`,
               email: user.pers_email,
               contact: user.pers_phone,
-              profilePic: `http://localhost/DeliveryTrackingSystem/${user.pers_profile_pic}`,
+              profilePic: `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`,
               userId: user.pers_username,
             });
           } else {
@@ -114,6 +114,11 @@ const Sidebar = ({ show, onHide }) => {
                 <img
                   src={profile.profilePic}
                   alt="Profile"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+                  }}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (

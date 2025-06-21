@@ -20,13 +20,15 @@ try {
     $stmt->bind_param("s", $username);
     $stmt->execute();
 
-    // Store result to use num_rows
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-        // Bind result
         $stmt->bind_result($pers_username, $pers_fname, $pers_lname, $pers_email, $pers_phone, $pers_profile_pic);
         $stmt->fetch();
+
+        // Make sure profile picture URL is complete
+        $base_url = "http://localhost/DeliveryTrackingSystem/uploads/";
+        $profile_pic_url = $pers_profile_pic ? $base_url . $pers_profile_pic : $base_url . "default-profile-pic.png";
 
         $user = [
             "pers_username" => $pers_username,
@@ -34,7 +36,7 @@ try {
             "pers_lname" => $pers_lname,
             "pers_email" => $pers_email,
             "pers_phone" => $pers_phone,
-            "pers_profile_pic" => $pers_profile_pic
+            "pers_profile_pic" => $profile_pic_url
         ];
 
         echo json_encode(["success" => true, "user" => $user]);

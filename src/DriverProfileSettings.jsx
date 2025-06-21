@@ -12,6 +12,7 @@ import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate } from "react-router-dom";
 import { FaEdit } from "react-icons/fa";
+import axios from "axios";
 
 function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -33,9 +34,34 @@ function DriverProfileSettings() {
   });
 
   useEffect(() => {
-    const storedProfile = localStorage.getItem("userProfile");
+    const storedProfile = localStorage.getItem("user");
+
     if (storedProfile) {
-      setProfile(JSON.parse(storedProfile));
+      const parsed = JSON.parse(storedProfile);
+
+      // Fetch complete data from the server
+      axios
+        .post(
+          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
+          {
+            pers_username: parsed.pers_username,
+          }
+        )
+        .then((res) => {
+          if (res.data.success) {
+            const u = res.data.user;
+            setProfile({
+              Name: `${u.pers_fname} ${u.pers_lname}`,
+              username: u.pers_username,
+              Email: u.pers_email,
+              Contact: u.pers_phone,
+              profilePic: `http://localhost/DeliveryTrackingSystem/${u.pers_profile_pic}`,
+            });
+          } else {
+            console.warn("User not found:", res.data.message);
+          }
+        })
+        .catch((err) => console.error(err));
     }
   }, []);
 
@@ -68,7 +94,6 @@ function DriverProfileSettings() {
       reader.readAsDataURL(file);
     }
   };
-
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
@@ -102,22 +127,34 @@ function DriverProfileSettings() {
                   border: "2px solid #116B8A",
                 }}
               >
-                {profile.profilePic ? (
-                  <Image
-                    src={profile.profilePic}
-                    alt="Profile"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <i
-                    className="bi bi-person-fill text-secondary"
-                    style={{ fontSize: "3rem" }}
-                  ></i>
-                )}
+               {profile.profilePic?.startsWith("data:image") ? (
+  <Image
+    src={profile.profilePic}
+    alt="Profile"
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    }}
+  />
+) : (
+  <Image
+    src={
+      profile.profilePic ||
+      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+    }
+    onError={(e) =>
+      (e.target.src =
+        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
+    }
+    alt="Profile"
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    }}
+  />
+)}
               </div>
               <input
                 id="profilePicInput"
@@ -132,7 +169,7 @@ function DriverProfileSettings() {
               {profile.Name || "Full Name"}
             </h5>
             <p className="text-muted mb-1" style={{ fontSize: "0.9rem" }}>
-              ID: 50021
+              ID: {profile.username || "User ID"}
             </p>
           </div>
 
