@@ -1,12 +1,16 @@
 <?php
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Content-Type: application/json");
-
 include 'database.php';
 
 $orders = [];
+$sql = "SELECT t.*, 
+               da.personnel_username, 
+               CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS assigned_personnel
+        FROM Transactions t
+        LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
+        LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username";
 
-$sql = "SELECT * FROM Transactions";
 $result = $conn->query($sql);
 
 if ($result && $result->num_rows > 0) {
@@ -44,7 +48,8 @@ if ($result && $result->num_rows > 0) {
             'down_payment' => number_format($row['down_payment'], 2),
             'balance' => number_format($row['balance'], 2),
             'total_cost' => number_format($calculatedTotal, 2),
-            'items' => $items
+            'items' => $items,
+            'assigned_personnel' => $row['assigned_personnel'] ?? null  // null if not assigned
         ];
     }
 }

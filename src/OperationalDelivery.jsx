@@ -32,7 +32,7 @@ const OperationalDelivery = () => {
       setOrders(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
-      setOrders([]); 
+      setOrders([]);
     }
   };
 
@@ -42,35 +42,46 @@ const OperationalDelivery = () => {
         "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
       );
 
-      console.log("✅ Personnel fetched:", res.data); 
+      console.log("✅ Personnel fetched:", res.data);
       setPersonnelList(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("❌ Failed to fetch personnel:", error);
-      setPersonnelList([]); 
+      setPersonnelList([]);
     }
   };
 
   const handleOpenAssignModal = () => {
-    setSelectedPersonnel(""); 
+    setSelectedPersonnel("");
     setShowModal(true);
   };
 
   const handleAssignPersonnel = async () => {
     try {
-      await axios.get(
-        "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php",
+      const res = await axios.post(
+        "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
         {
           orderId: selectedOrder.transaction_no,
           personnelUsername: selectedPersonnel,
         }
       );
-      alert("Personnel assigned!");
-      setShowModal(false);
-      setShowDetailModal(false);
-      fetchOrders();
+
+      switch (res.data.success) {
+        case true:
+          alert("Personnel assigned successfully!");
+          setShowModal(false); // Close assign modal
+          setShowDetailModal(false); // Close detail modal
+          setSelectedOrder(null); // Clear selected order
+          fetchOrders(); // Refresh orders list
+          break;
+
+        case false:
+        default:
+          alert("Assignment failed: " + (res.data.message || "Unknown error"));
+          break;
+      }
     } catch (error) {
       console.error("Assignment failed:", error);
-      alert("Assignment failed.");
+      alert("Assignment failed. Please try again later.");
     }
   };
 
@@ -96,6 +107,18 @@ const OperationalDelivery = () => {
                   </h5>
                   <p className="mb-2">
                     <strong>Customer:</strong> {order.customer_name}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Delivery Personnel:</strong>{" "}
+                    {order.assigned_personnel ? (
+                      <span className="text-success">
+                        {order.assigned_personnel}
+                      </span>
+                    ) : (
+                      <span className="text-muted">
+                        No assigned delivery personnel
+                      </span>
+                    )}
                   </p>
                   <div className="text-end">
                     <Button
@@ -173,15 +196,28 @@ const OperationalDelivery = () => {
               </div>
             </div>
 
-            <div className="text-center mt-4">
-              <Button
-                variant="success"
-                className="btn-view"
-                onClick={handleOpenAssignModal}
-              >
-                Assign Delivery Personnel
-              </Button>
-            </div>
+            {selectedOrder.assigned_personnel ? (
+              <div className="p-3 mt-3 bg-light border rounded-3">
+                <ul className="list-group">
+                  <li className="list-group-item d-flex justify-content-between align-items-center">
+                    <span className="fw-bold text-success">
+                      Delivery Personnel Assigned:
+                    </span>
+                    <span>{selectedOrder.assigned_personnel}</span>
+                  </li>
+                </ul>
+              </div>
+            ) : (
+              <div className="text-center mt-4">
+                <Button
+                  variant="success"
+                  className="btn-view"
+                  onClick={handleOpenAssignModal}
+                >
+                  Assign Delivery Personnel
+                </Button>
+              </div>
+            )}
           </Modal.Body>
         </Modal>
       )}
