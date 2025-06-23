@@ -3,7 +3,7 @@ import AdminLayout from "../AdminLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
 import AccountSecurityTab from "./AccountSecurityTab";
-import BackupRestoreTab from "./BackupRestoreTab"; 
+import BackupRestoreTab from "./BackupRestoreTab";
 import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
 
@@ -32,8 +32,7 @@ const AdminSettings = () => {
   };
 
   return (
-    <AdminLayout title="Admin Settings">
-      {/* Tabs Outside Main Container */}
+    <AdminLayout title="Admin Settings" showSearch={false}>
       <div className="settings-tabs mt-5">
         <button
           className={activeTab === "edit-profile" ? "active" : ""}
@@ -67,7 +66,6 @@ const AdminSettings = () => {
         </button>
       </div>
 
-      {/* Content Inside Main Container */}
       <div className="settings-container">
         <div className="settings-content">{renderTabContent()}</div>
       </div>

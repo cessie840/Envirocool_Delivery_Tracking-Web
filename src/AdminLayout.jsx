@@ -16,7 +16,7 @@ import {
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
-const AdminLayout = ({ title, onAddClick, children }) => {
+const AdminLayout = ({ title, onAddClick, showSearch = true, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -65,22 +65,40 @@ const AdminLayout = ({ title, onAddClick, children }) => {
         />
 
         <nav className="nav-buttons">
-          <button className="nav-btn" onClick={() => navigate("/admin-dashboard")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/admin-dashboard")}
+          >
             <FaHome className="icon" /> DASHBOARD
           </button>
-          <button className="nav-btn" onClick={() => navigate("/delivery-details")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/delivery-details")}
+          >
             <FaClipboardList className="icon" /> DELIVERY DETAILS
           </button>
-          <button className="nav-btn" onClick={() => navigate("/monitor-delivery")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/monitor-delivery")}
+          >
             <FaTruck className="icon" /> MONITOR DELIVERY
           </button>
-          <button className="nav-btn" onClick={() => navigate("/generate-report")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/generate-report")}
+          >
             <FaChartBar className="icon" /> GENERATE REPORT
           </button>
-          <button className="nav-btn" onClick={() => navigate("/admin-settings")}>
+          <button
+            className="nav-btn"
+            onClick={() => navigate("/admin-settings")}
+          >
             <FaCog className="icon" /> SETTINGS
           </button>
-          <button className="nav-btn logout" onClick={() => setShowLogoutModal(true)}>
+          <button
+            className="nav-btn logout"
+            onClick={() => setShowLogoutModal(true)}
+          >
             <FaSignOutAlt className="icon" /> LOGOUT
           </button>
         </nav>
@@ -96,10 +114,12 @@ const AdminLayout = ({ title, onAddClick, children }) => {
             <h2 className="fs-1 fw-bold m-0">{title}</h2>
           </div>
 
-          <div className="search-bar position-relative me-3">
-            <input type="text" placeholder="Search..." />
-            <FaSearch className="search-icon" />
-          </div>
+          {showSearch && (
+            <div className="search-bar position-relative me-3">
+              <input type="text" placeholder="Search..." />
+              <FaSearch className="search-icon" />
+            </div>
+          )}
         </div>
 
         {onAddClick && (
@@ -117,7 +137,11 @@ const AdminLayout = ({ title, onAddClick, children }) => {
       </main>
 
       {/* LOGOUT MODAL */}
-      <Modal show={showLogoutModal} onHide={() => setShowLogoutModal(false)} centered>
+      <Modal
+        show={showLogoutModal}
+        onHide={() => setShowLogoutModal(false)}
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
         </Modal.Header>

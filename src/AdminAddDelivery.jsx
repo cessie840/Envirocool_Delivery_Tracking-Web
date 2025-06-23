@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
+import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
 
 const AddDelivery = () => {
   const navigate = useNavigate();
@@ -51,11 +52,8 @@ const AddDelivery = () => {
       [name]: value,
     };
 
-    // If down_payment is updated, recalculate balance and total
     if (name === "down_payment") {
       const downPayment = parseFloat(value);
-
-      // Sum total cost from all items
       const totalCost = orderItems.reduce((sum, item) => {
         const cost = parseFloat(item.total_cost);
         return sum + (isNaN(cost) ? 0 : cost);
@@ -88,7 +86,6 @@ const AddDelivery = () => {
 
     setOrderItems(items);
 
-    // Update total in form based on all items
     const totalCostSum = items.reduce((sum, item) => {
       const cost = parseFloat(item.total_cost);
       return sum + (isNaN(cost) ? 0 : cost);
@@ -110,6 +107,24 @@ const AddDelivery = () => {
     ]);
   };
 
+  const removeItem = (index) => {
+    const updatedItems = orderItems.filter((_, i) => i !== index);
+    setOrderItems(updatedItems);
+
+    const totalCostSum = updatedItems.reduce((sum, item) => {
+      const cost = parseFloat(item.total_cost);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      total: totalCostSum.toFixed(2),
+      balance: (totalCostSum - parseFloat(prevForm.down_payment || 0)).toFixed(
+        2
+      ),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -118,7 +133,6 @@ const AddDelivery = () => {
       return;
     }
 
-    // Validate each item
     for (const item of orderItems) {
       const quantity = parseInt(item.quantity);
       const unitCost = parseFloat(item.unit_cost);
@@ -170,13 +184,16 @@ const AddDelivery = () => {
     }
   };
 
-  const dataToSend = {
-    ...form,
-    order_items: orderItems,
-  };
-
   return (
-    <AdminLayout title="Add Delivery">
+    <AdminLayout title="Add Delivery" showSearch={false}>
+      <div className="d-flex justify-content-start mt-4 ms-4">
+        <button
+          className="btn back-btn d-flex align-items-center gap-2 fs-5"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft /> Back
+        </button>
+      </div>
       <div className="add-delivery-container mt-4 p-4 border rounded mx-auto">
         <div className="header-info mb-3">
           <p>
@@ -258,17 +275,14 @@ const AddDelivery = () => {
               <label className="form-label d-block container-fluid">
                 Mode of Payment:
               </label>
-              <div className="MOP d-flex justify-content-center gap-4 gap-md-3 container-fluid">
+              <div className="MOP d-flex justify-content-center gap-5 gap-md-5 container-fluid">
                 {["Cash", "COD", "Card"].map((method) => (
-                  <div className="form-check d-flex" key={method}>
-                    <label
-                      className="form-check-label me-5 mx-md-4.5"
-                      htmlFor={method.toLowerCase()}
-                    >
-                      {method}
-                    </label>
+                  <div
+                    className="form-check d-flex align-items-center"
+                    key={method}
+                  >
                     <input
-                      className="form-check-input"
+                      className="form-check-input me-2"
                       type="radio"
                       name="mode_of_payment"
                       id={method.toLowerCase()}
@@ -277,6 +291,12 @@ const AddDelivery = () => {
                       onChange={handleChange}
                       required
                     />
+                    <label
+                      className="form-check-label"
+                      htmlFor={method.toLowerCase()}
+                    >
+                      {method}
+                    </label>
                   </div>
                 ))}
               </div>
@@ -285,13 +305,14 @@ const AddDelivery = () => {
 
           <div className="order-details mt-5">
             <h4 className="mb-4">Order Details</h4>
-            <table className="order-table">
+            <table className="order-table table">
               <thead>
                 <tr>
                   <th>Quantity</th>
                   <th>Item Description</th>
                   <th>Unit Cost</th>
                   <th>Total Cost</th>
+                  {orderItems.length > 1 && <th className="no-header"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -312,7 +333,7 @@ const AddDelivery = () => {
                       <input
                         type="text"
                         name="description"
-                        placeholder="Description"
+                        placeholder="Carrier Aura Inverter Split Type 1.5HP"
                         className="form-control"
                         value={item.description}
                         onChange={(e) => handleItemChange(index, e)}
@@ -341,6 +362,17 @@ const AddDelivery = () => {
                         required
                       />
                     </td>
+                    {orderItems.length > 1 && (
+                      <td className="align-middle remove-btn-cell">
+                        <button
+                          type="button"
+                          className="remove-btn"
+                          onClick={() => removeItem(index)}
+                        >
+                          <FaRegTrashAlt size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -395,7 +427,30 @@ const AddDelivery = () => {
             </div>
             <hr className="mt-4" />
             <div className="btn-group mx-3 mt-4 fs-6 gap-4">
-              <button type="reset" className="cancel-btn bg-danger">
+              <button
+                type="button"
+                className="cancel-btn bg-danger"
+                onClick={() => {
+                  setForm({
+                    customer_name: "",
+                    customer_address: "",
+                    customer_contact: "",
+                    date_of_order: "",
+                    mode_of_payment: "",
+                    down_payment: "",
+                    balance: "",
+                    total: "",
+                  });
+                  setOrderItems([
+                    {
+                      quantity: "",
+                      description: "",
+                      unit_cost: "",
+                      total_cost: "",
+                    },
+                  ]);
+                }}
+              >
                 Cancel
               </button>
               <button type="submit" className="add-btn bg-success">
