@@ -6,7 +6,7 @@ const UpdateOrderModal = ({
   handleClose,
   handleSubmit,
   formData,
-  handleChange,
+  setFormData,
   editableItems,
   setEditableItems,
 }) => {
@@ -15,15 +15,21 @@ const UpdateOrderModal = ({
     0
   );
 
-  const downPayment = parseFloat(formData.down_payment || 0);
-  const balance = total - downPayment;
+  const handleDownPaymentChange = (e) => {
+    const down_payment = parseFloat(e.target.value) || 0;
+    const balance = total - down_payment;
+    setFormData({
+      ...formData,
+      down_payment,
+      balance: balance.toFixed(2),
+      total: total.toFixed(2),
+    });
+  };
 
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
       <Modal.Header closeButton className="bg-success" closeVariant="white">
-        <Modal.Title className="text-white">
-          Update Delivery Information
-        </Modal.Title>
+        <Modal.Title className="text-white">Update Delivery Info</Modal.Title>
       </Modal.Header>
 
       <Modal.Body className="bg-light">
@@ -37,7 +43,9 @@ const UpdateOrderModal = ({
                 type="text"
                 name="customer_name"
                 value={formData.customer_name}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData({ ...formData, customer_name: e.target.value })
+                }
               />
             </Form.Group>
 
@@ -47,7 +55,9 @@ const UpdateOrderModal = ({
                 type="text"
                 name="customer_address"
                 value={formData.customer_address}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData({ ...formData, customer_address: e.target.value })
+                }
               />
             </Form.Group>
 
@@ -59,13 +69,11 @@ const UpdateOrderModal = ({
                 value={formData.customer_contact}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (!/^\d{0,11}$/.test(value)) return;
-                  handleChange(e);
+                  if (/^\d{0,11}$/.test(value)) {
+                    setFormData({ ...formData, customer_contact: value });
+                  }
                 }}
               />
-              <small className="text-muted">
-                Must start with "09" and be exactly 11 digits.
-              </small>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -74,47 +82,36 @@ const UpdateOrderModal = ({
                 type="text"
                 name="mode_of_payment"
                 value={formData.mode_of_payment}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData({ ...formData, mode_of_payment: e.target.value })
+                }
               />
             </Form.Group>
+
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Down Payment</Form.Label>
+              <Form.Label>Down Payment</Form.Label>
               <Form.Control
                 type="number"
                 step="0.01"
                 name="down_payment"
                 value={formData.down_payment}
-                onChange={(e) => {
-                  const down = parseFloat(e.target.value) || 0;
-                  const total = editableItems.reduce(
-                    (sum, item) => sum + item.quantity * item.unit_cost,
-                    0
-                  );
-                  const updatedForm = {
-                    ...formData,
-                    down_payment: down,
-                    balance: (total - down).toFixed(2),
-                    total: total.toFixed(2),
-                  };
-                  setFormData(updatedForm);
-                }}
+                onChange={handleDownPaymentChange}
               />
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Balance</Form.Label>
+              <Form.Label>Balance</Form.Label>
               <Form.Control
                 type="number"
                 name="balance"
-                readOnly
                 value={formData.balance}
+                readOnly
               />
             </Form.Group>
           </div>
 
           <div className="p-3 bg-white rounded shadow-sm border">
             <h5 className="text-success fw-bold mb-3">Items Ordered</h5>
-
             {editableItems.map((item, index) => (
               <div
                 key={index}
@@ -138,7 +135,7 @@ const UpdateOrderModal = ({
                     <Form.Label>Quantity</Form.Label>
                     <Form.Control
                       type="number"
-                      min={0}
+                      min={1}
                       value={item.quantity}
                       onChange={(e) => {
                         const newItems = [...editableItems];
@@ -153,8 +150,8 @@ const UpdateOrderModal = ({
                     <Form.Label>Unit Cost</Form.Label>
                     <Form.Control
                       type="number"
-                      step="0.01"
                       min={0}
+                      step="0.01"
                       value={item.unit_cost}
                       onChange={(e) => {
                         const newItems = [...editableItems];
@@ -164,13 +161,6 @@ const UpdateOrderModal = ({
                       }}
                     />
                   </Form.Group>
-                </div>
-
-                <div className="text-end">
-                  <span className="fw-bold text-success">
-                    Subtotal: ₱
-                    {(item.quantity * item.unit_cost).toLocaleString()}
-                  </span>
                 </div>
               </div>
             ))}

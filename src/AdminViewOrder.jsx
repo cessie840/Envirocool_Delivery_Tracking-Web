@@ -130,13 +130,13 @@ const ViewOrder = () => {
   };
 
   return (
-    <AdminLayout title="View Order Details" showSearch={false}>
+    <AdminLayout title="View Order Details">
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="btn back-btn d-flex align-items-center gap-2 fs-5"
+          className="btn d-flex align-items-center gap-2 fs-4"
           onClick={() => navigate(-1)}
         >
-          <FaArrowLeft/> Back
+          <FaArrowLeft /> Back
         </button>
       </div>
 
@@ -230,10 +230,11 @@ const ViewOrder = () => {
         handleClose={handleClose}
         handleSubmit={handleSubmit}
         formData={formData}
-        handleChange={handleChange}
+        setFormData={setFormData} 
         editableItems={editableItems}
         setEditableItems={setEditableItems}
       />
+
     </AdminLayout>
   );
 };
