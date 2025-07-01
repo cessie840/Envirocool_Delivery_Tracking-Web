@@ -1,20 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Container, Card, Modal, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
+import axios from "axios";
 
 function OutForDelivery() {
-  const [deliveries, setDeliveries] = useState(
-    JSON.parse(localStorage.getItem("outForDelivery")) || []
-  );
+  const [deliveries, setDeliveries] = useState([]);
   const [delivered, setDelivered] = useState([]);
   const [cancelled, setCancelled] = useState([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user")); // adjust key as needed
+    if (!user?.pers_username) return;
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php",
+        {
+          pers_username: user.pers_username,
+        }
+      )
+      .then((res) => {
+        if (res.data.success === false) {
+          alert(res.data.message);
+        } else if (Array.isArray(res.data)) {
+          setDeliveries(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setDeliveries(res.data.data); // handles structure if using { success: true, data: [...] }
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching deliveries:", err);
+        alert("Failed to fetch deliveries. Please try again later.");
+      });
+  }, []);
 
   const markAsDelivered = (transactionNo) => {
     const delivery = deliveries.find((d) => d.transactionNo === transactionNo);

@@ -6,14 +6,10 @@ header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Content-Type: application/json");
 include 'database.php';
 
-// Select only active personnel who are NOT already assigned
+// Select all delivery personnel without any restrictions
 $sql = "
-    SELECT dp.pers_username, dp.pers_fname, dp.pers_lname
-    FROM DeliveryPersonnel dp
-    WHERE dp.status = 'active'
-    AND dp.pers_username NOT IN (
-        SELECT personnel_username FROM DeliveryAssignments
-    )
+    SELECT pers_username, pers_fname, pers_lname
+    FROM DeliveryPersonnel
 ";
 
 $result = $conn->query($sql);
