@@ -55,35 +55,35 @@ const OperationalDelivery = () => {
     setShowModal(true);
   };
 
-  const handleAssignPersonnel = async () => {
-    try {
-      const res = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
-        {
-          orderId: selectedOrder.transaction_no,
-          personnelUsername: selectedPersonnel,
-        }
-      );
-
-      switch (res.data.success) {
-        case true:
-          alert("Personnel assigned successfully!");
-          setShowModal(false); // Close assign modal
-          setShowDetailModal(false); // Close detail modal
-          setSelectedOrder(null); // Clear selected order
-          fetchOrders(); // Refresh orders list
-          break;
-
-        case false:
-        default:
-          alert("Assignment failed: " + (res.data.message || "Unknown error"));
-          break;
+ const handleAssignPersonnel = async () => {
+  try {
+    const res = await axios.post(
+      "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
+      {
+        transaction_id: selectedOrder.transaction_no, // ✅ fixed key name
+        personnelUsername: selectedPersonnel
       }
-    } catch (error) {
-      console.error("Assignment failed:", error);
-      alert("Assignment failed. Please try again later.");
+    );
+
+    switch (res.data.success) {
+      case true:
+        alert("Personnel assigned successfully!");
+        setShowModal(false); // Close assign modal
+        setShowDetailModal(false); // Close detail modal
+        setSelectedOrder(null); // Clear selected order
+        fetchOrders(); // Refresh orders list
+        break;
+
+      case false:
+      default:
+        alert("Assignment failed: " + (res.data.message || "Unknown error"));
+        break;
     }
-  };
+  } catch (error) {
+    console.error("Assignment failed:", error);
+    alert("Assignment failed. Please try again later.");
+  }
+};
 
   const openDetailModal = (order) => {
     setSelectedOrder(order);

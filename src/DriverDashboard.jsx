@@ -3,11 +3,13 @@ import { Button, Container, Card } from "react-bootstrap";
 import axios from "axios";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
+import { useNavigate } from "react-router-dom";
 
 function DriverDashboard() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [assignedDeliveries, setAssignedDeliveries] = useState([]);
   const [outForDelivery, setOutForDelivery] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedProfile = localStorage.getItem("user");
@@ -22,9 +24,12 @@ function DriverDashboard() {
     }
 
     axios
-      .post("http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php", {
-        pers_username: username,
-      })
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
+        {
+          pers_username: username,
+        }
+      )
       .then((res) => {
         if (Array.isArray(res.data)) {
           setAssignedDeliveries(res.data);
@@ -43,15 +48,36 @@ function DriverDashboard() {
     );
     if (!delivery) return;
 
-    const updatedAssigned = assignedDeliveries.filter(
-      (d) => d.transactionNo !== transactionNo
-    );
-    const updatedOut = [...outForDelivery, delivery];
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
+        {
+          transactionNo,
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          // Update the local UI
+          const updatedAssigned = assignedDeliveries.filter(
+            (d) => d.transactionNo !== transactionNo
+          );
+          const updatedOut = [...outForDelivery, delivery];
 
-    setAssignedDeliveries(updatedAssigned);
-    setOutForDelivery(updatedOut);
+          setAssignedDeliveries(updatedAssigned);
+          setOutForDelivery(updatedOut);
+
+          // Show alert and navigate
+          alert("Order is now marked as 'Out for Delivery'.");
+          navigate("/out-for-delivery"); // Adjust this route if different
+        } else {
+          alert("Error: " + res.data.message);
+        }
+      })
+      .catch((err) => {
+        console.error("API error:", err);
+        alert("Failed to update delivery status. Please try again later.");
+      });
   };
-
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
