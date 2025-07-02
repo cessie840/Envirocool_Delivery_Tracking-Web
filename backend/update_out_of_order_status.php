@@ -1,7 +1,6 @@
 <?php
 include 'database.php';
 
-
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: POST");
@@ -49,24 +48,40 @@ try {
         respond(500, "Database connection failed.");
     }
 
-    // Prepare SQL statement
-    $stmt = $conn->prepare("UPDATE DeliveryDetails 
-                            SET delivery_status = 'Out for Delivery' 
-                               WHERE transaction_id = '$transactionNo' AND delivery_status = 'To Ship'
-                            ");
-    if (!$stmt) {
-        respond(500, "Failed to prepare SQL statement: " . $conn->error);
+    // Check if already "Out for Delivery"
+    $checkStmt = $conn->prepare("SELECT delivery_status FROM DeliveryDetails WHERE transaction_id = ?");
+    if (!$checkStmt) {
+        respond(500, "Failed to prepare status check query: " . $conn->error);
     }
 
-    // Bind and execute
+    $checkStmt->bind_param("i", $transactionNo);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+
+    if ($result->num_rows === 0) {
+        respond(404, "Transaction not found.");
+    }
+
+    $row = $result->fetch_assoc();
+    if ($row['delivery_status'] === 'Out for Delivery') {
+        respond(409, "Delivery is already marked as 'Out for Delivery'.");
+    }
+
+    // Now attempt update
+    $stmt = $conn->prepare("UPDATE DeliveryDetails 
+                            SET delivery_status = 'Out for Delivery' 
+                            WHERE transaction_id = ? AND delivery_status = 'To Ship'");
+    if (!$stmt) {
+        respond(500, "Failed to prepare update statement: " . $conn->error);
+    }
+
     $stmt->bind_param("i", $transactionNo);
     if (!$stmt->execute()) {
         respond(500, "Execution failed: " . $stmt->error);
     }
 
-    // Check if any rows were updated
     if ($stmt->affected_rows === 0) {
-        respond(404, "No matching delivery found or already updated.");
+        respond(404, "No matching delivery found or it has already been updated.");
     }
 
     respond(200, "Delivery marked as 'Out for Delivery'.");
@@ -74,8 +89,8 @@ try {
 } catch (Exception $e) {
     respond(500, "Unexpected server error.", $e->getMessage());
 } finally {
+    if (isset($checkStmt)) $checkStmt->close();
     if (isset($stmt)) $stmt->close();
     if (isset($conn)) $conn->close();
 }
-
 ?>

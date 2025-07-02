@@ -42,42 +42,50 @@ function DriverDashboard() {
       });
   }, []);
 
-  const markAsOutForDelivery = (transactionNo) => {
-    const delivery = assignedDeliveries.find(
-      (d) => d.transactionNo === transactionNo
-    );
-    if (!delivery) return;
+ const markAsOutForDelivery = (transactionNo) => {
+  const delivery = assignedDeliveries.find(
+    (d) => d.transactionNo === transactionNo
+  );
+  if (!delivery) {
+    alert("Delivery not found.");
+    return;
+  }
 
-    axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
-        {
-          transactionNo,
-        }
-      )
-      .then((res) => {
-        if (res.data.success) {
-          // Update the local UI
-          const updatedAssigned = assignedDeliveries.filter(
-            (d) => d.transactionNo !== transactionNo
-          );
-          const updatedOut = [...outForDelivery, delivery];
+  axios
+    .post(
+      "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
+      { transactionNo }
+    )
+    .then((res) => {
+      const { success, message } = res.data;
 
-          setAssignedDeliveries(updatedAssigned);
-          setOutForDelivery(updatedOut);
+      if (success) {
+        const updatedAssigned = assignedDeliveries.filter(
+          (d) => d.transactionNo !== transactionNo
+        );
+        const updatedOut = [...outForDelivery, delivery];
 
-          // Show alert and navigate
-          alert("Order is now marked as 'Out for Delivery'.");
-          navigate("/out-for-delivery"); // Adjust this route if different
-        } else {
-          alert("Error: " + res.data.message);
-        }
-      })
-      .catch((err) => {
+        setAssignedDeliveries(updatedAssigned);
+        setOutForDelivery(updatedOut);
+
+        alert("Order is now marked as 'Out for Delivery'.");
+        navigate("/out-for-delivery");
+      } else {
+        alert(`Error: ${message}`);
+      }
+    })
+    .catch((err) => {
+      if (err.response) {
+        // Handle known errors like 409
+        const { status, data } = err.response;
+        alert(`Error ${status}: ${data.message || "Something went wrong."}`);
+      } else {
+        // Handle network or other errors
         console.error("API error:", err);
         alert("Failed to update delivery status. Please try again later.");
-      });
-  };
+      }
+    });
+};
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />

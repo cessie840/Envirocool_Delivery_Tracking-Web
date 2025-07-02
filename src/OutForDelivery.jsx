@@ -13,7 +13,7 @@ function OutForDelivery() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user")); // adjust key as needed
@@ -41,14 +41,48 @@ function OutForDelivery() {
       });
   }, []);
 
-  const markAsDelivered = (transactionNo) => {
-    const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
-    const updated = deliveries.filter((d) => d.transactionNo !== transactionNo);
-    setDeliveries(updated);
-    setDelivered([...delivered, delivery]);
-    localStorage.setItem("outForDelivery", JSON.stringify(updated));
-    localStorage.setItem("delivered", JSON.stringify([...delivered, delivery]));
-  };
+const markAsDelivered = (transactionNo) => {
+  const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
+
+  if (!delivery) {
+    alert("Delivery not found.");
+    return;
+  }
+
+  axios
+    .post("http://localhost/DeliveryTrackingSystem/update_delivered_status.php", {
+      transaction_id: transactionNo,
+    })
+    .then((res) => {
+      const { success, message } = res.data;
+
+      if (success) {
+        const updatedDeliveries = deliveries.filter(
+          (d) => d.transactionNo !== transactionNo
+        );
+        const updatedDelivered = [...delivered, delivery];
+
+        setDeliveries(updatedDeliveries);
+        setDelivered(updatedDelivered);
+
+        alert("Delivery successfully marked as 'Delivered'.");
+        navigate("/successful-delivery");
+      } else {
+        alert(`Error: ${message}`);
+      }
+    })
+    .catch((err) => {
+      if (err.response) {
+        const { status, data } = err.response;
+        alert(`Error ${status}: ${data.message || "Something went wrong."}`);
+      } else {
+        console.error("API error:", err);
+        alert("Failed to update delivery status. Please try again later.");
+      }
+    });
+};
+
+
 
   const handleCancelClick = (delivery) => {
     setSelectedDelivery(delivery);
