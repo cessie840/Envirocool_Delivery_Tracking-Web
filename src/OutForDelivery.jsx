@@ -89,25 +89,54 @@ const markAsDelivered = (transactionNo) => {
     setShowCancelModal(true);
   };
 
-  const confirmCancellation = () => {
-    if (!cancelReason) return alert("Please select a cancellation reason.");
-    const updated = deliveries.filter(
-      (d) => d.transactionNo !== selectedDelivery.transactionNo
-    );
-    const cancelledWithReason = { ...selectedDelivery, reason: cancelReason };
+ const confirmCancellation = () => {
+  if (!cancelReason) {
+    alert("Please select a cancellation reason.");
+    return;
+  }
 
-    setDeliveries(updated);
-    setCancelled([...cancelled, cancelledWithReason]);
-    localStorage.setItem("outForDelivery", JSON.stringify(updated));
-    localStorage.setItem(
-      "cancelled",
-      JSON.stringify([...cancelled, cancelledWithReason])
-    );
+  axios
+    .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
+      transactionNo: selectedDelivery.transactionNo,
+      reason: cancelReason,
+    })
+    .then((res) => {
+      const { success, message } = res.data;
 
-    setShowCancelModal(false);
-    setSelectedDelivery(null);
-    setCancelReason("");
-  };
+      if (success) {
+        const updated = deliveries.filter(
+          (d) => d.transactionNo !== selectedDelivery.transactionNo
+        );
+        const cancelledWithReason = {
+          ...selectedDelivery,
+          reason: cancelReason,
+        };
+
+        setDeliveries(updated);
+        setCancelled([...cancelled, cancelledWithReason]);
+
+        localStorage.setItem("outForDelivery", JSON.stringify(updated));
+        localStorage.setItem(
+          "cancelled",
+          JSON.stringify([...cancelled, cancelledWithReason])
+        );
+
+        setShowCancelModal(false);
+        setSelectedDelivery(null);
+        setCancelReason("");
+
+        alert("Delivery marked as 'Cancelled'.");
+        navigate("/failed-delivery"); 
+      } else {
+        alert(`Failed to cancel delivery: ${message}`);
+      }
+    })
+    .catch((err) => {
+      console.error("Cancel error:", err);
+      alert("Error cancelling delivery.");
+    });
+};
+
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
