@@ -2,16 +2,36 @@ import React, { useState, useEffect } from "react";
 import { Container, Card } from "react-bootstrap";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
+import axios from "axios";
 
 function FailedDeliveries() {
   const [cancelledDeliveries, setCancelledDeliveries] = useState([]);
   const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("cancelled");
-    if (stored) {
-      setCancelledDeliveries(JSON.parse(stored));
-    }
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.pers_username) return;
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_cancelled_deliveries.php",
+        {
+          pers_username: user.pers_username,
+        }
+      )
+      .then((res) => {
+        if (res.data.success === false) {
+          alert(res.data.message);
+        } else if (Array.isArray(res.data)) {
+          setCancelledDeliveries(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setCancelledDeliveries(res.data.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching cancelled deliveries:", err);
+        alert("Failed to fetch cancelled deliveries. Please try again later.");
+      });
   }, []);
 
   return (
@@ -70,9 +90,15 @@ function FailedDeliveries() {
                   <strong>Unit Cost:</strong>
                   <span>{delivery.unitCost}</span>
                 </div>
-                <div className="d-flex justify-content-between mb-3">
+                <div className="d-flex justify-content-between mb-1">
                   <strong>Total Cost:</strong>
                   <span>{delivery.totalCost}</span>
+                </div>
+                <div className="d-flex justify-content-between mb-3">
+                  <strong className="text-danger">Cancelled Reason:</strong>
+                  <span className="text-danger fw-semibold">
+                    {delivery.cancelledReason}
+                  </span>
                 </div>
               </div>
             </Card>
