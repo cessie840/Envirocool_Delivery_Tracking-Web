@@ -20,7 +20,6 @@ const ViewOrder = () => {
     balance: "",
     total: "",
   });
-  
 
   useEffect(() => {
     document.title = "View Order Details";
@@ -130,7 +129,7 @@ const ViewOrder = () => {
   };
 
   return (
-    <AdminLayout title="View Order Details">
+    <AdminLayout title="View Order Details" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
           className="btn d-flex align-items-center gap-2 fs-4"
@@ -230,11 +229,10 @@ const ViewOrder = () => {
         handleClose={handleClose}
         handleSubmit={handleSubmit}
         formData={formData}
-        setFormData={setFormData} 
+        setFormData={setFormData}
         editableItems={editableItems}
         setEditableItems={setEditableItems}
       />
-
     </AdminLayout>
   );
 };
