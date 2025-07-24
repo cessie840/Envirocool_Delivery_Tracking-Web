@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import "leaflet/dist/leaflet.css";
+
 import Login from "./Login";
 import AdminDashboard from "./AdminDashboard";
 import ForgotPass from "./ForgotPass";
@@ -72,6 +74,10 @@ function App() {
         <Route path="/settings/backup-restore" element={<BackupRestoreTab />} />
         <Route path="/settings/view-terms" element={<ViewTermsTab />} />
       </>
+
+      
+
+      ;
 
       </Routes>
     </Router>
