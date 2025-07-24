@@ -22,13 +22,13 @@ import DriverProfileSettings from "./DriverProfileSettings";
 import AdminSettings from "./settings/AdminSettings";
 import OperationalSettings from "./settings/OperationalSettings";
 
-
 import EditProfileTab from "./settings/EditProfileTab";
 import ChangePasswordTab from "./settings/ChangePasswordTab";
 import AccountSecurityTab from "./settings/AccountSecurityTab";
 import BackupRestoreTab from "./settings/BackupRestoreTab";
 import ViewTermsTab from "./settings/ViewTermsTab";
 
+import Customer from "./Customer";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
@@ -72,6 +72,10 @@ function App() {
         <Route path="/settings/backup-restore" element={<BackupRestoreTab />} />
         <Route path="/settings/view-terms" element={<ViewTermsTab />} />
       </>
+
+        <Route path="/customer" element={<Customer />} />
+
+
 
       </Routes>
     </Router>
