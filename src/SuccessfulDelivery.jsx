@@ -2,14 +2,36 @@ import React, { useState, useEffect } from "react";
 import { Container, Card } from "react-bootstrap";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
+import axios from "axios";
 
 function SuccessfulDelivery() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [delivered, setDelivered] = useState([]);
 
-  useEffect(() => {
-    const storedDelivered = localStorage.getItem("delivered");
-    setDelivered(storedDelivered ? JSON.parse(storedDelivered) : []);
+ useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.pers_username) return;
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_delivered_deliveries.php",
+        {
+          pers_username: user.pers_username,
+        }
+      )
+      .then((res) => {
+        if (res.data.success === false) {
+          alert(res.data.message);
+        } else if (Array.isArray(res.data)) {
+          setDelivered(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setDelivered(res.data.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching deliveries:", err);
+        alert("Failed to fetch deliveries. Please try again later.");
+      });
   }, []);
 
   return (

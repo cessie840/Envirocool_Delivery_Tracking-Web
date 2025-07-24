@@ -1,13 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Container, Card, Modal, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
+import axios from "axios";
 
 function OutForDelivery() {
-  const [deliveries, setDeliveries] = useState(
-    JSON.parse(localStorage.getItem("outForDelivery")) || []
-  );
+  const [deliveries, setDeliveries] = useState([]);
   const [delivered, setDelivered] = useState([]);
   const [cancelled, setCancelled] = useState([]);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -16,39 +15,128 @@ function OutForDelivery() {
   const [cancelReason, setCancelReason] = useState("");
   const navigate = useNavigate();
 
-  const markAsDelivered = (transactionNo) => {
-    const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
-    const updated = deliveries.filter((d) => d.transactionNo !== transactionNo);
-    setDeliveries(updated);
-    setDelivered([...delivered, delivery]);
-    localStorage.setItem("outForDelivery", JSON.stringify(updated));
-    localStorage.setItem("delivered", JSON.stringify([...delivered, delivery]));
-  };
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user")); // adjust key as needed
+    if (!user?.pers_username) return;
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php",
+        {
+          pers_username: user.pers_username,
+        }
+      )
+      .then((res) => {
+        if (res.data.success === false) {
+          alert(res.data.message);
+        } else if (Array.isArray(res.data)) {
+          setDeliveries(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setDeliveries(res.data.data); // handles structure if using { success: true, data: [...] }
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching deliveries:", err);
+        alert("Failed to fetch deliveries. Please try again later.");
+      });
+  }, []);
+
+const markAsDelivered = (transactionNo) => {
+  const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
+
+  if (!delivery) {
+    alert("Delivery not found.");
+    return;
+  }
+
+  axios
+    .post("http://localhost/DeliveryTrackingSystem/update_delivered_status.php", {
+      transaction_id: transactionNo,
+    })
+    .then((res) => {
+      const { success, message } = res.data;
+
+      if (success) {
+        const updatedDeliveries = deliveries.filter(
+          (d) => d.transactionNo !== transactionNo
+        );
+        const updatedDelivered = [...delivered, delivery];
+
+        setDeliveries(updatedDeliveries);
+        setDelivered(updatedDelivered);
+
+        alert("Delivery successfully marked as 'Delivered'.");
+        navigate("/successful-delivery");
+      } else {
+        alert(`Error: ${message}`);
+      }
+    })
+    .catch((err) => {
+      if (err.response) {
+        const { status, data } = err.response;
+        alert(`Error ${status}: ${data.message || "Something went wrong."}`);
+      } else {
+        console.error("API error:", err);
+        alert("Failed to update delivery status. Please try again later.");
+      }
+    });
+};
+
+
 
   const handleCancelClick = (delivery) => {
     setSelectedDelivery(delivery);
     setShowCancelModal(true);
   };
 
-  const confirmCancellation = () => {
-    if (!cancelReason) return alert("Please select a cancellation reason.");
-    const updated = deliveries.filter(
-      (d) => d.transactionNo !== selectedDelivery.transactionNo
-    );
-    const cancelledWithReason = { ...selectedDelivery, reason: cancelReason };
+ const confirmCancellation = () => {
+  if (!cancelReason) {
+    alert("Please select a cancellation reason.");
+    return;
+  }
 
-    setDeliveries(updated);
-    setCancelled([...cancelled, cancelledWithReason]);
-    localStorage.setItem("outForDelivery", JSON.stringify(updated));
-    localStorage.setItem(
-      "cancelled",
-      JSON.stringify([...cancelled, cancelledWithReason])
-    );
+  axios
+    .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
+      transactionNo: selectedDelivery.transactionNo,
+      reason: cancelReason,
+    })
+    .then((res) => {
+      const { success, message } = res.data;
 
-    setShowCancelModal(false);
-    setSelectedDelivery(null);
-    setCancelReason("");
-  };
+      if (success) {
+        const updated = deliveries.filter(
+          (d) => d.transactionNo !== selectedDelivery.transactionNo
+        );
+        const cancelledWithReason = {
+          ...selectedDelivery,
+          reason: cancelReason,
+        };
+
+        setDeliveries(updated);
+        setCancelled([...cancelled, cancelledWithReason]);
+
+        localStorage.setItem("outForDelivery", JSON.stringify(updated));
+        localStorage.setItem(
+          "cancelled",
+          JSON.stringify([...cancelled, cancelledWithReason])
+        );
+
+        setShowCancelModal(false);
+        setSelectedDelivery(null);
+        setCancelReason("");
+
+        alert("Delivery marked as 'Cancelled'.");
+        navigate("/failed-delivery"); 
+      } else {
+        alert(`Failed to cancel delivery: ${message}`);
+      }
+    })
+    .catch((err) => {
+      console.error("Cancel error:", err);
+      alert("Error cancelling delivery.");
+    });
+};
+
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>

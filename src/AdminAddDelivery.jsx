@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
 import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
+import { Button, Modal } from "react-bootstrap";
 
 const AddDelivery = () => {
   const navigate = useNavigate();
 
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const [form, setForm] = useState({
     customer_name: "",
@@ -20,6 +22,35 @@ const AddDelivery = () => {
     balance: "",
     total: "",
   });
+
+  const handleConfirmCancel = () => {
+    setShowCancelModal(false);
+
+    // Clear form
+    setForm({
+      customer_name: "",
+      customer_address: "",
+      customer_contact: "",
+      date_of_order: "",
+      mode_of_payment: "",
+      down_payment: "",
+      balance: "",
+      total: "",
+    });
+
+    // Clear order items
+    setOrderItems([
+      {
+        quantity: "",
+        description: "",
+        unit_cost: "",
+        total_cost: "",
+      },
+    ]);
+
+    // Redirect to admin dashboard
+    navigate("/delivery-details");
+  };
 
   const [orderItems, setOrderItems] = useState([
     { quantity: "", description: "", unit_cost: "", total_cost: "" },
@@ -430,29 +461,35 @@ const AddDelivery = () => {
               <button
                 type="button"
                 className="cancel-btn bg-danger"
-                onClick={() => {
-                  setForm({
-                    customer_name: "",
-                    customer_address: "",
-                    customer_contact: "",
-                    date_of_order: "",
-                    mode_of_payment: "",
-                    down_payment: "",
-                    balance: "",
-                    total: "",
-                  });
-                  setOrderItems([
-                    {
-                      quantity: "",
-                      description: "",
-                      unit_cost: "",
-                      total_cost: "",
-                    },
-                  ]);
-                }}
+                onClick={() => setShowCancelModal(true)}
               >
                 Cancel
               </button>
+              <Modal
+                show={showCancelModal}
+                onHide={() => setShowCancelModal(false)}
+                centered
+              >
+                <Modal.Header closeButton>
+                  <Modal.Title className="text-danger">
+                    Confirm Cancellation
+                  </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                  Are you sure you want to cancel adding this delivery?
+                </Modal.Body>
+                <Modal.Footer>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowCancelModal(false)}
+                  >
+                    No
+                  </Button>
+                  <Button variant="danger" onClick={handleConfirmCancel}>
+                    Yes, Cancel
+                  </Button>
+                </Modal.Footer>
+              </Modal>
               <button type="submit" className="add-btn bg-success">
                 Add
               </button>

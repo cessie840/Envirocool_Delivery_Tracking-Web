@@ -34,6 +34,11 @@ FROM DeliveryAssignments da
 JOIN Transactions t ON da.transaction_id = t.transaction_id
 JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
 WHERE da.personnel_username = '$username'
+AND t.transaction_id IN (
+      SELECT transaction_id 
+      FROM DeliveryDetails 
+      WHERE delivery_status = 'To Ship'
+  )
 ";
 
 $result = $conn->query($sql);
@@ -47,7 +52,7 @@ if ($result && $result->num_rows > 0) {
 
         if (!isset($grouped[$tid])) {
             $grouped[$tid] = [
-                'transactionNo' => str_pad($tid, 9, "0", STR_PAD_LEFT),
+                'transactionNo' => $tid,
                 'customerName' => $row['customer_name'],
                 'address' => $row['customer_address'],
                 'contact' => $row['customer_contact'],
@@ -78,3 +83,5 @@ if ($result && $result->num_rows > 0) {
 
 echo json_encode($deliveries);
 $conn->close();
+
+?>
