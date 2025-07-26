@@ -41,102 +41,102 @@ function OutForDelivery() {
       });
   }, []);
 
-const markAsDelivered = (transactionNo) => {
-  const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
+  const markAsDelivered = (transactionNo) => {
+    const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
 
-  if (!delivery) {
-    alert("Delivery not found.");
-    return;
-  }
+    if (!delivery) {
+      alert("Delivery not found.");
+      return;
+    }
 
-  axios
-    .post("http://localhost/DeliveryTrackingSystem/update_delivered_status.php", {
-      transaction_id: transactionNo,
-    })
-    .then((res) => {
-      const { success, message } = res.data;
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/update_delivered_status.php",
+        {
+          transaction_id: transactionNo,
+        }
+      )
+      .then((res) => {
+        const { success, message } = res.data;
 
-      if (success) {
-        const updatedDeliveries = deliveries.filter(
-          (d) => d.transactionNo !== transactionNo
-        );
-        const updatedDelivered = [...delivered, delivery];
+        if (success) {
+          const updatedDeliveries = deliveries.filter(
+            (d) => d.transactionNo !== transactionNo
+          );
+          const updatedDelivered = [...delivered, delivery];
 
-        setDeliveries(updatedDeliveries);
-        setDelivered(updatedDelivered);
+          setDeliveries(updatedDeliveries);
+          setDelivered(updatedDelivered);
 
-        alert("Delivery successfully marked as 'Delivered'.");
-        navigate("/successful-delivery");
-      } else {
-        alert(`Error: ${message}`);
-      }
-    })
-    .catch((err) => {
-      if (err.response) {
-        const { status, data } = err.response;
-        alert(`Error ${status}: ${data.message || "Something went wrong."}`);
-      } else {
-        console.error("API error:", err);
-        alert("Failed to update delivery status. Please try again later.");
-      }
-    });
-};
-
-
+          alert("Delivery successfully marked as 'Delivered'.");
+          navigate("/successful-delivery");
+        } else {
+          alert(`Error: ${message}`);
+        }
+      })
+      .catch((err) => {
+        if (err.response) {
+          const { status, data } = err.response;
+          alert(`Error ${status}: ${data.message || "Something went wrong."}`);
+        } else {
+          console.error("API error:", err);
+          alert("Failed to update delivery status. Please try again later.");
+        }
+      });
+  };
 
   const handleCancelClick = (delivery) => {
     setSelectedDelivery(delivery);
     setShowCancelModal(true);
   };
 
- const confirmCancellation = () => {
-  if (!cancelReason) {
-    alert("Please select a cancellation reason.");
-    return;
-  }
+  const confirmCancellation = () => {
+    if (!cancelReason) {
+      alert("Please select a cancellation reason.");
+      return;
+    }
 
-  axios
-    .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
-      transactionNo: selectedDelivery.transactionNo,
-      reason: cancelReason,
-    })
-    .then((res) => {
-      const { success, message } = res.data;
+    axios
+      .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
+        transactionNo: selectedDelivery.transactionNo,
+        reason: cancelReason,
+      })
+      .then((res) => {
+        const { success, message } = res.data;
 
-      if (success) {
-        const updated = deliveries.filter(
-          (d) => d.transactionNo !== selectedDelivery.transactionNo
-        );
-        const cancelledWithReason = {
-          ...selectedDelivery,
-          reason: cancelReason,
-        };
+        if (success) {
+          const updated = deliveries.filter(
+            (d) => d.transactionNo !== selectedDelivery.transactionNo
+          );
+          const cancelledWithReason = {
+            ...selectedDelivery,
+            reason: cancelReason,
+          };
 
-        setDeliveries(updated);
-        setCancelled([...cancelled, cancelledWithReason]);
+          setDeliveries(updated);
+          setCancelled([...cancelled, cancelledWithReason]);
 
-        localStorage.setItem("outForDelivery", JSON.stringify(updated));
-        localStorage.setItem(
-          "cancelled",
-          JSON.stringify([...cancelled, cancelledWithReason])
-        );
+          localStorage.setItem("outForDelivery", JSON.stringify(updated));
+          localStorage.setItem(
+            "cancelled",
+            JSON.stringify([...cancelled, cancelledWithReason])
+          );
 
-        setShowCancelModal(false);
-        setSelectedDelivery(null);
-        setCancelReason("");
+          setShowCancelModal(false);
+          setSelectedDelivery(null);
+          setCancelReason("");
 
-        alert("Delivery marked as 'Cancelled'.");
-        navigate("/failed-delivery"); 
-      } else {
-        alert(`Failed to cancel delivery: ${message}`);
-      }
-    })
-    .catch((err) => {
-      console.error("Cancel error:", err);
-      alert("Error cancelling delivery.");
-    });
-};
-
+          alert("Delivery marked as 'Cancelled'.");
+          navigate("/failed-delivery");
+        } else {
+          alert(`Failed to cancel delivery: ${message}`);
+        }
+      })
+      .catch((err) => {
+        console.error("Cancel error:", err);
+        alert("Error cancelling delivery.");
+      });
+  };
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
@@ -215,7 +215,7 @@ const markAsDelivered = (transactionNo) => {
                   style={{ borderRadius: "10px" }}
                   onClick={() => handleCancelClick(delivery)}
                 >
-                  Cancelled/Failed
+                  Failed
                 </Button>
               </div>
             </Card>
@@ -230,7 +230,7 @@ const markAsDelivered = (transactionNo) => {
         centered
       >
         <Modal.Header closeButton style={{ backgroundColor: "#E8F8F5" }}>
-          <Modal.Title>Select Cancellation Reason</Modal.Title>
+          <Modal.Title>Select Reason:</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
@@ -245,7 +245,6 @@ const markAsDelivered = (transactionNo) => {
                   Customer didn't receive
                 </option>
                 <option value="Damaged item">Damaged item</option>
-                <option value="Customer cancelled">Customer cancelled</option>
               </Form.Select>
             </Form.Group>
           </Form>
@@ -255,7 +254,7 @@ const markAsDelivered = (transactionNo) => {
             Close
           </Button>
           <Button variant="danger" onClick={confirmCancellation}>
-            Confirm Cancel
+            Confirm 
           </Button>
         </Modal.Footer>
       </Modal>
