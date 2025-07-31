@@ -173,7 +173,7 @@ const Sidebar = ({ show, onHide }) => {
               { name: "Assigned Delivery", path: "/driver-dashboard" },
               { name: "Out For Delivery", path: "/out-for-delivery" },
               { name: "Successful Delivered", path: "/successful-delivery" },
-              { name: "Cancelled/Failed", path: "/failed-delivery" },
+              { name: "Failed Deliveries", path: "/failed-delivery" },
               { name: "Logout", path: "/" },
             ].map((item, i) => (
               <ListGroup.Item

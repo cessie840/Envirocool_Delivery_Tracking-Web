@@ -42,13 +42,11 @@ function FailedDeliveries() {
       <Container className="py-4">
         <br />
         <h2 className="text-center text-danger fw-bold mb-3">
-          CANCELLED / FAILED DELIVERIES
+          FAILED DELIVERIES
         </h2>
         <br />
         {cancelledDeliveries.length === 0 ? (
-          <p className="text-muted text-center">
-            No cancelled or failed deliveries.
-          </p>
+          <p className="text-muted text-center">No failed deliveries.</p>
         ) : (
           cancelledDeliveries.map((delivery, idx) => (
             <Card
