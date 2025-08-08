@@ -100,7 +100,7 @@ const DeliveryDetails = () => {
               <td>{group.delivery_status}</td>
               <td>
                 <button
-                  className="btn btn-view px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
+                  className="btn btn-view px-2 py-1 m-2 fw-normal border-light rounded-2"
                   onClick={() =>
                     navigate(`/view-delivery/${group.transaction_id}`)
                   }
@@ -109,7 +109,7 @@ const DeliveryDetails = () => {
                 </button>
 
                 <button
-                  className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal fs-6 border-light rounded-3"
+                  className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal border-light rounded-2"
                   onClick={() => handleDelete(group.transaction_id)}
                 >
                   Delete

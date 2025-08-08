@@ -1,22 +1,28 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:5173");
+
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174'
+];
+
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
+
 header("Content-Type: application/json");
+
 include 'database.php';
 
 $orders = [];
-$sql = "SELECT t.*, 
-               da.personnel_username, 
-               CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS assigned_personnel
-        FROM Transactions t
-        LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
-        LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username";
 
+$sql = "SELECT * FROM Transactions";
 $result = $conn->query($sql);
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $transactionId = $row['transaction_id'];
 
+        // Fetch purchase orders for this transaction
         $itemsSql = "SELECT quantity, description, unit_cost, (quantity * unit_cost) AS total_cost
                      FROM PurchaseOrder 
                      WHERE transaction_id = $transactionId";
@@ -48,8 +54,7 @@ if ($result && $result->num_rows > 0) {
             'down_payment' => number_format($row['down_payment'], 2),
             'balance' => number_format($row['balance'], 2),
             'total_cost' => number_format($calculatedTotal, 2),
-            'items' => $items,
-            'assigned_personnel' => $row['assigned_personnel'] ?? null  // null if not assigned
+            'items' => $items
         ];
     }
 }

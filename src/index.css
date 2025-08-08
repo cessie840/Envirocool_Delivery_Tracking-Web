@@ -282,6 +282,8 @@ input::placeholder {
   border-radius: 4px;
   cursor: pointer;
   box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+  font-size: 0.9rem;
+
 }
 
 .add-item{
@@ -311,7 +313,7 @@ input::placeholder {
 }
 
 .back-btn:hover{
-  color: #006400 !important;
+  color: #1c87c9 !important;
 }
 
 .sidebar.collapsed {
@@ -472,6 +474,7 @@ input::placeholder {
   border-radius: 4px;
   cursor: pointer;
   box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+  font-size: 0.9rem;
 }
 
 .btn-view:hover{

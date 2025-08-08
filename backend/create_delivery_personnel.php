@@ -1,18 +1,25 @@
 <?php
-// Handle preflight request
+// Allowed origins
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174'
+];
+
+// If request origin is allowed, set CORS headers
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
+
+header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json");
+
+// Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Origin: http://localhost:5173");
-    header("Access-Control-Allow-Headers: Content-Type");
     header("Access-Control-Allow-Methods: POST, OPTIONS");
     header("Access-Control-Max-Age: 86400");
     http_response_code(200);
     exit();
 }
-
-// Main POST headers
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json");
 
 include 'database.php';
 
@@ -27,9 +34,7 @@ if (!$input) {
     exit();
 }
 
-// Required fields
 $requiredFields = ['firstName', 'lastName', 'gender', 'birthdate', 'age', 'contactNumber', 'email'];
-
 foreach ($requiredFields as $field) {
     if (empty($input[$field])) {
         echo json_encode(["status" => "error", "message" => "Missing required field: $field"]);
@@ -37,18 +42,16 @@ foreach ($requiredFields as $field) {
     }
 }
 
-// Sanitize input
 $fname   = trim($input['firstName']);
 $lname   = trim($input['lastName']);
 $gender  = trim($input['gender']);
-$birth   = trim($input['birthdate']); // Format should be YYYY-MM-DD
+$birth   = trim($input['birthdate']);
 $age     = intval($input['age']);
 $phone   = trim($input['contactNumber']);
 $email   = trim($input['email']);
-$profilePicName = 'uploads/default-profile-pic.png';// Default profile picture
-$status = 'active';
+$profilePicName = 'default.png';
+$status = 'Active';
 
-// Validate formats
 if (!preg_match("/^09\d{9}$/", $phone)) {
     echo json_encode(["status" => "invalid_contact"]);
     exit();
@@ -64,32 +67,25 @@ if ($age < 18) {
     exit();
 }
 
-// Check if account already exists by email AND first + last name
-$stmt = $conn->prepare("SELECT * FROM DeliveryPersonnel WHERE pers_email = ? OR (pers_fname = ? AND pers_lname = ?)");
-$stmt->bind_param("sss", $email, $fname, $lname);
+$stmt = $conn->prepare("SELECT * FROM DeliveryPersonnel WHERE pers_email = ?");
+$stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result->num_rows > 0) {
-    echo json_encode([
-        "status" => "existing_account",
-        "message" => "An account with the same email or full name already exists."
-    ]);
+    echo json_encode(["status" => "email_exists", "message" => "This email is already in use."]);
     $stmt->close();
     exit();
 }
 $stmt->close();
 
-// Generate new unique username
 $result = $conn->query("SELECT COUNT(*) AS count FROM DeliveryPersonnel");
 $row = $result->fetch_assoc();
 $count = $row['count'] + 1;
 $username = 'personnel' . str_pad($count, 2, '0', STR_PAD_LEFT);
 
-// Generate password from birthdate (plaintext)
 $passwordPlain = $birth;
 $passwordHashed = password_hash($passwordPlain, PASSWORD_BCRYPT);
 
-// Insert new personnel
 $stmt = $conn->prepare("INSERT INTO DeliveryPersonnel (
     pers_username, pers_password, pers_fname, pers_lname,
     pers_age, pers_gender, pers_birth, pers_phone, pers_email,
