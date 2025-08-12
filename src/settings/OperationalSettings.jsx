@@ -29,7 +29,7 @@ const OperationalSettings = () => {
   };
 
   return (
-    <OperationalLayout title="Admin Settings">
+    <OperationalLayout title="Operational Manager Settings">
       {/* Tabs Outside Main Container */}
       <div className="settings-tabs mt-5">
         <button
