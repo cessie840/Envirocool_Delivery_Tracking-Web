@@ -16,11 +16,18 @@ import {
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
-const AdminLayout = ({ title, onAddClick, showSearch = true, children }) => {
+const AdminLayout = ({
+  title,
+  onAddClick,
+  showSearch = true,
+  onSearch,
+  children,
+}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   const confirmLogout = () => {
@@ -31,6 +38,12 @@ const AdminLayout = ({ title, onAddClick, showSearch = true, children }) => {
       localStorage.removeItem("user");
       navigate("/");
     }, 500);
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (onSearch) onSearch(value);
   };
 
   return (
@@ -113,6 +126,17 @@ const AdminLayout = ({ title, onAddClick, showSearch = true, children }) => {
             </button>
             <h2 className="fs-1 fw-bold m-0">{title}</h2>
           </div>
+          {showSearch && (
+            <div className="search-bar position-relative me-3">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+              <FaSearch className="search-icon" />
+            </div>
+          )}
         </div>
 
         {onAddClick && (

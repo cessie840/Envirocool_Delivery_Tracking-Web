@@ -5,12 +5,14 @@ import AdminLayout from "./AdminLayout";
 const DeliveryDetails = () => {
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
+  const [filter, setFiltered] = useState([]);
 
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
       .then((data) => {
         setDeliveries(data);
+        setFiltered(data);
       })
       .catch((err) => console.error("Failed to fetch deliveries:", err));
   };
@@ -45,7 +47,8 @@ const DeliveryDetails = () => {
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
-  const groupedDeliveries = deliveries.reduce((acc, item) => {
+  // Group from filtered list
+  const groupedDeliveries = filter.reduce((acc, item) => {
     const id = item.transaction_id;
 
     if (!acc[id]) {
@@ -66,9 +69,26 @@ const DeliveryDetails = () => {
     return acc;
   }, {});
 
+  const handleSearch = (term) => {
+    const lower = term.toLowerCase();
+    setFiltered(
+      deliveries.filter(
+        (e) =>
+          (e.transaction_id &&
+            e.transaction_id.toString().toLowerCase().includes(lower)) ||
+          (e.customer_name && e.customer_name.toLowerCase().includes(lower)) ||
+          (e.description && e.description.toLowerCase().includes(lower))
+      )
+    );
+  };
+
   return (
-    <AdminLayout title="Delivery Details" onAddClick={handleAddDelivery}>
-      
+    <AdminLayout
+      title="Delivery Details"
+      onAddClick={handleAddDelivery}
+      showSearch={true}
+      onSearch={handleSearch}
+    >
       <table className="delivery-table container-fluid table-responsive">
         <thead>
           <tr>
@@ -107,7 +127,6 @@ const DeliveryDetails = () => {
                 >
                   View
                 </button>
-
                 <button
                   className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal border-light rounded-2"
                   onClick={() => handleDelete(group.transaction_id)}
