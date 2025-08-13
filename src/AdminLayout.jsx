@@ -113,13 +113,6 @@ const AdminLayout = ({ title, onAddClick, showSearch = true, children }) => {
             </button>
             <h2 className="fs-1 fw-bold m-0">{title}</h2>
           </div>
-
-          {showSearch && (
-            <div className="search-bar position-relative me-3">
-              <input type="text" placeholder="Search..." />
-              <FaSearch className="search-icon" />
-            </div>
-          )}
         </div>
 
         {onAddClick && (

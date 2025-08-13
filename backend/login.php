@@ -42,7 +42,7 @@ $password = $data->password;
 function checkUser($conn, $table, $user_col, $pass_col, $fields) {
     global $username, $password;
 
-    $sql = "SELECT $user_col, $pass_col, $fields FROM $table WHERE $user_col = ?";
+    $sql = "SELECT $user_col, $pass_col, $fields FROM $table WHERE BINARY $user_col = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $username);
     $stmt->execute();
