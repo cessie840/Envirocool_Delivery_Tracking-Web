@@ -68,7 +68,6 @@ const DeliveryDetails = () => {
 
   return (
     <AdminLayout title="Delivery Details" onAddClick={handleAddDelivery}>
-      
       <table className="delivery-table container-fluid table-responsive">
         <thead>
           <tr>
@@ -82,41 +81,43 @@ const DeliveryDetails = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.values(groupedDeliveries).map((group, index) => (
-            <tr key={index}>
-              <td>{group.transaction_id}</td>
-              <td>{group.customer_name}</td>
-              <td>
-                {group.items.map((item, idx) => (
-                  <div key={idx}>{item.description}</div>
-                ))}
-              </td>
-              <td>
-                {group.items.map((item, idx) => (
-                  <div key={idx}>{item.quantity}</div>
-                ))}
-              </td>
-              <td>{group.total}</td>
-              <td>{group.delivery_status}</td>
-              <td>
-                <button
-                  className="btn btn-view px-2 py-1 m-2 fw-normal border-light rounded-2"
-                  onClick={() =>
-                    navigate(`/view-delivery/${group.transaction_id}`)
-                  }
-                >
-                  View
-                </button>
+          {Object.values(groupedDeliveries)
+            .sort((a, b) => b.transaction_id - a.transaction_id)
+            .map((group, index) => (
+              <tr key={index}>
+                <td>{group.transaction_id}</td>
+                <td>{group.customer_name}</td>
+                <td>
+                  {group.items.map((item, idx) => (
+                    <div key={idx}>{item.description}</div>
+                  ))}
+                </td>
+                <td>
+                  {group.items.map((item, idx) => (
+                    <div key={idx}>{item.quantity}</div>
+                  ))}
+                </td>
+                <td>{group.total}</td>
+                <td>{group.delivery_status}</td>
+                <td>
+                  <button
+                    className="btn btn-view px-2 py-1 m-2 fw-normal border-light rounded-2"
+                    onClick={() =>
+                      navigate(`/view-delivery/${group.transaction_id}`)
+                    }
+                  >
+                    View
+                  </button>
 
-                <button
-                  className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal border-light rounded-2"
-                  onClick={() => handleDelete(group.transaction_id)}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
+                  <button
+                    className="btn cancel-btn bg-danger px-2 py-1 m-2 fw-normal border-light rounded-2"
+                    onClick={() => handleDelete(group.transaction_id)}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </AdminLayout>

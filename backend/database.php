@@ -1,7 +1,7 @@
 <?php
 $host = 'localhost';
-$user = 'cess';
-$password = 'cezzmabangiz';
+$user = 'root';
+$password = '091203';
 $database = 'DeliveryTrackingSystem';
 
 

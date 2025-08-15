@@ -11,14 +11,12 @@ import {
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Sample data
+// Sample route data
 const route = [
   [14.5995, 120.9842],
   [14.6042, 120.9825],
   [14.6164, 121.003],
 ];
-
- const handleAddDelivery = () => navigate("/add-delivery");
 
 const dummyTransactions = {
   inTransit: [
@@ -46,7 +44,6 @@ const dummyTransactions = {
       distance: "15km",
       eta: "11:30 AM",
     },
-    
   ],
   completed: [
     {
@@ -79,6 +76,7 @@ const dummyTransactions = {
 };
 
 const MonitorDelivery = () => {
+  const navigate = useNavigate();
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
   const pickup = route[0];
@@ -90,10 +88,12 @@ const MonitorDelivery = () => {
     iconAnchor: [20, 40],
   });
 
+  const handleAddDelivery = () => navigate("/add-delivery");
+
   const renderTransactions = (transactions) => (
     <div
       style={{
-        maxHeight: "880px",
+        maxHeight: "80vh",
         overflowY: "auto",
         paddingRight: "5px",
       }}
@@ -102,7 +102,7 @@ const MonitorDelivery = () => {
         <div key={tx.id} className="bg-white rounded shadow-sm p-3 mb-3">
           <div
             className="d-flex justify-content-between align-items-center mb-2"
-            style={{ cursor: "pointer", fontSize: "22px" }}
+            style={{ cursor: "pointer", fontSize: "1.2rem" }}
             onClick={() =>
               setExpandedIndex(index === expandedIndex ? null : index)
             }
@@ -114,57 +114,23 @@ const MonitorDelivery = () => {
           </div>
 
           {expandedIndex === index && (
-            <div className="border rounded p-3" style={{ fontSize: "20px" }}>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Customer Name:
+            <div className="border rounded p-3" style={{ fontSize: "1rem" }}>
+              {[
+                ["Customer Name:", tx.name],
+                ["Contact No.:", tx.contact],
+                ["Shipping Address:", tx.address],
+                ["Order Description:", tx.description],
+                ["Shipment Time:", tx.time],
+                ["Delivery Incharge:", tx.driver],
+                ["Shipping Process:", tx.status],
+                ["Distance:", tx.distance],
+                ["ETA:", tx.eta],
+              ].map(([label, value], i) => (
+                <div className="row mb-2" key={i}>
+                  <div className="col-5 fw-semibold text-success">{label}</div>
+                  <div className="col-7">{value}</div>
                 </div>
-                <div className="col-7">{tx.name}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Contact No.:
-                </div>
-                <div className="col-7">{tx.contact}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Shipping Address:
-                </div>
-                <div className="col-7">{tx.address}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Order Description:
-                </div>
-                <div className="col-7">{tx.description}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Shipment Time:
-                </div>
-                <div className="col-7">{tx.time}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Delivery Incharge:
-                </div>
-                <div className="col-7">{tx.driver}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">
-                  Shipping Process:
-                </div>
-                <div className="col-7 text-success">{tx.status}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">Distance:</div>
-                <div className="col-7">{tx.distance}</div>
-              </div>
-              <div className="row mb-2">
-                <div className="col-5 fw-semibold text-success">ETA:</div>
-                <div className="col-7">{tx.eta}</div>
-              </div>
+              ))}
             </div>
           )}
         </div>
@@ -174,7 +140,6 @@ const MonitorDelivery = () => {
 
   return (
     <AdminLayout title="Monitor Delivery" onAddClick={handleAddDelivery}>
-      
       <div
         style={{
           marginTop: "30px",
@@ -185,43 +150,29 @@ const MonitorDelivery = () => {
       >
         <div className="container-fluid">
           <div className="row g-3">
+            <div style={{fontSize: 30, fontWeight: "bold"}}>Transactions:</div>
             {/* LEFT PANEL */}
-            <div className="col-md-5">
+            <div className="col-12 col-md-5">
               {/* Tabs */}
-              <div className="bg-white rounded shadow-sm p-2 d-flex gap-2 mb-2">
-                <button
-                  className={`btn btn-lg ${
-                    activeTab === "inTransit"
-                      ? "btn-success"
-                      : "btn-outline-secondary"
-                  }`}
-                  style={{ fontSize: "25px" }}
-                  onClick={() => setActiveTab("inTransit")}
-                >
-                  In Transit
-                </button>
-                <button
-                  className={`btn btn-lg ${
-                    activeTab === "completed"
-                      ? "btn-success"
-                      : "btn-outline-secondary"
-                  }`}
-                  style={{ fontSize: "25px" }}
-                  onClick={() => setActiveTab("completed")}
-                >
-                  Completed
-                </button>
-                <button
-                  className={`btn btn-lg ${
-                    activeTab === "cancelled"
-                      ? "btn-success"
-                      : "btn-outline-secondary"
-                  }`}
-                  style={{ fontSize: "25px" }}
-                  onClick={() => setActiveTab("cancelled")}
-                >
-                  Cancelled
-                </button>
+              <div className="bg-white rounded shadow-sm p-2 d-flex flex-wrap gap-2 mb-3">
+                {[
+                  ["inTransit", "In Transit"],
+                  ["completed", "Completed"],
+                  ["cancelled", "Cancelled"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={`btn btn-lg flex-fill ${
+                      activeTab === key
+                        ? "btn-success"
+                        : "btn-outline-secondary"
+                    }`}
+                    style={{ fontSize: "1.2rem" }}
+                    onClick={() => setActiveTab(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
               {/* Scrollable Transaction List */}
@@ -229,10 +180,12 @@ const MonitorDelivery = () => {
             </div>
 
             {/* RIGHT: MAP */}
-            <div className="col-md-7">
+            <div className="col-12 col-md-7">
               <div
                 className="bg-white shadow-sm rounded overflow-hidden"
-                style={{ height: "1000px" }}
+                style={{
+                  height: window.innerWidth < 768 ? "400px" : "1000px",
+                }}
               >
                 <MapContainer
                   center={pickup}
@@ -241,7 +194,7 @@ const MonitorDelivery = () => {
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
                   <Polyline positions={route} color="blue" weight={4} />
                   <Marker position={pickup}>
