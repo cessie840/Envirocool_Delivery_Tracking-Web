@@ -208,13 +208,13 @@ const ViewOrder = () => {
 
             <div className="buttons d-flex justify-content-center gap-5 mt-5">
               <button
-                className="btn btn-success px-5 py-2 rounded-3"
+                className="btn upd-btn btn-success px-5 py-2 rounded-3"
                 onClick={handleUpdate}
               >
                 Update
               </button>
               <button
-                className="btn btn-danger px-5 py-2 rounded-3"
+                className="btn del-btn btn-danger px-5 py-2 rounded-3"
                 onClick={() => handleDelete(transaction_id)}
               >
                 Delete
