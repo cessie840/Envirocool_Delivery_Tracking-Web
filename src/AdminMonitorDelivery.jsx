@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import AdminLayout from "./AdminLayout";
+import { useNavigate } from "react-router-dom";
 import {
   MapContainer,
   TileLayer,
@@ -16,6 +17,8 @@ const route = [
   [14.6042, 120.9825],
   [14.6164, 121.003],
 ];
+
+ const handleAddDelivery = () => navigate("/add-delivery");
 
 const dummyTransactions = {
   inTransit: [
@@ -170,7 +173,8 @@ const MonitorDelivery = () => {
   );
 
   return (
-    <AdminLayout title="Monitor Delivery">
+    <AdminLayout title="Monitor Delivery" onAddClick={handleAddDelivery}>
+      
       <div
         style={{
           marginTop: "30px",
