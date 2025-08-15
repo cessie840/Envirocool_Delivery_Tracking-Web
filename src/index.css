@@ -322,6 +322,14 @@ input::placeholder {
   padding: 0;
 }
 
+.close-sidebar:hover{
+  color: #1c87c9;
+}
+
+.btn-menu:hover{
+  color: #1c87c9;
+}
+
 /* .floating-toggle-btn {
   position: fixed;
   top: 1rem;

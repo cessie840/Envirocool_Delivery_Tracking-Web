@@ -12,7 +12,7 @@ const MonitorDelivery = () => {
   }, []);
 
   return (
-    <AdminLayout title="Monitor Delivery">
+    <AdminLayout title="Generate Report">
       {/* ADD DELIVERY BUTTON */}
       <div className="text-end mx-4 my-5 d-flex justify-content-end">
         <button
