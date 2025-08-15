@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
-import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
+import { FaRegTrashAlt, FaArrowLeft, FaChevronDown } from "react-icons/fa";
 import { Button, Modal } from "react-bootstrap";
 
 const AddDelivery = () => {
@@ -340,7 +340,7 @@ const AddDelivery = () => {
               <thead>
                 <tr>
                   <th>Quantity</th>
-                  <th>Item Description</th>
+                  <th>Item Name</th>
                   <th>Unit Cost</th>
                   <th>Total Cost</th>
                   {orderItems.length > 1 && <th className="no-header"></th>}
@@ -361,16 +361,29 @@ const AddDelivery = () => {
                       />
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        name="description"
-                        placeholder="Carrier Aura Inverter Split Type 1.5HP"
-                        className="form-control"
-                        value={item.description}
-                        onChange={(e) => handleItemChange(index, e)}
-                        required
-                      />
+                      <div className="dropdown-wrapper">
+                        <select
+                          name="description"
+                          className="form-control item-dropdown"
+                          value={item.description}
+                          onChange={(e) => handleItemChange(index, e)}
+                          required
+                        >
+                          <option value="">Select an item</option>
+                          <option value="Carrier Aura Inverter Split Type 1.5HP">
+                            Carrier Aura Inverter Split Type 1.5HP
+                          </option>
+                          <option value="Panasonic Deluxe Window Type 1.0HP">
+                            Panasonic Deluxe Window Type 1.0HP
+                          </option>
+                          <option value="LG DualCool Inverter Split Type 2.0HP">
+                            LG DualCool Inverter Split Type 2.0HP
+                          </option>
+                        </select>
+                        <FaChevronDown className="dropdown-icon" />
+                      </div>
                     </td>
+
                     <td>
                       <input
                         type="number"

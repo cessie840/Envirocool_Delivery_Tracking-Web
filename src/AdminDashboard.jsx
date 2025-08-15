@@ -24,21 +24,17 @@ const AdminDashboard = () => {
     setMonthlyData(data);
   }, []);
 
+  const handleAddDelivery = () => navigate("/add-delivery");
+
   const totalSuccess = monthlyData.reduce((sum, m) => sum + m.success, 0);
   const totalCancelled = monthlyData.reduce((sum, m) => sum + m.cancelled, 0);
 
   return (
-    <AdminLayout title="Dashboard">
-      {/* ADD DELIVERY BUTTON */}
-      <div className="text-end mx-4 my-3 d-flex justify-content-end">
-        <button
-          className="add-delivery rounded-2 px-3 py-2 fs-6 d-flex align-items-center gap-2"
-          onClick={() => navigate("/add-delivery")}
-        >
-          <FaPlus /> Add New Delivery
-        </button>
-      </div>
-
+    <AdminLayout
+      title="Dashboard"
+      showSearch={false}
+      onAddClick={handleAddDelivery}
+    >
       {/* DASHBOARD CONTENT */}
       <div className="dashboard-content mt-4 fs-4 p-2 p-md-4 bg-white">
         <div className="container-fluid">
@@ -134,14 +130,26 @@ const AdminDashboard = () => {
                     >
                       {monthlyData.map((data, i) => {
                         const month = [
-                          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                          "Jan",
+                          "Feb",
+                          "Mar",
+                          "Apr",
+                          "May",
+                          "Jun",
+                          "Jul",
+                          "Aug",
+                          "Sep",
+                          "Oct",
+                          "Nov",
+                          "Dec",
                         ][i];
 
                         const maxHeight = 150;
                         const maxValue = 160;
-                        const successHeight = (data.success / maxValue) * maxHeight;
-                        const cancelledHeight = (data.cancelled / maxValue) * maxHeight;
+                        const successHeight =
+                          (data.success / maxValue) * maxHeight;
+                        const cancelledHeight =
+                          (data.cancelled / maxValue) * maxHeight;
 
                         return (
                           <div
@@ -149,10 +157,16 @@ const AdminDashboard = () => {
                             className="d-flex flex-column align-items-center"
                             style={{ flex: "1", minWidth: "50px" }}
                           >
-                            <small className="text-success fw-bold" style={{ fontSize: "0.75rem" }}>
+                            <small
+                              className="text-success fw-bold"
+                              style={{ fontSize: "0.75rem" }}
+                            >
                               {data.success}
                             </small>
-                            <small className="text-danger fw-bold" style={{ fontSize: "0.75rem" }}>
+                            <small
+                              className="text-danger fw-bold"
+                              style={{ fontSize: "0.75rem" }}
+                            >
                               {data.cancelled}
                             </small>
 
@@ -191,19 +205,35 @@ const AdminDashboard = () => {
                   {/* Legend */}
                   <div className="d-flex justify-content-center gap-4 mt-4">
                     <div className="d-flex align-items-center gap-2">
-                      <div style={{ width: "15px", height: "15px", backgroundColor: "green" }}></div>
+                      <div
+                        style={{
+                          width: "15px",
+                          height: "15px",
+                          backgroundColor: "green",
+                        }}
+                      ></div>
                       <small>Successful</small>
                     </div>
                     <div className="d-flex align-items-center gap-2">
-                      <div style={{ width: "15px", height: "15px", backgroundColor: "red" }}></div>
+                      <div
+                        style={{
+                          width: "15px",
+                          height: "15px",
+                          backgroundColor: "red",
+                        }}
+                      ></div>
                       <small>Cancelled</small>
                     </div>
                   </div>
 
                   {/* Totals */}
                   <div className="d-flex justify-content-center mt-3 gap-5">
-                    <h6 className="text-success">Total Successful: {totalSuccess}</h6>
-                    <h6 className="text-danger">Total Cancelled: {totalCancelled}</h6>
+                    <h6 className="text-success">
+                      Total Successful: {totalSuccess}
+                    </h6>
+                    <h6 className="text-danger">
+                      Total Cancelled: {totalCancelled}
+                    </h6>
                   </div>
                 </div>
               </div>
