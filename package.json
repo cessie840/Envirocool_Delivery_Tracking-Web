@@ -11,18 +11,24 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "axios": "^1.9.0",
-    "bootstrap": "^5.3.6",
+    "axios": "^1.11.0",
+    "bootstrap": "^5.3.7",
     "chart.js": "^4.5.0",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "react": "^19.1.1",
     "react-bootstrap": "^2.10.10",
     "react-chart": "^0.0.1",
     "react-chartjs-2": "^5.3.0",
+    "react-csv": "^2.2.2",
+    "react-datepicker": "^8.4.0",
     "react-dom": "^19.1.1",
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
-    "react-router-dom": "^7.6.1"
+    "react-router-dom": "^7.6.1",
+    "recharts": "^3.1.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
