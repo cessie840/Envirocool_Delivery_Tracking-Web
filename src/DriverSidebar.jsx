@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Offcanvas, ListGroup } from "react-bootstrap";
+import { Offcanvas, ListGroup, Modal, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -11,6 +11,8 @@ const Sidebar = ({ show, onHide }) => {
     contact: "",
     profilePic: "",
   });
+
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const storedProfile = localStorage.getItem("user");
@@ -60,151 +62,186 @@ const Sidebar = ({ show, onHide }) => {
     }
   };
 
+  const confirmLogout = () => {
+    localStorage.removeItem("user"); // clear session storage/localstorage
+    setShowLogoutModal(false);
+    onHide();
+    navigate("/"); // redirect to login/home page
+  };
+
   const userName = profile.name;
   const userId = profile.userId;
 
   return (
-    <Offcanvas
-      show={show}
-      onHide={onHide}
-      placement="start"
-      backdropClassName="custom-backdrop"
-      className="custom-offcanvas"
-    >
-      {/* OVERLAP SIDEBAR */}
-
-      <style>
-        {`
-          .custom-offcanvas.offcanvas {
-            z-index: 1060 !important; 
-          }
-
-          .custom-backdrop {
-            z-index: 1059 !important; 
-          }
-
-          .offcanvas .btn-close {
-            filter: brightness(0) invert(3);
-          }
-        `}
-      </style>
-
-      <Offcanvas.Header
-        closeButton
-        className="text-white"
-        style={{ backgroundColor: "#116B8A" }}
+    <>
+      <Offcanvas
+        show={show}
+        onHide={onHide}
+        placement="start"
+        backdropClassName="custom-backdrop"
+        className="custom-offcanvas"
       >
-        <Offcanvas.Title>Delivery Menu</Offcanvas.Title>
-      </Offcanvas.Header>
+        {/* OVERLAP SIDEBAR */}
+        <style>
+          {`
+            .custom-offcanvas.offcanvas {
+              z-index: 1060 !important; 
+            }
 
-      {/* ACCOUNT DISPLAY */}
-      <Offcanvas.Body className="bg-light">
-        <div className="mx-2 mb-4 my-3 p-3 rounded border shadow-sm bg-white d-flex align-items-center gap-3 border-info rounded">
-          <label htmlFor="profileUpload" style={{ cursor: "pointer" }}>
-            <div
-              className="rounded-circle overflow-hidden d-flex justify-content-center align-items-center"
-              style={{
-                width: "80px",
-                height: "80px",
-                backgroundColor: "#dee2e6",
-                border: "2px solid #116B8A",
-              }}
-            >
-              {profile.profilePic ? (
-                <img
-                  src={profile.profilePic}
-                  alt="Profile"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src =
-                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
-                  }}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                <i className="bi bi-person-fill fs-3 text-secondary"></i>
-              )}
-              <input
-                id="profileUpload"
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleProfileChange}
-              />
-            </div>
-          </label>
+            .custom-backdrop {
+              z-index: 1059 !important; 
+            }
 
-          {/* EDIT PROFILE */}
-          <div>
-            <i
-              className="bi bi-pencil-square"
-              style={{
-                position: "absolute",
-                top: "102px",
-                right: "40px",
-                backgroundColor: "#fff",
-                padding: "3px",
-                fontSize: "1.3rem",
-                color: "#116B8A",
-                cursor: "pointer",
-              }}
-              title="Edit Profile"
-              onClick={() => navigate("/driver-profile-settings")}
-            ></i>
-            <p
-              className="mb-0 fw-semibold"
-              style={{ color: "black", fontSize: "1.1rem" }}
-            >
-              {userName}
-            </p>
-            <small className="text-muted">ID: {userId}</small>
-          </div>
-        </div>
+            .offcanvas .btn-close {
+              filter: brightness(0) invert(3);
+            }
+          `}
+        </style>
 
-        {/* SIDEBAR NAVIGATION */}
-
-        <div
-          className="mx-2 mb-4 p-3 border border-info rounded"
-          style={{ backgroundColor: "#eaf7f7" }}
+        <Offcanvas.Header
+          closeButton
+          className="text-white"
+          style={{ backgroundColor: "#116B8A" }}
         >
-          <h6 className="fw-bold mb-3 text-secondary">Navigation</h6>
-          <ListGroup variant="flush">
-            {[
-              { name: "Assigned Delivery", path: "/driver-dashboard" },
-              { name: "Out For Delivery", path: "/out-for-delivery" },
-              { name: "Successful Delivered", path: "/successful-delivery" },
-              { name: "Failed Deliveries", path: "/failed-delivery" },
-              { name: "Logout", path: "/" },
-            ].map((item, i) => (
-              <ListGroup.Item
-                key={i}
-                action
+          <Offcanvas.Title>Delivery Menu</Offcanvas.Title>
+        </Offcanvas.Header>
+
+        {/* ACCOUNT DISPLAY */}
+        <Offcanvas.Body className="bg-light">
+          <div className="mx-2 mb-4 my-3 p-3 rounded border shadow-sm bg-white d-flex align-items-center gap-3 border-info rounded">
+            <label htmlFor="profileUpload" style={{ cursor: "pointer" }}>
+              <div
+                className="rounded-circle overflow-hidden d-flex justify-content-center align-items-center"
                 style={{
-                  fontSize: "1.1rem",
-                  color: "#198754",
-                  fontWeight: "500",
-                  transition: "background-color 0.3s, color 0.3s",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = "#e6f4f9";
-                  e.currentTarget.style.color = "#0d4f65";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = "";
-                  e.currentTarget.style.color = "#198754";
-                }}
-                onClick={() => {
-                  navigate(item.path);
-                  onHide();
+                  width: "80px",
+                  height: "80px",
+                  backgroundColor: "#dee2e6",
+                  border: "2px solid #116B8A",
                 }}
               >
-                {item.name}
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-        </div>
-      </Offcanvas.Body>
-    </Offcanvas>
+                {profile.profilePic ? (
+                  <img
+                    src={profile.profilePic}
+                    alt="Profile"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+                    }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <i className="bi bi-person-fill fs-3 text-secondary"></i>
+                )}
+                <input
+                  id="profileUpload"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleProfileChange}
+                />
+              </div>
+            </label>
+
+            {/* EDIT PROFILE */}
+            <div>
+              <i
+                className="bi bi-pencil-square"
+                style={{
+                  position: "absolute",
+                  top: "102px",
+                  right: "40px",
+                  backgroundColor: "#fff",
+                  padding: "3px",
+                  fontSize: "1.3rem",
+                  color: "#116B8A",
+                  cursor: "pointer",
+                }}
+                title="Edit Profile"
+                onClick={() => navigate("/driver-profile-settings")}
+              ></i>
+              <p
+                className="mb-0 fw-semibold"
+                style={{ color: "black", fontSize: "1.1rem" }}
+              >
+                {userName}
+              </p>
+              <small className="text-muted">ID: {userId}</small>
+            </div>
+          </div>
+
+          {/* SIDEBAR NAVIGATION */}
+          <div
+            className="mx-2 mb-4 p-3 border border-info rounded"
+            style={{ backgroundColor: "#eaf7f7" }}
+          >
+            <h6 className="fw-bold mb-3 text-secondary">Navigation</h6>
+            <ListGroup variant="flush">
+              {[
+                { name: "Assigned Delivery", path: "/driver-dashboard" },
+                { name: "Out For Delivery", path: "/out-for-delivery" },
+                { name: "Successful Delivered", path: "/successful-delivery" },
+                { name: "Failed Deliveries", path: "/failed-delivery" },
+                { name: "Logout", path: "logout" }, // special case
+              ].map((item, i) => (
+                <ListGroup.Item
+                  key={i}
+                  action
+                  style={{
+                    fontSize: "1.1rem",
+                    color: "#198754",
+                    fontWeight: "500",
+                    transition: "background-color 0.3s, color 0.3s",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = "#e6f4f9";
+                    e.currentTarget.style.color = "#0d4f65";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = "";
+                    e.currentTarget.style.color = "#198754";
+                  }}
+                  onClick={() => {
+                    if (item.name === "Logout") {
+                      setShowLogoutModal(true); // open modal instead of direct logout
+                    } else {
+                      navigate(item.path);
+                      onHide();
+                    }
+                  }}
+                >
+                  {item.name}
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </div>
+        </Offcanvas.Body>
+      </Offcanvas>
+
+      {/* LOGOUT CONFIRMATION MODAL */}
+      <Modal
+        show={showLogoutModal}
+        onHide={() => setShowLogoutModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Are you sure you want to logout?</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmLogout}>
+            Logout
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 };
 
