@@ -138,7 +138,7 @@ body {
   background-color: #008f4c;
   color: white;
   border: none;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  /* box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3); */
   font-size: 1.1rem;
 }
 
@@ -147,6 +147,7 @@ body {
   color: #006400 !important;
   border: 1px solid #006400;
   margin-bottom: 0;
+  font-size: 0.9rem;
 }
 
 .header-info {
@@ -274,7 +275,7 @@ input::placeholder {
   /* font-weight: bold; */
   border-radius: 4px;
   cursor: pointer;
-  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+  /* box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3); */
 }
 
 .cancel-btn {
@@ -286,7 +287,23 @@ input::placeholder {
   cursor: pointer;
   box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
   font-size: 0.9rem;
+}
 
+.btn-view{
+  background-color: #3089ac;
+  color: white;
+  border: none;
+  padding: 5px 25px;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+  font-size: 0.9rem;
+}
+
+.btn-view:hover{
+  background-color: white;
+  color: #0c759d !important;
+  border: 1px solid #0c759d !important;
 }
 
 .add-item:hover{
@@ -313,13 +330,15 @@ input::placeholder {
 }
 
 .add-btn:hover{
-  background-color: #00aff0 !important;
+  background-color: white !important;
+ color: green !important;
+ border: 1px solid #006400;
 }
 
 .cancel-btn:hover, .del-btn:hover{
   background-color: white !important; 
   color: red !important;
-  border: 1px solid red;
+  border: 1px solid red !important;
 }
 
 .btn:hover{
@@ -521,22 +540,6 @@ input::placeholder {
   border: 1px solid #93c7db;
 }
 
-.btn-view{
-  background-color: #3089ac;
-  color: white;
-  border: none;
-  padding: 5px 25px;
-  border-radius: 4px;
-  cursor: pointer;
-  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
-  font-size: 0.9rem;
-}
-
-.btn-view:hover{
-  background-color: white;
-  color: #0c759d;
-  border: 1px solid #0c759d;
-}
 
 .dimmed-modal .modal-content {
   filter: brightness(0.4);  
@@ -580,6 +583,7 @@ input::placeholder {
   background-color: #dc3545;
   color: white;
 }
+
 
 .remove-btn-cell {
   text-align: center;
@@ -673,6 +677,15 @@ th.no-header {
   background-color: #ffffff;
   border-color: #dc3545;
 }
+
+/* PDF  */
+.pdf-bw {
+  filter: grayscale(100%);
+}
+.no-bw {
+  filter: none !important;
+}
+
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {
