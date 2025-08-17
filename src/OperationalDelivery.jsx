@@ -208,7 +208,7 @@ const OperationalDelivery = () => {
                     <span className="fw-bold text-success">
                       Delivery Personnel Assigned:
                     </span>
-                    <span>{selectedOrder.assigned_personnel}</span>
+                    <b><span>{selectedOrder.assigned_personnel}</span></b>
                   </li>
                 </ul>
               </div>
