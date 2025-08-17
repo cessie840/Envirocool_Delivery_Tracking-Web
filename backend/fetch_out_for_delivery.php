@@ -1,6 +1,5 @@
 <?php
-
-// CORS headers for preflight requests
+// CORS headers
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -8,79 +7,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
-
-// CORS headers for actual request
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
 header("Content-Type: application/json");
 
-include 'database.php'; // Make sure this sets $conn properly
+include 'database.php';
 
-// Decode input data
-$data = json_decode(file_get_contents("php://input"));
-
-// Check if username is provided
-if (!isset($data->pers_username) || empty($data->pers_username)) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Missing or empty 'pers_username'."
-    ]);
-    exit;
-}
-
-$username = $data->pers_username;
-
-// Ensure DB connection is available
 if (!$conn) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Database connection failed."
-    ]);
+    echo json_encode(["success" => false, "message" => "Database connection failed."]);
     exit;
 }
 
-// Prepare SQL statement
+// ✅ Fetch ALL out-for-delivery, including assigned driver
 $sql = "
+
 SELECT 
     t.transaction_id AS transactionNo,
     t.customer_name AS customerName,
     t.customer_address AS address,
     t.customer_contact AS contact,
     t.mode_of_payment AS paymentMode,
-    po.description AS name,
+    da.personnel_username AS driverUsername,
+    CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS driverName,
+    po.description AS itemName,
     po.quantity AS qty,
     po.unit_cost AS unitCost,
     (po.quantity * po.unit_cost) AS totalCost
 FROM DeliveryAssignments da
 JOIN Transactions t ON da.transaction_id = t.transaction_id
 JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
-WHERE da.personnel_username = ?
-  AND t.status = 'Out for Delivery'
+JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username   -- ✅ FIX: join personnel table
+WHERE t.status = 'Out for Delivery'
+ORDER BY da.personnel_username, t.transaction_id
 ";
 
 
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to prepare SQL statement: " . $conn->error
-    ]);
-    exit;
-}
-
-$stmt->bind_param("s", $username);
-
-if (!$stmt->execute()) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to execute SQL: " . $stmt->error
-    ]);
-    $stmt->close();
-    exit;
-}
-
-$result = $stmt->get_result();
+$result = $conn->query($sql);
 
 $deliveries = [];
 
@@ -94,30 +57,20 @@ while ($row = $result->fetch_assoc()) {
             "address" => $row['address'],
             "contact" => $row['contact'],
             "paymentMode" => $row['paymentMode'],
-            "unitCost" => $row['unitCost'],
-            "totalCost" => $row['totalCost'],
+            "driverUsername" => $row['driverUsername'],
+            "driverName" => $row['driverName'],
             "items" => []
         ];
     }
 
     $deliveries[$transactionNo]['items'][] = [
-        "name" => $row['name'],
+        "name" => $row['itemName'],
         "qty" => $row['qty'],
         "price" => $row['qty'] * $row['unitCost']
     ];
 }
 
-$stmt->close();
 $conn->close();
 
-// Final output
-if (empty($deliveries)) {
-    echo json_encode([
-        "success" => true,
-        "message" => "No 'Out for Delivery' transactions found.",
-        "data" => []
-    ]);
-} else {
-    echo json_encode(array_values($deliveries));
-}
+echo json_encode(array_values($deliveries));
 ?>

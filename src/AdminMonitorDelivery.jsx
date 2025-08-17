@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminLayout from "./AdminLayout";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,74 +11,23 @@ import {
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Sample route data
 const route = [
   [14.5995, 120.9842],
   [14.6042, 120.9825],
   [14.6164, 121.003],
 ];
 
-const dummyTransactions = {
-  inTransit: [
-    {
-      id: "000001",
-      name: "Dudong Batumbakal",
-      contact: "09123456789",
-      address: "123 Marinig Cabuyao Laguna",
-      description: "2 Aircon",
-      time: "11:00 PM",
-      driver: "Boyet Bagnet",
-      status: "Out for Delivery",
-      distance: "24km",
-      eta: "2:00 PM",
-    },
-    {
-      id: "000002",
-      name: "Maria Cruz",
-      contact: "09998887777",
-      address: "Brgy. Banlic Cabuyao Laguna",
-      description: "1 Refrigerator",
-      time: "10:00 AM",
-      driver: "Lito Lapid",
-      status: "Out for Delivery",
-      distance: "15km",
-      eta: "11:30 AM",
-    },
-  ],
-  completed: [
-    {
-      id: "000003",
-      name: "Juan Dela Cruz",
-      contact: "09111111111",
-      address: "Cabuyao City Center",
-      description: "1 Washing Machine",
-      time: "08:00 AM",
-      driver: "Pedro Penduko",
-      status: "Delivered",
-      distance: "10km",
-      eta: "9:00 AM",
-    },
-  ],
-  cancelled: [
-    {
-      id: "000004",
-      name: "Ana Santos",
-      contact: "09222222222",
-      address: "Mamatid Cabuyao Laguna",
-      description: "3 TV Units",
-      time: "2:00 PM",
-      driver: "Andres Bonifacio",
-      status: "Cancelled",
-      distance: "12km",
-      eta: "3:00 PM",
-    },
-  ],
-};
-
 const MonitorDelivery = () => {
   const navigate = useNavigate();
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
+  const [transactions, setTransactions] = useState({
+    inTransit: [],
+    completed: [],
+    cancelled: [],
+  });
+  const [loading, setLoading] = useState(true);
+
   const pickup = route[0];
   const dropoff = route[route.length - 1];
 
@@ -89,6 +38,48 @@ const MonitorDelivery = () => {
   });
 
   const handleAddDelivery = () => navigate("/add-delivery");
+
+  // ✅ Fetch from your PHP endpoint
+useEffect(() => {
+  const fetchDeliveries = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php"
+      );
+
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        const mapped = data.map((d) => ({
+          id: d.transactionNo,
+          name: d.customerName,
+          contact: d.contact,
+          address: d.address,
+          description: d.items.map((i) => `${i.qty} × ${i.name}`).join(", "),
+          time: "N/A",
+          driver: d.driverName
+            ? `${d.driverName} (${d.driverUsername})`
+            : d.driverUsername || "Unassigned",
+          // ✅ now shows assigned driver
+          status: "Out for Delivery",
+          distance: "—",
+          eta: "—",
+        }));
+
+        setTransactions((prev) => ({
+          ...prev,
+          inTransit: mapped,
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching deliveries:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDeliveries();
+}, []);
 
   const renderTransactions = (transactions) => (
     <div
@@ -150,7 +141,10 @@ const MonitorDelivery = () => {
       >
         <div className="container-fluid">
           <div className="row g-3">
-            <div style={{fontSize: 30, fontWeight: "bold"}}>Transactions:</div>
+            <div style={{ fontSize: 30, fontWeight: "bold" }}>
+              Transactions:
+            </div>
+
             {/* LEFT PANEL */}
             <div className="col-12 col-md-5">
               {/* Tabs */}
@@ -176,7 +170,11 @@ const MonitorDelivery = () => {
               </div>
 
               {/* Scrollable Transaction List */}
-              {renderTransactions(dummyTransactions[activeTab])}
+              {loading ? (
+                <div>Loading...</div>
+              ) : (
+                renderTransactions(transactions[activeTab])
+              )}
             </div>
 
             {/* RIGHT: MAP */}
