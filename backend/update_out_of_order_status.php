@@ -29,16 +29,12 @@ try {
     // Get raw input and decode
     $input = json_decode(file_get_contents("php://input"), true);
 
-    if (!isset($input['transactionNo'])) {
+    // ✅ Match frontend field
+    if (!isset($input['transaction_id'])) {
         respond(400, "Missing transaction number.");
     }
 
-    if (!is_numeric($input['transactionNo'])) {
-        respond(400, "Transaction number must be numeric.");
-    }
-
-    $transactionNo = intval($input['transactionNo']);
-
+    $transactionNo = intval($input['transaction_id']);
     if ($transactionNo <= 0) {
         respond(400, "Invalid transaction number.");
     }
@@ -48,12 +44,11 @@ try {
         respond(500, "Database connection failed.");
     }
 
-    // Check if already "Out for Delivery"
+    // Check if delivery exists and is still "To Ship"
     $checkStmt = $conn->prepare("SELECT delivery_status FROM DeliveryDetails WHERE transaction_id = ?");
     if (!$checkStmt) {
-        respond(500, "Failed to prepare status check query: " . $conn->error);
+        respond(500, "Failed to prepare query: " . $conn->error);
     }
-
     $checkStmt->bind_param("i", $transactionNo);
     $checkStmt->execute();
     $result = $checkStmt->get_result();
@@ -67,18 +62,15 @@ try {
         respond(409, "Delivery is already marked as 'Out for Delivery'.");
     }
 
-    // Now attempt update
+    // Update delivery status to "Out for Delivery"
     $stmt = $conn->prepare("UPDATE DeliveryDetails 
                             SET delivery_status = 'Out for Delivery' 
                             WHERE transaction_id = ? AND delivery_status = 'To Ship'");
     if (!$stmt) {
         respond(500, "Failed to prepare update statement: " . $conn->error);
     }
-
     $stmt->bind_param("i", $transactionNo);
-    if (!$stmt->execute()) {
-        respond(500, "Execution failed: " . $stmt->error);
-    }
+    $stmt->execute();
 
     if ($stmt->affected_rows === 0) {
         respond(404, "No matching delivery found or it has already been updated.");
