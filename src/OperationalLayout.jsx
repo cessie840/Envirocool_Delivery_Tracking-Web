@@ -107,7 +107,11 @@ const OperationalLayout = ({ children, title }) => {
       </main>
 
       {/* LOGOUT MODAL */}
-      <Modal show={showLogoutModal} onHide={() => setShowLogoutModal(false)} centered>
+      <Modal
+        show={showLogoutModal}
+        onHide={() => setShowLogoutModal(false)}
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title>Confirm Logout</Modal.Title>
         </Modal.Header>

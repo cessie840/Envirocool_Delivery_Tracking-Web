@@ -24,12 +24,12 @@ include 'database.php';
 
 $data = json_decode(file_get_contents("php://input"));
 
-if (!isset($data->orderId) || !isset($data->personnelUsername)) {
+if (empty($data->transaction_id) || empty($data->personnelUsername)) {
     echo json_encode(["success" => false, "message" => "Missing required fields."]);
     exit;
 }
 
-$orderId = intval($data->orderId);
+$orderId = intval($data->transaction_id);
 $personnelUsername = $conn->real_escape_string($data->personnelUsername);
 
 // Check if order already has an assignment
