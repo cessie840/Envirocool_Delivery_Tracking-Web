@@ -130,6 +130,14 @@ CREATE TABLE TopSellingItems (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE CancelledDeliveries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id INT NOT NULL,
+    reason TEXT NOT NULL,
+    cancelled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES DeliveryDetails(transaction_id)
+);
+
 INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone)
 VALUES (
     'admin101',
@@ -169,6 +177,8 @@ INSERT INTO TopSellingItems (month, item_name, quantity_sold)
 VALUES 
 (DATE_FORMAT(CURDATE(), '%Y-%m'), 'Reusable Bamboo Straw Set', 320),
 (DATE_FORMAT(CURDATE(), '%Y-%m'), 'Eco-Friendly Tote Bag', 275);
+
+
 
 UPDATE Transactions SET status='Delivered', customer_rating=5.0 WHERE transaction_id=100001;
 UPDATE Transactions SET status='Cancelled', cancel_reason='Customer didn''t receive' WHERE transaction_id=100002;
