@@ -2,6 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Allowed origins
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'
@@ -17,19 +18,33 @@ header("Content-Type: application/json");
 
 include 'database.php';
 
-$sql = "
-    SELECT pers_username, pers_fname, pers_lname
-    FROM DeliveryPersonnel
-";
+$response = [
+    "success" => false,
+    "message" => "",
+    "data" => []
+];
 
-$result = $conn->query($sql);
-$personnel = [];
+try {
+    $sql = "SELECT pers_id, pers_username, pers_fname, pers_lname FROM DeliveryPersonnel";
+    $result = $conn->query($sql);
 
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $personnel[] = $row;
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $response["data"][] = [
+                "id" => $row["pers_id"],
+                "username" => $row["pers_username"],
+                "fullname" => $row["pers_fname"] . " " . $row["pers_lname"]
+            ];
+        }
+        $response["success"] = true;
+        $response["message"] = "Delivery personnel fetched successfully.";
+    } else {
+        $response["message"] = "No delivery personnel found.";
     }
+} catch (Exception $e) {
+    $response["message"] = "Error: " . $e->getMessage();
 }
 
-echo json_encode($personnel);
+echo json_encode($response);
+$conn->close();
 ?>

@@ -1,5 +1,4 @@
 <?php
-// CORS headers for preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -8,7 +7,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// CORS headers for actual request
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
@@ -27,18 +25,22 @@ if (empty($username)) {
 
 $sql = "
 SELECT 
-    t.transaction_id, t.customer_name, t.customer_address, t.customer_contact, t.mode_of_payment,
-    po.quantity, po.description, po.unit_cost,
-    (po.quantity * po.unit_cost) AS item_total
+    t.transaction_id, 
+    t.customer_name, 
+    t.customer_address, 
+    t.customer_contact, 
+    t.mode_of_payment,
+    po.quantity, 
+    po.description, 
+    po.unit_cost,
+    (po.quantity * po.unit_cost) AS item_total,
+    dd.delivery_status
 FROM DeliveryAssignments da
 JOIN Transactions t ON da.transaction_id = t.transaction_id
 JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
+JOIN DeliveryDetails dd ON dd.transaction_id = t.transaction_id
 WHERE da.personnel_username = '$username'
-AND t.transaction_id IN (
-      SELECT transaction_id 
-      FROM DeliveryDetails 
-      WHERE delivery_status = 'To Ship'
-  )
+ORDER BY t.created_at DESC
 ";
 
 $result = $conn->query($sql);
@@ -58,7 +60,8 @@ if ($result && $result->num_rows > 0) {
                 'contact' => $row['customer_contact'],
                 'paymentMode' => $row['mode_of_payment'],
                 'items' => [],
-                'totalCost' => 0
+                'totalCost' => 0,
+                'delivery_status' => $row['delivery_status'] // ✅ include status
             ];
         }
 
@@ -66,7 +69,8 @@ if ($result && $result->num_rows > 0) {
 
         $grouped[$tid]['items'][] = [
             'name' => $row['description'],
-            'qty' => (int)$row['quantity'],
+            'qty'  => (int)$row['quantity'],
+            'unitCost' => (float)$row['unit_cost'],
             'price' => number_format($itemTotal, 2)
         ];
 
@@ -75,7 +79,10 @@ if ($result && $result->num_rows > 0) {
 
     // Format final output
     foreach ($grouped as &$order) {
-        $order['unitCost'] = count($order['items']) > 0 ? "₱" . $order['items'][0]['price'] : "₱0.00";
+        $order['unitCost'] = count($order['items']) > 0 
+            ? "₱" . number_format($order['items'][0]['unitCost'], 2)
+            : "₱0.00";
+
         $order['totalCost'] = "₱" . number_format($order['totalCost'], 2);
         $deliveries[] = $order;
     }
@@ -83,5 +90,4 @@ if ($result && $result->num_rows > 0) {
 
 echo json_encode($deliveries);
 $conn->close();
-
 ?>
