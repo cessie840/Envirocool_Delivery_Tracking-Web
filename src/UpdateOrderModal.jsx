@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 
 const UpdateOrderModal = ({
@@ -14,6 +14,17 @@ const UpdateOrderModal = ({
     (sum, item) => sum + item.quantity * item.unit_cost,
     0
   );
+
+  // 🔹 Automatically update total and balance when items change
+  useEffect(() => {
+    const down_payment = parseFloat(formData.down_payment) || 0;
+    const balance = total - down_payment;
+    setFormData((prev) => ({
+      ...prev,
+      total: total.toFixed(2),
+      balance: balance.toFixed(2),
+    }));
+  }, [editableItems, total]);
 
   const handleDownPaymentChange = (e) => {
     const down_payment = parseFloat(e.target.value) || 0;

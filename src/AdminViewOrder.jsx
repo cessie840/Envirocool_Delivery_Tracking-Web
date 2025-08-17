@@ -162,16 +162,16 @@ const ViewOrder = () => {
                 <strong>Payment Mode:</strong> {orderDetails.mode_of_payment}
               </p>
               <p>
+                <strong>Total:</strong> ₱
+                {Number(orderDetails?.total || 0).toLocaleString()}
+              </p>
+              <p>
                 <strong>Down Payment:</strong> ₱
                 {Number(orderDetails?.down_payment || 0).toLocaleString()}
               </p>
               <p>
                 <strong>Balance:</strong> ₱
                 {Number(orderDetails?.balance || 0).toLocaleString()}
-              </p>
-              <p>
-                <strong>Total:</strong> ₱
-                {Number(orderDetails?.total || 0).toLocaleString()}
               </p>
             </div>
 
