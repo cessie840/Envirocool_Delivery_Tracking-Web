@@ -47,14 +47,12 @@ SELECT
     po.description AS name,
     po.quantity AS qty,
     po.unit_cost AS unitCost,
-    (po.quantity * po.unit_cost) AS totalCost,
-    dd.delivery_status
+    (po.quantity * po.unit_cost) AS totalCost
 FROM DeliveryAssignments da
 JOIN Transactions t ON da.transaction_id = t.transaction_id
 JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
-JOIN DeliveryDetails dd ON dd.transaction_id = t.transaction_id AND dd.po_id = po.po_id
 WHERE da.personnel_username = ?
-  AND dd.delivery_status = 'Delivered'
+  AND t.status = 'Delivered'
 ";
 
 $stmt = $conn->prepare($sql);

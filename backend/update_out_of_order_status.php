@@ -1,11 +1,4 @@
 <?php
-include 'database.php';
-
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Content-Type: application/json");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -14,75 +7,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Helper function to return JSON response
-function respond($statusCode, $message, $data = null) {
-    http_response_code($statusCode);
-    echo json_encode([
-        'success' => $statusCode >= 200 && $statusCode < 300,
-        'message' => $message,
-        'data' => $data
-    ]);
-    exit();
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST");
+header("Content-Type: application/json");
+
+include 'database.php';
+
+$data = json_decode(file_get_contents("php://input"), true);
+$transactionId = isset($data['transaction_id']) ? intval($data['transaction_id']) : 0;
+
+if ($transactionId <= 0) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Invalid transaction ID"]);
+    exit;
 }
+
+// ✅ Start transaction
+$conn->begin_transaction();
 
 try {
-    // Get raw input and decode
-    $input = json_decode(file_get_contents("php://input"), true);
+    // Update main transaction status
+    $sql1 = "UPDATE Transactions SET status = 'Out for Delivery' WHERE transaction_id = ?";
+    $stmt1 = $conn->prepare($sql1);
+    $stmt1->bind_param("i", $transactionId);
+    $stmt1->execute();
 
-    // ✅ Match frontend field
-    if (!isset($input['transaction_id'])) {
-        respond(400, "Missing transaction number.");
+    if ($stmt1->affected_rows <= 0) {
+        throw new Exception("Failed to update transaction status.");
     }
 
-    $transactionNo = intval($input['transaction_id']);
-    if ($transactionNo <= 0) {
-        respond(400, "Invalid transaction number.");
-    }
+    // Update DeliveryDetails status for all items in this transaction
+    $sql2 = "UPDATE DeliveryDetails SET delivery_status = 'Out for Delivery' WHERE transaction_id = ?";
+    $stmt2 = $conn->prepare($sql2);
+    $stmt2->bind_param("i", $transactionId);
+    $stmt2->execute();
 
-    // Check DB connection
-    if (!$conn) {
-        respond(500, "Database connection failed.");
-    }
+    // Commit
+    $conn->commit();
 
-    // Check if delivery exists and is still "To Ship"
-    $checkStmt = $conn->prepare("SELECT delivery_status FROM DeliveryDetails WHERE transaction_id = ?");
-    if (!$checkStmt) {
-        respond(500, "Failed to prepare query: " . $conn->error);
-    }
-    $checkStmt->bind_param("i", $transactionNo);
-    $checkStmt->execute();
-    $result = $checkStmt->get_result();
-
-    if ($result->num_rows === 0) {
-        respond(404, "Transaction not found.");
-    }
-
-    $row = $result->fetch_assoc();
-    if ($row['delivery_status'] === 'Out for Delivery') {
-        respond(409, "Delivery is already marked as 'Out for Delivery'.");
-    }
-
-    // Update delivery status to "Out for Delivery"
-    $stmt = $conn->prepare("UPDATE DeliveryDetails 
-                            SET delivery_status = 'Out for Delivery' 
-                            WHERE transaction_id = ? AND delivery_status = 'To Ship'");
-    if (!$stmt) {
-        respond(500, "Failed to prepare update statement: " . $conn->error);
-    }
-    $stmt->bind_param("i", $transactionNo);
-    $stmt->execute();
-
-    if ($stmt->affected_rows === 0) {
-        respond(404, "No matching delivery found or it has already been updated.");
-    }
-
-    respond(200, "Delivery marked as 'Out for Delivery'.");
-
+    echo json_encode(["success" => true, "message" => "Transaction marked as Out for Delivery"]);
 } catch (Exception $e) {
-    respond(500, "Unexpected server error.", $e->getMessage());
-} finally {
-    if (isset($checkStmt)) $checkStmt->close();
-    if (isset($stmt)) $stmt->close();
-    if (isset($conn)) $conn->close();
+    $conn->rollback();
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => $e->getMessage()]);
 }
+
+$conn->close();
 ?>

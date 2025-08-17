@@ -36,19 +36,24 @@ const OperationalDelivery = () => {
     }
   };
 
-  const fetchPersonnel = async () => {
-    try {
-      const res = await axios.get(
-        "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
-      );
+ const fetchPersonnel = async () => {
+  try {
+    const res = await axios.get(
+      "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
+    );
 
-      console.log("✅ Personnel fetched:", res.data);
-      setPersonnelList(Array.isArray(res.data) ? res.data : []);
-    } catch (error) {
-      console.error("❌ Failed to fetch personnel:", error);
+    console.log("✅ Personnel fetched:", res.data.data);
+
+    if (res.data.success && Array.isArray(res.data.data)) {
+      setPersonnelList(res.data.data); // set the 'data' array
+    } else {
       setPersonnelList([]);
     }
-  };
+  } catch (error) {
+    console.error("❌ Failed to fetch personnel:", error);
+    setPersonnelList([]);
+  }
+};
 
   const handleOpenAssignModal = () => {
     setSelectedPersonnel("");
@@ -60,8 +65,8 @@ const OperationalDelivery = () => {
     const res = await axios.post(
       "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
       {
-        transaction_id: selectedOrder.transaction_no, // ✅ fixed key name
-        personnelUsername: selectedPersonnel
+          transaction_id: selectedOrder.transaction_no,
+  personnelUsername: selectedPersonnel
       }
     );
 

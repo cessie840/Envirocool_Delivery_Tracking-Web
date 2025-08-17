@@ -25,16 +25,17 @@ $response = [
 ];
 
 try {
-    $sql = "SELECT pers_id, pers_username, pers_fname, pers_lname FROM DeliveryPersonnel";
+    $sql = "SELECT pers_username, pers_fname, pers_lname FROM DeliveryPersonnel";
     $result = $conn->query($sql);
 
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
             $response["data"][] = [
-                "id" => $row["pers_id"],
-                "username" => $row["pers_username"],
-                "fullname" => $row["pers_fname"] . " " . $row["pers_lname"]
-            ];
+    "pers_username" => $row["pers_username"],
+    "pers_fname" => $row["pers_fname"],
+    "pers_lname" => $row["pers_lname"]
+];
+
         }
         $response["success"] = true;
         $response["message"] = "Delivery personnel fetched successfully.";
