@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Offcanvas, ListGroup, Modal, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import "./loading-overlay.css"; // ✅ import same overlay CSS
 
 const Sidebar = ({ show, onHide }) => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const Sidebar = ({ show, onHide }) => {
   });
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loading, setLoading] = useState(false); // ✅ new state
 
   useEffect(() => {
     const storedProfile = localStorage.getItem("user");
@@ -63,10 +65,13 @@ const Sidebar = ({ show, onHide }) => {
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem("user"); // clear session storage/localstorage
     setShowLogoutModal(false);
-    onHide();
-    navigate("/"); // redirect to login/home page
+    setLoading(true); // ✅ show loading
+    setTimeout(() => {
+      setLoading(false);
+      localStorage.removeItem("user"); // clear storage
+      navigate("/"); // redirect after timeout
+    }, 800); // adjust delay
   };
 
   const userName = profile.name;
@@ -74,6 +79,15 @@ const Sidebar = ({ show, onHide }) => {
 
   return (
     <>
+      {/* ✅ Loading Overlay */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Logging out...</span>
+          </div>
+        </div>
+      )}
+
       <Offcanvas
         show={show}
         onHide={onHide}
@@ -81,17 +95,14 @@ const Sidebar = ({ show, onHide }) => {
         backdropClassName="custom-backdrop"
         className="custom-offcanvas"
       >
-        {/* OVERLAP SIDEBAR */}
         <style>
           {`
             .custom-offcanvas.offcanvas {
               z-index: 1060 !important; 
             }
-
             .custom-backdrop {
               z-index: 1059 !important; 
             }
-
             .offcanvas .btn-close {
               filter: brightness(0) invert(3);
             }
@@ -207,7 +218,8 @@ const Sidebar = ({ show, onHide }) => {
                   }}
                   onClick={() => {
                     if (item.name === "Logout") {
-                      setShowLogoutModal(true); // open modal instead of direct logout
+                      setShowLogoutModal(true);
+                      onHide();
                     } else {
                       navigate(item.path);
                       onHide();
