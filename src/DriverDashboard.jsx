@@ -17,71 +17,75 @@ function DriverDashboard() {
     if (!storedProfile) return;
 
     const parsedProfile = JSON.parse(storedProfile);
-    const username = parsedProfile.pers_username;
+console.log("Parsed profile from localStorage:", parsedProfile);
+const username = parsedProfile.pers_username;
+console.log("Username being sent to backend:", username);
+
 
     if (!username) return;
 
     axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
-        { pers_username: username }
-      )
-      .then((res) => {
-        if (Array.isArray(res.data)) {
-          // Separate assigned and out-for-delivery
-          const assigned = res.data.filter(
-            (d) => d.delivery_status === "To Ship" || d.delivery_status === "Pending"
-          );
-          const out = res.data.filter((d) => d.delivery_status === "Out for Delivery");
+  .post("http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php", {
+    pers_username: username,
+  })
+  .then((res) => {
+    console.log("Fetched deliveries:", res.data);
+    if (Array.isArray(res.data)) {
+     const assigned = res.data.filter(
+  (d) => d.delivery_status === "To Ship" || d.delivery_status === "Pending"
+);
 
-          setAssignedDeliveries(assigned);
-          setOutForDelivery(out);
-        } else {
-          console.warn("Unexpected response format:", res.data);
-        }
-      })
-      .catch((err) => console.error("Error fetching deliveries:", err));
+      const out = res.data.filter((d) => d.delivery_status === "Out for Delivery");
+
+      setAssignedDeliveries(assigned);
+      setOutForDelivery(out);
+    } else {
+      console.warn("Unexpected response format:", res.data);
+    }
+  })
+  .catch((err) => console.error("Error fetching deliveries:", err));
   };
 
   useEffect(() => {
     fetchAssignedDeliveries();
   }, []);
 
-  const markAsOutForDelivery = (transactionNo) => {
-    const delivery = assignedDeliveries.find(
-      (d) => d.transactionNo === transactionNo
-    );
-    if (!delivery) {
-      alert("Delivery not found.");
-      return;
-    }
+const markAsOutForDelivery = (transactionNo) => {
+  const delivery = assignedDeliveries.find(
+    (d) => d.transactionNo === transactionNo
+  );
+  if (!delivery) {
+    alert("Delivery not found.");
+    return;
+  }
 
-    axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
-        { transaction_id: transactionNo }
-      )
-      .then((res) => {
-        const { success, message } = res.data;
+  axios
+    .post(
+      "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
+      { transaction_id: transactionNo }
+    )
+    .then((res) => {
+      const { success, message } = res.data;
 
-        if (success) {
-          alert("Order is now marked as 'Out for Delivery'.");
-          fetchAssignedDeliveries(); // refresh list
-          navigate("/out-for-delivery");
-        } else {
-          alert(`Error: ${message}`);
-        }
-      })
-      .catch((err) => {
-        if (err.response) {
-          const { status, data } = err.response;
-          alert(`Error ${status}: ${data?.message || "Something went wrong."}`);
-        } else {
-          console.error("API error:", err);
-          alert("Failed to update delivery status. Please try again later.");
-        }
-      });
-  };
+      if (success) {
+        alert("Order is now marked as 'Out for Delivery'.");
+        fetchAssignedDeliveries(); // refresh list
+        navigate("/out-for-delivery");
+      } else {
+        alert(`Error: ${message}`);
+      }
+    })
+    .catch((err) => {
+      if (err.response) {
+        const { status, data } = err.response;
+        alert(`Error ${status}: ${data?.message || "Something went wrong."}`);
+      } else {
+        console.error("API error:", err);
+        alert("Failed to update delivery status. Please try again later.");
+      }
+    });
+};
+
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>

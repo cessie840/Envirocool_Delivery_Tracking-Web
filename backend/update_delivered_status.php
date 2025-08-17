@@ -19,7 +19,7 @@ include 'database.php';
 try {
     // Decode JSON input
     $data = json_decode(file_get_contents("php://input"), true);
-    
+
     if (!isset($data['transaction_id']) || empty($data['transaction_id'])) {
         http_response_code(400);
         echo json_encode([
@@ -32,7 +32,12 @@ try {
 
     $transactionId = $conn->real_escape_string($data['transaction_id']);
 
-    $stmt = $conn->prepare("UPDATE DeliveryDetails SET delivery_status = 'Delivered' WHERE transaction_id = ? AND delivery_status = 'Out for Delivery'");
+    // Update the Transactions table instead of DeliveryDetails
+    $stmt = $conn->prepare("
+        UPDATE Transactions 
+        SET status = 'Delivered' 
+        WHERE transaction_id = ? AND status = 'Out for Delivery'
+    ");
 
     if (!$stmt) {
         throw new Exception("Failed to prepare SQL statement: " . $conn->error);
@@ -44,7 +49,7 @@ try {
         if ($stmt->affected_rows > 0) {
             echo json_encode([
                 "success" => true,
-                "message" => "Delivery Successfully",
+                "message" => "Delivery marked as Delivered successfully",
             ]);
         } else {
             http_response_code(404);

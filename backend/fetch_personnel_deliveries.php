@@ -22,7 +22,6 @@ if (empty($username)) {
     echo json_encode(["error" => "Username required"]);
     exit;
 }
-
 $sql = "
 SELECT 
     t.transaction_id, 
@@ -30,18 +29,18 @@ SELECT
     t.customer_address, 
     t.customer_contact, 
     t.mode_of_payment,
+    t.status AS delivery_status,
     po.quantity, 
     po.description, 
     po.unit_cost,
-    (po.quantity * po.unit_cost) AS item_total,
-    dd.delivery_status
+    (po.quantity * po.unit_cost) AS item_total
 FROM DeliveryAssignments da
 JOIN Transactions t ON da.transaction_id = t.transaction_id
 JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
-JOIN DeliveryDetails dd ON dd.transaction_id = t.transaction_id
 WHERE da.personnel_username = '$username'
 ORDER BY t.created_at DESC
 ";
+
 
 $result = $conn->query($sql);
 $deliveries = [];
@@ -61,7 +60,7 @@ if ($result && $result->num_rows > 0) {
                 'paymentMode' => $row['mode_of_payment'],
                 'items' => [],
                 'totalCost' => 0,
-                'delivery_status' => $row['delivery_status'] // ✅ include status
+                'delivery_status' => $row['delivery_status']
             ];
         }
 
@@ -77,7 +76,6 @@ if ($result && $result->num_rows > 0) {
         $grouped[$tid]['totalCost'] += $itemTotal;
     }
 
-    // Format final output
     foreach ($grouped as &$order) {
         $order['unitCost'] = count($order['items']) > 0 
             ? "₱" . number_format($order['items'][0]['unitCost'], 2)
