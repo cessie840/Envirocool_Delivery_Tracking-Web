@@ -19,13 +19,13 @@ function FailedDeliveries() {
           pers_username: user.pers_username,
         }
       )
-    .then((res) => {
-  if (res.data.success === false) {
-    alert(res.data.message);
-  } else {
-    setCancelledDeliveries(res.data.data || []);
-  }
-})
+      .then((res) => {
+        if (res.data.success === false) {
+          alert(res.data.message);
+        } else {
+          setCancelledDeliveries(res.data.data || []);
+        }
+      })
 
       .catch((err) => {
         console.error("Error fetching cancelled deliveries:", err);
