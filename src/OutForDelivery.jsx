@@ -96,11 +96,11 @@ function OutForDelivery() {
       return;
     }
 
-    axios
-      .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
-        transactionNo: selectedDelivery.transactionNo,
-        reason: cancelReason,
-      })
+   axios.post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
+  transaction_id: selectedDelivery.transactionNo,
+  reason: cancelReason,
+})
+
       .then((res) => {
         const { success, message } = res.data;
 
