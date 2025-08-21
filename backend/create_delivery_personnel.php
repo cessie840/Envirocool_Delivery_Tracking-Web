@@ -81,7 +81,7 @@ $stmt->close();
 $result = $conn->query("SELECT COUNT(*) AS count FROM DeliveryPersonnel");
 $row = $result->fetch_assoc();
 $count = $row['count'] + 1;
-$username = 'deliverypers' . str_pad($count, 3, '0', STR_PAD_LEFT);
+$username = 'personnel' . str_pad($count, 2, '0', STR_PAD_LEFT);
 
 $passwordPlain = $birth;
 $passwordHashed = password_hash($passwordPlain, PASSWORD_BCRYPT);

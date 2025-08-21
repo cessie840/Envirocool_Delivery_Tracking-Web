@@ -1,108 +1,86 @@
 <?php
-// Allowed origins
+header("Content-Type: application/json");
+
 $allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174'
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-}
-
-// Handle preflight (OPTIONS) request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Headers: Content-Type");
     header("Access-Control-Allow-Methods: POST, OPTIONS");
-    http_response_code(200);
-    exit();
-}
-
-header("Content-Type: application/json");
-
-include 'database.php'; // assumes $conn is available
-
-$data = json_decode(file_get_contents("php://input"));
-
-if (!isset($data->pers_username) || empty($data->pers_username)) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Missing or empty 'pers_username'."
-    ]);
+    header("Access-Control-Allow-Headers: Content-Type");
+} else {
+    http_response_code(403);
+    echo json_encode(["success" => false, "message" => "Forbidden origin"]);
     exit;
 }
 
-$username = $data->pers_username;
+require_once "database.php";
 
-$sql = "
-SELECT 
-    t.transaction_id AS transactionNo,
-    t.customer_name AS customerName,
-    t.customer_address AS address,
-    t.customer_contact AS contact,
-    t.mode_of_payment AS paymentMode,
-    po.description AS name,
-    po.quantity AS qty,
-    po.unit_cost AS unitCost,
-    (po.quantity * po.unit_cost) AS totalCost,
-    cd.reason AS cancelledReason
-FROM DeliveryAssignments da
-JOIN Transactions t ON da.transaction_id = t.transaction_id
-JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
-JOIN DeliveryDetails dd ON dd.transaction_id = t.transaction_id AND dd.po_id = po.po_id
-JOIN CancelledDeliveries cd ON cd.transaction_id = t.transaction_id
-WHERE da.personnel_username = ?
-  AND dd.delivery_status = 'Cancelled'
+$data = json_decode(file_get_contents("php://input"), true);
+$pers_username = $data['pers_username'] ?? '';
+
+if (empty($pers_username)) {
+    echo json_encode(["success" => false, "message" => "Missing delivery personnel username."]);
+    exit;
+}
+
+$query = "
+    SELECT 
+        c.cancel_id,
+        c.transaction_id,
+        c.cancelled_reason,
+        c.cancelled_at,
+        t.customer_name,
+        t.customer_address,
+        t.customer_contact,
+        t.mode_of_payment,
+        t.total AS totalCost
+    FROM CancelledDeliveries c
+    JOIN Transactions t ON c.transaction_id = t.transaction_id
+    JOIN DeliveryAssignments da ON da.transaction_id = c.transaction_id
+    WHERE da.personnel_username = ?
+    ORDER BY c.cancel_id DESC
 ";
 
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to prepare SQL: " . $conn->error
-    ]);
-    exit;
-}
-
-$stmt->bind_param("s", $username);
-
-if (!$stmt->execute()) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to execute SQL: " . $stmt->error
-    ]);
-    $stmt->close();
-    exit;
-}
-
+$stmt = $conn->prepare($query);
+$stmt->bind_param("s", $pers_username);
+$stmt->execute();
 $result = $stmt->get_result();
 
 $deliveries = [];
-
 while ($row = $result->fetch_assoc()) {
-    $transactionNo = $row['transactionNo'];
+    $itemsQuery = "SELECT description, quantity, unit_cost FROM PurchaseOrder WHERE transaction_id = ?";
+    $stmtItems = $conn->prepare($itemsQuery);
+    $stmtItems->bind_param("i", $row['transaction_id']);
+    $stmtItems->execute();
+    $itemsResult = $stmtItems->get_result();
 
-    if (!isset($deliveries[$transactionNo])) {
-        $deliveries[$transactionNo] = [
-            "transactionNo" => $transactionNo,
-            "customerName" => $row['customerName'],
-            "address" => $row['address'],
-            "contact" => $row['contact'],
-            "paymentMode" => $row['paymentMode'],
-            "unitCost" => $row['unitCost'],
-            "totalCost" => $row['totalCost'],
-            "cancelledReason" => $row['cancelledReason'],
-            "items" => []
+    $items = [];
+    while ($itemRow = $itemsResult->fetch_assoc()) {
+        $items[] = [
+            "name" => $itemRow['description'],
+            "qty" => $itemRow['quantity'],
+            "unitCost" => $itemRow['unit_cost']
         ];
     }
 
-    $deliveries[$transactionNo]['items'][] = [
-        "name" => $row['name'],
-        "qty" => $row['qty']
+    $deliveries[] = [
+        "transactionNo"   => $row['transaction_id'],
+        "customerName"    => $row['customer_name'],
+        "address"         => $row['customer_address'],
+        "contact"         => $row['customer_contact'],
+        "paymentMode"     => $row['mode_of_payment'],
+        "items"           => $items,
+        "totalCost"       => $row['totalCost'],
+        "cancelledReason" => $row['cancelled_reason']
     ];
 }
 
-$stmt->close();
-$conn->close();
+error_log("ℹ️ Found " . count($deliveries) . " cancelled deliveries for " . $pers_username);
 
-echo json_encode(array_values($deliveries));
-?>
+echo json_encode([
+    "success" => true,
+    "data" => $deliveries
+]);
