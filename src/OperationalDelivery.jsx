@@ -65,7 +65,7 @@ const OperationalDelivery = () => {
     const res = await axios.post(
       "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
       {
-          transaction_id: selectedOrder.transaction_no,
+          transaction_id: selectedOrder.transaction_id,
   personnelUsername: selectedPersonnel
       }
     );
@@ -73,10 +73,10 @@ const OperationalDelivery = () => {
     switch (res.data.success) {
       case true:
         alert("Personnel assigned successfully!");
-        setShowModal(false); // Close assign modal
-        setShowDetailModal(false); // Close detail modal
-        setSelectedOrder(null); // Clear selected order
-        fetchOrders(); // Refresh orders list
+        setShowModal(false); 
+        setShowDetailModal(false); 
+        setSelectedOrder(null); 
+        fetchOrders(); 
         break;
 
       case false:
@@ -108,7 +108,7 @@ const OperationalDelivery = () => {
               <div key={index} className="col-md-6">
                 <div className="compact-card card shadow-sm rounded-2 p-3 m-2">
                   <h5 className="fw-bold text-success">
-                    Transaction No. {order.transaction_no}
+                    Transaction No. {order.transaction_id}
                   </h5>
                   <p className="mb-2">
                     <strong>Customer:</strong> {order.customer_name}
@@ -152,7 +152,7 @@ const OperationalDelivery = () => {
         >
           <Modal.Header closeButton>
             <Modal.Title className="fw-bold text-success text-center">
-              Transaction #{selectedOrder.transaction_no}
+              Transaction #{selectedOrder.transaction_id}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
@@ -208,7 +208,7 @@ const OperationalDelivery = () => {
                     <span className="fw-bold text-success">
                       Delivery Personnel Assigned:
                     </span>
-                    <span>{selectedOrder.assigned_personnel}</span>
+                    <b><span>{selectedOrder.assigned_personnel}</span></b>
                   </li>
                 </ul>
               </div>
