@@ -56,30 +56,31 @@ CREATE TABLE DeliveryPersonnel (
 );
 
 CREATE TABLE Transactions (
-  transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-  customer_name VARCHAR(255),
-  customer_address TEXT,
-  customer_contact VARCHAR(20),
-  date_of_order DATE,
-  mode_of_payment ENUM('Cash', 'COD', 'Card'),
-  down_payment DECIMAL(10,2),
-  balance DECIMAL(10,2),
-  total DECIMAL(10,2),
-  status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
-  cancel_reason VARCHAR(255) DEFAULT NULL,
-  customer_rating DECIMAL(3,1) DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name VARCHAR(255),
+    customer_address TEXT,
+    customer_contact VARCHAR(20),
+    date_of_order DATE,
+    mode_of_payment ENUM('Cash', 'COD', 'Card'),
+    down_payment DECIMAL(10,2),
+    balance DECIMAL(10,2),
+    total DECIMAL(10,2),
+    status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    cancel_reason VARCHAR(255) DEFAULT NULL,
+    customer_rating DECIMAL(3,1) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) AUTO_INCREMENT = 100001;
 
 CREATE TABLE PurchaseOrder (
-  po_id INT PRIMARY KEY AUTO_INCREMENT,
-  transaction_id INT,
-  quantity INT,
-  description TEXT,
-  unit_cost DECIMAL(10,2),
-  total_cost DECIMAL(10,2),
-  FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
+    po_id INT PRIMARY KEY AUTO_INCREMENT,
+    transaction_id INT,
+    quantity INT,
+    description TEXT,
+    unit_cost DECIMAL(10,2),
+    total_cost DECIMAL(10,2),
+    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
 ) AUTO_INCREMENT = 500001;
+
 
 CREATE TABLE DeliveryAssignments (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -91,13 +92,16 @@ CREATE TABLE DeliveryAssignments (
 );
 
 CREATE TABLE DeliveryDetails (
-  delivery_id INT AUTO_INCREMENT PRIMARY KEY,
-  transaction_id INT,
-  po_id INT,
-  delivery_status ENUM('Pending', 'To Ship' ,'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
-  FOREIGN KEY (po_id) REFERENCES PurchaseOrder(po_id) ON DELETE CASCADE
+    delivery_id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id INT,
+    po_id INT,
+    delivery_status ENUM('Pending', 'To Ship' ,'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    cancellation_reason TEXT NULL,
+    cancelled_at DATETIME NULL,
+    status ENUM('OutForDelivery', 'Delivered', 'Cancelled') DEFAULT 'OutForDelivery',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
+    FOREIGN KEY (po_id) REFERENCES PurchaseOrder(po_id) ON DELETE CASCADE
 );
 
 CREATE TABLE coords (
@@ -131,11 +135,11 @@ CREATE TABLE TopSellingItems (
 );
 
 CREATE TABLE CancelledDeliveries (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    cancel_id INT AUTO_INCREMENT PRIMARY KEY,
     transaction_id INT NOT NULL,
-    reason TEXT NOT NULL,
+    cancelled_reason TEXT NOT NULL,
     cancelled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (transaction_id) REFERENCES DeliveryDetails(transaction_id)
+    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
 );
 
 INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone)
@@ -179,10 +183,10 @@ VALUES
 (DATE_FORMAT(CURDATE(), '%Y-%m'), 'Eco-Friendly Tote Bag', 275);
 
 
-
 UPDATE Transactions SET status='Delivered', customer_rating=5.0 WHERE transaction_id=100001;
 UPDATE Transactions SET status='Cancelled', cancel_reason='Customer didn''t receive' WHERE transaction_id=100002;
 UPDATE Transactions SET status='Delivered', customer_rating=4.0 WHERE transaction_id=100003;
+
 
 SELECT * FROM Admin;
 SELECT * FROM OperationalManager;
@@ -197,16 +201,12 @@ FROM DeliveryPersonnel;
 
 SELECT ad_username, ad_password FROM Admin;
 
-SELECT _ FROM Admin;
-SELECT _ FROM OperationalManager;
-SELECT _ FROM DeliveryPersonnel;
-SELECT _ FROM Transactions;
-SELECT _ FROM PurchaseOrder;
-SELECT _ FROM DeliveryAssignments;
+DESCRIBE Transactions;
 
-SELECT pers_username, pers_fname, pers_lname, status, assignment_status
-FROM DeliveryPersonnel;
+SELECT * FROM DeliveryAssignments 
+WHERE personnel_username = 'personnel02';
 
+------------- CREDENTIALS -----------------
 Admin Credentials:
 Username: admin101
 Password: admin111219#
