@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
-import { FaPlus } from "react-icons/fa";
+import { FaChartBar } from "react-icons/fa";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
@@ -23,6 +23,10 @@ const AdminDashboard = () => {
 
     setMonthlyData(data);
   }, []);
+
+  const handleGenerateReport = () => {
+    navigate("/generate-report");
+  };
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
@@ -116,12 +120,23 @@ const AdminDashboard = () => {
 
           {/* Bar Chart Card */}
           <div className="row g-4 mt-4">
+            <div className="text-end mx-1 my-3 d-flex justify-content-end">
+              <button
+                className="btn-view rounded-2 px-3 py-2 fs-6 d-flex align-items-center gap-2"
+                onClick={handleGenerateReport}
+              >
+                <FaChartBar /> See Overall Report
+              </button>
+            </div>
             <div className="col-12">
               <div className="card shadow-sm h-100">
                 <div className="card-body">
-                  <h5 className="card-title text-center mb-4">
-                    Monthly Delivery Overview
-                  </h5>
+                  {/* Title + Generate Report Button */}
+                  <div className="d-flex justify-content-center align-items-center mb-4">
+                    <h5 className="card-title text-center mb-0">
+                      Monthly Delivery Overview
+                    </h5>
+                  </div>
 
                   <div className="overflow-auto">
                     <div

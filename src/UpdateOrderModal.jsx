@@ -87,17 +87,24 @@ const UpdateOrderModal = ({
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Payment Mode</Form.Label>
-              <Form.Control
-                type="text"
+            <div className="mb-3">
+              <label className="form-label fw-bold">Payment Mode</label>
+              <select
                 name="mode_of_payment"
                 value={formData.mode_of_payment}
                 onChange={(e) =>
-                  setFormData({ ...formData, mode_of_payment: e.target.value })
+                  setFormData((prev) => ({
+                    ...prev,
+                    mode_of_payment: e.target.value,
+                  }))
                 }
-              />
-            </Form.Group>
+                className="form-select"
+              >
+                <option value="Cash">Cash</option>
+                <option value="COD">Cash on Delivery (COD)</option>
+                <option value="Card">Card</option>
+              </select>
+            </div>
 
             <Form.Group className="mb-3">
               <Form.Label>Down Payment</Form.Label>

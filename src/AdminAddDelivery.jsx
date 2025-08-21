@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
-import { FaRegTrashAlt, FaArrowLeft, FaChevronDown } from "react-icons/fa";
+import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
 import { Button, Modal } from "react-bootstrap";
 
 const AddDelivery = () => {
@@ -362,25 +362,15 @@ const AddDelivery = () => {
                     </td>
                     <td>
                       <div className="dropdown-wrapper">
-                        <select
+                        <input
                           name="description"
                           className="form-control item-dropdown"
+                          placeholder="Refrigerator na Malamig"
                           value={item.description}
                           onChange={(e) => handleItemChange(index, e)}
                           required
                         >
-                          <option value="">Select an item</option>
-                          <option value="Carrier Aura Inverter Split Type 1.5HP">
-                            Carrier Aura Inverter Split Type 1.5HP
-                          </option>
-                          <option value="Panasonic Deluxe Window Type 1.0HP">
-                            Panasonic Deluxe Window Type 1.0HP
-                          </option>
-                          <option value="LG DualCool Inverter Split Type 2.0HP">
-                            LG DualCool Inverter Split Type 2.0HP
-                          </option>
-                        </select>
-                        <FaChevronDown className="dropdown-icon" />
+                        </input>
                       </div>
                     </td>
 
