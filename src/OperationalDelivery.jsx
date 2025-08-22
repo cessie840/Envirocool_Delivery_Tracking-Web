@@ -127,7 +127,7 @@ const OperationalDelivery = () => {
             <div className="row">
               {unassignedOrders.length === 0 ? (
                 <div className="col-12 text-center text-muted my-3">
-                  <h6>All orders are already assigned 🎉</h6>
+                  <h6>All orders are already assigned </h6>
                 </div>
               ) : (
                 unassignedOrders.map((order, index) => (
