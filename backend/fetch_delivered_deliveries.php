@@ -82,24 +82,29 @@ $deliveries = [];
 while ($row = $result->fetch_assoc()) {
     $transactionNo = $row['transactionNo'];
 
-    if (!isset($deliveries[$transactionNo])) {
-        $deliveries[$transactionNo] = [
-            "transactionNo" => $transactionNo,
-            "customerName" => $row['customerName'],
-            "address" => $row['address'],
-            "contact" => $row['contact'],
-            "paymentMode" => $row['paymentMode'],
-            "unitCost" => $row['unitCost'],
-            "totalCost" => $row['totalCost'],
-            "items" => []
-        ];
-    }
-
-    $deliveries[$transactionNo]['items'][] = [
-        "name" => $row['name'],
-        "qty" => $row['qty'],
-        "price" => $row['qty'] * $row['unitCost']
+  if (!isset($deliveries[$transactionNo])) {
+    $deliveries[$transactionNo] = [
+        "transactionNo" => $transactionNo,
+        "customerName" => $row['customerName'],
+        "address" => $row['address'],
+        "contact" => $row['contact'],
+        "paymentMode" => $row['paymentMode'],
+        "totalCost" => 0,
+        "items" => []
     ];
+}
+
+$deliveries[$transactionNo]['items'][] = [
+    "name" => $row['name'],
+    "qty" => $row['qty'],
+    "unitCost" => $row['unitCost'],
+    "subtotal" => $row['qty'] * $row['unitCost']
+];
+
+// accumulate total
+$deliveries[$transactionNo]['totalCost'] += $row['qty'] * $row['unitCost'];
+
+
 }
 
 $stmt->close();

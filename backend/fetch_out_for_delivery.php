@@ -1,6 +1,5 @@
 <?php
 
-// CORS headers for preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -9,18 +8,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// CORS headers for actual request
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
 header("Content-Type: application/json");
 
-include 'database.php'; // Make sure this sets $conn properly
+include 'database.php'; 
 
-// Decode input data
 $data = json_decode(file_get_contents("php://input"));
 
-// Check if username is provided
 if (!isset($data->pers_username) || empty($data->pers_username)) {
     echo json_encode([
         "success" => false,
@@ -31,7 +27,6 @@ if (!isset($data->pers_username) || empty($data->pers_username)) {
 
 $username = $data->pers_username;
 
-// Ensure DB connection is available
 if (!$conn) {
     echo json_encode([
         "success" => false,
@@ -40,7 +35,6 @@ if (!$conn) {
     exit;
 }
 
-// Prepare SQL statement
 $sql = "
 SELECT 
     t.transaction_id AS transactionNo,
@@ -94,23 +88,27 @@ while ($row = $result->fetch_assoc()) {
             "address" => $row['address'],
             "contact" => $row['contact'],
             "paymentMode" => $row['paymentMode'],
-            "unitCost" => $row['unitCost'],
-            "totalCost" => $row['totalCost'],
+            "totalCost" => 0,
             "items" => []
         ];
     }
 
+    $subtotal = $row['qty'] * $row['unitCost'];
+
     $deliveries[$transactionNo]['items'][] = [
         "name" => $row['name'],
-        "qty" => $row['qty'],
-        "price" => $row['qty'] * $row['unitCost']
+        "qty" => (int)$row['qty'],
+        "unitCost" => (float)$row['unitCost'],
+        "subtotal" => (float)$subtotal
     ];
+
+    $deliveries[$transactionNo]['totalCost'] += $subtotal;
 }
+
 
 $stmt->close();
 $conn->close();
 
-// Final output
 if (empty($deliveries)) {
     echo json_encode([
         "success" => true,

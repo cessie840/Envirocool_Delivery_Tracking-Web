@@ -76,14 +76,15 @@ if ($result && $result->num_rows > 0) {
         $grouped[$tid]['totalCost'] += $itemTotal;
     }
 
-    foreach ($grouped as &$order) {
-        $order['unitCost'] = count($order['items']) > 0 
-            ? "₱" . number_format($order['items'][0]['unitCost'], 2)
-            : "₱0.00";
+   foreach ($grouped as &$order) {
+    $order['unitCost'] = count($order['items']) > 0 
+        ? (float)$order['items'][0]['unitCost']
+        : 0;
 
-        $order['totalCost'] = "₱" . number_format($order['totalCost'], 2);
-        $deliveries[] = $order;
-    }
+    $order['totalCost'] = round($order['totalCost'], 2); 
+    $deliveries[] = $order;
+}
+
 }
 
 echo json_encode($deliveries);
