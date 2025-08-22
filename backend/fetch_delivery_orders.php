@@ -1,5 +1,4 @@
 <?php
-
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'
@@ -15,7 +14,16 @@ include 'database.php';
 
 $orders = [];
 
-$sql = "SELECT * FROM Transactions";
+// ✅ Join DeliveryAssignments + DeliveryPersonnel to get personnel full name
+$sql = "
+    SELECT t.*, 
+           CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS assigned_personnel
+    FROM Transactions t
+    LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
+    LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
+    ORDER BY t.transaction_id DESC
+";
+
 $result = $conn->query($sql);
 
 if ($result && $result->num_rows > 0) {
@@ -46,7 +54,7 @@ if ($result && $result->num_rows > 0) {
         }
 
         $orders[] = [
-            'transaction_no' => $transactionId,
+            'transaction_id' => $transactionId,
             'customer_name' => $row['customer_name'],
             'customer_address' => $row['customer_address'],
             'contact_number' => $row['customer_contact'],
@@ -54,6 +62,7 @@ if ($result && $result->num_rows > 0) {
             'down_payment' => number_format($row['down_payment'], 2),
             'balance' => number_format($row['balance'], 2),
             'total_cost' => number_format($calculatedTotal, 2),
+            'assigned_personnel' => $row['assigned_personnel'] ?? null,
             'items' => $items
         ];
     }

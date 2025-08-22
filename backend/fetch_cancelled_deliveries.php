@@ -60,9 +60,9 @@ while ($row = $result->fetch_assoc()) {
     $items = [];
     while ($itemRow = $itemsResult->fetch_assoc()) {
         $items[] = [
-            "name" => $itemRow['description'],
-            "qty" => $itemRow['quantity'],
-            "unitCost" => $itemRow['unit_cost']
+            "name"      => $itemRow['description'],
+            "qty"       => $itemRow['quantity'],
+            "unitCost"  => $itemRow['unit_cost']
         ];
     }
 
@@ -77,8 +77,6 @@ while ($row = $result->fetch_assoc()) {
         "cancelledReason" => $row['cancelled_reason']
     ];
 }
-
-error_log("ℹ️ Found " . count($deliveries) . " cancelled deliveries for " . $pers_username);
 
 echo json_encode([
     "success" => true,
