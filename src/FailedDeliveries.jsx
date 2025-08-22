@@ -26,12 +26,15 @@ function FailedDeliveries() {
           setCancelledDeliveries(res.data.data || []);
         }
       })
-
       .catch((err) => {
         console.error("Error fetching cancelled deliveries:", err);
         alert("Failed to fetch cancelled deliveries. Please try again later.");
       });
   }, []);
+
+  // ✅ Helper function for formatting
+  const formatCurrency = (amount) =>
+    `₱${Number(amount).toLocaleString("en-PH")}`;
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
@@ -55,12 +58,15 @@ function FailedDeliveries() {
               className="mb-4 p-3 border border-danger rounded"
               style={{ backgroundColor: "#fff0f0" }}
             >
-              <h5 className="text-center fw-bold text-dark mb-3">
+              {/* Header */}
+              <h5 className="text-center fw-bold text-dark mb-2">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
+
               <div className="border p-3 rounded bg-white">
+                {/* Customer Info */}
                 <div className="d-flex justify-content-between mb-1">
-                  <strong>Customer Name:</strong>
+                  <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
                 </div>
                 <div className="d-flex justify-content-between mb-1">
@@ -75,29 +81,49 @@ function FailedDeliveries() {
                   <strong>Payment:</strong>
                   <span>{delivery.paymentMode}</span>
                 </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Items:</strong>
-                  <div>
-                    {delivery.items.map((item, i) => (
-                      <div key={i}>
-                        {item.name} <strong>x{item.qty}</strong>
-                      </div>
-                    ))}
+
+                <strong className="d-block mb-1">Items:</strong>
+                {delivery.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="d-flex justify-content-between mb-1 ps-3"
+                  >
+                    <span>
+                      {item.name}{" "}
+                      <span style={{ fontWeight: "bold", color: "#198754" }}>
+                        x{item.qty}
+                      </span>
+                    </span>
+                    <span style={{ display: "flex", gap: "10px" }}>
+                      <span>{formatCurrency(item.unitCost)}</span> |
+                      <span>{formatCurrency(item.qty * item.unitCost)}</span>
+                    </span>
                   </div>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Unit Cost:</strong>
-                  <span>{delivery.unitCost}</span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Total Cost:</strong>
-                  <span>{delivery.totalCost}</span>
-                </div>
+                ))}
+
+                {/* Dashed Separator */}
+                <hr
+                  className="my-2"
+                  style={{
+                    borderTop: "2px dashed #999",
+                  }}
+                />
+                {/* Total */}
                 <div className="d-flex justify-content-between mb-3">
-                  <strong className="text-danger">Cancelled Reason:</strong>
-                  <span className="text-danger fw-semibold">
-                    {delivery.cancelledReason}
+                  <strong>Total:</strong>
+                  <span className="fw-bold">
+                    {formatCurrency(delivery.totalCost)}
                   </span>
+                </div>
+
+                {/* Cancelled Reason */}
+                <div className="d-flex justify-content-between mb-3">
+                  <strong className="text-danger">
+                    Reason for Cancellation:
+                  </strong>
+                  <strong className="text-danger mb-0">
+                    {delivery.cancelledReason}
+                  </strong>
                 </div>
               </div>
             </Card>

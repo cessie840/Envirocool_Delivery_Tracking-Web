@@ -15,24 +15,28 @@ function OutForDelivery() {
   const [cancelReason, setCancelReason] = useState("");
   const navigate = useNavigate();
 
+  // ✅ Currency formatter
+  const formatCurrency = (amount) =>
+    `₱${Number(amount).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user")); // adjust key as needed
+    const user = JSON.parse(localStorage.getItem("user"));
     if (!user?.pers_username) return;
 
     axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php",
-        {
-          pers_username: user.pers_username,
-        }
-      )
+      .post("http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php", {
+        pers_username: user.pers_username,
+      })
       .then((res) => {
         if (res.data.success === false) {
           alert(res.data.message);
         } else if (Array.isArray(res.data)) {
           setDeliveries(res.data);
         } else if (Array.isArray(res.data.data)) {
-          setDeliveries(res.data.data); // handles structure if using { success: true, data: [...] }
+          setDeliveries(res.data.data);
         }
       })
       .catch((err) => {
@@ -43,30 +47,23 @@ function OutForDelivery() {
 
   const markAsDelivered = (transactionNo) => {
     const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
-
     if (!delivery) {
       alert("Delivery not found.");
       return;
     }
 
     axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/update_delivered_status.php",
-        {
-          transaction_id: transactionNo,
-        }
-      )
+      .post("http://localhost/DeliveryTrackingSystem/update_delivered_status.php", {
+        transaction_id: transactionNo,
+      })
       .then((res) => {
         const { success, message } = res.data;
-
         if (success) {
           const updatedDeliveries = deliveries.filter(
             (d) => d.transactionNo !== transactionNo
           );
-          const updatedDelivered = [...delivered, delivery];
-
           setDeliveries(updatedDeliveries);
-          setDelivered(updatedDelivered);
+          setDelivered([...delivered, delivery]);
 
           alert("Delivery successfully marked as 'Delivered'.");
           navigate("/successful-delivery");
@@ -75,13 +72,8 @@ function OutForDelivery() {
         }
       })
       .catch((err) => {
-        if (err.response) {
-          const { status, data } = err.response;
-          alert(`Error ${status}: ${data.message || "Something went wrong."}`);
-        } else {
-          console.error("API error:", err);
-          alert("Failed to update delivery status. Please try again later.");
-        }
+        console.error("API error:", err);
+        alert("Failed to update delivery status. Please try again later.");
       });
   };
 
@@ -101,10 +93,8 @@ function OutForDelivery() {
         transaction_id: selectedDelivery.transactionNo,
         reason: cancelReason,
       })
-
       .then((res) => {
         const { success, message } = res.data;
-
         if (success) {
           const updated = deliveries.filter(
             (d) => d.transactionNo !== selectedDelivery.transactionNo
@@ -145,11 +135,10 @@ function OutForDelivery() {
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
       <Container className="py-4">
-        <br />
         <h2 className="text-center text-success fw-bold mb-3">
           OUT FOR DELIVERY
         </h2>
-        <br />
+
         {deliveries.length === 0 ? (
           <p className="text-muted text-center">No deliveries found.</p>
         ) : (
@@ -159,12 +148,15 @@ function OutForDelivery() {
               className="mb-4 p-3 border border-info rounded"
               style={{ backgroundColor: "#eaf7f7" }}
             >
+              {/* Header */}
               <h5 className="text-center fw-bold text-dark mb-3">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
+
               <div className="border p-3 rounded bg-white">
+                {/* Customer Info */}
                 <div className="d-flex justify-content-between mb-1">
-                  <strong>Customer Name:</strong>
+                  <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
                 </div>
                 <div className="d-flex justify-content-between mb-1">
@@ -179,25 +171,44 @@ function OutForDelivery() {
                   <strong>Payment:</strong>
                   <span>{delivery.paymentMode}</span>
                 </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Items:</strong>
-                  <div>
-                    {delivery.items.map((item, i) => (
-                      <div key={i}>
-                        {item.name} <strong>x{item.qty}</strong>
-                      </div>
-                    ))}
+
+                <strong className="d-block mb-1">Items:</strong>
+                {delivery.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="d-flex justify-content-between mb-1 ps-3"
+                  >
+                    <span>
+                      {item.name}{" "}
+                      <span style={{ fontWeight: "bold", color: "#198754" }}>
+                        x{item.qty}
+                      </span>
+                    </span>
+                    <span style={{ display: "flex", gap: "10px" }}>
+                      <span>{formatCurrency(item.unitCost)}</span> |{" "}
+                      <span>{formatCurrency(item.qty * item.unitCost)}</span>
+                    </span>
                   </div>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Unit Cost:</strong>
-                  <span>{delivery.unitCost}</span>
-                </div>
+                ))}
+
+                {/* Dashed Separator */}
+                <hr
+                  className="my-2"
+                  style={{
+                    borderTop: "2px dashed #999",
+                  }}
+                />
+
+                {/* Total */}
                 <div className="d-flex justify-content-between mb-3">
-                  <strong>Total Cost:</strong>
-                  <span>{delivery.totalCost}</span>
+                  <strong>Total:</strong>
+                  <span className="fw-bold">
+                    {formatCurrency(delivery.totalCost)}
+                  </span>
                 </div>
               </div>
+
+              {/* Action Buttons */}
               <div className="d-flex justify-content-center gap-2 mt-3">
                 <Button
                   size="sm"
@@ -224,7 +235,7 @@ function OutForDelivery() {
         )}
       </Container>
 
-      {/* FAILED?CANCELLED REPORT MODAL */}
+      {/* FAILED/CANCELLED MODAL */}
       <Modal
         show={showCancelModal}
         onHide={() => setShowCancelModal(false)}

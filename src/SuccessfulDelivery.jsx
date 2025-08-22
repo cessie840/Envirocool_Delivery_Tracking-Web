@@ -8,7 +8,7 @@ function SuccessfulDelivery() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [delivered, setDelivered] = useState([]);
 
- useEffect(() => {
+  useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user?.pers_username) return;
 
@@ -34,6 +34,10 @@ function SuccessfulDelivery() {
       });
   }, []);
 
+  // THOUSAND OPERATOR 
+  const formatCurrency = (amount) =>
+    `₱${Number(amount).toLocaleString("en-PH")}`;
+
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
@@ -56,12 +60,15 @@ function SuccessfulDelivery() {
               className="mb-4 p-3 border border-success rounded"
               style={{ backgroundColor: "#e9f9ed" }}
             >
-              <h5 className="text-center fw-bold text-dark mb-3">
+              <h5 className="text-center fw-bold text-dark mb-2">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
+
               <div className="border p-3 rounded bg-white">
+
+              {/* CUSTOMER INFO  */}
                 <div className="d-flex justify-content-between mb-1">
-                  <strong>Customer Name:</strong>
+                  <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
                 </div>
                 <div className="d-flex justify-content-between mb-1">
@@ -76,23 +83,40 @@ function SuccessfulDelivery() {
                   <strong>Payment:</strong>
                   <span>{delivery.paymentMode}</span>
                 </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Items:</strong>
-                  <div>
-                    {delivery.items.map((item, i) => (
-                      <div key={i}>
-                        {item.name} <strong>x{item.qty}</strong>
-                      </div>
-                    ))}
+
+                {/* ITEMS  */}
+                <strong className="d-block mb-1">Items:</strong>
+                {delivery.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="d-flex justify-content-between mb-1 ps-3"
+                  >
+                    <span>
+                      {item.name}{" "}
+                      <span style={{ fontWeight: "bold", color: "#198754" }}>
+                        x{item.qty}
+                      </span>
+                    </span>
+                    <span style={{ display: "flex", gap: "10px" }}>
+                      <span>{formatCurrency(item.unitCost)}</span> |
+                      <span>{formatCurrency(item.subtotal)}</span>
+                    </span>
                   </div>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Unit Cost:</strong>
-                  <span>{delivery.unitCost}</span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Total Cost:</strong>
-                  <span>{delivery.totalCost}</span>
+                ))}
+
+                {/* SEPARATOR PARANG SA RECEIPT */}
+                <hr
+                  className="my-2"
+                  style={{
+                    borderTop: "2px dashed #999",
+                  }}
+                />
+                {/* Total */}
+                <div className="d-flex justify-content-between mb-3">
+                  <strong>Total:</strong>
+                  <span className="fw-bold">
+                    {formatCurrency(delivery.totalCost)}
+                  </span>
                 </div>
               </div>
             </Card>
