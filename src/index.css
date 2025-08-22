@@ -685,6 +685,22 @@ th.no-header {
   filter: none !important;
 }
 
+#delivery-tabs .nav-link {
+  background-color: #cacbcc81; 
+  color: #6c757d; 
+  border: 1px solid #dee2e6;
+  margin-right: 2px;
+  border-radius: 0.375rem 0.375rem 0 0;
+  transition: background-color 0.2s ease-in-out;
+}
+
+#delivery-tabs .nav-link.active {
+  background-color: #ffffff !important; 
+  color: #198754 !important; 
+  border-bottom: 1px solid #fff; 
+  font-weight: bold;
+  font-size: 1.1rem;
+}
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {
