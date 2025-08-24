@@ -53,9 +53,13 @@ function OutForDelivery() {
     }
 
     axios
-      .post("http://localhost/DeliveryTrackingSystem/update_delivered_status.php", {
-        transaction_id: transactionNo,
-      })
+      .post(
+        "http://localhost/DeliveryTrackingSystem/update_delivered_status.php",
+        {
+          transaction_id: transactionNo,
+          status: "Delivered", // ✅ FIX: send status
+        }
+      )
       .then((res) => {
         const { success, message } = res.data;
         if (success) {
@@ -76,6 +80,7 @@ function OutForDelivery() {
         alert("Failed to update delivery status. Please try again later.");
       });
   };
+
 
   const handleCancelClick = (delivery) => {
     setSelectedDelivery(delivery);

@@ -27,8 +27,10 @@ if ($transactionId <= 0) {
 $conn->begin_transaction();
 
 try {
-    // Update main transaction status
-    $sql1 = "UPDATE Transactions SET status = 'Out for Delivery' WHERE transaction_id = ?";
+   $sql1 = "UPDATE Transactions 
+         SET status = 'Out for Delivery', shipout_at = NOW() 
+         WHERE transaction_id = ?";
+
     $stmt1 = $conn->prepare($sql1);
     $stmt1->bind_param("i", $transactionId);
     $stmt1->execute();

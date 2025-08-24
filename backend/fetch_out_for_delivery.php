@@ -116,6 +116,10 @@ if (empty($deliveries)) {
         "data" => []
     ]);
 } else {
-    echo json_encode(array_values($deliveries));
+    echo json_encode([
+        "success" => true,
+        "data" => array_values($deliveries)
+    ]);
 }
+
 ?>

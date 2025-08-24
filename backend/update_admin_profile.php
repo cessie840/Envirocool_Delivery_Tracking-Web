@@ -23,42 +23,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include 'database.php';
 
-if (!isset($_SESSION['ad_username'])) {
-    http_response_code(401);
-    echo json_encode(["error" => "Unauthorized"]);
-    exit();
-}
+try {
+    // Decode JSON input
+    $data = json_decode(file_get_contents("php://input"), true);
 
-$data = json_decode(file_get_contents("php://input"), true);
+    if (!isset($data['transaction_id']) || empty($data['transaction_id'])) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Transaction ID is required",
+            "error_code" => "ERR_MISSING_ID"
+        ]);
+        exit;
+    }
 
-$currentUsername = $_SESSION['ad_username'];
-$newUsername = $data['ad_username'];
+    $transactionId = $conn->real_escape_string($data['transaction_id']);
 
-$sql = "UPDATE Admin SET 
-            ad_username = ?, 
-            ad_fname = ?, 
-            ad_lname = ?, 
-            ad_email = ?, 
-            ad_phone = ? 
-        WHERE ad_username = ?";
+   
+    $stmt = $conn->prepare("
+        UPDATE Transactions 
+        SET status = 'Delivered', completed_at = NOW()
+        WHERE transaction_id = ? AND status = 'Out for Delivery'
+    ");
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param(
-    "ssssss", 
-    $newUsername, 
-    $data['ad_fname'], 
-    $data['ad_lname'], 
-    $data['ad_email'], 
-    $data['ad_phone'], 
-    $currentUsername
-);
+    if (!$stmt) {
+        throw new Exception("Failed to prepare SQL statement: " . $conn->error);
+    }
 
-if ($stmt->execute()) {
-    $_SESSION['ad_username'] = $newUsername; 
-    echo json_encode(["status" => "success"]);
-} else {
+    $stmt->bind_param("s", $transactionId);
+
+    if ($stmt->execute()) {
+        if ($stmt->affected_rows > 0) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Delivery marked as Delivered successfully",
+            ]);
+        } else {
+            http_response_code(404);
+            echo json_encode([
+                "success" => false,
+                "message" => "No matching record found or already updated",
+                "error_code" => "ERR_NOT_FOUND"
+            ]);
+        }
+    } else {
+        throw new Exception("SQL execution failed: " . $stmt->error);
+    }
+
+    $stmt->close();
+    $conn->close();
+} catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(["error" => "Update failed"]);
+    echo json_encode([
+        "success" => false,
+        "message" => "Internal server error",
+        "error_detail" => $e->getMessage(),
+        "error_code" => "ERR_EXCEPTION"
+    ]);
 }
-
-$conn->close();
+?>

@@ -1,24 +1,23 @@
 <?php
 // CORS headers
+// Enable CORS
+header("Access-Control-Allow-Origin: http://localhost:5173"); // allow your React app
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+// Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Origin: http://localhost:5173");
-    header("Access-Control-Allow-Headers: Content-Type");
-    header("Access-Control-Allow-Methods: POST, OPTIONS");
     http_response_code(200);
-    exit();
+    exit;
 }
 
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST");
-header("Content-Type: application/json");
-
-// Database connection
 include 'database.php';
 
 try {
-    // Decode JSON input
     $data = json_decode(file_get_contents("php://input"), true);
+
+    // Debug request payload
+    file_put_contents("debug_update.log", print_r($data, true), FILE_APPEND);
 
     if (!isset($data['transaction_id']) || empty($data['transaction_id'])) {
         http_response_code(400);
@@ -30,26 +29,58 @@ try {
         exit;
     }
 
-    $transactionId = $conn->real_escape_string($data['transaction_id']);
-
-    // Update the Transactions table instead of DeliveryDetails
-    $stmt = $conn->prepare("
-        UPDATE Transactions 
-        SET status = 'Delivered' 
-        WHERE transaction_id = ? AND status = 'Out for Delivery'
-    ");
-
-    if (!$stmt) {
-        throw new Exception("Failed to prepare SQL statement: " . $conn->error);
+    if (!isset($data['status']) || empty($data['status'])) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Status is required",
+            "error_code" => "ERR_MISSING_STATUS"
+        ]);
+        exit;
     }
 
-    $stmt->bind_param("s", $transactionId);
+    $transactionId = intval($data['transaction_id']); // force integer
+    $status = trim($data['status']);
+
+    // Decide which timestamp field to update
+    $timestampField = null;
+    if ($status === "Delivered") {
+        $timestampField = "completed_at";
+    } elseif ($status === "Cancelled") {
+        $timestampField = "cancelled_at";
+    } elseif ($status === "Out for Delivery") {
+        $timestampField = "shipout_at";
+    }
+
+    if ($timestampField === null) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid status value",
+            "error_code" => "ERR_INVALID_STATUS"
+        ]);
+        exit;
+    }
+
+    // Update query
+    $sql = "
+        UPDATE Transactions 
+        SET status = ?, $timestampField = NOW() 
+        WHERE transaction_id = ?
+    ";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Failed to prepare SQL: " . $conn->error);
+    }
+
+    // Bind params: status (string), transaction_id (int)
+    $stmt->bind_param("si", $status, $transactionId);
 
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
             echo json_encode([
                 "success" => true,
-                "message" => "Delivery marked as Delivered successfully",
+                "message" => "Transaction updated to $status successfully"
             ]);
         } else {
             http_response_code(404);

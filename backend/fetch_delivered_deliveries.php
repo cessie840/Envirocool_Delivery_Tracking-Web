@@ -101,9 +101,7 @@ $deliveries[$transactionNo]['items'][] = [
     "subtotal" => $row['qty'] * $row['unitCost']
 ];
 
-// accumulate total
 $deliveries[$transactionNo]['totalCost'] += $row['qty'] * $row['unitCost'];
-
 
 }
 

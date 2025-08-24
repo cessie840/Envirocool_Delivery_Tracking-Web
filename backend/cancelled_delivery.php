@@ -24,6 +24,7 @@ if (!$transaction_id || empty($reason)) {
     exit;
 }
 
+// ✅ Check if transaction exists
 $check = $conn->prepare("SELECT * FROM Transactions WHERE transaction_id = ?");
 $check->bind_param("i", $transaction_id);
 $check->execute();
@@ -37,25 +38,13 @@ if ($result->num_rows === 0) {
     exit;
 }
 
+// ✅ Update transaction to Cancelled
 $update = $conn->prepare("UPDATE Transactions 
-                          SET status = 'Cancelled', cancel_reason = ? 
+                          SET status = 'Cancelled', cancelled_reason = ?, cancelled_at = NOW() 
                           WHERE transaction_id = ?");
 $update->bind_param("si", $reason, $transaction_id);
 
-if (!$update->execute()) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to update transaction.",
-        "error_detail" => $conn->error
-    ]);
-    exit;
-}
-
-$insert = $conn->prepare("INSERT INTO CancelledDeliveries (transaction_id, cancelled_reason) 
-                          VALUES (?, ?)");
-$insert->bind_param("is", $transaction_id, $reason);
-
-if ($insert->execute()) {
+if ($update->execute()) {
     echo json_encode([
         "success" => true,
         "message" => "Delivery successfully cancelled.",
@@ -65,12 +54,11 @@ if ($insert->execute()) {
 } else {
     echo json_encode([
         "success" => false,
-        "message" => "Failed to record cancelled delivery.",
+        "message" => "Failed to update transaction.",
         "error_detail" => $conn->error
     ]);
 }
 
 $update->close();
-$insert->close();
 $conn->close();
 ?>

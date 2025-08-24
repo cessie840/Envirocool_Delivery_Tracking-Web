@@ -28,20 +28,20 @@ if (empty($pers_username)) {
 
 $query = "
     SELECT 
-        c.cancel_id,
-        c.transaction_id,
-        c.cancelled_reason,
-        c.cancelled_at,
+        t.transaction_id,
         t.customer_name,
         t.customer_address,
         t.customer_contact,
         t.mode_of_payment,
-        t.total AS totalCost
-    FROM CancelledDeliveries c
-    JOIN Transactions t ON c.transaction_id = t.transaction_id
-    JOIN DeliveryAssignments da ON da.transaction_id = c.transaction_id
-    WHERE da.personnel_username = ?
-    ORDER BY c.cancel_id DESC
+        t.total AS totalCost,
+        t.cancelled_reason,
+        t.cancelled_at
+    FROM Transactions t
+    JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
+    JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
+    WHERE da.personnel_username = ? 
+      AND t.status = 'Cancelled'
+    ORDER BY t.cancelled_at DESC
 ";
 
 $stmt = $conn->prepare($query);
@@ -51,6 +51,7 @@ $result = $stmt->get_result();
 
 $deliveries = [];
 while ($row = $result->fetch_assoc()) {
+    // fetch items for this transaction
     $itemsQuery = "SELECT description, quantity, unit_cost FROM PurchaseOrder WHERE transaction_id = ?";
     $stmtItems = $conn->prepare($itemsQuery);
     $stmtItems->bind_param("i", $row['transaction_id']);
@@ -74,7 +75,8 @@ while ($row = $result->fetch_assoc()) {
         "paymentMode"     => $row['mode_of_payment'],
         "items"           => $items,
         "totalCost"       => $row['totalCost'],
-        "cancelledReason" => $row['cancelled_reason']
+        "cancelledReason" => $row['cancelled_reason'],
+        "cancelledAt"     => $row['cancelled_at']
     ];
 }
 
