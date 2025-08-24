@@ -55,21 +55,32 @@ CREATE TABLE DeliveryPersonnel (
     lock_until DATETIME DEFAULT NULL
 );
 
-CREATE TABLE Transactions (
-    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_name VARCHAR(255),
-    customer_address TEXT,
-    customer_contact VARCHAR(20),
-    date_of_order DATE,
-    mode_of_payment ENUM('Cash', 'COD', 'Card'),
-    down_payment DECIMAL(10,2),
-    balance DECIMAL(10,2),
-    total DECIMAL(10,2),
-    status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
-    cancel_reason VARCHAR(255) DEFAULT NULL,
-    customer_rating DECIMAL(3,1) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) AUTO_INCREMENT = 100001;
+CREATE TABLE Transactions ( 
+transaction_id INT AUTO_INCREMENT PRIMARY KEY, 
+customer_name VARCHAR(255), 
+customer_address TEXT, 
+customer_contact VARCHAR(20), 
+date_of_order DATE, 
+mode_of_payment ENUM('Cash', 'COD', 'Card'), 
+down_payment DECIMAL(10,2), 
+balance DECIMAL(10,2), 
+total DECIMAL(10,2), 
+status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending', 
+customer_rating DECIMAL(3,1) DEFAULT NULL, 
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) AUTO_INCREMENT = 100001;
+
+ALTER TABLE Transactions 
+ADD COLUMN completed_at DATETIME NULL AFTER status;
+
+ALTER TABLE Transactions 
+ADD COLUMN shipout_at DATETIME NULL AFTER status;
+
+ALTER TABLE Transactions
+ADD COLUMN cancelled_reason TEXT NULL AFTER status;
+
+ALTER TABLE Transactions
+ADD COLUMN cancelled_at DATETIME NULL AFTER status;
+
 
 CREATE TABLE PurchaseOrder (
     po_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -134,13 +145,7 @@ CREATE TABLE TopSellingItems (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE CancelledDeliveries (
-    cancel_id INT AUTO_INCREMENT PRIMARY KEY,
-    transaction_id INT NOT NULL,
-    cancelled_reason TEXT NOT NULL,
-    cancelled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
-);
+
 
 INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone)
 VALUES (
