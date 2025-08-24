@@ -4,8 +4,8 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+  http_response_code(200);
+  exit();
 }
 
 header("Content-Type: application/json");
@@ -25,7 +25,7 @@ $out = [
 ];
 
 if ($type === 'daily') {
-  // Use selected date
+  // DAILY
   $sql = "SELECT 
             COALESCE(SUM(successful_deliveries),0) AS succ,
             COALESCE(SUM(failed_deliveries),0) AS fail,
@@ -48,11 +48,14 @@ if ($type === 'daily') {
   }
   $stmt->close();
 
-  // Fallback: compute from Transactions if summary is all zeros
+  // DAILY: COMPUTE TRANSACTIONS IF SUMMARY IS ZERO
   if ($out["total"] === 0) {
     $sql = "SELECT 
               SUM(CASE WHEN status='Delivered' THEN 1 ELSE 0 END) AS succ,
-              SUM(CASE WHEN status='Cancelled' THEN 1 ELSE 0 END) AS fail
+              SUM(CASE WHEN status='Cancelled' THEN 1 ELSE 0 END) AS fail,
+              SUM(CASE WHEN status='Cancelled' AND (cancel_reason='Customer Didn''t Receive' OR cancelled_reason='Customer Didn''t Receive') THEN 1 ELSE 0 END) AS r1,
+              SUM(CASE WHEN status='Cancelled' AND (cancel_reason='Damaged Item' OR cancelled_reason='Damaged Item') THEN 1 ELSE 0 END) AS r2,
+              AVG(customer_rating) AS avg_rating
             FROM Transactions
             WHERE DATE(date_of_order) = ?";
     $stmt = $conn->prepare($sql);
@@ -62,13 +65,15 @@ if ($type === 'daily') {
     if ($res && $row = $res->fetch_assoc()) {
       $out["successful_deliveries"] = (int)$row["succ"];
       $out["failed_deliveries"] = (int)$row["fail"];
+      $out["reason_customer_didnt_receive"] = (int)$row["r1"];
+      $out["reason_damaged_item"] = (int)$row["r2"];
+      $out["avg_rating"] = $row["avg_rating"] !== null ? round($row["avg_rating"], 2) : "N/A";
       $out["total"] = $out["successful_deliveries"] + $out["failed_deliveries"];
     }
     $stmt->close();
   }
-
-} else { // monthly
-  // Use selected month (YYYY-MM)
+} else {
+  // MONTHLY
   $sql = "SELECT 
     COALESCE(SUM(successful_deliveries),0) AS succ,
     COALESCE(SUM(failed_deliveries),0) AS fail,
@@ -91,11 +96,13 @@ if ($type === 'daily') {
   }
   $stmt->close();
 
-  // Fallback: compute from Transactions if summary is all zeros
   if ($out["total"] === 0) {
     $sql = "SELECT 
               SUM(CASE WHEN status='Delivered' THEN 1 ELSE 0 END) AS succ,
-              SUM(CASE WHEN status='Cancelled' THEN 1 ELSE 0 END) AS fail
+              SUM(CASE WHEN status='Cancelled' THEN 1 ELSE 0 END) AS fail,
+              SUM(CASE WHEN status='Cancelled' AND (cancel_reason='Customer Didn''t Receive' OR cancelled_reason='Customer Didn''t Receive') THEN 1 ELSE 0 END) AS r1,
+              SUM(CASE WHEN status='Cancelled' AND (cancel_reason='Damaged Item' OR cancelled_reason='Damaged Item') THEN 1 ELSE 0 END) AS r2,
+              AVG(customer_rating) AS avg_rating
             FROM Transactions
             WHERE DATE_FORMAT(date_of_order, '%Y-%m') = ?";
     $stmt = $conn->prepare($sql);
@@ -105,6 +112,9 @@ if ($type === 'daily') {
     if ($res && $row = $res->fetch_assoc()) {
       $out["successful_deliveries"] = (int)$row["succ"];
       $out["failed_deliveries"] = (int)$row["fail"];
+      $out["reason_customer_didnt_receive"] = (int)$row["r1"];
+      $out["reason_damaged_item"] = (int)$row["r2"];
+      $out["avg_rating"] = $row["avg_rating"] !== null ? round($row["avg_rating"], 2) : "N/A";
       $out["total"] = $out["successful_deliveries"] + $out["failed_deliveries"];
     }
     $stmt->close();
