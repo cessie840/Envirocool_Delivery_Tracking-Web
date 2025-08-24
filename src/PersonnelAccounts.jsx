@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import OperationalLayout from "./OperationalLayout";
+import ViewPersonnelModal from "./ViewPersonnelModal";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaUserPlus, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -8,12 +9,16 @@ const PersonnelAccounts = () => {
   const navigate = useNavigate();
   const [personnel, setPersonnel] = useState([]);
   const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
 
     axios
-      .get("http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php")
+      .get(
+        "http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php"
+      )
       .then((response) => {
         setPersonnel(response.data);
       })
@@ -23,7 +28,8 @@ const PersonnelAccounts = () => {
   }, []);
 
   const handleDelete = async (username) => {
-    if (!window.confirm("Are you sure you want to delete this account?")) return;
+    if (!window.confirm("Are you sure you want to delete this account?"))
+      return;
 
     try {
       const response = await axios.post(
@@ -33,7 +39,9 @@ const PersonnelAccounts = () => {
 
       if (response.data.status === "success") {
         alert("Account deleted successfully.");
-        setPersonnel((prev) => prev.filter((p) => p.pers_username !== username));
+        setPersonnel((prev) =>
+          prev.filter((p) => p.pers_username !== username)
+        );
       } else {
         alert(response.data.message || "Failed to delete the account.");
       }
@@ -76,7 +84,9 @@ const PersonnelAccounts = () => {
             {personnel.length > 0 ? (
               personnel.map((person) => (
                 <tr key={person.pers_username}>
-                  <td>{person.pers_fname} {person.pers_lname}</td>
+                  <td>
+                    {person.pers_fname} {person.pers_lname}
+                  </td>
                   <td>{person.pers_email}</td>
                   <td>{person.pers_username}</td>
                   <td className="position-relative">
@@ -95,7 +105,9 @@ const PersonnelAccounts = () => {
                     </div>
                     <span
                       role="button"
-                      onClick={() => togglePasswordVisibility(person.pers_username)}
+                      onClick={() =>
+                        togglePasswordVisibility(person.pers_username)
+                      }
                       className="toggle-eye-icon"
                     >
                       {visiblePasswords[person.pers_username] ? (
@@ -106,6 +118,16 @@ const PersonnelAccounts = () => {
                     </span>
                   </td>
                   <td>
+                    <button
+                      id="personnel-view"
+                      className="btn btn-view me-2"
+                      onClick={() => {
+                        setSelectedUser(person.pers_username);
+                        setShowModal(true);
+                      }}
+                    >
+                      View
+                    </button>
                     <button
                       id="personnel-cancel"
                       className="btn cancel-btn btn-danger"
@@ -124,6 +146,12 @@ const PersonnelAccounts = () => {
           </tbody>
         </table>
       </div>
+
+      <ViewPersonnelModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        username={selectedUser}
+      />
     </OperationalLayout>
   );
 };

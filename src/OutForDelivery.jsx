@@ -27,9 +27,12 @@ function OutForDelivery() {
     if (!user?.pers_username) return;
 
     axios
-      .post("http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php", {
-        pers_username: user.pers_username,
-      })
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php",
+        {
+          pers_username: user.pers_username,
+        }
+      )
       .then((res) => {
         if (res.data.success === false) {
           alert(res.data.message);
@@ -271,7 +274,7 @@ function OutForDelivery() {
             Close
           </Button>
           <Button variant="danger" onClick={confirmCancellation}>
-            Confirm Cancel
+            Confirm
           </Button>
         </Modal.Footer>
       </Modal>
