@@ -9,14 +9,14 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 }
 
 header("Content-Type: application/json");
-
 include 'database.php';
 
 $orders = [];
 
-// ✅ Join DeliveryAssignments + DeliveryPersonnel to get personnel full name
 $sql = "
     SELECT t.*, 
+           dp.pers_username, 
+           dp.pers_profile_pic,
            CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS assigned_personnel
     FROM Transactions t
     LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
@@ -26,11 +26,14 @@ $sql = "
 
 $result = $conn->query($sql);
 
+// 👇 Make sure this matches your actual uploads folder
+$baseURL = "http://localhost/DeliveryTrackingSystem/uploads/";
+
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $transactionId = $row['transaction_id'];
 
-        // Fetch purchase orders for this transaction
+        // Fetch purchase orders
         $itemsSql = "SELECT quantity, description, unit_cost, (quantity * unit_cost) AS total_cost
                      FROM PurchaseOrder 
                      WHERE transaction_id = $transactionId";
@@ -53,6 +56,18 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
+        // ✅ Normalize profile picture
+        $profilePic = $row['pers_profile_pic'];
+
+        if (!empty($profilePic)) {
+
+            $profilePic = ltrim($profilePic, '/');
+            $profilePic = str_replace("uploads/", "", $profilePic);
+            $profilePic = $baseURL . $profilePic;
+        } else {
+            $profilePic = $baseURL . "default-profile-pic.png";
+        }
+
         $orders[] = [
             'transaction_id' => $transactionId,
             'customer_name' => $row['customer_name'],
@@ -62,7 +77,10 @@ if ($result && $result->num_rows > 0) {
             'down_payment' => number_format($row['down_payment'], 2),
             'balance' => number_format($row['balance'], 2),
             'total_cost' => number_format($calculatedTotal, 2),
-            'assigned_personnel' => $row['assigned_personnel'] ?? null,
+            'assigned_personnel' => $row['assigned_personnel'] ?? null,       
+            'assigned_personnel_username' => $row['pers_username'] ?? null,  
+            'personnel_image' => $profilePic,   // ✅ always a clean full URL
+            'status' => $row['status'], 
             'items' => $items
         ];
     }
@@ -70,3 +88,4 @@ if ($result && $result->num_rows > 0) {
 
 echo json_encode($orders);
 $conn->close();
+?>

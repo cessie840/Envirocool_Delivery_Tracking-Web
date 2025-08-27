@@ -102,6 +102,7 @@ const OperationalDelivery = () => {
   const unassignedOrders = orders.filter(
     (o) => !o.assigned_personnel || o.assigned_personnel === null
   );
+
   const assignedOrders = orders.filter(
     (o) => o.assigned_personnel && o.assigned_personnel !== null
   );
@@ -141,6 +142,10 @@ const OperationalDelivery = () => {
                       </p>
                       <p className="mb-2 text-muted">
                         <strong>Delivery Personnel:</strong> Not Assigned
+                      </p>
+                      {/* ✅ Show Status */}
+                      <p className="mb-2">
+                        <strong>Status:</strong> {order.status}
                       </p>
                       <div className="text-end">
                         <Button
@@ -189,6 +194,10 @@ const OperationalDelivery = () => {
                           {order.assigned_personnel}
                         </span>
                       </p>
+                      {/* ✅ Show Status */}
+                      <p className="mb-2">
+                        <strong>Status:</strong> {order.status}
+                      </p>
                       <div className="text-end">
                         <Button
                           className="btn-view"
@@ -207,6 +216,7 @@ const OperationalDelivery = () => {
         </Tabs>
       </div>
 
+      {/* ✅ Details Modal */}
       {selectedOrder && (
         <Modal
           show={showDetailModal}
@@ -234,6 +244,10 @@ const OperationalDelivery = () => {
               </p>
               <p>
                 <strong>Payment Mode:</strong> {selectedOrder.payment_mode}
+              </p>
+              {/* ✅ Show Status */}
+              <p>
+                <strong>Status:</strong> {selectedOrder.status}
               </p>
             </div>
 
@@ -273,29 +287,43 @@ const OperationalDelivery = () => {
                     <span className="fw-bold text-success">
                       Delivery Personnel Assigned:
                     </span>
-                    <b>{selectedOrder.assigned_personnel}</b>
+                    <div className="d-flex align-items-center">
+                      <b className="me-3">{selectedOrder.assigned_personnel}</b>
+                      <img
+                        src={selectedOrder.personnel_image}
+                        className="rounded-circle border border-2 border-dark img-fluid personnel-img"
+                      />
+                    </div>
                   </li>
                 </ul>
-                <div className="text-center mt-3">
+                {/* ✅ Show Change Personnel button ONLY if Pending or To Ship */}
+                {(selectedOrder.status === "Pending" ||
+                  selectedOrder.status === "To Ship") && (
+                  <div className="text-center mt-3">
+                    <Button
+                      variant="warning"
+                      className="btn-view"
+                      onClick={handleOpenAssignModal}
+                    >
+                      Change Personnel
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ✅ Show Assign button ONLY if Pending or To Ship */
+              (selectedOrder.status === "Pending" ||
+                selectedOrder.status === "To Ship") && (
+                <div className="text-center mt-4">
                   <Button
-                    variant="warning"
+                    variant="success"
                     className="btn-view"
                     onClick={handleOpenAssignModal}
                   >
-                    Change Personnel
+                    Assign Delivery Personnel
                   </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center mt-4">
-                <Button
-                  variant="success"
-                  className="btn-view"
-                  onClick={handleOpenAssignModal}
-                >
-                  Assign Delivery Personnel
-                </Button>
-              </div>
+              )
             )}
           </Modal.Body>
         </Modal>

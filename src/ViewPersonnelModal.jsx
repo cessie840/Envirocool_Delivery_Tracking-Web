@@ -30,7 +30,7 @@ const ViewPersonnelModal = ({ show, onHide, username }) => {
               username: u.pers_username,
               Email: u.pers_email,
               Contact: u.pers_phone,
-              profilePic: u.pers_profile_pic, 
+              profilePic: u.pers_profile_pic,
               Age: u.pers_age,
               Gender: u.pers_gender,
               Birthdate: u.pers_birth,
@@ -104,11 +104,7 @@ const ViewPersonnelModal = ({ show, onHide, username }) => {
           </p>
         </div>
       </Modal.Body>
-      <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}>
-        <Button variant="secondary" onClick={onHide}>
-          Close
-        </Button>
-      </Modal.Footer>
+      <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}></Modal.Footer>
     </Modal>
   );
 };
