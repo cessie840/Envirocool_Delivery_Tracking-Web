@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import {
-  FaPlus, FaFilePdf, FaFilter, FaDollarSign,
+  FaPlus,
+  FaFilePdf,
+  FaFilter,
+  FaDollarSign,
   FaUsers,
   FaBoxes,
   FaClipboardList,
@@ -116,8 +119,8 @@ const GenerateReport = () => {
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
         : r.date
-          ? new Date(r.date).toISOString().slice(0, 10)
-          : null,
+        ? new Date(r.date).toISOString().slice(0, 10)
+        : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
@@ -175,7 +178,11 @@ const GenerateReport = () => {
     setLoading(true);
     try {
       if (reportType === "sales" || reportType === "all") {
-        const res = await fetch(buildUrl("http://localhost/DeliveryTrackingSystem/get_sales_report.php"));
+        const res = await fetch(
+          buildUrl(
+            "http://localhost/DeliveryTrackingSystem/get_sales_report.php"
+          )
+        );
         if (!res.ok) throw new Error("get_sales_report failed");
         const data = await safeJson(res);
         setSalesData(normalizeSales(data.sales ?? []));
@@ -184,7 +191,11 @@ const GenerateReport = () => {
       }
 
       if (reportType === "transaction" || reportType === "all") {
-        const res = await fetch(buildUrl("http://localhost/DeliveryTrackingSystem/get_transaction_report.php"));
+        const res = await fetch(
+          buildUrl(
+            "http://localhost/DeliveryTrackingSystem/get_transaction_report.php"
+          )
+        );
         if (!res.ok) throw new Error("get_transaction_report failed");
         const data = await safeJson(res);
         setTransactionData(normalizeTransactions(data.transactions ?? []));
@@ -192,36 +203,48 @@ const GenerateReport = () => {
           reportType === "transaction"
             ? data.summary ?? {}
             : reportType === "all"
-              ? { ...prev, transactionSummary: data.summary ?? {} }
-              : prev
+            ? { ...prev, transactionSummary: data.summary ?? {} }
+            : prev
         );
       }
 
       if (reportType === "service" || reportType === "all") {
-        const res = await fetch(buildUrl("http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"));
+        const res = await fetch(
+          buildUrl(
+            "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
+          )
+        );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
         const data = await safeJson(res);
-        setServiceData(normalizeService(data.serviceDeliveries ?? data.data ?? []));
+        setServiceData(
+          normalizeService(data.serviceDeliveries ?? data.data ?? [])
+        );
         setSummary((prev) =>
           reportType === "service"
             ? data.summary ?? {}
             : reportType === "all"
-              ? { ...prev, serviceSummary: data.summary ?? {} }
-              : prev
+            ? { ...prev, serviceSummary: data.summary ?? {} }
+            : prev
         );
       }
 
       if (reportType === "customer" || reportType === "all") {
-        const res = await fetch(buildUrl("http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php"));
+        const res = await fetch(
+          buildUrl(
+            "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
+          )
+        );
         if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
         const data = await safeJson(res);
-        setCustomerData(normalizeCustomer(data.customerSatisfaction ?? data.data ?? []));
+        setCustomerData(
+          normalizeCustomer(data.customerSatisfaction ?? data.data ?? [])
+        );
         setSummary((prev) =>
           reportType === "customer"
             ? data.summary ?? {}
             : reportType === "all"
-              ? { ...prev, customerSummary: data.summary ?? {} }
-              : prev
+            ? { ...prev, customerSummary: data.summary ?? {} }
+            : prev
         );
       }
     } catch (error) {
@@ -294,35 +317,34 @@ const GenerateReport = () => {
   const filteredSalesData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
-        const rowDate = new Date(row.date);
-        return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
-      })
+          const rowDate = new Date(row.date);
+          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
+        })
       : salesData;
 
   const filteredTransactionData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
-        const rowDate = new Date(row.date_of_order || row.date);
-        return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
-      })
+          const rowDate = new Date(row.date_of_order || row.date);
+          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
+        })
       : transactionData;
 
   const filteredServiceData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? serviceData.filter((row) => {
-        const rowDate = new Date(row.date);
-        return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
-      })
+          const rowDate = new Date(row.date);
+          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
+        })
       : serviceData;
 
   const filteredCustomerData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? customerData.filter((row) => {
-        const rowDate = new Date(row.date);
-        return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
-      })
+          const rowDate = new Date(row.date);
+          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
+        })
       : customerData;
-
 
   // Totals for Sales report
   const totalSalesAmount = filteredSalesData.reduce(
@@ -386,7 +408,6 @@ const GenerateReport = () => {
     }
   });
 
-
   // Customer satisfaction rating distribution (for pie chart)
   const ratingDistribution = filteredCustomerData.reduce((acc, cur) => {
     const rating = cur.customer_rating ?? "No Rating";
@@ -438,8 +459,6 @@ const GenerateReport = () => {
     },
   ];
 
-
-
   // Cards styling and hover effect styles
   const cardStyle = {
     borderRadius: "0.75rem",
@@ -475,8 +494,8 @@ const GenerateReport = () => {
       return (
         <Row className="mb-2">
           <Col md={3}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
-              <div className="d-flex align-items-center">
+            <Card className="card-total" style={{ backgroundColor: "white" }}>
+              <div className="card-total-icon">
                 <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
                   <FaDollarSign />
                 </div>
@@ -494,8 +513,8 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={3}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
-              <div className="d-flex align-items-center">
+            <Card className="card-total" style={{ backgroundColor: "white" }}>
+              <div className="card-total-icon">
                 <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
                   <FaUsers />
                 </div>
@@ -507,8 +526,8 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={3}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
-              <div className="d-flex align-items-center">
+            <Card className="card-total" style={{ backgroundColor: "white" }}>
+              <div className="card-total-icon">
                 <div style={{ ...iconStyle, backgroundColor: "#FF9800" }}>
                   <FaBoxes />
                 </div>
@@ -520,8 +539,8 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={3}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
-              <div className="d-flex align-items-center">
+            <Card className="card-total" style={{ backgroundColor: "white" }}>
+              <div className="card-total-icon">
                 <div style={{ ...iconStyle, backgroundColor: "#9C27B0" }}>
                   <FaClipboardList />
                 </div>
@@ -591,7 +610,6 @@ const GenerateReport = () => {
     return null;
   };
 
-
   // Render totals card for Service Delivery report
   const renderServiceTotalsCard = () => {
     if (reportType !== "service" && reportType !== "all") return null;
@@ -641,8 +659,6 @@ const GenerateReport = () => {
       </Row>
     );
   };
-
-
 
   // Render sales growth line chart
   const renderSalesGrowthChart = () => (
@@ -744,9 +760,9 @@ const GenerateReport = () => {
       totalRatings === 0
         ? [{ name: "No Ratings", value: 1, percent: "0.0" }]
         : ratingDistribution.map((entry) => ({
-          ...entry,
-          percent: ((entry.value / totalRatings) * 100).toFixed(1),
-        }));
+            ...entry,
+            percent: ((entry.value / totalRatings) * 100).toFixed(1),
+          }));
 
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -774,7 +790,6 @@ const GenerateReport = () => {
       </ResponsiveContainer>
     );
   };
-
 
   const renderSalesTable = () => (
     <Table
@@ -980,7 +995,8 @@ const GenerateReport = () => {
     pdf.setFontSize(12);
     pdf.setFont("helvetica", "normal");
     pdf.text(
-      `Report Type: ${REPORT_TYPES.find((r) => r.value === reportType)?.label || "All Reports"
+      `Report Type: ${
+        REPORT_TYPES.find((r) => r.value === reportType)?.label || "All Reports"
       }`,
       marginX,
       cursorY
@@ -1070,7 +1086,7 @@ const GenerateReport = () => {
         {(reportType === "service" || reportType === "all") &&
           renderServiceTotalsCard()}
       </div>
-      <div ref={reportRef} className="bg-white p-4 rounded shadow-sm mx-4 mb-5">
+      <div ref={reportRef} className="report-container">
         {loading ? (
           <div className="text-center py-5">
             <Spinner animation="border" variant="success" />
@@ -1080,53 +1096,51 @@ const GenerateReport = () => {
             {(reportType === "sales" || reportType === "all") && (
               <>
                 <h4 className="text-success mb-3 text-center">Sales Report</h4>
-
                 <h5 className="mb-2 text-center">Sales Growth Over Time</h5>
                 {renderSalesGrowthChart()}
-
                 <h5 className="mt-4 mb-2 text-center">Top Selling Items</h5>
                 {renderTopSellingChart()} <br /> <br />
-
                 {renderSalesTable()} <hr />
               </>
             )}
 
-
             {(reportType === "transaction" || reportType === "all") && (
               <>
-                <h4 className="text-info mt-5 mb-3 text-center">Transaction Report</h4>
-
-                <h5 className="mb-2 text-center">Delivery Status (Delivered vs Cancelled)</h5>
+                <h4 className="text-info mt-5 mb-3 text-center">
+                  Transaction Report
+                </h4>
+                <h5 className="mb-2 text-center">
+                  Delivery Status (Delivered vs Cancelled)
+                </h5>
                 {renderTransactionStatusChart()} <br /> <br />
-
                 {renderTransactionTable()} <hr />
               </>
             )}
 
-
             {(reportType === "service" || reportType === "all") && (
               <>
-                <h4 className="text-warning mt-5 mb-3 text-center">Service Delivery Report</h4>
-
+                <h4 className="text-warning mt-5 mb-3 text-center">
+                  Service Delivery Report
+                </h4>
                 <h5 className="mb-2 text-center">Failed Delivery Reasons</h5>
                 {renderServiceFailedReasonsChart()} <br /> <br />
-
                 {renderServiceTable()} <hr />
               </>
             )}
 
-
             {(reportType === "customer" || reportType === "all") && (
               <>
-                <h4 className="text-secondary mt-5 mb-3 text-center">Customer Satisfaction Report</h4>
-
-                <h5 className="mb-2 text-center">Customer Rating Distribution</h5>
-                {renderCustomerRatingPieChart()} <br /><br />
-
+                <h4 className="text-secondary mt-5 mb-3 text-center">
+                  Customer Satisfaction Report
+                </h4>
+                <h5 className="mb-2 text-center">
+                  Customer Rating Distribution
+                </h5>
+                {renderCustomerRatingPieChart()} <br />
+                <br />
                 {renderCustomerTable()}
               </>
             )}
-
           </>
         )}
       </div>
