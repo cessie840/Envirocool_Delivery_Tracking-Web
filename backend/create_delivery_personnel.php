@@ -84,7 +84,7 @@ $count = $row['count'] + 1;
 $username = 'personnel' . str_pad($count, 2, '0', STR_PAD_LEFT);
 
 $passwordPlain = $birth;
-$passwordHashed = password_hash($passwordPlain, PASSWORD_BCRYPT);
+$passwordHash = password_hash($passwordPlain, PASSWORD_DEFAULT);
 
 $stmt = $conn->prepare("INSERT INTO DeliveryPersonnel (
     pers_username, pers_password, pers_fname, pers_lname,
