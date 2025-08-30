@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
-import { FaChartBar } from "react-icons/fa";
-import { Pie } from "react-chartjs-2";
+import {
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
+  FaListAlt,
+  FaEquals,
+  FaSearch,
+} from "react-icons/fa";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -14,7 +20,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     document.title = "Admin Dashboard";
 
-    // Generate mock data for each month
     const data = Array.from({ length: 12 }, () => {
       const success = Math.floor(Math.random() * 100 + 50);
       const cancelled = Math.floor(Math.random() * 60 + 20);
@@ -24,14 +29,7 @@ const AdminDashboard = () => {
     setMonthlyData(data);
   }, []);
 
-  const handleGenerateReport = () => {
-    navigate("/generate-report");
-  };
-
   const handleAddDelivery = () => navigate("/add-delivery");
-
-  const totalSuccess = monthlyData.reduce((sum, m) => sum + m.success, 0);
-  const totalCancelled = monthlyData.reduce((sum, m) => sum + m.cancelled, 0);
 
   return (
     <AdminLayout
@@ -39,218 +37,179 @@ const AdminDashboard = () => {
       showSearch={false}
       onAddClick={handleAddDelivery}
     >
-      {/* DASHBOARD CONTENT */}
-      <div className="dashboard-content mt-4 fs-4 p-2 p-md-4 bg-white">
-        <div className="container-fluid">
-          {/* Cards Row */}
-          <div className="row g-4">
-            {/* Successful Deliveries */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
-                  <h6 className="text-muted">Successful Deliveries</h6>
-                  <p className="fw-bold fs-5 mb-0">1,200</p>
-                </div>
+      <div className="container">
+        {/* Top 4 Cards */}
+        <div className="row mb-4">
+          {/* Total Transactions */}
+          <div className="col-md-3 mb-3">
+            <div className="dashboard-card bg-light p-3 h-100">
+              <div className="card-left icon-transactions">
+                <FaListAlt />
               </div>
-            </div>
-
-            {/* Failed Deliveries */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-x-circle-fill text-danger fs-3 mb-2"></i>
-                  <h6 className="text-muted">Failed Deliveries</h6>
-                  <p className="fw-bold fs-5 mb-0">120</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Daily Deliveries */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-truck text-warning fs-3 mb-2"></i>
-                  <h6 className="text-muted">Daily Deliveries</h6>
-                  <p className="fw-bold fs-5 mb-0">89</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Customer Satisfaction */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-star-fill text-warning fs-3 mb-2"></i>
-                  <h6 className="text-muted">Customer Satisfaction</h6>
-                  <p className="fw-bold fs-5 mb-1">4.8 / 5.0</p>
-                  <small className="text-muted">1,320 reviews</small>
-                </div>
+              <div className="card-right">
+                <h5>10</h5>
+                <small>Total Transactions</small>
               </div>
             </div>
           </div>
 
-          {/* Classification Card */}
-          <div className="row g-4 mt-4">
-            <div className="col-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body">
-                  <h5 className="card-title text-center mb-4">
-                    Failed Delivery Classification
-                  </h5>
-                  <div className="d-flex flex-column flex-md-row justify-content-around text-center fs-6">
-                    {/* Customer Didn’t Receive */}
-                    <div className="p-3">
-                      <i className="bi bi-person-x-fill text-danger fs-3 mb-2"></i>
-                      <h6 className="text-danger">Customer Didn’t Receive</h6>
-                      <p className="fw-bold fs-5">80</p>
-                    </div>
-
-                    {/* Damaged Item */}
-                    <div className="p-3">
-                      <i className="bi bi-box-seam text-warning fs-3 mb-2"></i>
-                      <h6 className="text-danger">Damaged Item</h6>
-                      <p className="fw-bold fs-5">40</p>
-                    </div>
-                  </div>
-                </div>
+          {/* Successful */}
+          <div className="col-md-3 mb-3">
+            <div className="dashboard-card bg-light p-3 h-100">
+              <div className="card-left icon-success">
+                <FaCheckCircle />
+              </div>
+              <div className="card-right">
+                <h5>120</h5>
+                <small>Successful</small>
               </div>
             </div>
           </div>
 
-          {/* Bar Chart Card */}
-          <div className="row g-4 mt-4">
-            <div className="text-end mx-1 my-3 d-flex justify-content-end">
-              <button
-                className="btn-view rounded-2 px-3 py-2 fs-6 d-flex align-items-center gap-2"
-                onClick={handleGenerateReport}
-              >
-                <FaChartBar /> See Overall Report
-              </button>
+          {/* Cancelled */}
+          <div className="col-md-3 mb-3">
+            <div className="dashboard-card bg-light p-3 h-100">
+              <div className="card-left icon-cancel">
+                <FaTimesCircle />
+              </div>
+              <div className="card-right">
+                <h5>30</h5>
+                <small>Cancelled</small>
+              </div>
             </div>
-            <div className="col-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body">
-                  {/* Title + Generate Report Button */}
-                  <div className="d-flex justify-content-center align-items-center mb-4">
-                    <h5 className="card-title text-center mb-0">
-                      Monthly Delivery Overview
-                    </h5>
-                  </div>
+          </div>
 
-                  <div className="overflow-auto">
-                    <div
-                      className="d-flex justify-content-between align-items-end"
-                      style={{ minWidth: "700px", height: "260px" }}
-                    >
-                      {monthlyData.map((data, i) => {
-                        const month = [
-                          "Jan",
-                          "Feb",
-                          "Mar",
-                          "Apr",
-                          "May",
-                          "Jun",
-                          "Jul",
-                          "Aug",
-                          "Sep",
-                          "Oct",
-                          "Nov",
-                          "Dec",
-                        ][i];
+          {/* Outgoing */}
+          <div className="col-md-3 mb-3">
+            <div className="dashboard-card bg-light p-3 h-100">
+              <div className="card-left icon-pending">
+                <FaClock />
+              </div>
+              <div className="card-right">
+                <h5>45</h5>
+                <small>Outgoing</small>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                        const maxHeight = 150;
-                        const maxValue = 160;
-                        const successHeight =
-                          (data.success / maxValue) * maxHeight;
-                        const cancelledHeight =
-                          (data.cancelled / maxValue) * maxHeight;
-
-                        return (
-                          <div
-                            key={i}
-                            className="d-flex flex-column align-items-center"
-                            style={{ flex: "1", minWidth: "50px" }}
-                          >
-                            <small
-                              className="text-success fw-bold"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              {data.success}
-                            </small>
-                            <small
-                              className="text-danger fw-bold"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              {data.cancelled}
-                            </small>
-
-                            {/* Bars */}
-                            <div
-                              className="d-flex gap-1 align-items-end"
-                              style={{ height: `${maxHeight}px` }}
-                            >
-                              <div
-                                title={`${data.success} Successful`}
-                                style={{
-                                  height: `${successHeight}px`,
-                                  width: "14px",
-                                  backgroundColor: "green",
-                                  borderRadius: "3px",
-                                }}
-                              ></div>
-                              <div
-                                title={`${data.cancelled} Cancelled`}
-                                style={{
-                                  height: `${cancelledHeight}px`,
-                                  width: "14px",
-                                  backgroundColor: "red",
-                                  borderRadius: "3px",
-                                }}
-                              ></div>
-                            </div>
-
-                            <small className="mt-2 text-muted">{month}</small>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Legend */}
-                  <div className="d-flex justify-content-center gap-4 mt-4">
-                    <div className="d-flex align-items-center gap-2">
-                      <div
-                        style={{
-                          width: "15px",
-                          height: "15px",
-                          backgroundColor: "green",
-                        }}
-                      ></div>
-                      <small>Successful</small>
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <div
-                        style={{
-                          width: "15px",
-                          height: "15px",
-                          backgroundColor: "red",
-                        }}
-                      ></div>
-                      <small>Cancelled</small>
-                    </div>
-                  </div>
-
-                  {/* Totals */}
-                  <div className="d-flex justify-content-center mt-3 gap-5">
-                    <h6 className="text-success">
-                      Total Successful: {totalSuccess}
-                    </h6>
-                    <h6 className="text-danger">
-                      Total Cancelled: {totalCancelled}
-                    </h6>
-                  </div>
+        {/* Bottom 2 Panels */}
+        <div className="row">
+          {/* Recent Transactions */}
+          <div className="col-md-8 mb-3">
+            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm">
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="recent-transaction-title m-0">
+                  Recent Transactions
+                </h5>
+                <div className="d-flex gap-3">
+                  <FaEquals className="text-secondary cursor-pointer" />
+                  <FaSearch className="text-secondary cursor-pointer" />
                 </div>
+              </div>
+
+              {/* Responsive Table */}
+              <div className="table-responsive">
+                <table className="table align-middle custom-table mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Transaction No.</th>
+                      <th scope="col">Client</th>
+                      <th scope="col">Date Ordered</th>
+                      <th scope="col">Item Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>#1001</td>
+                      <td>John Doe</td>
+                      <td>Aug 25, 2025</td>
+                      <td>
+                        <span className="badge bg-success">Successful</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>#1002</td>
+                      <td>Jane Smith</td>
+                      <td>Aug 24, 2025</td>
+                      <td>
+                        <span className="badge bg-danger">Cancelled</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>#1003</td>
+                      <td>Michael Johnson</td>
+                      <td>Aug 23, 2025</td>
+                      <td>
+                        <span className="badge bg-warning text-dark">
+                          Out to Delivery
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer Note */}
+              <div className="text-first text-muted small mt-2">
+                Showing 5 recent transactions out of 100
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Transactions */}
+          <div className="col-md-4 mb-3">
+            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm">
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="customer-satisfaction-title m-0">
+                  Pending Transactions
+                </h5>
+                <div className="d-flex gap-3">
+                  <FaEquals className="text-secondary cursor-pointer" />
+                  <FaSearch className="text-secondary cursor-pointer" />
+                </div>
+              </div>
+
+              {/* Responsive Table */}
+              <div className="table-responsive">
+                <table className="table align-middle custom-table mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Transaction No.</th>
+                      <th scope="col">Client</th>
+                      <th scope="col">Date Ordered</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>#2001</td>
+                      <td>Chris Evans</td>
+                      <td>Aug 22, 2025</td>
+                    </tr>
+                    <tr>
+                      <td>#2002</td>
+                      <td>Emma Watson</td>
+                      <td>Aug 21, 2025</td>
+                    </tr>
+                    <tr>
+                      <td>#2003</td>
+                      <td>Robert Downey</td>
+                      <td>Aug 20, 2025</td>
+                    </tr>
+                    <tr>
+                      <td>#2004</td>
+                      <td>Scarlett Johansson</td>
+                      <td>Aug 19, 2025</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer Note */}
+              <div className="text-first text-muted small mt-2">
+                Showing 4 pending transactions
               </div>
             </div>
           </div>

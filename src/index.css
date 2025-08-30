@@ -148,11 +148,79 @@ body {
   border: 1px solid #006400;
   margin-bottom: 0;
 }
+.dashboard-container {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.dashboard-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  flex: 1;
+}
+
+.dashboard-panel {
+  display: block;
+  border-radius: 8px;
+}
+
+.card-left {
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  margin-right: 15px;
+  color: #fff;
+}
+
+.icon-transactions {
+  background-color: #2196f3;
+}
+
+.icon-success {
+  background: #28a745;
+}
+
+.icon-cancel {
+  background: #dc3545;
+}
+
+.icon-pending {
+  background-color: #ff9800;
+}
+.card-right h5 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.card-right small {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
 
 .header-info {
   text-align: right;
   font-size: 1rem;
   color: #333;
+}
+
+.recent-transaction-title,
+.customer-satisfaction-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.custom-table thead tr {
+  border-bottom: 1px solid #dee2e6; /* light gray line */
 }
 
 .add-delivery-container {
