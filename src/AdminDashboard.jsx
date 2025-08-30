@@ -16,6 +16,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [recentTransactions, setRecentTransactions] = useState([]);
   const [dashboardCounts, setDashboardCounts] = useState({
     total: 0,
     successful: 0,
@@ -40,6 +41,27 @@ const AdminDashboard = () => {
       })
       .catch((err) => {
         console.error("Error fetching dashboard data:", err);
+      });
+
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_recent_transactions.php",
+        {
+          withCredentials: true,
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setRecentTransactions(res.data.transactions);
+        } else {
+          console.error(
+            "Failed to fetch recent transactions:",
+            res.data.message
+          );
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching recent transactions:", err);
       });
   }, []);
 
@@ -135,32 +157,36 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>#1001</td>
-                      <td>John Doe</td>
-                      <td>Aug 25, 2025</td>
-                      <td>
-                        <span className="badge bg-success">Successful</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>#1002</td>
-                      <td>Jane Smith</td>
-                      <td>Aug 24, 2025</td>
-                      <td>
-                        <span className="badge bg-danger">Cancelled</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>#1003</td>
-                      <td>Michael Johnson</td>
-                      <td>Aug 23, 2025</td>
-                      <td>
-                        <span className="badge bg-warning text-dark">
-                          Out to Delivery
-                        </span>
-                      </td>
-                    </tr>
+                    {recentTransactions.length > 0 ? (
+                      recentTransactions.map((tx) => (
+                        <tr key={tx.transaction_id}>
+                          <td>#{tx.transaction_id}</td>
+                          <td>{tx.customer_name}</td>
+                          <td>{tx.date_ordered}</td>
+                          <td>
+                            {tx.status === "Delivered" && (
+                              <span className="badge bg-success">
+                                Successful
+                              </span>
+                            )}
+                            {tx.status === "Cancelled" && (
+                              <span className="badge bg-danger">Cancelled</span>
+                            )}
+                            {tx.status === "Out for Delivery" && (
+                              <span className="badge bg-warning text-dark">
+                                Out to Delivery
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="text-center text-muted">
+                          No recent transactions found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
