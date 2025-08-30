@@ -10,23 +10,37 @@ import {
   FaSearch,
 } from "react-icons/fa";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import axios from "axios";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [monthlyData, setMonthlyData] = useState([]);
+  const [dashboardCounts, setDashboardCounts] = useState({
+    total: 0,
+    successful: 0,
+    cancelled: 0,
+    pending: 0,
+  });
 
   useEffect(() => {
     document.title = "Admin Dashboard";
 
-    const data = Array.from({ length: 12 }, () => {
-      const success = Math.floor(Math.random() * 100 + 50);
-      const cancelled = Math.floor(Math.random() * 60 + 20);
-      return { success, cancelled };
-    });
-
-    setMonthlyData(data);
+    // Fetch totals from PHP
+    axios
+      .get("http://localhost/DeliveryTrackingSystem/get_total_dashboard.php", {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.success) {
+          setDashboardCounts(res.data);
+        } else {
+          console.error("Failed to fetch dashboard data:", res.data.message);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching dashboard data:", err);
+      });
   }, []);
 
   const handleAddDelivery = () => navigate("/add-delivery");
@@ -47,7 +61,7 @@ const AdminDashboard = () => {
                 <FaListAlt />
               </div>
               <div className="card-right">
-                <h5>10</h5>
+                <h5>{dashboardCounts.total}</h5>
                 <small>Total Transactions</small>
               </div>
             </div>
@@ -60,7 +74,7 @@ const AdminDashboard = () => {
                 <FaCheckCircle />
               </div>
               <div className="card-right">
-                <h5>120</h5>
+                <h5>{dashboardCounts.successful}</h5>
                 <small>Successful</small>
               </div>
             </div>
@@ -73,7 +87,7 @@ const AdminDashboard = () => {
                 <FaTimesCircle />
               </div>
               <div className="card-right">
-                <h5>30</h5>
+                <h5>{dashboardCounts.cancelled}</h5>
                 <small>Cancelled</small>
               </div>
             </div>
@@ -86,7 +100,7 @@ const AdminDashboard = () => {
                 <FaClock />
               </div>
               <div className="card-right">
-                <h5>45</h5>
+                <h5>{dashboardCounts.pending}</h5>
                 <small>Outgoing</small>
               </div>
             </div>
