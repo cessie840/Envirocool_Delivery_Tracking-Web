@@ -111,8 +111,8 @@ function App() {
           />
           <Route path="/settings/view-terms" element={<ViewTermsTab />} />
         </>
-        <Route path="/customer" element={<Customer />} />;
-        <Route path="/tracking-page" element={<CustomerTrackingPage />} />;
+        <Route path="/tracking-page" element={<CustomerTrackingPage />} />
+        <Route path="/customer" element={<Customer />} />
       </Routes>
     </Router>
   );
