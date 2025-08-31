@@ -47,7 +47,7 @@ const REPORT_TYPES = [
   { value: "transaction", label: "Transaction Report" },
   { value: "service", label: "Service Delivery Report" },
   { value: "customer", label: "Customer Satisfaction Report" },
-  { value: "all", label: "All Reports" },
+  { value: "all", label: "Overall Reports" },
 ];
 
 const PERIODS = [
@@ -69,7 +69,7 @@ const GenerateReport = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [period, setPeriod] = useState("monthly");
-  const [reportType, setReportType] = useState("all"); // default to all
+  const [reportType, setReportType] = useState("all");
 
   // Data states
   const [loading, setLoading] = useState(false);
@@ -79,6 +79,25 @@ const GenerateReport = () => {
   const [transactionData, setTransactionData] = useState([]);
   const [serviceData, setServiceData] = useState([]);
   const [customerData, setCustomerData] = useState([]);
+  const [deliveryStatus, setDeliveryStatus] = useState("");
+  const [deliveryPersonnel, setDeliveryPersonnel] = useState("");
+  const [cancellationReasonFilter, setCancellationReasonFilter] = useState("");
+  const [deliveryPersonnelOptions, setDeliveryPersonnelOptions] = useState([]);
+  const [cancellationReasonOptions, setCancellationReasonOptions] = useState(
+    []
+  );
+
+  const salesRef = useRef(null);
+  const transactionRef = useRef(null);
+  const serviceRef = useRef(null);
+  const customerRef = useRef(null);
+
+  const [salesPage, setSalesPage] = useState(1);
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [servicePage, setServicePage] = useState(1);
+  const [customerPage, setCustomerPage] = useState(1);
+
+  const [activeTab, setActiveTab] = useState("overall");
 
   // Fetch data based on filters
   useEffect(() => {
@@ -86,12 +105,17 @@ const GenerateReport = () => {
   }, [startDate, endDate, period, reportType]);
 
   useEffect(() => {
-    console.log("Sales Data:", salesData);
-    console.log("Top Selling:", topSelling);
-    console.log("Transaction Data:", transactionData);
-    console.log("Service Data:", serviceData);
-    console.log("Customer Data:", customerData);
+    // console logs removed for brevity
   }, [salesData, topSelling, transactionData, serviceData, customerData]);
+
+  useEffect(() => {
+    if (activeTab === "overall") {
+      setSalesPage(1);
+      setTransactionPage(1);
+      setServicePage(1);
+      setCustomerPage(1);
+    }
+  }, [activeTab]);
 
   // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
@@ -133,6 +157,7 @@ const GenerateReport = () => {
         ? new Date(r.completed_at).toISOString().slice(0, 10)
         : null,
       cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
+      delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-", // new field
     }));
 
   const normalizeService = (raw = []) =>
@@ -158,7 +183,7 @@ const GenerateReport = () => {
   const safeJson = async (res) => {
     try {
       const json = await res.json();
-      console.debug("API response:", json);
+      // console.debug("API response:", json);
       return json;
     } catch (err) {
       console.error("JSON parse error", err);
@@ -198,7 +223,10 @@ const GenerateReport = () => {
         );
         if (!res.ok) throw new Error("get_transaction_report failed");
         const data = await safeJson(res);
-        setTransactionData(normalizeTransactions(data.transactions ?? []));
+        const normalizedTransactions = normalizeTransactions(
+          data.transactions ?? []
+        );
+        setTransactionData(normalizedTransactions);
         setSummary((prev) =>
           reportType === "transaction"
             ? data.summary ?? {}
@@ -206,6 +234,15 @@ const GenerateReport = () => {
             ? { ...prev, transactionSummary: data.summary ?? {} }
             : prev
         );
+
+        // Extract unique delivery personnel for dropdown
+        const personnelSet = new Set();
+        normalizedTransactions.forEach((t) => {
+          if (t.delivery_personnel && t.delivery_personnel !== "-") {
+            personnelSet.add(t.delivery_personnel);
+          }
+        });
+        setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
       }
 
       if (reportType === "service" || reportType === "all") {
@@ -216,9 +253,10 @@ const GenerateReport = () => {
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
         const data = await safeJson(res);
-        setServiceData(
-          normalizeService(data.serviceDeliveries ?? data.data ?? [])
+        const normalizedService = normalizeService(
+          data.serviceDeliveries ?? data.data ?? []
         );
+        setServiceData(normalizedService);
         setSummary((prev) =>
           reportType === "service"
             ? data.summary ?? {}
@@ -226,6 +264,15 @@ const GenerateReport = () => {
             ? { ...prev, serviceSummary: data.summary ?? {} }
             : prev
         );
+
+        // Extract unique Reason for Cancellations for dropdown
+        const reasonsSet = new Set();
+        normalizedService.forEach((s) => {
+          if (s.cancelled_reason) {
+            reasonsSet.add(s.cancelled_reason);
+          }
+        });
+        setCancellationReasonOptions(Array.from(reasonsSet).sort());
       }
 
       if (reportType === "customer" || reportType === "all") {
@@ -254,6 +301,8 @@ const GenerateReport = () => {
       setTransactionData([]);
       setServiceData([]);
       setCustomerData([]);
+      setDeliveryPersonnelOptions([]);
+      setCancellationReasonOptions([]);
     } finally {
       setLoading(false);
     }
@@ -326,25 +375,116 @@ const GenerateReport = () => {
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
           const rowDate = new Date(row.date_of_order || row.date);
-          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
+          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+            return false;
+
+          if (
+            deliveryStatus &&
+            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
+          )
+            return false;
+
+          if (
+            deliveryPersonnel &&
+            !row.delivery_personnel
+              .toLowerCase()
+              .includes(deliveryPersonnel.toLowerCase())
+          )
+            return false;
+
+          if (cancellationReasonFilter && row.cancelled_reason) {
+            if (
+              !row.cancelled_reason
+                .toLowerCase()
+                .includes(cancellationReasonFilter.toLowerCase())
+            )
+              return false;
+          } else if (cancellationReasonFilter) {
+            return false;
+          }
+
+          return true;
         })
-      : transactionData;
+      : transactionData.filter((row) => {
+          if (
+            deliveryStatus &&
+            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
+          )
+            return false;
+
+          if (
+            deliveryPersonnel &&
+            !row.delivery_personnel
+              .toLowerCase()
+              .includes(deliveryPersonnel.toLowerCase())
+          )
+            return false;
+
+          if (cancellationReasonFilter && row.cancelled_reason) {
+            if (
+              !row.cancelled_reason
+                .toLowerCase()
+                .includes(cancellationReasonFilter.toLowerCase())
+            )
+              return false;
+          } else if (cancellationReasonFilter) {
+            return false;
+          }
+
+          return true;
+        });
 
   const filteredServiceData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? serviceData.filter((row) => {
           const rowDate = new Date(row.date);
-          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
-        })
-      : serviceData;
+          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+            return false;
 
-  const filteredCustomerData =
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? customerData.filter((row) => {
-          const rowDate = new Date(row.date);
-          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
+          if (cancellationReasonFilter && row.cancelled_reason) {
+            if (
+              !row.cancelled_reason
+                .toLowerCase()
+                .includes(cancellationReasonFilter.toLowerCase())
+            )
+              return false;
+          } else if (cancellationReasonFilter) {
+            return false;
+          }
+
+          return true;
         })
-      : customerData;
+      : serviceData.filter((row) => {
+          if (cancellationReasonFilter && row.cancelled_reason) {
+            if (
+              !row.cancelled_reason
+                .toLowerCase()
+                .includes(cancellationReasonFilter.toLowerCase())
+            )
+              return false;
+          } else if (cancellationReasonFilter) {
+            return false;
+          }
+          return true;
+        });
+
+const filteredCustomerData =
+  isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
+    ? customerData.filter((row) => {
+        const rowDate = new Date(row.date);
+        if (rowDate < new Date(startDate) || rowDate > new Date(endDate)) return false;
+
+        // Only include delivered transactions
+        if (String(row.delivery_status).toLowerCase() !== "delivered") return false;
+
+        return true;
+      })
+    : customerData.filter((row) => {
+        // Only include delivered transactions
+        if (String(row.delivery_status).toLowerCase() !== "delivered") return false;
+        return true;
+      });
+
 
   // Totals for Sales report
   const totalSalesAmount = filteredSalesData.reduce(
@@ -434,16 +574,6 @@ const GenerateReport = () => {
   }, []);
 
   // Transaction status data (Delivered vs Cancelled)
-  const transactionStatusCounts = {
-    Delivered: 0,
-    Cancelled: 0,
-  };
-  filteredTransactionData.forEach((row) => {
-    const st = String(row.delivery_status).toLowerCase();
-    if (st === "delivered") transactionStatusCounts.Delivered++;
-    else if (st === "cancelled") transactionStatusCounts.Cancelled++;
-  });
-
   const transactionStatusData = [
     {
       name: "Delivered",
@@ -494,8 +624,11 @@ const GenerateReport = () => {
       return (
         <Row className="mb-2">
           <Col md={3}>
-            <Card className="card-total" style={{ backgroundColor: "white" }}>
-              <div className="card-total-icon">
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
+              <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
                   <FaDollarSign />
                 </div>
@@ -513,8 +646,11 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={3}>
-            <Card className="card-total" style={{ backgroundColor: "white" }}>
-              <div className="card-total-icon">
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
+              <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
                   <FaUsers />
                 </div>
@@ -526,8 +662,11 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={3}>
-            <Card className="card-total" style={{ backgroundColor: "white" }}>
-              <div className="card-total-icon">
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
+              <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#FF9800" }}>
                   <FaBoxes />
                 </div>
@@ -539,8 +678,11 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={3}>
-            <Card className="card-total" style={{ backgroundColor: "white" }}>
-              <div className="card-total-icon">
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
+              <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#9C27B0" }}>
                   <FaClipboardList />
                 </div>
@@ -559,7 +701,10 @@ const GenerateReport = () => {
       return (
         <Row className="mb-2">
           <Col md={4}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
                   <FaDollarSign />
@@ -578,7 +723,10 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={4}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
                   <FaUsers />
@@ -591,7 +739,10 @@ const GenerateReport = () => {
             </Card>
           </Col>
           <Col md={4}>
-            <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
+            <Card
+              className="card-total p-3 mb-4"
+              style={{ backgroundColor: "white" }}
+            >
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#FF9800" }}>
                   <FaBoxes />
@@ -618,40 +769,49 @@ const GenerateReport = () => {
     return (
       <Row className="mb-2">
         <Col md={4}>
-          <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
+          <Card
+            className="card-total p-3 mb-2"
+            style={{ backgroundColor: "white" }}
+          >
             <div className="d-flex align-items-center">
               <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
                 <FaCheckCircle />
               </div>
               <div>
                 <h6>Successful Deliveries</h6>
-                <p className="mb-0 text-success">{successfulDeliveries}</p>
+                <p className="mb-0">{successfulDeliveries}</p>
               </div>
             </div>
           </Card>
         </Col>
         <Col md={4}>
-          <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
+          <Card
+            className="card-total p-3 mb-2"
+            style={{ backgroundColor: "white" }}
+          >
             <div className="d-flex align-items-center">
               <div style={{ ...iconStyle, backgroundColor: "#E57373" }}>
                 <FaTimesCircle />
               </div>
               <div>
                 <h6>Failed Deliveries</h6>
-                <p className="mb-0 text-danger">{failedDeliveries}</p>
+                <p className="mb-0">{failedDeliveries}</p>
               </div>
             </div>
           </Card>
         </Col>
         <Col md={4}>
-          <Card className="p-3 mb-2" style={{ backgroundColor: "white" }}>
+          <Card
+            className="card-total p-3 mb-4"
+            style={{ backgroundColor: "white" }}
+          >
             <div className="d-flex align-items-center">
               <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
                 <FaTruck />
               </div>
               <div>
                 <h6>Total Transactions</h6>
-                <p className="mb-0 text-info">{totalTransactionsService}</p>
+                <p className="mb-0">{totalTransactionsService}</p>
               </div>
             </div>
           </Card>
@@ -791,183 +951,344 @@ const GenerateReport = () => {
     );
   };
 
-  const renderSalesTable = () => (
-    <Table
-      bordered
-      hover
-      responsive
-      className="shadow-sm"
-      style={{ cursor: "default" }}
-    >
-      <thead className="table-success">
-        <tr>
-          <th>Date</th>
-          <th>Customer Name</th>
-          <th>Item Name</th>
-          <th>Quantity</th>
-          <th>Unit Cost</th>
-          <th>Total Cost</th>
-        </tr>
-      </thead>
-      <tbody>
-        {salesData.length === 0 ? (
-          <tr>
-            <td colSpan={6} className="text-center">
-              No sales data found.
-            </td>
-          </tr>
-        ) : (
-          salesData.map((row, i) => (
-            <tr key={i} className="table-row-hover">
-              <td>{formatDate(row.date)}</td>
-              <td>{row.customer_name}</td>
-              <td>{row.item_name}</td>
-              <td>{row.qty}</td>
-              <td>₱{Number(row.unit_cost).toFixed(2)}</td>
-              <td>₱{Number(row.total_cost).toFixed(2)}</td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </Table>
-  );
+  // PAGINATION FOR EVERY TABLE
+  const getItemsPerPage = () => {
+    return activeTab === "overall" ? 5 : 15;
+  };
 
-  const renderTransactionTable = () => (
-    <Table
-      bordered
-      hover
-      responsive
-      className="shadow-sm"
-      style={{ cursor: "default" }}
-    >
-      <thead className="table-info">
-        <tr>
-          <th>Transaction No.</th>
-          <th>Customer Name</th>
-          <th>Address</th>
-          <th>Contact Number</th>
-          <th>Date of Order</th>
-          <th>Item Name</th>
-          <th>Quantity</th>
-          <th>Total Cost</th>
-          <th>Mode of Payment</th>
-          <th>Delivery Status</th>
-          <th>Ship Out At</th>
-          <th>Completed At</th>
-          <th>Cancelled Reason</th>
-        </tr>
-      </thead>
-      <tbody>
-        {transactionData.length === 0 ? (
-          <tr>
-            <td colSpan={13} className="text-center">
-              No transaction data found.
-            </td>
-          </tr>
-        ) : (
-          transactionData.map((row, i) => (
-            <tr key={i} className="table-row-hover">
-              <td>{row.transaction_id}</td>
-              <td>{row.customer_name}</td>
-              <td>{row.customer_address}</td>
-              <td>{row.customer_contact}</td>
-              <td>{formatDate(row.date_of_order)}</td>
-              <td>{row.item_name}</td>
-              <td>{row.qty}</td>
-              <td>₱{Number(row.total_cost).toFixed(2)}</td>
-              <td>{row.mode_of_payment}</td>
-              <td>{row.delivery_status}</td>
-              <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
-              <td>{row.completed_at ? formatDate(row.completed_at) : "-"}</td>
-              <td>{row.cancelled_reason || "-"}</td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </Table>
-  );
+  const paginate = (data, currentPage) => {
+    const itemsPerPage = getItemsPerPage();
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return data.slice(startIndex, startIndex + itemsPerPage);
+  };
 
-  const renderServiceTable = () => (
-    <Table
-      bordered
-      hover
-      responsive
-      className="shadow-sm"
-      style={{ cursor: "default" }}
-    >
-      <thead className="table-warning">
-        <tr>
-          <th>Date</th>
-          <th>Customer Name</th>
-          <th>Item Name</th>
-          <th>Delivery Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {serviceData.length === 0 ? (
-          <tr>
-            <td colSpan={4} className="text-center">
-              No service delivery data found.
-            </td>
-          </tr>
-        ) : (
-          serviceData.map((row, i) => (
-            <tr key={i} className="table-row-hover">
-              <td>{formatDate(row.date)}</td>
-              <td>{row.customer_name}</td>
-              <td>{row.item_name}</td>
-              <td>{row.delivery_status}</td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </Table>
-  );
+  const renderSalesTable = () => {
+    const itemsPerPage = getItemsPerPage();
+    const startIndex = (salesPage - 1) * itemsPerPage;
+    const paginatedData = filteredSalesData.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+    const totalPages = Math.ceil(filteredSalesData.length / itemsPerPage);
 
-  const renderCustomerTable = () => (
-    <Table
-      bordered
-      hover
-      responsive
-      className="shadow-sm"
-      style={{ cursor: "default" }}
-    >
-      <thead className="table-secondary">
-        <tr>
-          <th>Date</th>
-          <th>Customer Name</th>
-          <th>Item Name</th>
-          <th>Customer Rating</th>
-          <th>Delivery Status</th>
-          <th>Failed Delivery Reason</th>
-        </tr>
-      </thead>
-      <tbody>
-        {customerData.length === 0 ? (
-          <tr>
-            <td colSpan={6} className="text-center">
-              No customer satisfaction data found.
-            </td>
-          </tr>
-        ) : (
-          customerData.map((row, i) => (
-            <tr key={i} className="table-row-hover">
-              <td>{formatDate(row.date)}</td>
-              <td>{row.customer_name}</td>
-              <td>{row.item_name}</td>
-              <td>{row.customer_rating ?? "N/A"}</td>
-              <td>{row.delivery_status}</td>
-              <td>
-                {row.delivery_status === "Cancelled"
-                  ? row.cancelled_reason || "-"
-                  : "-"}
-              </td>
+    return (
+      <>
+        <Table
+          bordered
+          hover
+          responsive
+          className="shadow-sm"
+          style={{ cursor: "default" }}
+        >
+          <thead className="table-success">
+            <tr>
+              <th>Date</th>
+              <th>Customer Name</th>
+              <th>Item Name</th>
+              <th>Quantity</th>
+              <th>Unit Cost</th>
+              <th>Total Cost</th>
             </tr>
-          ))
-        )}
-      </tbody>
-    </Table>
-  );
+          </thead>
+          <tbody>
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center">
+                  No sales data found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((row, i) => (
+                <tr key={i} className="table-row-hover">
+                  <td>{formatDate(row.date)}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{row.item_name}</td>
+                  <td>{row.qty}</td>
+                  <td>
+                    ₱
+                    {Number(row.unit_cost).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>
+                    ₱
+                    {Number(row.total_cost).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+
+        {/* Pagination */}
+        <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={salesPage === 1}
+            onClick={() => setSalesPage(salesPage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {salesPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={salesPage === totalPages}
+            onClick={() => setSalesPage(salesPage + 1)}
+          >
+            ›
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  const renderTransactionTable = () => {
+    const itemsPerPage = getItemsPerPage();
+    const startIndex = (transactionPage - 1) * itemsPerPage;
+    const paginatedData = filteredTransactionData.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+    const totalPages = Math.ceil(filteredTransactionData.length / itemsPerPage);
+
+    return (
+      <>
+        <Table
+          bordered
+          hover
+          responsive
+          className="shadow-sm"
+          style={{ cursor: "default" }}
+        >
+          <thead className="table-info">
+            <tr>
+              <th>Transaction No.</th>
+              <th>Customer Name</th>
+              <th>Address</th>
+              <th>Contact Number</th>
+              <th>Date of Order</th>
+              <th>Item Name</th>
+              <th>Quantity</th>
+              <th>Total Cost</th>
+              <th>Mode of Payment</th>
+              <th>Delivery Status</th>
+              <th>Delivery Personnel</th> {/* New column */}
+              <th>Ship Out At</th>
+              <th>Completed At</th>
+              <th>Reason for Cancellation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={14} className="text-center">
+                  No transaction data found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((row, i) => (
+                <tr key={i} className="table-row-hover">
+                  <td>{row.transaction_id}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{row.customer_address}</td>
+                  <td>{row.customer_contact}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
+                  <td>{row.item_name}</td>
+                  <td>{row.qty}</td>
+                  <td>
+                    ₱
+                    {Number(row.total_cost).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>{row.mode_of_payment}</td>
+                  <td>{row.delivery_status}</td>
+                  <td>{row.delivery_personnel || "-"}</td>
+                  <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
+                  <td>
+                    {row.completed_at ? formatDate(row.completed_at) : "-"}
+                  </td>
+                  <td>{row.cancelled_reason || "-"}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+
+        {/* Pagination */}
+        <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={transactionPage === 1}
+            onClick={() => setTransactionPage(transactionPage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {transactionPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={transactionPage === totalPages}
+            onClick={() => setTransactionPage(transactionPage + 1)}
+          >
+            ›
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  const renderServiceTable = () => {
+    const itemsPerPage = getItemsPerPage();
+    const startIndex = (servicePage - 1) * itemsPerPage;
+    const paginatedData = filteredServiceData.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+    const totalPages = Math.ceil(filteredServiceData.length / itemsPerPage);
+
+    return (
+      <>
+        <Table
+          bordered
+          hover
+          responsive
+          className="shadow-sm"
+          style={{ cursor: "default" }}
+        >
+          <thead className="table-warning">
+            <tr>
+              <th>Date</th>
+              <th>Customer Name</th>
+              <th>Item Name</th>
+              <th>Delivery Status</th>
+              <th>Reason for Cancellation</th> {/* New column */}
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center">
+                  No service delivery data found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((row, i) => (
+                <tr key={i} className="table-row-hover">
+                  <td>{formatDate(row.date)}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{row.item_name}</td>
+                  <td>{row.delivery_status}</td>
+                  <td>{row.cancelled_reason || "-"}</td> {/* New cell */}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+
+        {/* Pagination */}
+        <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={servicePage === 1}
+            onClick={() => setServicePage(servicePage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {servicePage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={servicePage === totalPages}
+            onClick={() => setServicePage(servicePage + 1)}
+          >
+            ›
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  const renderCustomerTable = () => {
+    const itemsPerPage = getItemsPerPage();
+    const startIndex = (customerPage - 1) * itemsPerPage;
+    const paginatedData = filteredCustomerData.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+    const totalPages = Math.ceil(filteredCustomerData.length / itemsPerPage);
+
+    return (
+      <>
+        <Table
+          bordered
+          hover
+          responsive
+          className="shadow-sm"
+          style={{ cursor: "default" }}
+        >
+          <thead className="table-secondary">
+            <tr>
+              <th>Date</th>
+              <th>Customer Name</th>
+              <th>Item Name</th>
+              <th>Customer Rating</th>
+              <th>Delivery Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center">
+                  No customer satisfaction data found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((row, i) => (
+                <tr key={i} className="table-row-hover">
+                  <td>{formatDate(row.date)}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{row.item_name}</td>
+                  <td>{row.customer_rating ?? "N/A"}</td>
+                  <td>{row.delivery_status}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+
+        {/* Pagination */}
+        <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={customerPage === 1}
+            onClick={() => setCustomerPage(customerPage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {customerPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={customerPage === totalPages}
+            onClick={() => setCustomerPage(customerPage + 1)}
+          >
+            ›
+          </button>
+        </div>
+      </>
+    );
+  };
 
   // generatePDF left unchanged (keeps your implementation)
   const generatePDF = async () => {
@@ -1086,53 +1407,97 @@ const GenerateReport = () => {
         {(reportType === "service" || reportType === "all") &&
           renderServiceTotalsCard()}
       </div>
-      <div ref={reportRef} className="report-container">
-        {loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="success" />
-          </div>
-        ) : (
-          <>
-            {(reportType === "sales" || reportType === "all") && (
+      {loading ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="success" />
+        </div>
+      ) : (
+        <>
+          {(reportType === "sales" || reportType === "all") && (
+            <div
+              ref={salesRef}
+              className="report-container mb-5"
+              style={{
+                backgroundColor: "white",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              {" "}
               <>
-                <h4 className="text-success mb-3 text-center">Sales Report</h4>
+                <h2 className="text-success mt-3 mb-3 text-center">
+                  Sales Report
+                </h2>
                 <h5 className="mb-2 text-center">Sales Growth Over Time</h5>
                 {renderSalesGrowthChart()}
                 <h5 className="mt-4 mb-2 text-center">Top Selling Items</h5>
                 {renderTopSellingChart()} <br /> <br />
-                {renderSalesTable()} <hr />
+                {renderSalesTable()}
               </>
-            )}
+            </div>
+          )}
 
-            {(reportType === "transaction" || reportType === "all") && (
+          {(reportType === "transaction" || reportType === "all") && (
+            <div
+              ref={transactionRef}
+              className="report-container mb-5"
+              style={{
+                backgroundColor: "white",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              {" "}
               <>
-                <h4 className="text-info mt-5 mb-3 text-center">
+                <h2 className="text-info mt-3 mb-3 text-center">
                   Transaction Report
-                </h4>
+                </h2>
                 <h5 className="mb-2 text-center">
                   Delivery Status (Delivered vs Cancelled)
                 </h5>
                 {renderTransactionStatusChart()} <br /> <br />
-                {renderTransactionTable()} <hr />
+                {renderTransactionTable()}
               </>
-            )}
+            </div>
+          )}
 
-            {(reportType === "service" || reportType === "all") && (
+          {(reportType === "service" || reportType === "all") && (
+            <div
+              ref={serviceRef}
+              className="report-container mb-5"
+              style={{
+                backgroundColor: "white",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              {" "}
               <>
-                <h4 className="text-warning mt-5 mb-3 text-center">
+                <h2 className="text-warning mt-3 mb-3 text-center">
                   Service Delivery Report
-                </h4>
+                </h2>
                 <h5 className="mb-2 text-center">Failed Delivery Reasons</h5>
                 {renderServiceFailedReasonsChart()} <br /> <br />
-                {renderServiceTable()} <hr />
+                {renderServiceTable()}
               </>
-            )}
+            </div>
+          )}
 
-            {(reportType === "customer" || reportType === "all") && (
+          {(reportType === "customer" || reportType === "all") && (
+            <div
+              ref={customerRef}
+              className="report-container mb-5"
+              style={{
+                backgroundColor: "white",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              {" "}
               <>
-                <h4 className="text-secondary mt-5 mb-3 text-center">
+                <h2 className="text-secondary mt-3 mb-3 text-center">
                   Customer Satisfaction Report
-                </h4>
+                </h2>
                 <h5 className="mb-2 text-center">
                   Customer Rating Distribution
                 </h5>
@@ -1140,10 +1505,10 @@ const GenerateReport = () => {
                 <br />
                 {renderCustomerTable()}
               </>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+          )}
+        </>
+      )}
       {/* Filter Modal */}
       <Modal show={showFilter} onHide={() => setShowFilter(false)} centered>
         <Modal.Header closeButton>
@@ -1152,7 +1517,7 @@ const GenerateReport = () => {
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3" controlId="filterStartDate">
-              <Form.Label>Start Date</Form.Label>
+              <Form.Label className="text-success">Start Date</Form.Label>
               <Form.Control
                 type="date"
                 value={startDate}
@@ -1162,7 +1527,7 @@ const GenerateReport = () => {
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="filterEndDate">
-              <Form.Label>End Date</Form.Label>
+              <Form.Label className="text-success">End Date</Form.Label>
               <Form.Control
                 type="date"
                 value={endDate}
@@ -1173,7 +1538,7 @@ const GenerateReport = () => {
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="filterPeriod">
-              <Form.Label>Period</Form.Label>
+              <Form.Label className="text-success">Period</Form.Label>
               <Form.Select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
@@ -1186,8 +1551,8 @@ const GenerateReport = () => {
               </Form.Select>
             </Form.Group>
 
-            <Form.Group controlId="filterReportType">
-              <Form.Label>Report Type</Form.Label>
+            <Form.Group controlId="filterReportType" className="mb-3">
+              <Form.Label className="text-success">Report Type</Form.Label>
               <Form.Select
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
@@ -1199,6 +1564,61 @@ const GenerateReport = () => {
                 ))}
               </Form.Select>
             </Form.Group>
+
+            {["all", "transaction"].includes(reportType) && (
+              <Form.Group controlId="filterDeliveryStatus" className="mb-3">
+                <Form.Label className="text-success">
+                  Delivery Status
+                </Form.Label>
+                <Form.Select
+                  value={deliveryStatus}
+                  onChange={(e) => setDeliveryStatus(e.target.value)}
+                >
+                  <option value="">Select Delivery Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </Form.Select>
+              </Form.Group>
+            )}
+
+            {["all", "transaction"].includes(reportType) && (
+              <Form.Group controlId="filterDeliveryPersonnel" className="mb-3">
+                <Form.Label className="text-success">
+                  Delivery Personnel
+                </Form.Label>
+                <Form.Select
+                  value={deliveryPersonnel}
+                  onChange={(e) => setDeliveryPersonnel(e.target.value)}
+                >
+                  <option value="">Select a Delivery Personnel</option>
+                  {deliveryPersonnelOptions.map((person, idx) => (
+                    <option key={idx} value={person}>
+                      {person}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
+
+            {["all", "transaction", "service"].includes(reportType) && (
+              <Form.Group controlId="filterCancellationReason" className="mb-3">
+                <Form.Label className="text-success">
+                  Reason for Cancellation
+                </Form.Label>
+                <Form.Select
+                  value={cancellationReasonFilter}
+                  onChange={(e) => setCancellationReasonFilter(e.target.value)}
+                >
+                  <option value="">Select a Reason for Cancellation</option>
+                  {cancellationReasonOptions.map((reason, idx) => (
+                    <option key={idx} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
           </Form>
         </Modal.Body>
         <Modal.Footer>
@@ -1209,6 +1629,7 @@ const GenerateReport = () => {
             variant="primary"
             onClick={() => {
               setShowFilter(false);
+              setActiveTab("filtered");
               fetchData();
             }}
           >
