@@ -1591,7 +1591,7 @@ const filteredCustomerData =
                   value={deliveryPersonnel}
                   onChange={(e) => setDeliveryPersonnel(e.target.value)}
                 >
-                  <option value="">Select a Delivery Personnel</option>
+                  <option value="">Select Delivery Personnel</option>
                   {deliveryPersonnelOptions.map((person, idx) => (
                     <option key={idx} value={person}>
                       {person}
@@ -1610,7 +1610,7 @@ const filteredCustomerData =
                   value={cancellationReasonFilter}
                   onChange={(e) => setCancellationReasonFilter(e.target.value)}
                 >
-                  <option value="">Select a Reason for Cancellation</option>
+                  <option value="">Select Reason for Cancellation</option>
                   {cancellationReasonOptions.map((reason, idx) => (
                     <option key={idx} value={reason}>
                       {reason}
