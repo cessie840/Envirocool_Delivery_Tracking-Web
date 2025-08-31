@@ -611,20 +611,6 @@ const totalSalesTransaction = filteredTransactionData
     },
   ];
 
-  // Cards styling and hover effect styles
-  const cardStyle = {
-    borderRadius: "0.75rem",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-    transition: "transform 0.3s ease, box-shadow 0.3s ease",
-    marginBottom: "1.5rem",
-  };
-  const cardHoverStyle = {
-    transform: "translateY(-5px)",
-    boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-  };
-
-  // State to track hover for cards (optional for subtle effect)
-  const [hoveredCard, setHoveredCard] = useState(null);
 
   const iconStyle = {
     width: 40,
@@ -647,7 +633,7 @@ const totalSalesTransaction = filteredTransactionData
         <Row className="mb-2">
           <Col md={3}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 2"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -669,7 +655,7 @@ const totalSalesTransaction = filteredTransactionData
           </Col>
           <Col md={3}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 mb-1"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -685,7 +671,7 @@ const totalSalesTransaction = filteredTransactionData
           </Col>
           <Col md={3}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 mb-1"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -701,7 +687,7 @@ const totalSalesTransaction = filteredTransactionData
           </Col>
           <Col md={3}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 mb-1"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -721,10 +707,10 @@ const totalSalesTransaction = filteredTransactionData
 
     if (reportType === "sales" || reportType === "all") {
       return (
-        <Row className="mb-2">
+        <Row className="mb-1">
           <Col md={4}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 mb-1"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -732,8 +718,8 @@ const totalSalesTransaction = filteredTransactionData
                   <FaDollarSign />
                 </div>
                 <div>
-                  <h6>Total Sales</h6>
-                  <p className="mb-0">
+                  <h6 className="fw-semibold">Total Sales</h6>
+                  <p className="mb-0 fw-semibold">
                     ₱
                     {totalSalesAmount.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
@@ -746,7 +732,7 @@ const totalSalesTransaction = filteredTransactionData
           </Col>
           <Col md={4}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 mb-1"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -754,15 +740,15 @@ const totalSalesTransaction = filteredTransactionData
                   <FaUsers />
                 </div>
                 <div>
-                  <h6>Total Customers</h6>
-                  <p className="mb-0">{totalCustomersSales}</p>
+                  <h6 className="fw-semibold">Total Customers</h6>
+                  <p className="mb-0 fw-semibold">{totalCustomersSales}</p>
                 </div>
               </div>
             </Card>
           </Col>
           <Col md={4}>
             <Card
-              className="card-total p-3 mb-4"
+              className="card-total p-3 mb-1"
               style={{ backgroundColor: "white" }}
             >
               <div className="d-flex align-items-center">
@@ -770,8 +756,8 @@ const totalSalesTransaction = filteredTransactionData
                   <FaBoxes />
                 </div>
                 <div>
-                  <h6>Total Items Sold</h6>
-                  <p className="mb-0">{totalItemsSold}</p>
+                  <h6 className="fw-semibold">Total Items Sold</h6>
+                  <p className="mb-0 fw-semibold">{totalItemsSold}</p>
                 </div>
               </div>
             </Card>
@@ -789,10 +775,10 @@ const totalSalesTransaction = filteredTransactionData
     if (serviceData.length === 0) return null;
 
     return (
-      <Row className="mb-2">
+      <Row className="mb-2 fw-semibold">
         <Col md={4}>
           <Card
-            className="card-total p-3 mb-2"
+            className="card-total p-3 mb-1"
             style={{ backgroundColor: "white" }}
           >
             <div className="d-flex align-items-center">
@@ -800,7 +786,7 @@ const totalSalesTransaction = filteredTransactionData
                 <FaCheckCircle />
               </div>
               <div>
-                <h6>Successful Deliveries</h6>
+                <h6 className="fw-semibold">Successful Deliveries</h6>
                 <p className="mb-0">{successfulDeliveries}</p>
               </div>
             </div>
@@ -808,7 +794,7 @@ const totalSalesTransaction = filteredTransactionData
         </Col>
         <Col md={4}>
           <Card
-            className="card-total p-3 mb-2"
+            className="card-total p-3 mb-1"
             style={{ backgroundColor: "white" }}
           >
             <div className="d-flex align-items-center">
@@ -816,7 +802,7 @@ const totalSalesTransaction = filteredTransactionData
                 <FaTimesCircle />
               </div>
               <div>
-                <h6>Failed Deliveries</h6>
+                <h6 className="fw-semibold">Failed Deliveries</h6>
                 <p className="mb-0">{failedDeliveries}</p>
               </div>
             </div>
@@ -832,7 +818,7 @@ const totalSalesTransaction = filteredTransactionData
                 <FaTruck />
               </div>
               <div>
-                <h6>Total Transactions</h6>
+                <h6 className="fw-semibold">Total Transactions</h6>
                 <p className="mb-0">{totalTransactionsService}</p>
               </div>
             </div>
@@ -1403,19 +1389,20 @@ const totalSalesTransaction = filteredTransactionData
         <div>
           <Button
             variant="primary"
-            className="me-2"
+            className="me-2 btn btn-view px-3 py-2 rounded"
             onClick={() => setShowFilter(true)}
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button variant="danger" onClick={generatePDF}>
+          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded" onClick={generatePDF}>
             <FaFilePdf /> Generate PDF
           </Button>
         </div>
           <Button
           variant="success"
           onClick={() => navigate("/add-delivery")}
-          className="d-flex align-items-center gap-2"
+          className="d-flex align-items-center gap-2 btn add-delivery px-3 py-2 rounded"
+          style={{fontSize: '15px'}}
         >
           <FaPlus /> Add New Delivery
         </Button>
