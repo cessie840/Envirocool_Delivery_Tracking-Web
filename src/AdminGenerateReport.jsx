@@ -1395,17 +1395,11 @@ const totalSalesTransaction = filteredTransactionData
         .btn-primary:hover, .btn-success:hover, .btn-danger:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .card { border-radius: 0.75rem; cursor: default; }
       `}</style>
-      {/* Buttons */}
+
+        {/* BUTTONS  */}
       <br /> <br />
       <br />
       <div className="d-flex justify-content-between align-items-center mb-3 no-print mx-4">
-        <Button
-          variant="success"
-          onClick={() => navigate("/add-delivery")}
-          className="d-flex align-items-center gap-2"
-        >
-          <FaPlus /> Add New Delivery
-        </Button>
         <div>
           <Button
             variant="primary"
@@ -1418,8 +1412,16 @@ const totalSalesTransaction = filteredTransactionData
             <FaFilePdf /> Generate PDF
           </Button>
         </div>
+          <Button
+          variant="success"
+          onClick={() => navigate("/add-delivery")}
+          className="d-flex align-items-center gap-2"
+        >
+          <FaPlus /> Add New Delivery
+        </Button>
       </div>
-      {/* Totals cards */}
+
+      {/* TOTAL CARDS  */}
       <div className="mx-4">
         {(reportType === "sales" ||
           reportType === "transaction" ||
