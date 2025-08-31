@@ -104,9 +104,13 @@ const GenerateReport = () => {
     fetchData();
   }, [startDate, endDate, period, reportType]);
 
-  useEffect(() => {
-    // console logs removed for brevity
-  }, [salesData, topSelling, transactionData, serviceData, customerData]);
+  useEffect(() => { }, [
+    salesData,
+    topSelling,
+    transactionData,
+    serviceData,
+    customerData,
+  ]);
 
   useEffect(() => {
     if (activeTab === "overall") {
@@ -126,7 +130,9 @@ const GenerateReport = () => {
       qty: Number(r.qty ?? r.quantity ?? 0),
       unit_cost: Number(r.unit_cost ?? r.unit_price ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
-    }));
+      delivery_status: (r.delivery_status ?? r.status ?? "delivered").toLowerCase(),
+    })).filter(sale => sale.delivery_status === "delivered");
+
 
   const normalizeTopSelling = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
@@ -143,8 +149,8 @@ const GenerateReport = () => {
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
         : r.date
-        ? new Date(r.date).toISOString().slice(0, 10)
-        : null,
+          ? new Date(r.date).toISOString().slice(0, 10)
+          : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
@@ -183,7 +189,6 @@ const GenerateReport = () => {
   const safeJson = async (res) => {
     try {
       const json = await res.json();
-      // console.debug("API response:", json);
       return json;
     } catch (err) {
       console.error("JSON parse error", err);
@@ -210,7 +215,12 @@ const GenerateReport = () => {
         );
         if (!res.ok) throw new Error("get_sales_report failed");
         const data = await safeJson(res);
-        setSalesData(normalizeSales(data.sales ?? []));
+        let normalizedSales = normalizeSales(data.sales ?? []);
+        // Filter to only delivered sales
+        normalizedSales = normalizedSales.filter(
+          (sale) => sale.delivery_status.toLowerCase() === "delivered"
+        );
+        setSalesData(normalizedSales);
         setTopSelling(normalizeTopSelling(data.topSelling ?? []));
         if (reportType === "sales") setSummary(data.summary ?? {});
       }
@@ -231,8 +241,8 @@ const GenerateReport = () => {
           reportType === "transaction"
             ? data.summary ?? {}
             : reportType === "all"
-            ? { ...prev, transactionSummary: data.summary ?? {} }
-            : prev
+              ? { ...prev, transactionSummary: data.summary ?? {} }
+              : prev
         );
 
         // Extract unique delivery personnel for dropdown
@@ -261,8 +271,8 @@ const GenerateReport = () => {
           reportType === "service"
             ? data.summary ?? {}
             : reportType === "all"
-            ? { ...prev, serviceSummary: data.summary ?? {} }
-            : prev
+              ? { ...prev, serviceSummary: data.summary ?? {} }
+              : prev
         );
 
         // Extract unique Reason for Cancellations for dropdown
@@ -290,8 +300,8 @@ const GenerateReport = () => {
           reportType === "customer"
             ? data.summary ?? {}
             : reportType === "all"
-            ? { ...prev, customerSummary: data.summary ?? {} }
-            : prev
+              ? { ...prev, customerSummary: data.summary ?? {} }
+              : prev
         );
       }
     } catch (error) {
@@ -303,6 +313,10 @@ const GenerateReport = () => {
       setCustomerData([]);
       setDeliveryPersonnelOptions([]);
       setCancellationReasonOptions([]);
+
+      console.log("Normalized Transactions:", normalizedTransactions);
+      console.log("Delivered Transaction IDs:", deliveredTransactionIds);
+      console.log("Normalized Sales:", normalizedSales);
     } finally {
       setLoading(false);
     }
@@ -366,125 +380,133 @@ const GenerateReport = () => {
   const filteredSalesData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
-          const rowDate = new Date(row.date);
-          return rowDate >= new Date(startDate) && rowDate <= new Date(endDate);
-        })
-      : salesData;
+        const rowDate = new Date(row.date);
+        return (
+          rowDate >= new Date(startDate) &&
+          rowDate <= new Date(endDate) &&
+          row.delivery_status.toLowerCase() === "delivered"
+        );
+      })
+      : salesData.filter(
+        (row) => row.delivery_status.toLowerCase() === "delivered"
+      );
 
   const filteredTransactionData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
-          const rowDate = new Date(row.date_of_order || row.date);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
+        const rowDate = new Date(row.date_of_order || row.date);
+        if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+          return false;
 
-          if (
-            deliveryStatus &&
-            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
+        if (
+          deliveryStatus &&
+          row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
+        )
+          return false;
 
+        if (
+          deliveryPersonnel &&
+          !row.delivery_personnel
+            .toLowerCase()
+            .includes(deliveryPersonnel.toLowerCase())
+        )
+          return false;
+
+        if (cancellationReasonFilter && row.cancelled_reason) {
           if (
-            deliveryPersonnel &&
-            !row.delivery_personnel
+            !row.cancelled_reason
               .toLowerCase()
-              .includes(deliveryPersonnel.toLowerCase())
+              .includes(cancellationReasonFilter.toLowerCase())
           )
             return false;
+        } else if (cancellationReasonFilter) {
+          return false;
+        }
 
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
+        return true;
+      })
       : transactionData.filter((row) => {
-          if (
-            deliveryStatus &&
-            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
+        if (
+          deliveryStatus &&
+          row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
+        )
+          return false;
 
+        if (
+          deliveryPersonnel &&
+          !row.delivery_personnel
+            .toLowerCase()
+            .includes(deliveryPersonnel.toLowerCase())
+        )
+          return false;
+
+        if (cancellationReasonFilter && row.cancelled_reason) {
           if (
-            deliveryPersonnel &&
-            !row.delivery_personnel
+            !row.cancelled_reason
               .toLowerCase()
-              .includes(deliveryPersonnel.toLowerCase())
+              .includes(cancellationReasonFilter.toLowerCase())
           )
             return false;
+        } else if (cancellationReasonFilter) {
+          return false;
+        }
 
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        });
+        return true;
+      });
 
   const filteredServiceData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-      : serviceData.filter((row) => {
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-          return true;
-        });
-
-const filteredCustomerData =
-  isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-    ? customerData.filter((row) => {
         const rowDate = new Date(row.date);
-        if (rowDate < new Date(startDate) || rowDate > new Date(endDate)) return false;
+        if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+          return false;
 
-        // Only include delivered transactions
-        if (String(row.delivery_status).toLowerCase() !== "delivered") return false;
+        if (cancellationReasonFilter && row.cancelled_reason) {
+          if (
+            !row.cancelled_reason
+              .toLowerCase()
+              .includes(cancellationReasonFilter.toLowerCase())
+          )
+            return false;
+        } else if (cancellationReasonFilter) {
+          return false;
+        }
 
         return true;
       })
-    : customerData.filter((row) => {
-        // Only include delivered transactions
-        if (String(row.delivery_status).toLowerCase() !== "delivered") return false;
+      : serviceData.filter((row) => {
+        if (cancellationReasonFilter && row.cancelled_reason) {
+          if (
+            !row.cancelled_reason
+              .toLowerCase()
+              .includes(cancellationReasonFilter.toLowerCase())
+          )
+            return false;
+        } else if (cancellationReasonFilter) {
+          return false;
+        }
         return true;
       });
 
+  const filteredCustomerData =
+    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
+      ? customerData.filter((row) => {
+        const rowDate = new Date(row.date);
+        if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+          return false;
+
+        // Only include delivered transactions
+        if (String(row.delivery_status).toLowerCase() !== "delivered")
+          return false;
+
+        return true;
+      })
+      : customerData.filter((row) => {
+        // Only include delivered transactions
+        if (String(row.delivery_status).toLowerCase() !== "delivered")
+          return false;
+        return true;
+      });
 
   // Totals for Sales report
   const totalSalesAmount = filteredSalesData.reduce(
@@ -920,9 +942,9 @@ const filteredCustomerData =
       totalRatings === 0
         ? [{ name: "No Ratings", value: 1, percent: "0.0" }]
         : ratingDistribution.map((entry) => ({
-            ...entry,
-            percent: ((entry.value / totalRatings) * 100).toFixed(1),
-          }));
+          ...entry,
+          percent: ((entry.value / totalRatings) * 100).toFixed(1),
+        }));
 
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -1316,8 +1338,7 @@ const filteredCustomerData =
     pdf.setFontSize(12);
     pdf.setFont("helvetica", "normal");
     pdf.text(
-      `Report Type: ${
-        REPORT_TYPES.find((r) => r.value === reportType)?.label || "All Reports"
+      `Report Type: ${REPORT_TYPES.find((r) => r.value === reportType)?.label || "All Reports"
       }`,
       marginX,
       cursorY
