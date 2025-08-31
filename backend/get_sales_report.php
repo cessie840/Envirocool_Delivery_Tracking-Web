@@ -55,6 +55,7 @@ if (!$start || !$end) {
 }
 
 // Sales data query
+// Sales data query
 $sql = "
 SELECT 
     DATE(t.date_of_order) AS date,
@@ -66,6 +67,7 @@ SELECT
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+AND t.status = 'Delivered'
 ORDER BY t.date_of_order ASC
 ";
 
@@ -85,6 +87,7 @@ SELECT
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+AND t.status = 'Delivered'
 GROUP BY po.description
 ORDER BY quantity_sold DESC
 LIMIT 10
@@ -106,6 +109,7 @@ SELECT
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+AND t.status = 'Delivered'
 ";
 $stmtSum = $conn->prepare($sqlSummary);
 $stmtSum->bind_param('ss', $startDate, $endDate);
@@ -113,6 +117,7 @@ $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();
 $stmtSum->close();
+
 
 echo json_encode([
     "sales" => $sales,
