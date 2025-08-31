@@ -531,7 +531,7 @@ const GenerateReport = () => {
     0
   );
 const totalSalesTransaction = filteredTransactionData
-  .filter(row => String(row.delivery_status).toLowerCase() === "delivered") // only delivered
+  .filter(row => String(row.delivery_status).toLowerCase() === "delivered") 
   .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
 
 
