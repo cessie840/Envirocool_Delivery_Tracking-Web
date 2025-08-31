@@ -530,10 +530,10 @@ const GenerateReport = () => {
     (acc, cur) => acc + (Number(cur.qty) || 0),
     0
   );
-  const totalSalesTransaction = filteredTransactionData.reduce(
-    (acc, cur) => acc + (Number(cur.total_cost) || 0),
-    0
-  );
+const totalSalesTransaction = filteredTransactionData
+  .filter(row => String(row.delivery_status).toLowerCase() === "delivered") // only delivered
+  .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
+
 
   // Totals for Service Delivery report
   const successfulDeliveries = filteredServiceData.filter(
