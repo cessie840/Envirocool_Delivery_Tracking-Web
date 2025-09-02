@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Table } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 
 const DeliveryDetails = () => {
@@ -89,9 +90,7 @@ const DeliveryDetails = () => {
       showSearch={true}
       onSearch={handleSearch}
     >
-      <table  bordered
-          hover
-          responsive className="delivery-table container-fluid table-responsive bg-white">
+      <Table bordered hover responsive className="delivery-table container-fluid table-responsive bg-white">
         <thead>
           <tr>
             <th>Transaction No.</th>
@@ -171,7 +170,7 @@ const DeliveryDetails = () => {
               </tr>
             ))}
         </tbody>
-      </table>
+      </Table>
 
 
     </AdminLayout>

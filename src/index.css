@@ -56,7 +56,6 @@ body {
 }
 
 /* DASHBOARD  */
-
 .sidebar {
   width: 350px;
   background-color: #fff;
@@ -66,6 +65,26 @@ body {
   height: 100vh;
   z-index: 1000;
   overflow-y: auto;
+  overflow: visible !important;
+  z-index: 1000;
+}
+
+.sidebar-header {
+  padding: 0 0.5rem;
+}
+
+.collapse-toggle {
+  font-size: 1.5rem;
+  color: #006400;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.collapse-toggle:hover {
+  color: #004d00 !important;
+  background-color: #d9e6de;
 }
 
 .nav-buttons {
@@ -73,6 +92,7 @@ body {
 }
 
 .nav-btn {
+  position: relative;
   width: 100%;
   background-color: #fff;
   border: 1px solid #ccc;
@@ -88,10 +108,45 @@ body {
   border-radius: 4px;
 }
 
-.nav-btn:hover {
-  background-color: #d9e6de;
+.nav-btn.active {
+  background: #d9e6de;
+  font-weight: 600;
 }
 
+.tooltip-text {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #303030a6;
+  color: #fff;
+  padding: 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease 0s;
+  font-size: 0.85rem;
+  margin-left: 20px;
+  z-index: 1000;
+  user-select: none;
+  font-weight: 400;
+}
+
+.nav-btn:hover .tooltip-text {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0.4s; 
+}
+
+.nav-btn.active .icon {
+  color: #006400 !important;
+}
+
+.nav-btn:hover {
+  background-color: #d9e6de;
+  border: 1px solid #006400;
+}
 
 .nav-btn.logout {
   color: #cc3636;
@@ -103,6 +158,10 @@ body {
 
 .icon {
   font-size: 1.5rem;
+}
+
+.sidebar:not(.collapsed-lg) .tooltip-text {
+  display: none;
 }
 
 
@@ -152,6 +211,7 @@ body {
   background-color: white;
   color: #006400 !important;
   border-color: #006400;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .header-info {
@@ -363,8 +423,21 @@ input::placeholder {
   color: #006400;
 }
 
+.back-btn {
+  background: #008000;
+  border: none;
+  padding: 5px 20px;
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: color 0.3s ease;
+}
+
 .back-btn:hover {
-  color: #1c87c9 !important;
+  color: #004d00 !important;
+  background-color: white;
+  border: 1px solid #004d00 !important;
 }
 
 .sidebar.collapsed {
@@ -431,14 +504,14 @@ input::placeholder {
 /* ROUNDED DELIVERY TABLE  */
 .delivery-table {
   border-collapse: separate;
-  border-spacing: 0; 
+  border-spacing: 0;
   width: 100%;
-  border-radius: 0.5rem; 
+  border-radius: 0.5rem;
   overflow: hidden;
   text-align: center;
   padding: 0;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-  border: 1px solid #c0c0c0; 
+  border: 1px solid #c0c0c0;
 }
 
 .delivery-table th,
@@ -451,6 +524,7 @@ input::placeholder {
 .delivery-table td:not(:first-child) {
   border-left: none;
 }
+
 .delivery-table th:not(:last-child),
 .delivery-table td:not(:last-child) {
   border-right: none;
@@ -460,8 +534,8 @@ input::placeholder {
   font-weight: 700;
   font-size: 1.1rem;
   padding: 10px;
-  background-color: #d3eed3; 
-  border-top: none; 
+  background-color: #d3eed3;
+  border-top: none;
 }
 
 .delivery-table td {
@@ -484,7 +558,7 @@ input::placeholder {
 }
 
 .delivery-table tr:last-child td:last-child {
-  border-bottom-right-radius: 0.5rem; 
+  border-bottom-right-radius: 0.5rem;
 }
 
 .delivery-table-hover:hover {
@@ -492,7 +566,6 @@ input::placeholder {
   transition: background-color 0.3s ease !important;
   cursor: pointer;
 }
-
 
 .delivery-table button {
   color: white;
@@ -831,6 +904,43 @@ th.no-header {
   .sidebar {
     width: 380px !important;
     padding: 1rem !important;
+    transition: width 0.3s ease;
+  }
+
+  .sidebar.collapsed-lg {
+    width: 80px !important;
+    padding: 1rem 0.5rem !important;
+  }
+  .sidebar.collapsed-lg .nav-btn {
+    justify-content: center;
+    padding: 1rem 0.5rem;
+    border: none;
+  }
+
+  .sidebar.collapsed-lg .nav-btn .nav-text {
+    display: none;
+  }
+
+  .sidebar.collapsed-lg .collapse-toggle {
+    margin-bottom: 1rem;
+    color: #006400;
+    font-size: 1.3rem;
+    padding: 1rem;
+  }
+
+  .main-panel {
+    margin-left: 380px;
+    width: calc(100% - 380px);
+    transition: margin-left 0.3s ease, width 0.3s ease;
+  }
+
+  .sidebar.collapsed-lg + .main-panel {
+    margin-left: 80px;
+    width: calc(100% - 80px);
+  }
+
+  .sidebar.collapsed-lg .logo {
+    display: none !important;
   }
 
   .text-left {
@@ -917,7 +1027,3 @@ th.no-header {
     margin: 0.1rem !important;
   }
 }
-
-/* .deliveryTable {
-  background-color: #008000;
-} */

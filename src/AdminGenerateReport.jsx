@@ -45,7 +45,7 @@ import html2canvas from "html2canvas";
 const REPORT_TYPES = [
   { value: "sales", label: "Sales Report" },
   { value: "transaction", label: "Transaction Report" },
-  { value: "service", label: "Service Delivery Report" },
+  { value: "service", label: "Delivery Service Report" },
   { value: "customer", label: "Customer Satisfaction Report" },
   { value: "all", label: "Overall Reports" },
 ];
@@ -55,7 +55,7 @@ const PERIODS = [
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
-  { value: "annually", label: "Annually" },
+  { value: "annual", label: "Annual" },
 ];
 
 const COLORS = ["#4CAF50", "#E57373", "#FFC107", "#2196F3", "#9C27B0"];
@@ -66,10 +66,26 @@ const GenerateReport = () => {
 
   // Filter modal state
   const [showFilter, setShowFilter] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [period, setPeriod] = useState("monthly");
-  const [reportType, setReportType] = useState("all");
+  const [period, setPeriod] = useState(() => {
+    return localStorage.getItem("reportPeriod") || "monthly";
+  });
+
+  const [reportType, setReportType] = useState(() => {
+    return localStorage.getItem("reportType") || "all";
+  });
+
+  const [startDate, setStartDate] = useState(() => {
+    return localStorage.getItem("reportStartDate") || "";
+  });
+
+  const [endDate, setEndDate] = useState(() => {
+    return localStorage.getItem("reportEndDate") || "";
+  });
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("reportActiveTab") || "overall";
+  });
+
 
   // Data states
   const [loading, setLoading] = useState(false);
@@ -97,7 +113,8 @@ const GenerateReport = () => {
   const [servicePage, setServicePage] = useState(1);
   const [customerPage, setCustomerPage] = useState(1);
 
-  const [activeTab, setActiveTab] = useState("overall");
+
+
 
   // Fetch data based on filters
   useEffect(() => {
@@ -120,6 +137,27 @@ const GenerateReport = () => {
       setCustomerPage(1);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem("reportPeriod", period);
+  }, [period]);
+
+  useEffect(() => {
+    localStorage.setItem("reportType", reportType);
+  }, [reportType]);
+
+  useEffect(() => {
+    localStorage.setItem("reportStartDate", startDate);
+  }, [startDate]);
+
+  useEffect(() => {
+    localStorage.setItem("reportEndDate", endDate);
+  }, [endDate]);
+
+  useEffect(() => {
+    localStorage.setItem("reportActiveTab", activeTab);
+  }, [activeTab]);
+
 
   // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
@@ -367,7 +405,7 @@ const GenerateReport = () => {
           getQuarter(date) === getQuarter(start)
         );
       }
-      case "annually":
+      case "annual":
         return date.getFullYear() === start.getFullYear();
       default:
         return false;
@@ -530,9 +568,9 @@ const GenerateReport = () => {
     (acc, cur) => acc + (Number(cur.qty) || 0),
     0
   );
-const totalSalesTransaction = filteredTransactionData
-  .filter(row => String(row.delivery_status).toLowerCase() === "delivered") 
-  .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
+  const totalSalesTransaction = filteredTransactionData
+    .filter(row => String(row.delivery_status).toLowerCase() === "delivered")
+    .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
 
 
   // Totals for Service Delivery report
@@ -544,7 +582,6 @@ const totalSalesTransaction = filteredTransactionData
   ).length;
   const totalTransactionsService = filteredServiceData.length;
 
-  // Failed delivery reasons counts for Service Delivery report
   const failedReasonsCount = { "Items Not Delivered": 0, "Damaged Item": 0 };
 
   filteredServiceData.forEach((row) => {
@@ -570,7 +607,7 @@ const totalSalesTransaction = filteredTransactionData
     }
   });
 
-  // Customer satisfaction rating distribution (for pie chart)
+  // Customer satisfaction rating distribution chart
   const ratingDistribution = filteredCustomerData.reduce((acc, cur) => {
     const rating = cur.customer_rating ?? "No Rating";
     const found = acc.find((a) => String(a.name) === String(rating));
@@ -881,9 +918,7 @@ const totalSalesTransaction = filteredTransactionData
         <YAxis allowDecimals={false} />
         <Tooltip />
         <Legend />
-        {/* Single bar plotting counts for each row (Delivered / Cancelled) */}
         <Bar dataKey="count">
-          {/* style individual cells */}
           {transactionStatusData.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
@@ -985,7 +1020,7 @@ const totalSalesTransaction = filteredTransactionData
           bordered
           hover
           responsive
-          className="shadow-sm"
+          className="shadow-sm text-center"
           style={{ cursor: "default" }}
         >
           <thead className="table-success">
@@ -1032,7 +1067,7 @@ const totalSalesTransaction = filteredTransactionData
           </tbody>
         </Table>
 
-        {/* Pagination */}
+        {/* SALES PAGINATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -1071,7 +1106,7 @@ const totalSalesTransaction = filteredTransactionData
           bordered
           hover
           responsive
-          className="shadow-sm"
+          className="shadow-sm text-center"
           style={{ cursor: "default" }}
         >
           <thead className="table-info">
@@ -1086,7 +1121,7 @@ const totalSalesTransaction = filteredTransactionData
               <th>Total Cost</th>
               <th>Mode of Payment</th>
               <th>Delivery Status</th>
-              <th>Delivery Personnel</th> {/* New column */}
+              <th>Delivery Personnel</th> 
               <th>Ship Out At</th>
               <th>Completed At</th>
               <th>Reason for Cancellation</th>
@@ -1130,7 +1165,7 @@ const totalSalesTransaction = filteredTransactionData
           </tbody>
         </Table>
 
-        {/* Pagination */}
+        {/* TRANSACTION PAGINATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -1169,7 +1204,7 @@ const totalSalesTransaction = filteredTransactionData
           bordered
           hover
           responsive
-          className="shadow-sm"
+          className="shadow-sm text-center"
           style={{ cursor: "default" }}
         >
           <thead className="table-warning">
@@ -1178,14 +1213,14 @@ const totalSalesTransaction = filteredTransactionData
               <th>Customer Name</th>
               <th>Item Name</th>
               <th>Delivery Status</th>
-              <th>Reason for Cancellation</th> {/* New column */}
+              <th>Reason for Cancellation</th>
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center">
-                  No service delivery data found.
+                  No delivery service data found.
                 </td>
               </tr>
             ) : (
@@ -1195,14 +1230,14 @@ const totalSalesTransaction = filteredTransactionData
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.delivery_status}</td>
-                  <td>{row.cancelled_reason || "-"}</td> {/* New cell */}
+                  <td>{row.cancelled_reason || "-"}</td> 
                 </tr>
               ))
             )}
           </tbody>
         </Table>
 
-        {/* Pagination */}
+        {/* DELVERY SECRVICE PAGINATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -1241,7 +1276,7 @@ const totalSalesTransaction = filteredTransactionData
           bordered
           hover
           responsive
-          className="shadow-sm"
+          className="shadow-sm text-center"
           style={{ cursor: "default" }}
         >
           <thead className="table-secondary">
@@ -1274,7 +1309,7 @@ const totalSalesTransaction = filteredTransactionData
           </tbody>
         </Table>
 
-        {/* Pagination */}
+        {/* CUSTMER SATIDFACVTION PAGNATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -1382,7 +1417,7 @@ const totalSalesTransaction = filteredTransactionData
         .card { border-radius: 0.75rem; cursor: default; }
       `}</style>
 
-        {/* BUTTONS  */}
+      {/* BUTTONS  */}
       <br /> <br />
       <br />
       <div className="d-flex justify-content-between align-items-center mb-3 no-print mx-4">
@@ -1398,15 +1433,23 @@ const totalSalesTransaction = filteredTransactionData
             <FaFilePdf /> Generate PDF
           </Button>
         </div>
-          <Button
+        <Button
           variant="success"
           onClick={() => navigate("/add-delivery")}
           className="d-flex align-items-center gap-2 btn add-delivery px-3 py-2 rounded"
-          style={{fontSize: '15px'}}
+          style={{ fontSize: '15px' }}
         >
           <FaPlus /> Add New Delivery
         </Button>
       </div>
+
+      {/* REPORT CONTENT  */}
+      <div className="period-title text-center" ref={reportRef}>
+        <h5 className="text-success fs-1 mt-3 mb-4 fw-semibold">
+          {`${REPORT_TYPES.find(r => r.value === reportType)?.label || "Report"} for the ${PERIODS.find(p => p.value === period)?.label || ""} Period`}
+        </h5>
+      </div>
+
 
       {/* TOTAL CARDS  */}
       <div className="mx-4">
@@ -1484,7 +1527,7 @@ const totalSalesTransaction = filteredTransactionData
               {" "}
               <>
                 <h2 className="text-warning mt-3 mb-3 text-center">
-                  Service Delivery Report
+                  Delivery Service Report
                 </h2>
                 <h5 className="mb-2 text-center">Failed Delivery Reasons</h5>
                 {renderServiceFailedReasonsChart()} <br /> <br />
@@ -1519,7 +1562,8 @@ const totalSalesTransaction = filteredTransactionData
           )}
         </>
       )}
-      {/* Filter Modal */}
+
+      {/* FILTERING MODAL */}
       <Modal show={showFilter} onHide={() => setShowFilter(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Filter Reports</Modal.Title>

@@ -132,7 +132,7 @@ const ViewOrder = () => {
     <AdminLayout title="View Order Details" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="btn back-btn d-flex align-items-center gap-2 fs-4"
+          className="btn back-btn d-flex align-items-center gap-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
