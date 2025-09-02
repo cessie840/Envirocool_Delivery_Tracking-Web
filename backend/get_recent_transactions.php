@@ -21,7 +21,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include 'database.php'; // your DB connection
 
-// Get only Delivered, Cancelled, Out for Delivery
+// Initialize total count
+$totalTransactions = 0;
+
+// 1. Get total number of transactions (selected statuses)
+$totalQuery = "
+    SELECT COUNT(*) AS total 
+    FROM Transactions
+    WHERE status IN ('To Ship', 'Out for Delivery', 'Delivered', 'Cancelled')
+";
+$totalResult = $conn->query($totalQuery);
+
+if ($totalResult && $totalResult->num_rows > 0) {
+    $row = $totalResult->fetch_assoc();
+    $totalTransactions = (int)$row['total'];
+}
+
+// 2. Get the last 10 transactions (selected statuses)
 $sql = "
     SELECT 
         transaction_id, 
@@ -29,9 +45,9 @@ $sql = "
         DATE_FORMAT(date_of_order, '%b %d, %Y') AS date_ordered,
         status 
     FROM Transactions
-    WHERE status IN ('Delivered', 'Cancelled', 'Out for Delivery')
+    WHERE status IN ('To Ship', 'Out for Delivery', 'Delivered', 'Cancelled')
     ORDER BY created_at DESC
-    LIMIT 5
+    LIMIT 10
 ";
 
 $result = $conn->query($sql);
@@ -47,16 +63,14 @@ if ($result && $result->num_rows > 0) {
             "status"         => $row['status']
         ];
     }
-    echo json_encode([
-        "success" => true,
-        "transactions" => $transactions
-    ]);
-} else {
-    echo json_encode([
-        "success" => true,
-        "transactions" => []
-    ]);
 }
+
+// Return JSON response
+echo json_encode([
+    "success" => true,
+    "transactions" => $transactions,
+    "total" => $totalTransactions
+]);
 
 $conn->close();
 ?>
