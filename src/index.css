@@ -65,8 +65,6 @@ body {
   height: 100vh;
   z-index: 1000;
   overflow-y: auto;
-  overflow: visible !important;
-  z-index: 1000;
 }
 
 .sidebar-header {
@@ -905,6 +903,8 @@ th.no-header {
     width: 380px !important;
     padding: 1rem !important;
     transition: width 0.3s ease;
+    overflow: visible !important;
+    z-index: 1000;
   }
 
   .sidebar.collapsed-lg {
