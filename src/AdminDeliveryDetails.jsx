@@ -222,7 +222,7 @@ const DeliveryDetails = () => {
               </tr>
             ))}
         </tbody>
-      </table>
+      </Table>
 
       {/* 🔹 Update Modal */}
       <UpdateOrderModal
