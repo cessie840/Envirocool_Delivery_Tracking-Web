@@ -55,7 +55,7 @@ const PERIODS = [
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
-  { value: "annual", label: "Annual" },
+  { value: "annually", label: "Annual" },
 ];
 
 const COLORS = ["#4CAF50", "#E57373", "#FFC107", "#2196F3", "#9C27B0"];
@@ -405,7 +405,7 @@ const GenerateReport = () => {
           getQuarter(date) === getQuarter(start)
         );
       }
-      case "annual":
+      case "annually":
         return date.getFullYear() === start.getFullYear();
       default:
         return false;
