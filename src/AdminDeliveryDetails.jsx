@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Table } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 
@@ -135,7 +136,7 @@ const DeliveryDetails = () => {
       showSearch={true}
       onSearch={handleSearch}
     >
-      <table className="delivery-table container-fluid table-responsive">
+      <Table bordered hover responsive className="delivery-table container-fluid table-responsive bg-white">
         <thead>
           <tr>
             <th>Transaction No.</th>
@@ -151,7 +152,7 @@ const DeliveryDetails = () => {
           {Object.values(groupedDeliveries)
             .sort((a, b) => b.transaction_id - a.transaction_id)
             .map((group, index) => (
-              <tr key={index}>
+              <tr key={index} className="delivery-table-hover">
                 <td>{group.transaction_id}</td>
                 <td>{group.customer_name}</td>
                 <td>
@@ -164,8 +165,43 @@ const DeliveryDetails = () => {
                     <div key={idx}>{item.quantity}</div>
                   ))}
                 </td>
-                <td>{group.total}</td>
-                <td>{group.delivery_status}</td>
+                <td>
+                  {Number(group.total).toLocaleString("en-PH", {
+                    style: "currency",
+                    currency: "PHP",
+                  })}
+                </td>
+                <td>
+                  <span
+                    style={{
+                      backgroundColor:
+                        group.delivery_status === "Delivered"
+                          ? "#C6FCD3"
+                          : group.delivery_status === "Cancelled"
+                            ? "#FDE0E0"
+                            : group.delivery_status === "Pending"
+                              ? "#FFF5D7"
+                              : "transparent",
+                      color:
+                        group.delivery_status === "Delivered"
+                          ? "#3E5F44"
+                          : group.delivery_status === "Cancelled"
+                            ? "red"
+                            : group.delivery_status === "Pending"
+                              ? "#FF9D23"
+                              : "black",
+                      padding: "5px",
+                      borderRadius: "8px",
+                      display: "inline-block",
+                      minWidth: "80px",
+                      textAlign: "center",
+                      fontSize: "0.9rem",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {group.delivery_status}
+                  </span>
+                </td>
                 <td>
                   <button
                     className="btn btn-view px-2 py-1 m-2 fw-normal border-light rounded-2"
