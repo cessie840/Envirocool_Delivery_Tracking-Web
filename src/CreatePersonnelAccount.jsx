@@ -54,7 +54,7 @@ const CreatePersonnelAccount = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 1. Check for empty fields
+
     for (let key in formData) {
       if (formData[key].trim() === "") {
         setErrorMessage(

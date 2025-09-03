@@ -1,10 +1,12 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
-
 
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(200);
@@ -14,67 +16,118 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 include 'database.php';
 
 try {
-  
     $data = json_decode(file_get_contents("php://input"), true);
+    if (!$data) throw new Exception("No input data");
 
-    if (
-        !isset($data['customer_name']) || !isset($data['customer_address']) || !isset($data['customer_contact']) ||
-        !isset($data['date_of_order']) || !isset($data['mode_of_payment']) ||
-        !isset($data['down_payment']) || !isset($data['balance']) || !isset($data['total']) ||
-        !isset($data['order_items']) || !is_array($data['order_items'])
-    ) {
-        http_response_code(400);
-        echo json_encode(["error" => "Missing required fields"]);
-        exit();
-    }
 
-    $customer_name = $data['customer_name'];
-    $customer_address = $data['customer_address'];
-    $customer_contact = $data['customer_contact'];
-    $date_of_order = $data['date_of_order'];
-    $mode_of_payment = $data['mode_of_payment'];
-    $down_payment = $data['down_payment'];
-    $balance = $data['balance'];
-    $total = $data['total'];
-    $order_items = $data['order_items'];
+    $customer_name = $data['customer_name'] ?? '';
+    $customer_address = $data['customer_address'] ?? '';
+    $customer_contact = $data['customer_contact'] ?? '';
+    $date_of_order = $data['date_of_order'] ?? null;
+    $target_date_delivery = $data['target_date_delivery'] ?? null;
+    $mode_of_payment = $data['payment_method'] ?? '';
+    $payment_option = $data['payment_option'] ?? '';
+    $full_payment = isset($data['full_payment']) && $data['full_payment'] !== "" ? floatval($data['full_payment']) : null;
+    $fbilling_date = !empty($data['fp_collection_date']) ? $data['fp_collection_date'] : null;
+    $down_payment = isset($data['down_payment']) && $data['down_payment'] !== "" ? floatval($data['down_payment']) : null;
+    $dbilling_date = !empty($data['dp_collection_date']) ? $data['dp_collection_date'] : null;
+    $balance = isset($data['balance']) && $data['balance'] !== "" ? floatval($data['balance']) : null;
+    $total = isset($data['total']) && $data['total'] !== "" ? floatval($data['total']) : null;
 
-   
-    $stmt = $conn->prepare("INSERT INTO Transactions (customer_name, customer_address, customer_contact, date_of_order, mode_of_payment, down_payment, balance, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssssss", $customer_name, $customer_address, $customer_contact, $date_of_order, $mode_of_payment, $down_payment, $balance, $total);
+    $order_items = $data['order_items'] ?? [];
 
-    if (!$stmt->execute()) {
-        http_response_code(500);
-        echo json_encode(["error" => "Failed to insert transaction"]);
-        exit();
-    }
+    $stmt = $conn->prepare("INSERT INTO Transactions
+        (customer_name, customer_address, customer_contact, date_of_order, target_date_delivery,
+         mode_of_payment, payment_option, full_payment, fbilling_date, down_payment, dbilling_date, balance, total)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if (!$stmt) throw new Exception($conn->error);
+
+  $full_payment_val = $full_payment !== null ? $full_payment : 0;
+$down_payment_val = $down_payment !== null ? $down_payment : 0;
+$balance_val = $balance !== null ? $balance : 0;
+$total_val = $total !== null ? $total : 0;
+
+$stmt->bind_param(
+    "sssssssdsdsdd",
+    $customer_name,
+    $customer_address,
+    $customer_contact,
+    $date_of_order,
+    $target_date_delivery,
+    $mode_of_payment,
+    $payment_option,
+    $full_payment_val,
+    $fbilling_date,
+    $down_payment_val,
+    $dbilling_date,
+    $balance_val,
+    $total_val
+);
+
+
+
+    if (!$stmt->execute()) throw new Exception($stmt->error);
 
     $transaction_id = $stmt->insert_id;
+    $stmt->close();
 
+    if (!empty($order_items)) {
+        $stmt_product_check = $conn->prepare("SELECT product_id FROM Product WHERE type_of_product = ? AND description = ?");
+        $stmt_product_insert = $conn->prepare("INSERT INTO Product (type_of_product, description, unit_cost) VALUES (?, ?, ?)");
+        $stmt_po = $conn->prepare("INSERT INTO PurchaseOrder 
+            (transaction_id, product_id, type_of_product, description, quantity, unit_cost)
+            VALUES (?, ?, ?, ?, ?, ?)");
 
-    $stmt_po = $conn->prepare("INSERT INTO PurchaseOrder (transaction_id, quantity, description, unit_cost, total_cost) VALUES (?, ?, ?, ?, ?)");
+        foreach ($order_items as $item) {
+            $type_of_product = trim($item['type_of_product'] ?? '');
+            $description = trim($item['description'] ?? '');
+            $unit_cost = isset($item['unit_cost']) ? floatval($item['unit_cost']) : 0;
+            $quantity = isset($item['quantity']) ? intval($item['quantity']) : 0;
 
-    foreach ($order_items as $item) {
-        $quantity = $item['quantity'];
-        $description = $item['description'];
-        $unit_cost = $item['unit_cost'];
-        $total_cost = $item['total_cost'];
+            if (empty($type_of_product) || empty($description)) {
+                throw new Exception("Product type and description cannot be empty");
+            }
 
-        $stmt_po->bind_param("iisdd", $transaction_id, $quantity, $description, $unit_cost, $total_cost);
+            $stmt_product_check->bind_param("ss", $type_of_product, $description);
+            $stmt_product_check->execute();
+            $stmt_product_check->store_result();
+            $stmt_product_check->bind_result($product_id);
+            if ($stmt_product_check->num_rows > 0) {
+                $stmt_product_check->fetch(); 
+            } else {
+            
+                $stmt_product_insert->bind_param("ssd", $type_of_product, $description, $unit_cost);
+                if (!$stmt_product_insert->execute()) {
+                    throw new Exception("Product insert failed: " . $stmt_product_insert->error);
+                }
+                $product_id = $stmt_product_insert->insert_id;
+            }
 
-        if (!$stmt_po->execute()) {
-            http_response_code(500);
-            echo json_encode(["error" => "Failed to insert PO item"]);
-            exit();
+            $stmt_po->bind_param(
+                "iissid",
+                $transaction_id,
+                $product_id,
+                $type_of_product,
+                $description,
+                $quantity,
+                $unit_cost
+            );
+            if (!$stmt_po->execute()) {
+                throw new Exception("PurchaseOrder insert failed: " . $stmt_po->error);
+            }
         }
+
+        $stmt_product_check->close();
+        $stmt_product_insert->close();
+        $stmt_po->close();
     }
 
-
-    http_response_code(200);
     echo json_encode(["status" => "success", "transaction_id" => $transaction_id]);
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(["error" => "Server error", "details" => $e->getMessage()]);
+    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
 }
 
 $conn->close();
+?>

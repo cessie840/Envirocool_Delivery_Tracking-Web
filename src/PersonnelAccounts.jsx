@@ -76,7 +76,6 @@ const PersonnelAccounts = () => {
               <th>Full Name</th>
               <th>Email</th>
               <th>Username</th>
-              <th>Password</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -89,34 +88,7 @@ const PersonnelAccounts = () => {
                   </td>
                   <td>{person.pers_email}</td>
                   <td>{person.pers_username}</td>
-                  <td className="position-relative">
-                    <div className="text-center">
-                      <span
-                        className={
-                          visiblePasswords[person.pers_username]
-                            ? ""
-                            : "password-dots"
-                        }
-                      >
-                        {visiblePasswords[person.pers_username]
-                          ? person.pers_password
-                          : "•••••••••"}
-                      </span>
-                    </div>
-                    <span
-                      role="button"
-                      onClick={() =>
-                        togglePasswordVisibility(person.pers_username)
-                      }
-                      className="toggle-eye-icon"
-                    >
-                      {visiblePasswords[person.pers_username] ? (
-                        <FaEyeSlash />
-                      ) : (
-                        <FaEye />
-                      )}
-                    </span>
-                  </td>
+              
                   <td>
                     <button
                       id="personnel-view"

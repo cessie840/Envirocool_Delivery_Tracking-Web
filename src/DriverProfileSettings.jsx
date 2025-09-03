@@ -13,6 +13,7 @@ import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate } from "react-router-dom";
 import { FaEdit } from "react-icons/fa";
 import axios from "axios";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -22,6 +23,9 @@ function DriverProfileSettings() {
     username: "",
     Email: "",
     Contact: "",
+    Age: "",
+    Gender: "",
+    Birthday: "",
     profilePic: "",
   });
 
@@ -33,13 +37,19 @@ function DriverProfileSettings() {
     confirm: "",
   });
 
+  const [showPassword, setShowPassword] = useState({
+    old: false,
+    new: false,
+    confirm: false,
+  });
+
   useEffect(() => {
     const storedProfile = localStorage.getItem("user");
+    const storedPassword = localStorage.getItem("userPassword");
 
     if (storedProfile) {
       const parsed = JSON.parse(storedProfile);
 
-      // Fetch complete data from the server
       axios
         .post(
           "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
@@ -55,8 +65,16 @@ function DriverProfileSettings() {
               username: u.pers_username,
               Email: u.pers_email,
               Contact: u.pers_phone,
+              Age: u.pers_age,
+              Gender: u.pers_gender,
+              Birthday: u.pers_birth,
               profilePic: `http://localhost/DeliveryTrackingSystem/${u.pers_profile_pic}`,
             });
+
+         
+            if (storedPassword) {
+              setPasswordForm((prev) => ({ ...prev, old: storedPassword }));
+            }
           } else {
             console.warn("User not found:", res.data.message);
           }
@@ -68,7 +86,49 @@ function DriverProfileSettings() {
   const handleSave = () => {
     const updatedProfile = { ...profile, [modalField]: fieldValue };
     setProfile(updatedProfile);
-    localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+
+    const fieldMapping = {
+      Name: ["pers_fname", "pers_lname"],
+      username: "pers_username",
+      Email: "pers_email",
+      Contact: "pers_phone",
+      Age: "pers_age",
+      Gender: "pers_gender",
+      Birthday: "pers_birthday",
+    };
+
+    const formData = new FormData();
+    formData.append("pers_username", profile.username); 
+
+    if (modalField === "Name") {
+      const [fname, ...lnameParts] = fieldValue.split(" ");
+      const lname = lnameParts.join(" ");
+      formData.append("pers_fname", fname || "");
+      formData.append("pers_lname", lname || "");
+    } else {
+      const mappedField = fieldMapping[modalField];
+      if (mappedField) {
+        formData.append(mappedField, fieldValue);
+      }
+    }
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          alert("Profile updated successfully!");
+
+          localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+        } else {
+          alert("Update failed: " + res.data.message);
+        }
+      })
+      .catch((err) => console.error(err));
+
     setModalField(null);
   };
 
@@ -77,10 +137,34 @@ function DriverProfileSettings() {
       alert("New password and confirm password do not match.");
       return;
     }
-    alert("Password successfully changed!");
-    setPasswordForm({ old: "", new: "", confirm: "" });
-    setModalField(null);
+
+    const formData = new FormData();
+    formData.append("pers_username", profile.username);
+    formData.append("pers_password", passwordForm.new);
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          alert("Password successfully changed!");
+
+          localStorage.setItem("userPassword", passwordForm.new);
+
+          setPasswordForm({ old: passwordForm.new, new: "", confirm: "" });
+          setModalField(null);
+        } else {
+          alert("Update failed: " + res.data.message);
+        }
+      })
+      .catch((err) => console.error(err));
   };
+
 
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
@@ -94,6 +178,7 @@ function DriverProfileSettings() {
       reader.readAsDataURL(file);
     }
   };
+
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
@@ -116,7 +201,7 @@ function DriverProfileSettings() {
               backgroundColor: "#E8F8F5",
             }}
           >
-            {/* PROFLE PICTURE */}
+            {/* PROFILE PICTURE */}
             <label htmlFor="profilePicInput" style={{ cursor: "pointer" }}>
               <div
                 className="mx-auto rounded-circle overflow-hidden border border-3 d-flex justify-content-center align-items-center"
@@ -127,34 +212,34 @@ function DriverProfileSettings() {
                   border: "2px solid #116B8A",
                 }}
               >
-               {profile.profilePic?.startsWith("data:image") ? (
-  <Image
-    src={profile.profilePic}
-    alt="Profile"
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-    }}
-  />
-) : (
-  <Image
-    src={
-      profile.profilePic ||
-      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
-    }
-    onError={(e) =>
-      (e.target.src =
-        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
-    }
-    alt="Profile"
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-    }}
-  />
-)}
+                {profile.profilePic?.startsWith("data:image") ? (
+                  <Image
+                    src={profile.profilePic}
+                    alt="Profile"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <Image
+                    src={
+                      profile.profilePic ||
+                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                    }
+                    onError={(e) =>
+                      (e.target.src =
+                        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
+                    }
+                    alt="Profile"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                )}
               </div>
               <input
                 id="profilePicInput"
@@ -186,6 +271,9 @@ function DriverProfileSettings() {
               { label: "Username", key: "username" },
               { label: "Email", key: "Email" },
               { label: "Contact Number", key: "Contact" },
+              { label: "Age", key: "Age" },
+              { label: "Gender", key: "Gender" },
+              { label: "Birthday", key: "Birthday" },
             ].map(({ label, key }) => (
               <div className="mt-3" key={key}>
                 <label className="text-secondary small fw-semibold">
@@ -221,6 +309,7 @@ function DriverProfileSettings() {
               </div>
             ))}
 
+            {/* Password */}
             <div className="mt-3">
               <label className="text-secondary small fw-semibold">
                 Password
@@ -260,7 +349,7 @@ function DriverProfileSettings() {
         </Card>
       </Container>
 
-      {/* MODAL FOR EDITING DETAILS*/}
+      {/* MODAL FOR EDITING DETAILS */}
       <Modal
         show={modalField && modalField !== "password"}
         onHide={() => setModalField(null)}
@@ -272,11 +361,23 @@ function DriverProfileSettings() {
         <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
           <Form.Group>
             <Form.Label>Enter new {modalField}</Form.Label>
-            <Form.Control
-              type="text"
-              value={fieldValue}
-              onChange={(e) => setFieldValue(e.target.value)}
-            />
+
+            {/* If editing Gender, show dropdown */}
+            {modalField === "Gender" ? (
+              <Form.Select
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+              >
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </Form.Select>
+            ) : (
+              <Form.Control
+                type="text"
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+              />
+            )}
           </Form.Group>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}>
@@ -289,7 +390,6 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
-      {/* PASSWORD CHANGE MODAL */}
       <Modal
         show={modalField === "password"}
         onHide={() => setModalField(null)}
@@ -299,35 +399,54 @@ function DriverProfileSettings() {
           <Modal.Title>Change Password</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
-          <Form.Group className="mb-3">
-            <Form.Label>Old Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={passwordForm.old}
-              onChange={(e) =>
-                setPasswordForm({ ...passwordForm, old: e.target.value })
-              }
-            />
-          </Form.Group>
+ 
           <Form.Group className="mb-3">
             <Form.Label>New Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={passwordForm.new}
-              onChange={(e) =>
-                setPasswordForm({ ...passwordForm, new: e.target.value })
-              }
-            />
+            <InputGroup>
+              <Form.Control
+                type={showPassword.new ? "text" : "password"}
+                value={passwordForm.new}
+                onChange={(e) =>
+                  setPasswordForm({ ...passwordForm, new: e.target.value })
+                }
+              />
+              <Button
+                variant="outline-secondary"
+                onClick={() =>
+                  setShowPassword({ ...showPassword, new: !showPassword.new })
+                }
+              >
+                {showPassword.new ? <FaEyeSlash /> : <FaEye />}
+              </Button>
+            </InputGroup>
           </Form.Group>
+
+          {/* Confirm Password */}
           <Form.Group>
             <Form.Label>Confirm Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={passwordForm.confirm}
-              onChange={(e) =>
-                setPasswordForm({ ...passwordForm, confirm: e.target.value })
-              }
-            />
+            <InputGroup>
+              <Form.Control
+                type={showPassword.confirm ? "text" : "password"}
+                value={passwordForm.confirm}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    confirm: e.target.value,
+                  })
+                }
+              />
+              <Button
+                variant="outline-secondary"
+                onClick={() =>
+                  setShowPassword({
+                    ...showPassword,
+                    confirm: !showPassword.confirm,
+                  })
+                }
+              >
+                {showPassword.confirm ? <FaEyeSlash /> : <FaEye />}
+              </Button>
+            </InputGroup>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}>
