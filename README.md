@@ -61,13 +61,19 @@ customer_name VARCHAR(255),
 customer_address TEXT, 
 customer_contact VARCHAR(20), 
 date_of_order DATE, 
-mode_of_payment ENUM('Cash', 'COD', 'Card'), 
+target_date_delivery DATE,
+mode_of_payment ENUM('Cash', 'Bank Transfer', 'Card', 'GCash'), 
+payment_option ENUM('Full Payment', 'Down Payment'),
+full_payment DECIMAL (10,2),
+fbilling_date DATE,
+dbilling_date DATE,
 down_payment DECIMAL(10,2), 
 balance DECIMAL(10,2), 
 total DECIMAL(10,2), 
+tracking_number VARCHAR (20),
 status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending', 
 customer_rating DECIMAL(3,1) DEFAULT NULL, 
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) AUTO_INCREMENT = 100001;
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) AUTO_INCREMENT = 4001;
 
 ALTER TABLE Transactions 
 ADD COLUMN completed_at DATETIME NULL AFTER status;
@@ -81,17 +87,32 @@ ADD COLUMN cancelled_reason TEXT NULL AFTER status;
 ALTER TABLE Transactions
 ADD COLUMN cancelled_at DATETIME NULL AFTER status;
 
+ALTER TABLE Transactions MODIFY mode_of_payment VARCHAR(255);
 
-CREATE TABLE PurchaseOrder (
-    po_id INT PRIMARY KEY AUTO_INCREMENT,
-    transaction_id INT,
-    quantity INT,
-    description TEXT,
-    unit_cost DECIMAL(10,2),
-    total_cost DECIMAL(10,2),
-    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
-) AUTO_INCREMENT = 500001;
+ALTER TABLE Product ADD UNIQUE(type_of_product, description);
 
+CREATE TABLE Product (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    type_of_product VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL, 
+    unit_cost DECIMAL(10,2) NOT NULL, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE PurchaseOrder ( 
+    po_id INT AUTO_INCREMENT PRIMARY KEY, 
+    transaction_id INT NOT NULL, 
+    product_id INT NOT NULL,
+     type_of_product VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL, 
+    quantity INT NOT NULL,  
+    total_cost DECIMAL(10,2) GENERATED ALWAYS AS (quantity * unit_cost) STORED, 
+    unit_cost DECIMAL(10,2), 
+    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES Product(product_id) ON DELETE CASCADE) AUTO_INCREMENT=0001;
+
+    ALTER TABLE PurchaseOrder MODIFY product_id INT NULL;
 
 CREATE TABLE DeliveryAssignments (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
