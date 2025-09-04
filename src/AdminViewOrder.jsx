@@ -139,7 +139,7 @@ const ViewOrder = () => {
     <AdminLayout title="View Order Details" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="btn back-btn d-flex align-items-center gap-2"
+          className="back btn btn-success d-flex align-items-center gap-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
@@ -161,41 +161,62 @@ const ViewOrder = () => {
             <hr />
 
             <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
-              <h5 className="text-success">Customer Details</h5>
-              <p>
-                <strong>Name:</strong> {orderDetails.customer_name}
-              </p>
-              <p>
-                <strong>Address:</strong> {orderDetails.customer_address}
-              </p>
-              <p>
-                <strong>Contact:</strong> {orderDetails.customer_contact}
-              </p>
-              <p>
-                <strong>Date of Order:</strong> {orderDetails.date_of_order}
-              </p>
-              <p>
-                <strong>Target Delivery Date:</strong>{" "}
-                {orderDetails.target_date_delivery}
-              </p>
-              <p>
-                <strong>Payment Mode:</strong> {orderDetails.mode_of_payment}
-              </p>
-              <p>
-                <strong>Payment Option:</strong> {orderDetails.payment_option}
-              </p>
-              <p>
-                <strong>Total:</strong> ₱
-                {Number(orderDetails?.total || 0).toLocaleString()}
-              </p>
-              <p>
-                <strong>Down Payment:</strong> ₱
-                {Number(orderDetails?.down_payment || 0).toLocaleString()}
-              </p>
-              <p>
-                <strong>Balance:</strong> ₱
-                {Number(orderDetails?.balance || 0).toLocaleString()}
-              </p>
+                <div className="row mb-3">
+    {/* Left title */}
+    <div className="col-md-6">
+      <h5 className="text-success">Client Details</h5>
+    </div>
+    {/* Right title */}
+    <div className="col-md-6">
+      <h5 className="text-success">Payment Details</h5>
+    </div>
+  </div>
+
+              <div className="row">
+                {/* Left column - Customer Info */}
+                <div className="col-md-6">
+                  <p>
+                    <strong>Name:</strong> {orderDetails.customer_name}
+                  </p>
+                  <p>
+                    <strong>Address:</strong> {orderDetails.customer_address}
+                  </p>
+                  <p>
+                    <strong>Contact:</strong> {orderDetails.customer_contact}
+                  </p>
+                  <p>
+                    <strong>Date of Order:</strong> {orderDetails.date_of_order}
+                  </p>
+                  <p>
+                    <strong>Target Delivery Date:</strong>{" "}
+                    {orderDetails.target_date_delivery}
+                  </p>
+                </div>
+
+                {/* Right column - Payment Info */}
+                <div className="col-md-6 border-start">
+                  <p>
+                    <strong>Payment Mode:</strong>{" "}
+                    {orderDetails.mode_of_payment}
+                  </p>
+                  <p>
+                    <strong>Payment Option:</strong>{" "}
+                    {orderDetails.payment_option}
+                  </p>
+                  <p>
+                    <strong>Total:</strong> ₱
+                    {Number(orderDetails?.total || 0).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>Down Payment:</strong> ₱
+                    {Number(orderDetails?.down_payment || 0).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>Balance:</strong> ₱
+                    {Number(orderDetails?.balance || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">

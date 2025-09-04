@@ -1031,3 +1031,21 @@ th.no-header {
 .deliveryTable{
   background-color: #008000;
 }
+
+.back {
+  background-color: #008f4c;
+  color: white;
+  border: 1px solid transparent;
+  font-size: 1.1rem;
+  display: inline-block;
+  vertical-align: middle;
+  transition: all 0.3s ease-in-out;
+  box-sizing: border-box;
+}
+
+.back:hover {
+  background-color: white;
+  color: #006400 !important;
+  border-color: #006400;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}

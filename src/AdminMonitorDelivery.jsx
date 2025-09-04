@@ -105,7 +105,15 @@ useEffect(() => {
 
 
 
-  const renderTransactions = (transactions) => (
+const renderTransactions = (transactions, activeTab) => {
+  // Define background + border per tab
+  const tabColors = {
+    inTransit: { bg: "#d9e7f7ff", border: "  #1762b1ff" }, // Blue
+    completed: { bg: "#dff7e0ff", border: " #53a967ff" }, // Green
+    cancelled: { bg: "#f7d9d9ff", border: " #eb5b6aff" }, // Red
+  };
+
+  return (
     <div
       style={{
         maxHeight: "80vh",
@@ -116,7 +124,11 @@ useEffect(() => {
       {transactions.map((t, index) => (
         <div
           key={t.transaction_id}
-          className="bg-white rounded shadow-sm p-3 mb-3"
+          className="rounded shadow-sm p-3 mb-3"
+          style={{
+            backgroundColor: tabColors[activeTab].bg,
+            border: `1px solid ${tabColors[activeTab].border}`,
+          }}
         >
           <div
             className="d-flex justify-content-between align-items-center mb-2"
@@ -133,7 +145,13 @@ useEffect(() => {
           </div>
 
           {expandedIndex === index && (
-            <div className="border rounded p-3" style={{ fontSize: "1rem" }}>
+            <div
+              className="border rounded p-3 bg-white"
+              style={{
+                fontSize: "1rem",
+                border: `2px solid ${tabColors[activeTab].border}`,
+              }}
+            >
               {[
                 ["Customer Name:", t.customer_name],
                 ["Contact No.:", t.contact],
@@ -149,7 +167,7 @@ useEffect(() => {
                   ? [
                       ["Ship Out Date:", t.shipout_time],
                       ["Cancelled Date:", t.cancelled_time],
-                      ["Cancellation Reason:", t.cancelled_reason], 
+                      ["Cancellation Reason:", t.cancelled_reason],
                     ]
                   : [["Ship Out Date:", t.shipout_time]]),
                 ["Delivery Incharge:", t.driver],
@@ -168,6 +186,8 @@ useEffect(() => {
       ))}
     </div>
   );
+};
+
 
   return (
     <AdminLayout title="Monitor Delivery" onAddClick={handleAddDelivery}>
@@ -185,23 +205,36 @@ useEffect(() => {
               Transactions:
             </div>
 
-            {/* LEFT PANEL */}
             <div className="col-12 col-md-5">
-              {/* Tabs */}
               <div className="rounded p-2 d-flex flex-wrap gap-2 mb-3">
                 {[
-                  ["inTransit", "In Transit"],
-                  ["completed", "Completed"],
-                  ["cancelled", "Cancelled"],
-                ].map(([key, label]) => (
+                  ["inTransit", "In Transit", "#1762b1ff"], // Blue
+                  ["completed", "Completed", "#53a967ff"], // Green
+                  ["cancelled", "Cancelled", "#eb5b6aff"], // Red
+                ].map(([key, label, color]) => (
                   <button
                     key={key}
-                    className={`btn btn-lg flex-fill ${
-                      activeTab === key
-                        ? "btn-success"
-                        : "btn-outline-secondary"
-                    }`}
-                    style={{ fontSize: "1.2rem", boxShadow: "5px 4px 5px rgba(156, 153, 153, 0.6)" }}
+                    className="btn btn-lg flex-fill fw-semibold"
+                    style={{
+                      backgroundColor: activeTab === key ? color : "#ffffffff",
+                      color: activeTab === key ? "white" : color, // inactive text = border color
+                      border: `1px solid ${color}`,
+                      fontSize: "1.2rem",
+                      boxShadow: "5px 4px 5px rgba(156, 153, 153, 0.6)",
+                      transition: "all 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== key) {
+                        e.target.style.backgroundColor = color;
+                        e.target.style.color = "white";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== key) {
+                        e.target.style.backgroundColor = "#ffffffff";
+                        e.target.style.color = color;
+                      }
+                    }}
                     onClick={() => setActiveTab(key)}
                   >
                     {label}
@@ -209,8 +242,8 @@ useEffect(() => {
                 ))}
               </div>
 
-              {/* Scrollable Transaction List */}
-              {renderTransactions(transactions[activeTab])}
+             
+              {renderTransactions(transactions[activeTab], activeTab)}
             </div>
 
             {/* RIGHT: MAP */}
