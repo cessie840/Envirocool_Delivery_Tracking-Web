@@ -9,7 +9,7 @@ import CreatableSelect from "react-select/creatable";
 
 
 const paymentOptions = [
-  { label: "Cash", value: "Cash" },
+  { label: "CASH", value: "Cash" },
   { label: "GCASH", value: "GCASH" },
   {
     label: "Bank Transfer",
@@ -830,7 +830,6 @@ const handleChange = (e) => {
                   name="fp_collection_date"
                   value={form.fp_collection_date || ""}
                   onChange={handleChange}
-                  disabled={form.payment_option !== "Full Payment"}
                   required={form.payment_option === "Full Payment"}
                 />
               </div>
@@ -856,7 +855,7 @@ const handleChange = (e) => {
 
               <div className="col-md-6">
                 <label htmlFor="dpBillingDate" className="form-label">
-                  Billing Date:
+                  Payment Due:
                 </label>
                 <input
                   style={{ color: "gray" }}

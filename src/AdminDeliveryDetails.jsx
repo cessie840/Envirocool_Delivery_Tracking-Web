@@ -136,7 +136,12 @@ const DeliveryDetails = () => {
       showSearch={true}
       onSearch={handleSearch}
     >
-      <Table bordered hover responsive className="delivery-table container-fluid table-responsive bg-white">
+      <Table
+        bordered
+        hover
+        responsive
+        className="delivery-table container-fluid table-responsive bg-white"
+      >
         <thead>
           <tr>
             <th>Transaction No.</th>
@@ -178,18 +183,22 @@ const DeliveryDetails = () => {
                         group.delivery_status === "Delivered"
                           ? "#C6FCD3"
                           : group.delivery_status === "Cancelled"
-                            ? "#FDE0E0"
-                            : group.delivery_status === "Pending"
-                              ? "#FFF5D7"
-                              : "transparent",
+                          ? "#FDE0E0"
+                          : group.delivery_status === "Pending"
+                          ? "#FFF5D7"
+                          : group.delivery_status === "Out for Delivery"
+                          ? "#d2e6f5ff"
+                          : "transparent",
                       color:
                         group.delivery_status === "Delivered"
                           ? "#3E5F44"
                           : group.delivery_status === "Cancelled"
-                            ? "red"
-                            : group.delivery_status === "Pending"
-                              ? "#FF9D23"
-                              : "black",
+                          ? "red"
+                          : group.delivery_status === "Pending"
+                          ? "#FF9D23"
+                          : group.delivery_status === "Out for Delivery"
+                          ? "#1762b1ff"
+                          : "black",
                       padding: "5px",
                       borderRadius: "8px",
                       display: "inline-block",
@@ -213,7 +222,7 @@ const DeliveryDetails = () => {
                   </button>
 
                   <button
-                    className="btn upd-btn btn-success px-2 py-1 m-2 fw-normal border-light rounded-2"
+                    className="btn upd-btn btn-success px-2 py-1 m-2 fw-normal border-success rounded-2"
                     onClick={() => handleUpdate(group.transaction_id)}
                   >
                     Update
@@ -224,7 +233,6 @@ const DeliveryDetails = () => {
         </tbody>
       </Table>
 
-      {/* 🔹 Update Modal */}
       <UpdateOrderModal
         show={showModal}
         handleClose={() => setShowModal(false)}

@@ -174,7 +174,7 @@ useEffect(() => {
       <div
         style={{
           marginTop: "30px",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "#fdfafaff",
           minHeight: "100vh",
           padding: "20px",
         }}
@@ -188,7 +188,7 @@ useEffect(() => {
             {/* LEFT PANEL */}
             <div className="col-12 col-md-5">
               {/* Tabs */}
-              <div className="bg-white rounded shadow-sm p-2 d-flex flex-wrap gap-2 mb-3">
+              <div className="rounded p-2 d-flex flex-wrap gap-2 mb-3">
                 {[
                   ["inTransit", "In Transit"],
                   ["completed", "Completed"],
@@ -201,7 +201,7 @@ useEffect(() => {
                         ? "btn-success"
                         : "btn-outline-secondary"
                     }`}
-                    style={{ fontSize: "1.2rem" }}
+                    style={{ fontSize: "1.2rem", boxShadow: "5px 4px 5px rgba(156, 153, 153, 0.6)" }}
                     onClick={() => setActiveTab(key)}
                   >
                     {label}

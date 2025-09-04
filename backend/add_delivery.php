@@ -28,7 +28,7 @@ try {
     $mode_of_payment = $data['payment_method'] ?? '';
     $payment_option = $data['payment_option'] ?? '';
     $full_payment = isset($data['full_payment']) && $data['full_payment'] !== "" ? floatval($data['full_payment']) : null;
-    $fbilling_date = !empty($data['fp_collection_date']) ? $data['fp_collection_date'] : null;
+    $fbilling_date = $data['fp_collection_date']? $data['fp_collection_date'] : null;
     $down_payment = isset($data['down_payment']) && $data['down_payment'] !== "" ? floatval($data['down_payment']) : null;
     $dbilling_date = !empty($data['dp_collection_date']) ? $data['dp_collection_date'] : null;
     $balance = isset($data['balance']) && $data['balance'] !== "" ? floatval($data['balance']) : null;

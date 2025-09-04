@@ -12,10 +12,14 @@ const ViewOrder = () => {
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
+    tracking_number: "",
     customer_name: "",
     customer_address: "",
     customer_contact: "",
+    date_of_order: "",
+    target_date_delivery: "",
     mode_of_payment: "",
+    payment_option: "",
     down_payment: "",
     balance: "",
     total: "",
@@ -30,10 +34,13 @@ const ViewOrder = () => {
       .then((data) => {
         setOrderDetails(data);
         setFormData({
+          tracking_number: data.tracking_number,
           customer_name: data.customer_name,
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
+          date_of_order: data.date_of_order,
           mode_of_payment: data.mode_of_payment,
+          payment_option: data.payment_option,
           down_payment: data.down_payment,
           balance: data.balance,
           total: data.total,
@@ -142,9 +149,15 @@ const ViewOrder = () => {
       <div className="container mt-4 w-75">
         <div className="card shadow-lg border-0 rounded-4">
           <div className="card-body">
-            <h2 className="card-title text-center fw-bold text-success">
-              Transaction No. {transaction_id}
-            </h2>
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <h2 className="card-title fw-bold text-success">
+                Transaction No. {transaction_id}
+              </h2>
+              <h2 className="card-title fw-bold text-success">
+                Tracking No. {orderDetails.tracking_number}
+              </h2>
+            </div>
+
             <hr />
 
             <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
@@ -159,7 +172,17 @@ const ViewOrder = () => {
                 <strong>Contact:</strong> {orderDetails.customer_contact}
               </p>
               <p>
+                <strong>Date of Order:</strong> {orderDetails.date_of_order}
+              </p>
+              <p>
+                <strong>Target Delivery Date:</strong>{" "}
+                {orderDetails.target_date_delivery}
+              </p>
+              <p>
                 <strong>Payment Mode:</strong> {orderDetails.mode_of_payment}
+              </p>
+              <p>
+                <strong>Payment Option:</strong> {orderDetails.payment_option}
               </p>
               <p>
                 <strong>Total:</strong> ₱
