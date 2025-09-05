@@ -43,13 +43,11 @@ const ViewOrder = () => {
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
           date_of_order: data.date_of_order,
-          target_date_delivery: data.target_date_delivery,
           mode_of_payment: data.mode_of_payment,
           payment_option: data.payment_option,
           down_payment: data.down_payment,
           balance: data.balance,
           total: data.total,
-
           target_date_delivery: formatDate(data.target_date_delivery),
         });
       })
@@ -62,15 +60,14 @@ const ViewOrder = () => {
   const handleUpdate = () => {
     const fixedItems = orderDetails.items.map((item) => ({
       quantity: item.quantity,
-      type_of_product: item.type_of_product || item.product_type || "", 
-      description: item.description || item.item_name || "", 
+      type_of_product: item.type_of_product || item.product_type || "",
+      description: item.description || item.item_name || "",
       unit_cost: item.unit_cost,
     }));
 
     setEditableItems(fixedItems);
     setShowModal(true);
   };
-
 
   const handleClose = () => setShowModal(false);
 
@@ -175,11 +172,10 @@ const ViewOrder = () => {
 
             <div className="m-2 p-3 bg-white border rounded-3 shadow-sm">
               <div className="row">
-           
                 <div className="col-md-6">
                   <h5 className="text-success fw-bold">Client Details</h5>
                 </div>
-           
+
                 <div className="col-md-6">
                   <h5 className="text-success fw-bold">Payment Details</h5>
                 </div>
@@ -206,15 +202,12 @@ const ViewOrder = () => {
                   </p>
                 </div>
 
-             
                 <div className="col-md-6 border-start">
                   <p>
-                    <span>Payment Method:</span>{" "}
-                    {orderDetails.mode_of_payment}
+                    <span>Payment Method:</span> {orderDetails.mode_of_payment}
                   </p>
                   <p>
-                    <span>Payment Option:</span>{" "}
-                    {orderDetails.payment_option}
+                    <span>Payment Option:</span> {orderDetails.payment_option}
                   </p>
                   <p>
                     <span>Total:</span> ₱
