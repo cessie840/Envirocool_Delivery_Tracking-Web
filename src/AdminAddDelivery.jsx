@@ -410,7 +410,7 @@ const AddDelivery = () => {
     <AdminLayout title="Add Delivery" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="btn back-btn d-flex align-items-center gap-2"
+          className="back btn btn-success d-flex align-items-center gap-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
