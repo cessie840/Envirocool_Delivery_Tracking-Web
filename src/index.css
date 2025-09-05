@@ -474,6 +474,7 @@ input::placeholder {
 .view-order {
   background-color: #f0faf077;
   border-radius: 15px;
+  border: 1px solid #ccccccd2;
 }
 
 .view-order.card {

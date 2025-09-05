@@ -426,7 +426,7 @@ const AddDelivery = () => {
           </h4>
         </div>
 
-        <form className="delivery-form bg-white" onSubmit={handleSubmit}>
+        <form id="deliveryForm" className="delivery-form bg-white" onSubmit={handleSubmit}>
           <h4 className="mb-3">Customer Details</h4>
 
           <div className="row mb-3">
@@ -451,9 +451,8 @@ const AddDelivery = () => {
               </label>
               <input
                 type="date"
-                className={`form-control ${
-                  form.date_of_order ? "text-black" : "text-muted"
-                }`}
+                className={`form-control ${form.date_of_order ? "text-black" : "text-muted"
+                  }`}
                 id="dateOfOrder"
                 name="date_of_order"
                 value={form.date_of_order}
@@ -505,9 +504,8 @@ const AddDelivery = () => {
                 type="date"
                 id="targetDate"
                 name="target_date_delivery"
-                className={`form-control ${
-                  form.target_date_delivery ? "text-black" : "text-muted"
-                }`}
+                className={`form-control ${form.target_date_delivery ? "text-black" : "text-muted"
+                  }`}
                 onChange={handleChange}
                 required
               />
@@ -881,13 +879,15 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className={`form-control ${
-                    form.fp_collection_date || "" ? "text-black" : "text-muted"
-                  }`}
-                  id="fpBillingDate"
-                  name="fp_collection_date"
+                  className={`form-control ${form.dp_collection_date ? "text-black" : "text-muted"
+                    }`}
+                  id="dpBillingDate"
+                  name="dp_collection_date"
+                  value={form.dp_collection_date || ""}
                   onChange={handleChange}
-                  required={form.payment_option === "Full Payment"}
+                  disabled={form.payment_option !== "Down Payment"}
+                  required={form.payment_option === "Down Payment"}
+                  max={new Date().toISOString().split("T")[0]}
                 />
               </div>
             </div>
@@ -923,9 +923,8 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className={`form-control ${
-                    form.dp_collection_date || "" ? "text-black" : "text-muted"
-                  }`}
+                  className={`form-control ${form.dp_collection_date || "" ? "text-black" : "text-muted"
+                    }`}
                   id="dpBillingDate"
                   name="dp_collection_date"
                   onChange={handleChange}
@@ -1013,7 +1012,7 @@ const AddDelivery = () => {
               </Button>
             </Modal.Footer>
           </Modal>
-          <button type="submit" className="add-btn bg-success">
+          <button type="submit" form="deliveryForm" className="add-btn bg-success">
             Add
           </button>
         </div>
