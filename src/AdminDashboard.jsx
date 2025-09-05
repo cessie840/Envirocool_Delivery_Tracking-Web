@@ -37,8 +37,6 @@ const AdminDashboard = () => {
       .then((res) => {
         if (res.data.success) {
           setDashboardCounts(res.data);
-        } else {
-          console.error("Failed to fetch dashboard data:", res.data.message);
         }
       })
       .catch((err) => console.error("Error fetching dashboard data:", err));
@@ -54,18 +52,13 @@ const AdminDashboard = () => {
       .then((res) => {
         if (res.data.success) {
           setRecentTransactions(res.data.transactions);
-        } else {
-          console.error(
-            "Failed to fetch recent transactions:",
-            res.data.message
-          );
         }
       })
       .catch((err) =>
         console.error("Error fetching recent transactions:", err)
       );
 
-    // Fetch pending transactions with full URL
+    // Fetch pending transactions
     axios
       .get(
         "http://localhost/DeliveryTrackingSystem/get_pending_transactions.php",
@@ -76,11 +69,6 @@ const AdminDashboard = () => {
       .then((res) => {
         if (res.data.success) {
           setPendingTransactions(res.data.transactions);
-        } else {
-          console.error(
-            "Failed to fetch pending transactions:",
-            res.data.message
-          );
         }
       })
       .catch((err) =>
@@ -92,7 +80,7 @@ const AdminDashboard = () => {
 
   const iconStyle = {
     color: "white",
-    fontSize: "1.5rem",
+    fontSize: "1.3rem",
     padding: "10px",
     borderRadius: "50%",
     display: "flex",
@@ -109,32 +97,34 @@ const AdminDashboard = () => {
       showSearch={false}
       onAddClick={handleAddDelivery}
     >
-      <div className="container">
+      <div className="container-fluid">
         {/* Top 4 Cards */}
-        <Row className="mb-4">
-          <Col md={3} sm={6} xs={12}>
-            <Card className="p-3 mb-3 shadow-sm">
+        <Row className="mb-4 g-3">
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 shadow-sm h-100">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#673AB7" }}>
                   <FaListAlt />
                 </div>
                 <div>
-                  <h6 className="fw-semibold">Total Transactions</h6>
-                  <p className="mb-0 fw-semibold">{dashboardCounts.total}</p>
+                  <h6 className="fw-semibold m-0">Total Transactions</h6>
+                  <p className="mb-0 fw-semibold small">
+                    {dashboardCounts.total}
+                  </p>
                 </div>
               </div>
             </Card>
           </Col>
 
-          <Col md={3} sm={6} xs={12}>
-            <Card className="p-3 mb-3 shadow-sm">
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 shadow-sm h-100">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
                   <FaCheckCircle />
                 </div>
                 <div>
-                  <h6 className="fw-semibold">Successful</h6>
-                  <p className="mb-0 fw-semibold">
+                  <h6 className="fw-semibold m-0">Successful</h6>
+                  <p className="mb-0 fw-semibold small">
                     {dashboardCounts.successful}
                   </p>
                 </div>
@@ -142,15 +132,15 @@ const AdminDashboard = () => {
             </Card>
           </Col>
 
-          <Col md={3} sm={6} xs={12}>
-            <Card className="p-3 mb-3 shadow-sm">
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 shadow-sm h-100">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#F44336" }}>
                   <FaTimesCircle />
                 </div>
                 <div>
-                  <h6 className="fw-semibold">Cancelled</h6>
-                  <p className="mb-0 fw-semibold">
+                  <h6 className="fw-semibold m-0">Cancelled</h6>
+                  <p className="mb-0 fw-semibold small">
                     {dashboardCounts.cancelled}
                   </p>
                 </div>
@@ -158,15 +148,17 @@ const AdminDashboard = () => {
             </Card>
           </Col>
 
-          <Col md={3} sm={6} xs={12}>
-            <Card className="p-3 mb-3 shadow-sm">
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 shadow-sm h-100">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#FFC107" }}>
                   <FaClock />
                 </div>
                 <div>
-                  <h6 className="fw-semibold">Outgoing</h6>
-                  <p className="mb-0 fw-semibold">{dashboardCounts.pending}</p>
+                  <h6 className="fw-semibold m-0">Outgoing</h6>
+                  <p className="mb-0 fw-semibold small">
+                    {dashboardCounts.pending}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -174,21 +166,20 @@ const AdminDashboard = () => {
         </Row>
 
         {/* Bottom Panels */}
-        <Row>
+        <Row className="g-3">
           {/* Recent Transactions */}
-          <Col lg={8} md={12} className="mb-3">
+          <Col lg={7} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="m-0">Recent Transactions</h5>
+                <h5 className="m-0 fw-bold">Recent Transactions</h5>
                 <div className="d-flex gap-3">
-                  <FaEquals className="text-secondary cursor-pointer" />
                   <FaSearch className="text-secondary cursor-pointer" />
                 </div>
               </div>
 
               <div className="table-responsive">
                 <table className="table table-striped table-hover align-middle mb-0">
-                  <thead>
+                  <thead className="table-light">
                     <tr>
                       <th>Transaction No.</th>
                       <th>Client</th>
@@ -238,25 +229,23 @@ const AdminDashboard = () => {
             </div>
           </Col>
 
-          {/* Pending Transactions */}
-          <Col lg={4} md={12} className="mb-3">
+          {/* Pending Transactions (no Status column) */}
+          <Col lg={5} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="m-0">Pending Transactions</h5>
+                <h5 className="m-0 fw-bold">Pending Transactions</h5>
                 <div className="d-flex gap-3">
-                  <FaEquals className="text-secondary cursor-pointer" />
                   <FaSearch className="text-secondary cursor-pointer" />
                 </div>
               </div>
 
               <div className="table-responsive">
                 <table className="table table-striped table-hover align-middle mb-0">
-                  <thead>
+                  <thead className="table-light">
                     <tr>
                       <th>Transaction No.</th>
                       <th>Client</th>
                       <th>Date Ordered</th>
-                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,16 +255,11 @@ const AdminDashboard = () => {
                           <td>#{tx.transaction_id}</td>
                           <td>{tx.customer_name}</td>
                           <td>{tx.date_ordered}</td>
-                          <td>
-                            <span className="badge bg-warning text-dark">
-                              Pending
-                            </span>
-                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="text-center text-muted">
+                        <td colSpan="3" className="text-center text-muted">
                           No pending transactions found
                         </td>
                       </tr>
@@ -285,7 +269,8 @@ const AdminDashboard = () => {
               </div>
 
               <div className="text-muted small mt-2">
-                Showing {pendingTransactions.length} pending transactions
+                Showing {pendingTransactions.length} pending transactions out of{" "}
+                {dashboardCounts.pending}
               </div>
             </div>
           </Col>

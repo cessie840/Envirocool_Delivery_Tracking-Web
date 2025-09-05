@@ -19,16 +19,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-include 'database.php'; // your DB connection
+include 'database.php'; // DB connection
 
 // Initialize total count
 $totalTransactions = 0;
 
-// 1. Get total number of transactions (selected statuses)
+// 1. Get total number of **pending** transactions
 $totalQuery = "
     SELECT COUNT(*) AS total 
     FROM Transactions
-    WHERE status IN ('To Ship', 'Out for Delivery', 'Delivered', 'Cancelled')
+    WHERE status = 'Pending'
 ";
 $totalResult = $conn->query($totalQuery);
 
@@ -37,7 +37,7 @@ if ($totalResult && $totalResult->num_rows > 0) {
     $totalTransactions = (int)$row['total'];
 }
 
-// 2. Get the last 20 transactions (selected statuses)
+// 2. Get the last 20 **pending** transactions
 $sql = "
     SELECT 
         transaction_id, 
@@ -45,7 +45,7 @@ $sql = "
         DATE_FORMAT(date_of_order, '%b %d, %Y') AS date_ordered,
         status 
     FROM Transactions
-    WHERE status IN ('To Ship', 'Out for Delivery', 'Delivered', 'Cancelled')
+    WHERE status = 'Pending'
     ORDER BY created_at DESC
     LIMIT 20
 ";
