@@ -40,170 +40,162 @@ const MonitorDelivery = () => {
   const handleAddDelivery = () => navigate("/add-delivery");
 
   // fetch deliveries from PHP
-useEffect(() => {
-  const fetchDeliveries = async () => {
-    try {
-      const [outRes, completedRes, cancelledRes] = await Promise.all([
-        axios.get(
-          "http://localhost/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
-        ),
-        axios.get(
-          "http://localhost/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
-        ),
-        axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_cancelled_deliveries.php"
-        ), 
-      ]);
+  useEffect(() => {
+    const fetchDeliveries = async () => {
+      try {
+        const [outRes, completedRes, cancelledRes] = await Promise.all([
+          axios.get(
+            "http://localhost/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
+          ),
+          axios.get(
+            "http://localhost/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
+          ),
+          axios.get(
+            "http://localhost/DeliveryTrackingSystem/get_cancelled_deliveries.php"
+          ),
+        ]);
 
-      const outData = outRes.data.deliveries || outRes.data || [];
-      const completedData =
-        completedRes.data.deliveries || completedRes.data || [];
-      const cancelledData =
-        cancelledRes.data.deliveries || cancelledRes.data || [];
+        const outData = outRes.data.deliveries || outRes.data || [];
+        const completedData =
+          completedRes.data.deliveries || completedRes.data || [];
+        const cancelledData =
+          cancelledRes.data.deliveries || cancelledRes.data || [];
 
-      const uniqueById = (arr) => {
-        const map = new Map();
-        arr.forEach((item) => {
-          map.set(item.transaction_id, item);
+        const uniqueById = (arr) => {
+          const map = new Map();
+          arr.forEach((item) => {
+            map.set(item.transaction_id, item);
+          });
+          return Array.from(map.values());
+        };
+
+        const inTransit = uniqueById(
+          outData.filter(
+            (d) => d.status === "In Transit" || d.status === "Out for Delivery"
+          )
+        );
+
+        const completed = uniqueById(
+          completedData.filter((d) => d.status === "Delivered")
+        );
+
+        const cancelled = uniqueById(
+          cancelledData.filter((d) => d.status === "Cancelled")
+        );
+
+        const sortByTimeDesc = (a, b) =>
+          new Date(b.completed_time || b.cancelled_at || b.time) -
+          new Date(a.completed_time || a.cancelled_at || a.time);
+
+        setTransactions({
+          inTransit: inTransit.sort(sortByTimeDesc),
+          completed: completed.sort(sortByTimeDesc),
+          cancelled: cancelled.sort(sortByTimeDesc),
         });
-        return Array.from(map.values());
-      };
+      } catch (error) {
+        console.error("Error fetching deliveries:", error);
+      }
+    };
 
-      
-      const inTransit = uniqueById(
-        outData.filter(
-          (d) => d.status === "In Transit" || d.status === "Out for Delivery"
-        )
-      );
+    fetchDeliveries();
+  }, []);
 
-      const completed = uniqueById(
-        completedData.filter((d) => d.status === "Delivered")
-      );
+  const renderTransactions = (transactions, activeTab) => {
+    // Define background + border per tab
+    const tabColors = {
+      inTransit: { bg: "#EDF4FAFF", border: "  #95B0CEFF" },
+      completed: { bg: "#EAF8EACE", border: " #ABCFB4FF" },
+      cancelled: { bg: "#FAEEEEE1", border: " #DDB4B8FF" },
+    };
 
-      const cancelled = uniqueById(
-        cancelledData.filter((d) => d.status === "Cancelled")
-      );
-
-     
-      const sortByTimeDesc = (a, b) =>
-        new Date(b.completed_time || b.cancelled_at || b.time) -
-        new Date(a.completed_time || a.cancelled_at || a.time);
-
-      setTransactions({
-        inTransit: inTransit.sort(sortByTimeDesc),
-        completed: completed.sort(sortByTimeDesc),
-        cancelled: cancelled.sort(sortByTimeDesc),
-      });
-    } catch (error) {
-      console.error("Error fetching deliveries:", error);
-    }
-  };
-
-  fetchDeliveries();
-}, []);
-
-
-
-
-const renderTransactions = (transactions, activeTab) => {
-  // Define background + border per tab
-  const tabColors = {
-    inTransit: { bg: "#d9e7f7ff", border: "  #1762b1ff" }, // Blue
-    completed: { bg: "#dff7e0ff", border: " #53a967ff" }, // Green
-    cancelled: { bg: "#f7d9d9ff", border: " #eb5b6aff" }, // Red
-  };
-
-  return (
-    <div
-      style={{
-        maxHeight: "80vh",
-        overflowY: "auto",
-        paddingRight: "5px",
-      }}
-    >
-      {transactions.map((t, index) => (
-        <div
-          key={t.transaction_id}
-          className="rounded shadow-sm p-3 mb-3"
-          style={{
-            backgroundColor: tabColors[activeTab].bg,
-            border: `1px solid ${tabColors[activeTab].border}`,
-          }}
-        >
+    return (
+      <div
+        style={{
+          maxHeight: "80vh",
+          overflowY: "auto",
+          paddingRight: "5px",
+        }}
+      >
+        {transactions.map((t, index) => (
           <div
-            className="d-flex justify-content-between align-items-center mb-2"
-            style={{ cursor: "pointer", fontSize: "1.2rem" }}
-            onClick={() =>
-              setExpandedIndex(index === expandedIndex ? null : index)
-            }
+            key={t.transaction_id}
+            className="rounded shadow-sm p-3 mb-3"
+            style={{
+              backgroundColor: tabColors[activeTab].bg,
+              border: `1px solid ${tabColors[activeTab].border}`,
+            }}
           >
-            <span>
-              <strong className="text-success">Transaction No:</strong>{" "}
-              {t.transaction_id}
-            </span>
-            <span>{expandedIndex === index ? "▲" : "▼"}</span>
-          </div>
-
-          {expandedIndex === index && (
             <div
-              className="border rounded p-3 bg-white"
-              style={{
-                fontSize: "1rem",
-                border: `2px solid ${tabColors[activeTab].border}`,
-              }}
+              className="d-flex justify-content-between align-items-center mb-2"
+              style={{ cursor: "pointer", fontSize: "1.2rem" }}
+              onClick={() =>
+                setExpandedIndex(index === expandedIndex ? null : index)
+              }
             >
-              {[
-                ["Customer Name:", t.customer_name],
-                ["Contact No.:", t.contact],
-                ["Shipping Address:", t.customer_address],
-                ["Order Description:", t.description],
-                ["Date of Order:", t.time],
-                ...(activeTab === "completed"
-                  ? [
+              <span>
+                <strong className="text-success">Transaction No:</strong>{" "}
+                {t.transaction_id}
+              </span>
+              <span>{expandedIndex === index ? "▲" : "▼"}</span>
+            </div>
+
+            {expandedIndex === index && (
+              <div
+                className="border rounded p-3 bg-white"
+                style={{
+                  fontSize: "1rem",
+                  border: `2px solid ${tabColors[activeTab].border}`,
+                }}
+              >
+                {[
+                  ["Customer Name:", t.customer_name],
+                  ["Contact No.:", t.contact],
+                  ["Shipping Address:", t.customer_address],
+                  ["Order Description:", t.description],
+                  ["Date of Order:", t.time],
+                  ...(activeTab === "completed"
+                    ? [
                       ["Shipout Date:", t.shipout_time],
                       ["Received Date:", t.completed_time],
                     ]
-                  : activeTab === "cancelled"
-                  ? [
-                      ["Ship Out Date:", t.shipout_time],
-                      ["Cancelled Date:", t.cancelled_time],
-                      ["Cancellation Reason:", t.cancelled_reason],
-                    ]
-                  : [["Ship Out Date:", t.shipout_time]]),
-                ["Delivery Incharge:", t.driver],
-                ["Shipping Process:", t.status],
-                ["Distance:", t.distance],
-                ["ETA:", t.eta],
-              ].map(([label, value], i) => (
-                <div className="row mb-2" key={i}>
-                  <div className="col-5 fw-semibold text-success">{label}</div>
-                  <div className="col-7">{value || "N/A"}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
+                    : activeTab === "cancelled"
+                      ? [
+                        ["Ship Out Date:", t.shipout_time],
+                        ["Cancelled Date:", t.cancelled_time],
+                        ["Cancellation Reason:", t.cancelled_reason],
+                      ]
+                      : [["Ship Out Date:", t.shipout_time]]),
+                  ["Delivery Incharge:", t.driver],
+                  ["Shipping Process:", t.status],
+                  ["Distance:", t.distance],
+                  ["ETA:", t.eta],
+                ].map(([label, value], i) => (
+                  <div className="row mb-2" key={i}>
+                    <div className="col-5 fw-semibold text-success">
+                      {label}
+                    </div>
+                    <div className="col-7">{value || "N/A"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
-    <AdminLayout title="Monitor Delivery" onAddClick={handleAddDelivery}>
-      <div
-        style={{
-          marginTop: "30px",
-          backgroundColor: "#fdfafaff",
-          minHeight: "100vh",
-          padding: "20px",
-        }}
-      >
-        <div className="container-fluid">
+    <AdminLayout
+      title="Monitor Delivery Transactions"
+      onAddClick={handleAddDelivery}
+    >
+      <div className="p-4 bg-white rounded-4 border border-secondary-subtle">
+        <div className="container-fluid p-3">
           <div className="row g-3">
-            <div style={{ fontSize: 30, fontWeight: "bold" }}>
+            {/* <div style={{ fontSize: 30, fontWeight: "bold" }}>
               Transactions:
-            </div>
+            </div> */}
 
             <div className="col-12 col-md-5">
               <div className="rounded p-2 d-flex flex-wrap gap-2 mb-3">
@@ -217,10 +209,11 @@ const renderTransactions = (transactions, activeTab) => {
                     className="btn btn-lg flex-fill fw-semibold"
                     style={{
                       backgroundColor: activeTab === key ? color : "#ffffffff",
-                      color: activeTab === key ? "white" : color, // inactive text = border color
+                      color: activeTab === key ? "white" : color,
                       border: `1px solid ${color}`,
                       fontSize: "1.2rem",
-                      boxShadow: "5px 4px 5px rgba(156, 153, 153, 0.6)",
+                      boxShadow:
+                        activeTab === key ? "none" : "5px 4px 5px rgba(156, 153, 153, 0.6)", 
                       transition: "all 0.3s ease",
                     }}
                     onMouseEnter={(e) => {
@@ -239,10 +232,10 @@ const renderTransactions = (transactions, activeTab) => {
                   >
                     {label}
                   </button>
+
                 ))}
               </div>
 
-             
               {renderTransactions(transactions[activeTab], activeTab)}
             </div>
 
