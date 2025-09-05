@@ -9,7 +9,7 @@ const DeliveryDetails = () => {
   const [deliveries, setDeliveries] = useState([]);
   const [filter, setFiltered] = useState([]);
 
-  // 🔹 States for modal
+
   const [showModal, setShowModal] = useState(false);
   const [editableItems, setEditableItems] = useState([]);
   const [formData, setFormData] = useState({
@@ -26,6 +26,11 @@ const DeliveryDetails = () => {
   // 🔹 New state for status filter
   const [statusFilter, setStatusFilter] = useState("All");
 
+
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  return dateString.split("T")[0] || dateString.split(" ")[0];
+};
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
@@ -41,7 +46,7 @@ const DeliveryDetails = () => {
     fetchDeliveries();
   }, []);
 
-  // 🔹 Handle Update (open modal with details)
+  
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
@@ -49,51 +54,77 @@ const DeliveryDetails = () => {
     )
       .then((res) => res.json())
       .then((data) => {
+        const fixedItems = data.items.map((item) => ({
+          quantity: item.quantity,
+          type_of_product: item.type_of_product || "",
+          description: item.description || "",
+          unit_cost: parseFloat(item.unit_cost) || 0,
+        }));
+
+        setEditableItems(fixedItems);
+
         setFormData({
-          customer_name: data.customer_name,
-          customer_address: data.customer_address,
-          customer_contact: data.customer_contact,
-          mode_of_payment: data.mode_of_payment,
-          down_payment: data.down_payment,
-          balance: data.balance,
-          total: data.total,
+          tracking_number: data.tracking_number || "",
+          customer_name: data.customer_name || "",
+          customer_address: data.customer_address || "",
+          customer_contact: data.customer_contact || "",
+          date_of_order: data.date_of_order || "",
+          target_date_delivery: formatDate(data.target_date_delivery),
+          mode_of_payment: data.mode_of_payment || "",
+          payment_option: data.payment_option || "Full Payment",
+          down_payment: parseFloat(data.down_payment) || 0,
+          balance: parseFloat(data.balance) || 0,
+          total: parseFloat(data.total) || 0,
         });
-        setEditableItems(data.items);
+
         setShowModal(true);
       })
       .catch((err) => console.error("Failed to fetch order:", err));
   };
 
-  const handleSubmit = () => {
-    if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
-      return;
-    }
+const handleSubmit = () => {
+  if (!/^09\d{9}$/.test(formData.customer_contact)) {
+    alert("Contact number must start with '09' and be exactly 11 digits.");
+    return;
+  }
 
-    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        transaction_id: transactionId,
-        ...formData,
-        items: editableItems,
-      }),
+  const total = editableItems.reduce(
+    (sum, item) => sum + item.quantity * item.unit_cost,
+    0
+  );
+
+  const down_payment = parseFloat(formData.down_payment) || 0;
+  const balance = total - down_payment;
+
+  fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transaction_id: transactionId,
+      ...formData,
+      total,
+      balance,
+      items: editableItems,
+    }),
+  })
+    .then((res) => res.json())
+    .then((response) => {
+      if (response.status === "success") {
+        alert("Update successful!");
+        fetchDeliveries();
+        setShowModal(false);
+      } else {
+        console.error("Update response:", response);
+        alert("Update failed.");
+      }
     })
-      .then((res) => res.json())
-      .then((response) => {
-        if (response.status === "success") {
-          alert("Update successful!");
-          fetchDeliveries();
-          setShowModal(false);
-        } else {
-          alert("Update failed.");
-        }
-      })
-      .catch((err) => {
-        console.error("Update error:", err);
-        alert("An error occurred.");
-      });
-  };
+    .catch((err) => {
+      console.error("Update error:", err);
+      alert("An error occurred.");
+    });
+};
+
+
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
@@ -123,7 +154,8 @@ const DeliveryDetails = () => {
     setFiltered(applyFilters(deliveries, "", status));
   };
 
-  // Group from filtered list
+ 
+
   const groupedDeliveries = filter.reduce((acc, item) => {
     const id = item.transaction_id;
 
@@ -131,6 +163,7 @@ const DeliveryDetails = () => {
       acc[id] = {
         transaction_id: id,
         customer_name: item.customer_name,
+        tracking_number: item.tracking_number,
         total: item.total,
         delivery_status: item.delivery_status,
         items: [],
@@ -175,6 +208,7 @@ const DeliveryDetails = () => {
         <thead>
           <tr>
             <th>Transaction No.</th>
+            <th>Tracking No.</th>
             <th>Customer Name</th>
             <th>Item Description</th>
             <th>Item/s Quantity</th>
@@ -190,6 +224,9 @@ const DeliveryDetails = () => {
               .map((group, index) => (
                 <tr key={index} className="delivery-table-hover">
                   <td>{group.transaction_id}</td>
+
+                  <td>{group.tracking_number}</td>
+
                   <td>{group.customer_name}</td>
                   <td className="p-1">
                     {group.items.map((item, idx) => (
@@ -214,22 +251,22 @@ const DeliveryDetails = () => {
                           group.delivery_status === "Delivered"
                             ? "#C6FCD3"
                             : group.delivery_status === "Cancelled"
-                              ? "#FDE0E0"
-                              : group.delivery_status === "Pending"
-                                ? "#FFF5D7"
-                                : group.delivery_status === "Out for Delivery"
-                                  ? "#d2e6f5ff"
-                                  : "transparent",
+                            ? "#FDE0E0"
+                            : group.delivery_status === "Pending"
+                            ? "#FFF5D7"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#d2e6f5ff"
+                            : "transparent",
                         color:
                           group.delivery_status === "Delivered"
                             ? "#3E5F44"
                             : group.delivery_status === "Cancelled"
-                              ? "red"
-                              : group.delivery_status === "Pending"
-                                ? "#FF9D23"
-                                : group.delivery_status === "Out for Delivery"
-                                  ? "#1762b1ff"
-                                  : "black",
+                            ? "red"
+                            : group.delivery_status === "Pending"
+                            ? "#FF9D23"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#1762b1ff"
+                            : "black",
                         padding: "5px",
                         borderRadius: "8px",
                         display: "inline-block",
@@ -247,7 +284,9 @@ const DeliveryDetails = () => {
                       <button
                         className="btn btn-view"
                         onClick={() =>
+                         
                           navigate(`/view-delivery/${group.transaction_id}`)
+                        
                         }
                       >
                         View

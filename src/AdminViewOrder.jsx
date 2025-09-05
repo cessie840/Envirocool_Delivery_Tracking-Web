@@ -7,7 +7,6 @@ import UpdateOrderModal from "./UpdateOrderModal";
 const ViewOrder = () => {
   const navigate = useNavigate();
   const { transaction_id } = useParams();
-
   const [orderDetails, setOrderDetails] = useState(null);
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -25,6 +24,11 @@ const ViewOrder = () => {
     total: "",
   });
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return dateString.split("T")[0] || dateString.split(" ")[0];
+  };
+
   useEffect(() => {
     document.title = "View Order Details";
     fetch(
@@ -39,11 +43,14 @@ const ViewOrder = () => {
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
           date_of_order: data.date_of_order,
+          target_date_delivery: data.target_date_delivery,
           mode_of_payment: data.mode_of_payment,
           payment_option: data.payment_option,
           down_payment: data.down_payment,
           balance: data.balance,
           total: data.total,
+
+          target_date_delivery: formatDate(data.target_date_delivery),
         });
       })
 
@@ -53,9 +60,17 @@ const ViewOrder = () => {
   }, [transaction_id]);
 
   const handleUpdate = () => {
-    setEditableItems(JSON.parse(JSON.stringify(orderDetails.items)));
+    const fixedItems = orderDetails.items.map((item) => ({
+      quantity: item.quantity,
+      type_of_product: item.type_of_product || item.product_type || "", 
+      description: item.description || item.item_name || "", 
+      unit_cost: item.unit_cost,
+    }));
+
+    setEditableItems(fixedItems);
     setShowModal(true);
   };
+
 
   const handleClose = () => setShowModal(false);
 
@@ -191,10 +206,10 @@ const ViewOrder = () => {
                   </p>
                 </div>
 
-                {/* Right column - Payment Info */}
+             
                 <div className="col-md-6 border-start">
                   <p>
-                    <span>Payment Mode:</span>{" "}
+                    <span>Payment Method:</span>{" "}
                     {orderDetails.mode_of_payment}
                   </p>
                   <p>

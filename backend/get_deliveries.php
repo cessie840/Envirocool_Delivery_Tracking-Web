@@ -8,7 +8,9 @@ header("Content-Type: application/json");
 
 $sql = "
     SELECT 
+   
         t.transaction_id,
+        t.tracking_number,
         t.customer_name,
         t.total,
         t.status AS delivery_status, 
