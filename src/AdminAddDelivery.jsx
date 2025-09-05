@@ -410,24 +410,23 @@ const AddDelivery = () => {
     <AdminLayout title="Add Delivery" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="back btn btn-success d-flex align-items-center gap-2"
+          className="back-btn btn-success d-flex align-items-center gap-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
         </button>
       </div>
-      <div className="add-delivery-container mt-4 p-4 border rounded mx-auto">
-        <div className="header-info mb-3">
-          <p>
+      <div className="add-delivery-container mt-4 p-4 mx-auto mb-3">
+        <div className="header-info m-3 d-flex justify-content-between">
+          <h4>
             <strong>Transaction No.:</strong> {transactionId}
-          </p>
-          <p>
+          </h4>
+          <h4>
             <strong>P.O. No.:</strong> {poId}
-          </p>
+          </h4>
         </div>
-        <hr />
 
-        <form className="delivery-form" onSubmit={handleSubmit}>
+        <form className="delivery-form bg-white" onSubmit={handleSubmit}>
           <h4 className="mb-3">Customer Details</h4>
 
           <div className="row mb-3">
@@ -451,14 +450,16 @@ const AddDelivery = () => {
                 Date of Order:
               </label>
               <input
-                style={{ color: "gray" }}
                 type="date"
-                className="form-control"
+                className={`form-control ${
+                  form.date_of_order ? "text-black" : "text-muted"
+                }`}
                 id="dateOfOrder"
                 name="date_of_order"
                 value={form.date_of_order}
                 onChange={handleChange}
                 required
+                max={new Date().toISOString().split("T")[0]}
               />
             </div>
           </div>
@@ -502,10 +503,11 @@ const AddDelivery = () => {
               <input
                 style={{ color: "gray" }}
                 type="date"
-                className="form-control"
                 id="targetDate"
                 name="target_date_delivery"
-                value={form.target_date_delivery}
+                className={`form-control ${
+                  form.target_date_delivery ? "text-black" : "text-muted"
+                }`}
                 onChange={handleChange}
                 required
               />
@@ -879,10 +881,11 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className="form-control"
+                  className={`form-control ${
+                    form.fp_collection_date || "" ? "text-black" : "text-muted"
+                  }`}
                   id="fpBillingDate"
                   name="fp_collection_date"
-                  value={form.fp_collection_date || ""}
                   onChange={handleChange}
                   required={form.payment_option === "Full Payment"}
                 />
@@ -920,10 +923,11 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className="form-control"
+                  className={`form-control ${
+                    form.dp_collection_date || "" ? "text-black" : "text-muted"
+                  }`}
                   id="dpBillingDate"
                   name="dp_collection_date"
-                  value={form.dp_collection_date || ""}
                   onChange={handleChange}
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
@@ -974,47 +978,45 @@ const AddDelivery = () => {
                 />
               </div>
             </div>
-
-            <hr className="mt-4" />
-            <div className="btn-group mx-3 mt-4 fs-6 gap-4">
-              <button
-                type="button"
-                className="cancel-btn bg-danger"
-                onClick={() => setShowCancelModal(true)}
-              >
-                Cancel
-              </button>
-              <Modal
-                show={showCancelModal}
-                onHide={() => setShowCancelModal(false)}
-                centered
-              >
-                <Modal.Header closeButton>
-                  <Modal.Title className="text-danger">
-                    Confirm Cancellation
-                  </Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                  Are you sure you want to cancel adding this delivery?
-                </Modal.Body>
-                <Modal.Footer>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowCancelModal(false)}
-                  >
-                    No
-                  </Button>
-                  <Button variant="danger" onClick={handleConfirmCancel}>
-                    Yes, Cancel
-                  </Button>
-                </Modal.Footer>
-              </Modal>
-              <button type="submit" className="add-btn bg-success">
-                Add
-              </button>
-            </div>
           </div>
         </form>
+        <div className="btn-group mx-3 mt-4 fs-6 gap-4">
+          <button
+            type="button"
+            className="cancel-btn bg-danger"
+            onClick={() => setShowCancelModal(true)}
+          >
+            Cancel
+          </button>
+          <Modal
+            show={showCancelModal}
+            onHide={() => setShowCancelModal(false)}
+            centered
+          >
+            <Modal.Header closeButton>
+              <Modal.Title className="text-danger">
+                Confirm Cancellation
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              Are you sure you want to cancel adding this delivery?
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant="secondary"
+                onClick={() => setShowCancelModal(false)}
+              >
+                No
+              </Button>
+              <Button variant="danger" onClick={handleConfirmCancel}>
+                Yes, Cancel
+              </Button>
+            </Modal.Footer>
+          </Modal>
+          <button type="submit" className="add-btn bg-success">
+            Add
+          </button>
+        </div>
       </div>
     </AdminLayout>
   );

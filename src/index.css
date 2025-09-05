@@ -162,7 +162,6 @@ body {
   display: none;
 }
 
-
 /* MAIN PANEL  */
 .main-panel {
   background-color: #dcf4fd;
@@ -219,10 +218,21 @@ body {
 }
 
 .add-delivery-container {
-  background-color: white;
+  background-color: #f0faf0bd;
   max-width: 900px;
   width: 100%;
+  border: 1px solid #cccccc94;
+
+  border-radius: 15px;
 }
+
+.delivery-form {
+  background-color: white !important;
+  padding: 25px;
+  border: 1px solid #cccccca4;
+  border-radius: 10px;
+}
+
 
 .delivery-form h4,
 .order-details h4 {
@@ -389,7 +399,6 @@ input::placeholder {
   background-color: #0c759d;
 }
 
-
 .upd-btn {
   background-color: #008f4c;
   color: white;
@@ -437,14 +446,15 @@ input::placeholder {
 }
 
 .back-btn {
-  background: #008000;
+  background: #008f4c;
   border: none;
   padding: 5px 20px;
   color: #ffffff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   border: 1px solid transparent;
   transition: color 0.3s ease;
+  border-radius: 7px;
 }
 
 .back-btn:hover {
@@ -453,12 +463,20 @@ input::placeholder {
   border: 1px solid #004d00 !important;
 }
 
+.btn-group .cancel-btn, .btn-group .add-btn{
+  border-radius: 7px;
+  font-size: 1rem !important;
+  padding: 5px 20px;
+  width: 7rem;
+}
+
+
 .view-order {
   background-color: #f0faf077;
   border-radius: 15px;
 }
 
-.view-order.card{
+.view-order.card {
   margin-bottom: 2rem;
 }
 
@@ -607,7 +625,6 @@ input::placeholder {
 .back:hover {
   color: #d12525;
 }
-
 
 /* OPERATIONAL MODAL  */
 .modal-header-custom {
@@ -915,6 +932,10 @@ th.no-header {
   font-size: 1.1rem;
 }
 
+.text-muted{
+  color: #b3b1b1 !important;
+}
+
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {
@@ -953,7 +974,7 @@ th.no-header {
     transition: margin-left 0.3s ease, width 0.3s ease;
   }
 
-  .sidebar.collapsed-lg+.main-panel {
+  .sidebar.collapsed-lg + .main-panel {
     margin-left: 80px;
     width: calc(100% - 80px);
   }
