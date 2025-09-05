@@ -147,48 +147,46 @@ const ViewOrder = () => {
       </div>
 
       <div className="container mt-4 w-75">
-        <div className="card shadow-lg border-0 rounded-4">
-          <div className="card-body">
+        <div className="view-order card shadow-lg border-0 rounded-4">
+          <div className="view-order card-body">
             <div className="d-flex justify-content-between align-items-center mt-3">
-              <h2 className="card-title fw-bold text-success">
+              <h3 className="card-title fw-bold text-success">
                 Transaction No. {transaction_id}
-              </h2>
-              <h2 className="card-title fw-bold text-success">
+              </h3>
+              <h3 className="card-title fw-bold text-success">
                 Tracking No. {orderDetails.tracking_number}
-              </h2>
+              </h3>
             </div>
 
-            <hr />
-
-            <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
-                <div className="row mb-3">
-    {/* Left title */}
-    <div className="col-md-6">
-      <h5 className="text-success">Client Details</h5>
-    </div>
-    {/* Right title */}
-    <div className="col-md-6">
-      <h5 className="text-success">Payment Details</h5>
-    </div>
-  </div>
-
+            <div className="m-2 p-3 bg-white border rounded-3 shadow-sm">
               <div className="row">
+                {/* Left title */}
+                <div className="col-md-6">
+                  <h5 className="text-success fw-bold">Client Details</h5>
+                </div>
+                {/* Right title */}
+                <div className="col-md-6">
+                  <h5 className="text-success fw-bold">Payment Details</h5>
+                </div>
+              </div>
+
+              <div className="row pt-3">
                 {/* Left column - Customer Info */}
                 <div className="col-md-6">
                   <p>
-                    <strong>Name:</strong> {orderDetails.customer_name}
+                    <span>Name:</span> {orderDetails.customer_name}
                   </p>
                   <p>
-                    <strong>Address:</strong> {orderDetails.customer_address}
+                    <span>Address:</span> {orderDetails.customer_address}
                   </p>
                   <p>
-                    <strong>Contact:</strong> {orderDetails.customer_contact}
+                    <span>Contact:</span> {orderDetails.customer_contact}
                   </p>
                   <p>
-                    <strong>Date of Order:</strong> {orderDetails.date_of_order}
+                    <span>Date of Order:</span> {orderDetails.date_of_order}
                   </p>
                   <p>
-                    <strong>Target Delivery Date:</strong>{" "}
+                    <span>Target Delivery Date:</span>{" "}
                     {orderDetails.target_date_delivery}
                   </p>
                 </div>
@@ -196,31 +194,31 @@ const ViewOrder = () => {
                 {/* Right column - Payment Info */}
                 <div className="col-md-6 border-start">
                   <p>
-                    <strong>Payment Mode:</strong>{" "}
+                    <span>Payment Mode:</span>{" "}
                     {orderDetails.mode_of_payment}
                   </p>
                   <p>
-                    <strong>Payment Option:</strong>{" "}
+                    <span>Payment Option:</span>{" "}
                     {orderDetails.payment_option}
                   </p>
                   <p>
-                    <strong>Total:</strong> ₱
+                    <span>Total:</span> ₱
                     {Number(orderDetails?.total || 0).toLocaleString()}
                   </p>
                   <p>
-                    <strong>Down Payment:</strong> ₱
+                    <span>Down Payment:</span> ₱
                     {Number(orderDetails?.down_payment || 0).toLocaleString()}
                   </p>
                   <p>
-                    <strong>Balance:</strong> ₱
+                    <span>Balance:</span> ₱
                     {Number(orderDetails?.balance || 0).toLocaleString()}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
-              <h5 className="text-success">Items Ordered</h5>
+            <div className="mx-2 my-3 p-3 bg-white border rounded-3 shadow-sm">
+              <h5 className="text-success fw-bold">Items Ordered</h5>
               <ul className="list-group list-group-flush">
                 {orderDetails.items.map((item, index) => (
                   <li
@@ -233,9 +231,9 @@ const ViewOrder = () => {
                         Unit Cost: ₱{Number(item.unit_cost).toLocaleString()}
                       </small>
                     </div>
-                    <strong>
+                    <span>
                       ₱{(item.unit_cost * item.quantity).toLocaleString()}
-                    </strong>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -250,18 +248,12 @@ const ViewOrder = () => {
               </div>
             </div>
 
-            <div className="buttons d-flex justify-content-center gap-5 mt-5">
+            <div className="buttons d-flex justify-content-center gap-5 mt-4">
               <button
                 className="btn upd-btn btn-success px-5 py-2 rounded-3"
                 onClick={handleUpdate}
               >
                 Update
-              </button>
-              <button
-                className="btn del-btn btn-danger px-5 py-2 rounded-3"
-                onClick={() => handleDelete(transaction_id)}
-              >
-                Delete
               </button>
             </div>
           </div>

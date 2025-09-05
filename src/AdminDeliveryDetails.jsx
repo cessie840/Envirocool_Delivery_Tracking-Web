@@ -161,7 +161,7 @@ const DeliveryDetails = () => {
                 <tr key={index} className="delivery-table-hover">
                   <td>{group.transaction_id}</td>
                   <td>{group.customer_name}</td>
-                  <td>
+                  <td className="p-1">
                     {group.items.map((item, idx) => (
                       <div key={idx}>{item.description}</div>
                     ))}
@@ -184,51 +184,52 @@ const DeliveryDetails = () => {
                           group.delivery_status === "Delivered"
                             ? "#C6FCD3"
                             : group.delivery_status === "Cancelled"
-                            ? "#FDE0E0"
-                            : group.delivery_status === "Pending"
-                            ? "#FFF5D7"
-                            : group.delivery_status === "Out for Delivery"
-                            ? "#d2e6f5ff"
-                            : "transparent",
+                              ? "#FDE0E0"
+                              : group.delivery_status === "Pending"
+                                ? "#FFF5D7"
+                                : group.delivery_status === "Out for Delivery"
+                                  ? "#d2e6f5ff"
+                                  : "transparent",
                         color:
                           group.delivery_status === "Delivered"
                             ? "#3E5F44"
                             : group.delivery_status === "Cancelled"
-                            ? "red"
-                            : group.delivery_status === "Pending"
-                            ? "#FF9D23"
-                            : group.delivery_status === "Out for Delivery"
-                            ? "#1762b1ff"
-                            : "black",
+                              ? "red"
+                              : group.delivery_status === "Pending"
+                                ? "#FF9D23"
+                                : group.delivery_status === "Out for Delivery"
+                                  ? "#1762b1ff"
+                                  : "black",
                         padding: "5px",
                         borderRadius: "8px",
                         display: "inline-block",
                         minWidth: "80px",
                         textAlign: "center",
-                        fontSize: "0.9rem",
+                        fontSize: "0.85rem",
                         fontWeight: "600",
                       }}
                     >
                       {group.delivery_status}
                     </span>
                   </td>
-                  <td className="action-btn d-flex text-align-center justify-content-center p-2 gap-2">
-                    <button
-                      className="btn btn-view"
-                      onClick={() =>
-                        navigate(`/view-delivery/${group.transaction_id}`)
-                      }
-                    >
-                      View
-                    </button>
+                  <td className="align-middle text-center">
+                    <div className="action-btn d-flex justify-content-center gap-2 py-2">
+                      <button
+                        className="btn btn-view"
+                        onClick={() => navigate(`/view-delivery/${group.transaction_id}`)}
+                      >
+                        View
+                      </button>
 
-                    <button
-                      className="btn upd-btn"
-                      onClick={() => handleUpdate(group.transaction_id)}
-                    >
-                      Update
-                    </button>
+                      <button
+                        className="btn upd-btn"
+                        onClick={() => handleUpdate(group.transaction_id)}
+                      >
+                        Update
+                      </button>
+                    </div>
                   </td>
+
                 </tr>
               ))
           ) : (

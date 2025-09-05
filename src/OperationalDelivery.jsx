@@ -18,6 +18,16 @@ const OperationalDelivery = () => {
     fetchOrders();
   }, []);
 
+  const formatPeso = (value) => {
+    if (value === null || value === undefined || isNaN(value)) return "₱0.00";
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
+
   useEffect(() => {
     if (showModal) {
       fetchPersonnel();
@@ -143,13 +153,13 @@ const OperationalDelivery = () => {
                       <p className="mb-2 text-muted">
                         <strong>Delivery Personnel:</strong> Not Assigned
                       </p>
-                      {/* ✅ Show Status */}
+
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
-                      <div className="text-end">
+                      <div className="action-btn d-flex justify-content-end p-2 gap-2">
                         <Button
-                          className="btn-view"
+                          className="btn btn-view px-3 py-1"
                           size="sm"
                           variant="danger"
                           onClick={() => openDetailModal(order)}
@@ -194,13 +204,12 @@ const OperationalDelivery = () => {
                           {order.assigned_personnel}
                         </span>
                       </p>
-                      {/* ✅ Show Status */}
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
                       <div className="text-end">
                         <Button
-                          className="btn-view"
+                          className="btn btn-view px-3 py-1"
                           size="sm"
                           onClick={() => openDetailModal(order)}
                         >
@@ -254,28 +263,30 @@ const OperationalDelivery = () => {
             <div className="p-3 mt-3 bg-light border rounded-3">
               <h5 className="text-success">Items Ordered</h5>
               <ul className="list-group list-group-flush">
-                {Array.isArray(selectedOrder.items) &&
-                selectedOrder.items.length > 0 ? (
+                {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
                   selectedOrder.items.map((item, idx) => (
                     <li
                       key={idx}
                       className="list-group-item d-flex justify-content-between"
                     >
-                      <span>
+                      <div>
                         {item.name} x{item.quantity}
-                      </span>
-                      <span className="fw-bold">₱{item.price}</span>
+                        <br />
+                        <small className="text-muted">
+                          Unit Cost: {formatPeso(item.unit_cost)}
+                        </small>
+                      </div>
+                      <span className="fw-bold">{formatPeso(item.total_cost)}</span>
                     </li>
                   ))
                 ) : (
-                  <li className="list-group-item text-muted">
-                    No items found.
-                  </li>
+                  <li className="list-group-item text-muted">No items found.</li>
                 )}
               </ul>
+
               <div className="text-end mt-3">
                 <h5 className="fw-bold text-success">
-                  Total Cost: ₱{selectedOrder.total_cost}
+                  Total Cost: {formatPeso(selectedOrder.total_cost)}
                 </h5>
               </div>
             </div>
@@ -296,28 +307,27 @@ const OperationalDelivery = () => {
                     </div>
                   </li>
                 </ul>
-                {/* ✅ Show Change Personnel button ONLY if Pending or To Ship */}
+
                 {(selectedOrder.status === "Pending" ||
                   selectedOrder.status === "To Ship") && (
-                  <div className="text-center mt-3">
-                    <Button
-                      variant="warning"
-                      className="btn-view"
-                      onClick={handleOpenAssignModal}
-                    >
-                      Change Personnel
-                    </Button>
-                  </div>
-                )}
+                    <div className="text-center mt-3">
+                      <Button
+                        variant="warning"
+                        className="btn btn-view px-3 py-1"
+                        onClick={handleOpenAssignModal}
+                      >
+                        Change Personnel
+                      </Button>
+                    </div>
+                  )}
               </div>
             ) : (
-              /* ✅ Show Assign button ONLY if Pending or To Ship */
               (selectedOrder.status === "Pending" ||
                 selectedOrder.status === "To Ship") && (
                 <div className="text-center mt-4">
                   <Button
                     variant="success"
-                    className="btn-view"
+                    className="btn btn-view px-3 py-1"
                     onClick={handleOpenAssignModal}
                   >
                     Assign Delivery Personnel
@@ -363,12 +373,11 @@ const OperationalDelivery = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button
-            className={`add-btn p-1 px-3 fw-normal border-0 rounded-2 ${
-              selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
-            }`}
+            className={`add-btn p-1 px-3 fw-normal border-0 rounded-2 ${selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
+              }`}
             onClick={handleAssignPersonnel}
           >
-            {selectedOrder?.assigned_personnel ? "Reassign" : "Assign"}
+            {selectedOrder?.assigned_personnel ? "Re-assign" : "Assign"}
           </Button>
         </Modal.Footer>
       </Modal>

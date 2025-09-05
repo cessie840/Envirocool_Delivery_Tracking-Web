@@ -55,6 +55,102 @@ const AddDelivery = () => {
     total: "",
   });
 
+  const [unitCostInput, setUnitCostInput] = useState("");
+
+  const handleUnitCostChange = (index, e) => {
+    const rawValue = parsePeso(e.target.value);
+    const updatedItems = [...orderItems];
+
+    updatedItems[index].unit_cost = rawValue;
+
+    const quantity = parseInt(updatedItems[index].quantity) || 0;
+    const unitCost = parseFloat(rawValue) || 0;
+    updatedItems[index].total_cost = (unitCost * quantity).toFixed(2);
+
+    setOrderItems(updatedItems);
+    recalcTotal(updatedItems);
+  };
+
+  const handleUnitCostBlur = (index) => {
+    const updatedItems = [...orderItems];
+    updatedItems[index].unit_cost = formatPeso(
+      parseFloat(updatedItems[index].unit_cost)
+    );
+    setOrderItems(updatedItems);
+  };
+
+  const handleUnitCostFocus = (index) => {
+    const updatedItems = [...orderItems];
+    updatedItems[index].unit_cost = parsePeso(updatedItems[index].unit_cost);
+    setOrderItems(updatedItems);
+  };
+
+  const handleDownPaymentFocus = () => {
+    setForm((prev) => ({
+      ...prev,
+      down_payment: parsePeso(prev.down_payment),
+    }));
+  };
+
+  const handleDownPaymentBlur = () => {
+    setForm((prev) => ({
+      ...prev,
+      down_payment: formatPeso(prev.down_payment),
+    }));
+  };
+
+  const handleItemChange = (index, e) => {
+    const { name, value } = e.target;
+    const updatedItems = [...orderItems];
+    updatedItems[index][name] = value;
+
+    if (name === "quantity" || name === "unit_cost") {
+      const quantity = parseInt(updatedItems[index].quantity) || 0;
+      const unitCost =
+        parseFloat(parsePeso(updatedItems[index].unit_cost)) || 0;
+      updatedItems[index].total_cost = (unitCost * quantity).toFixed(2);
+    }
+
+    setOrderItems(updatedItems);
+    recalcTotal(updatedItems);
+  };
+
+  const recalcTotal = (updatedItems) => {
+    const totalCost = updatedItems.reduce((sum, item) => {
+      const cost = parseFloat(item.total_cost);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
+    if (form.payment_option === "Down Payment") {
+      const downPayment = parseFloat(form.down_payment) || 0;
+      setForm((prevForm) => ({
+        ...prevForm,
+        total: totalCost.toFixed(2),
+        balance: (totalCost - downPayment).toFixed(2),
+      }));
+    } else {
+      setForm((prevForm) => ({
+        ...prevForm,
+        total: totalCost.toFixed(2),
+        balance: "",
+      }));
+    }
+  };
+
+  const formatPeso = (value) => {
+    if (value === "" || value === null || isNaN(value)) return "";
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const parsePeso = (value) => {
+    if (!value) return "";
+    return value.toString().replace(/[^0-9.]/g, "");
+  };
+
   const handleConfirmCancel = () => {
     setShowCancelModal(false);
 
@@ -142,7 +238,10 @@ const AddDelivery = () => {
       [name]: value,
     };
 
-    if (name === "payment_option") {
+    if (name === "down_payment" || name === "payment_option") {
+      const downPayment = parseFloat(
+        name === "down_payment" ? value : form.down_payment
+      );
       const totalCost = orderItems.reduce((sum, item) => {
         const cost = parseFloat(item.total_cost);
         return sum + (isNaN(cost) ? 0 : cost);
@@ -187,40 +286,6 @@ const AddDelivery = () => {
     }
 
     setForm(updatedForm);
-  };
-
-  const handleItemChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedItems = [...orderItems];
-    updatedItems[index][name] = value;
-
-    if (name === "unit_cost" || name === "quantity") {
-      const unitCost = parseFloat(updatedItems[index].unit_cost) || 0;
-      const quantity = parseInt(updatedItems[index].quantity) || 0;
-      updatedItems[index].total_cost = (unitCost * quantity).toFixed(2);
-    }
-
-    setOrderItems(updatedItems);
-
-    const totalCost = updatedItems.reduce((sum, item) => {
-      const cost = parseFloat(item.total_cost);
-      return sum + (isNaN(cost) ? 0 : cost);
-    }, 0);
-
-    if (form.payment_option === "Down Payment") {
-      const downPayment = parseFloat(form.down_payment) || 0;
-      setForm((prevForm) => ({
-        ...prevForm,
-        total: totalCost.toFixed(2),
-        balance: (totalCost - downPayment).toFixed(2),
-      }));
-    } else {
-      setForm((prevForm) => ({
-        ...prevForm,
-        total: totalCost.toFixed(2),
-        balance: "",
-      }));
-    }
   };
 
   const addNewItem = () => {
@@ -271,15 +336,32 @@ const AddDelivery = () => {
         return;
       }
 
-      if (isNaN(unitCost) || unitCost < 0) {
-        alert("Each item's unit cost must be a non-negative number.");
-        return;
-      }
+      orderItems.forEach((item, index) => {
+        const unitCost = parseFloat(
+          String(item.unit_cost).replace(/[₱,]/g, "")
+        );
+
+        if (isNaN(unitCost) || unitCost < 0) {
+          alert(`Each item's unit cost must be a non-negative number.`);
+          return;
+        }
+      });
     }
+
+    const normalizedOrderItems = orderItems.map((item) => ({
+      quantity: parseInt(item.quantity) || 0,
+      type_of_product: item.type_of_product,
+      description: item.description,
+      unit_cost: parseFloat(parsePeso(item.unit_cost)) || 0,
+      total_cost: parseFloat(item.total_cost) || 0,
+    }));
 
     const dataToSend = {
       ...form,
-      order_items: orderItems,
+      down_payment: parseFloat(parsePeso(form.down_payment)) || 0,
+      full_payment: parseFloat(parsePeso(form.full_payment)) || 0,
+      total: parseFloat(parsePeso(form.total)) || 0,
+      order_items: normalizedOrderItems,
     };
 
     try {
@@ -644,26 +726,28 @@ const AddDelivery = () => {
 
                     <td>
                       <input
-                        type="number"
+                        type="text"
                         name="unit_cost"
                         placeholder="₱0.00"
                         className="form-control"
-                        value={item.unit_cost}
-                        onChange={(e) => handleItemChange(index, e)}
+                        value={orderItems[index].unit_cost}
+                        onChange={(e) => handleUnitCostChange(index, e)}
+                        onBlur={() => handleUnitCostBlur(index)}
+                        onFocus={() => handleUnitCostFocus(index)}
                         required
                       />
                     </td>
                     <td>
                       <input
-                        type="number"
+                        type="text"
                         name="total_cost"
                         placeholder="₱0.00"
                         className="form-control"
-                        value={item.total_cost}
-                        onChange={(e) => handleItemChange(index, e)}
-                        required
+                        value={formatPeso(item.total_cost)}
+                        readOnly
                       />
                     </td>
+
                     {orderItems.length > 1 && (
                       <td className="align-middle remove-btn-cell">
                         <button
@@ -772,12 +856,16 @@ const AddDelivery = () => {
                   Full Payment Amount:
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="full_payment"
                   placeholder="₱0.00"
-                  step="0.01"
-                  value={form.full_payment}
-                  onChange={handleChange}
+                  value={formatPeso(form.full_payment)}
+                  onChange={(e) => {
+                    const parsedValue = parsePeso(e.target.value);
+                    handleChange({
+                      target: { name: "full_payment", value: parsedValue },
+                    });
+                  }}
                   disabled={form.payment_option !== "Full Payment"}
                   required={form.payment_option === "Full Payment"}
                   className="form-control"
@@ -807,12 +895,18 @@ const AddDelivery = () => {
                   Down Payment Amount:
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="down_payment"
                   placeholder="₱0.00"
-                  step="0.01"
                   value={form.down_payment}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const parsedValue = parsePeso(e.target.value);
+                    handleChange({
+                      target: { name: "down_payment", value: parsedValue },
+                    });
+                  }}
+                  onFocus={handleDownPaymentFocus}
+                  onBlur={handleDownPaymentBlur}
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
                   className="form-control"
@@ -841,14 +935,20 @@ const AddDelivery = () => {
               <div className="col-md-6">
                 <label className="form-label">Balance:</label>
                 <input
-                  type="number"
+                  type="text"
                   name="balance"
                   placeholder="₱0.00"
-                  step="0.01"
                   value={
-                    form.payment_option === "Down Payment" ? form.balance : ""
+                    form.payment_option === "Down Payment"
+                      ? formatPeso(form.balance)
+                      : ""
                   }
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const parsedValue = parsePeso(e.target.value);
+                    handleChange({
+                      target: { name: "balance", value: parsedValue },
+                    });
+                  }}
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
                   className="form-control"
@@ -858,12 +958,16 @@ const AddDelivery = () => {
               <div className="col-md-6">
                 <label className="form-label">Total:</label>
                 <input
-                  type="number"
+                  type="text"
                   name="total"
                   placeholder="₱0.00"
-                  step="0.01"
-                  value={form.total}
-                  onChange={handleChange}
+                  value={formatPeso(form.total)}
+                  onChange={(e) => {
+                    const parsedValue = parsePeso(e.target.value);
+                    handleChange({
+                      target: { name: "total", value: parsedValue },
+                    });
+                  }}
                   disabled={!form.payment_option}
                   required={!!form.payment_option}
                   className="form-control"
