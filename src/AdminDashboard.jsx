@@ -40,7 +40,7 @@ const AdminDashboard = () => {
       onAddClick={handleAddDelivery}
     >
       {/* DASHBOARD CONTENT */}
-      <div className="dashboard-content mt-4 fs-4 p-2 p-md-4 bg-white">
+      <div className="dashboard-content mt-4 fs-4 p-2 p-md-4">
         <div className="container-fluid">
           {/* Cards Row */}
           <div className="row g-4">

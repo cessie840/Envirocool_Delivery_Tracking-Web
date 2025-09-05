@@ -134,7 +134,7 @@ body {
 .nav-btn:hover .tooltip-text {
   opacity: 1;
   pointer-events: auto;
-  transition-delay: 0.4s; 
+  transition-delay: 0.4s;
 }
 
 .nav-btn.active .icon {
@@ -390,7 +390,7 @@ input::placeholder {
 }
 
 
-.upd-btn{
+.upd-btn {
   background-color: #008f4c;
   color: white;
   padding: 4px 15px;
@@ -404,6 +404,10 @@ input::placeholder {
   box-sizing: border-box;
 }
 
+.view-order .upd-btn {
+  font-size: 1.2rem;
+  padding: 5px 50px !important;
+}
 
 .upd-btn:hover {
   color: #006400 !important;
@@ -449,6 +453,26 @@ input::placeholder {
   border: 1px solid #004d00 !important;
 }
 
+.view-order {
+  background-color: #f0faf077;
+  border-radius: 15px;
+}
+
+.view-order.card{
+  margin-bottom: 2rem;
+}
+
+.list-group {
+  --bs-list-group-bg: #f8f8f8;
+  border: 1px solid #cccccca2;
+  border-radius: 5px;
+}
+
+.view-order span {
+  color: #327229 !important;
+  font-weight: 600;
+}
+
 .sidebar.collapsed {
   width: 0;
   overflow: hidden;
@@ -492,22 +516,8 @@ input::placeholder {
   color: #666;
 }
 
-/* .floating-toggle-btn {
-  position: fixed;
-  top: 1rem;
-  left: 5px;
-  z-index: 1050;
-  background-color: white;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  color: #333;
-} */
-
 .dashboard-content {
-  background-color: white;
+  background-color: #e7f3e3;
 }
 
 /* ROUNDED DELIVERY TABLE  */
@@ -598,9 +608,6 @@ input::placeholder {
   color: #d12525;
 }
 
-.card-body {
-  background-color: #ebf1eb;
-}
 
 /* OPERATIONAL MODAL  */
 .modal-header-custom {
@@ -922,6 +929,7 @@ th.no-header {
     width: 80px !important;
     padding: 1rem 0.5rem !important;
   }
+
   .sidebar.collapsed-lg .nav-btn {
     justify-content: center;
     padding: 1rem 0.5rem;
@@ -945,7 +953,7 @@ th.no-header {
     transition: margin-left 0.3s ease, width 0.3s ease;
   }
 
-  .sidebar.collapsed-lg + .main-panel {
+  .sidebar.collapsed-lg+.main-panel {
     margin-left: 80px;
     width: calc(100% - 80px);
   }
@@ -1042,7 +1050,7 @@ th.no-header {
     font-size: 0.75rem !important;
   }
 
-   .delivery-table .upd-btn {
+  .delivery-table .upd-btn {
     padding: 0.2rem 0.8rem !important;
     font-size: 0.75rem !important;
   }
@@ -1051,13 +1059,13 @@ th.no-header {
     font-size: 1rem;
   }
 
-  .action-btn{
+  .action-btn {
     flex-direction: column;
     gap: 5px !important;
   }
 }
 
-.deliveryTable{
+.deliveryTable {
   background-color: #008000;
 }
 
