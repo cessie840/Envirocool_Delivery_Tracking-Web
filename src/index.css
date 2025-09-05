@@ -348,7 +348,7 @@ input::placeholder {
   color: white;
   border: none;
   padding: 5px 25px;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
   border: 1px solid transparent;
@@ -361,10 +361,10 @@ input::placeholder {
 .btn-view {
   background-color: #208eb9;
   color: white;
-  padding: 5px 25px;
+  padding: 0 15px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border: 1px solid transparent;
   display: inline-block;
   vertical-align: middle;
@@ -383,16 +383,27 @@ input::placeholder {
   color: #0c759d !important;
 }
 
-/* .add-item:hover{
-  color: #006400 !important;
-  border: 1px solid #006400;
-} */
-
 .add-item {
   color: #ffffff !important;
   border: 1px solid #0c759d;
   background-color: #0c759d;
 }
+
+
+.upd-btn{
+  background-color: #008f4c;
+  color: white;
+  padding: 4px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  display: inline-block;
+  vertical-align: middle;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
 
 .upd-btn:hover {
   color: #006400 !important;
@@ -1021,10 +1032,28 @@ th.no-header {
     margin: 0.1rem !important;
   }
 
-  .cancel-btn {
-    padding: 0.3rem 1.7rem !important;
-    font-size: 0.9rem !important;
-    margin: 0.1rem !important;
+  .delivery-table .cancel-btn {
+    padding: 0.2rem 0.6rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .delivery-table .btn-view {
+    padding: 0.2rem 0.8rem !important;
+    font-size: 0.75rem !important;
+  }
+
+   .delivery-table .upd-btn {
+    padding: 0.2rem 0.8rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .delivery-table td {
+    font-size: 1rem;
+  }
+
+  .action-btn{
+    flex-direction: column;
+    gap: 5px !important;
   }
 }
 

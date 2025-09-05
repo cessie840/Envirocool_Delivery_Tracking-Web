@@ -7,7 +7,6 @@ import { Button, Modal } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 
-
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
   { label: "GCASH", value: "GCASH" },
@@ -29,20 +28,12 @@ const paymentOptions = [
   },
 ];
 
-
-
-
-
 const AddDelivery = () => {
-
-  
-  const [products, setProducts] = useState([]); 
+  const [products, setProducts] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
   const [productOptions, setProductOptions] = useState([]);
 
-  
   const navigate = useNavigate();
-
 
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
@@ -53,7 +44,7 @@ const AddDelivery = () => {
     customer_address: "",
     customer_contact: "",
     date_of_order: "",
-    target_date_delivery:"",
+    target_date_delivery: "",
     payment_method: "",
     payment_option: "",
     full_payment: "",
@@ -64,12 +55,9 @@ const AddDelivery = () => {
     total: "",
   });
 
-
-  
   const handleConfirmCancel = () => {
     setShowCancelModal(false);
 
- 
     setForm({
       customer_name: "",
       customer_address: "",
@@ -86,32 +74,28 @@ const AddDelivery = () => {
       total: "",
     });
 
-  
-   setOrderItems([
-     {
-       quantity: "",
-       type_of_product: "",
-       description: "",
-       unit_cost: "",
-       total_cost: "",
-     },
-   ]);
-
-
+    setOrderItems([
+      {
+        quantity: "",
+        type_of_product: "",
+        description: "",
+        unit_cost: "",
+        total_cost: "",
+      },
+    ]);
 
     navigate("/delivery-details");
   };
 
- const [orderItems, setOrderItems] = useState([
-   {
-     quantity: "",
-     type_of_product: "",
-     description: "",
-     unit_cost: "",
-     total_cost: "",
-   },
- ]);
-
+  const [orderItems, setOrderItems] = useState([
+    {
+      quantity: "",
+      type_of_product: "",
+      description: "",
+      unit_cost: "",
+      total_cost: "",
+    },
+  ]);
 
   useEffect(() => {
     document.title = "Add Delivery";
@@ -136,9 +120,6 @@ const AddDelivery = () => {
     fetchProducts();
   }, []);
 
-  
-  
-
   const fetchLatestIDs = async () => {
     try {
       const res = await axios.get(
@@ -153,71 +134,66 @@ const AddDelivery = () => {
     }
   };
 
-const handleChange = (e) => {
-  const { name, value } = e.target;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  let updatedForm = {
-    ...form,
-    [name]: value,
+    let updatedForm = {
+      ...form,
+      [name]: value,
+    };
+
+    if (name === "payment_option") {
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost);
+        return sum + (isNaN(cost) ? 0 : cost);
+      }, 0);
+
+      if (value === "Full Payment") {
+        updatedForm.full_payment = totalCost.toFixed(2);
+        updatedForm.down_payment = "";
+        updatedForm.dp_collection_date = "";
+        updatedForm.balance = "";
+        updatedForm.total = totalCost.toFixed(2);
+      } else if (value === "Down Payment") {
+        updatedForm.full_payment = "";
+        updatedForm.fp_collection_date = "";
+        updatedForm.total = totalCost.toFixed(2);
+      }
+    }
+
+    if (name === "down_payment" || name === "payment_option") {
+      const downPayment = parseFloat(
+        name === "down_payment" ? value : form.down_payment
+      );
+
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost);
+        return sum + (isNaN(cost) ? 0 : cost);
+      }, 0);
+
+      if (
+        (name === "payment_option" && value === "Full Payment") ||
+        form.payment_option === "Full Payment"
+      ) {
+        updatedForm.balance = "";
+        updatedForm.total = totalCost.toFixed(2);
+      } else if (!isNaN(downPayment) && !isNaN(totalCost)) {
+        updatedForm.balance = (totalCost - downPayment).toFixed(2);
+        updatedForm.total = totalCost.toFixed(2);
+      } else {
+        updatedForm.balance = "";
+        updatedForm.total = "";
+      }
+    }
+
+    setForm(updatedForm);
   };
-
-
-  if (name === "payment_option") {
-    const totalCost = orderItems.reduce((sum, item) => {
-      const cost = parseFloat(item.total_cost);
-      return sum + (isNaN(cost) ? 0 : cost);
-    }, 0);
-
-    if (value === "Full Payment") {
-      updatedForm.full_payment = totalCost.toFixed(2);
-      updatedForm.down_payment = "";
-      updatedForm.dp_collection_date = "";
-      updatedForm.balance = "";
-      updatedForm.total = totalCost.toFixed(2);
-    } else if (value === "Down Payment") {
-      updatedForm.full_payment = "";
-      updatedForm.fp_collection_date = "";
-      updatedForm.total = totalCost.toFixed(2);
-    }
-  }
-
- 
-  if (name === "down_payment" || name === "payment_option") {
-    const downPayment = parseFloat(
-      name === "down_payment" ? value : form.down_payment
-    );
-
-    const totalCost = orderItems.reduce((sum, item) => {
-      const cost = parseFloat(item.total_cost);
-      return sum + (isNaN(cost) ? 0 : cost);
-    }, 0);
-
-    if (
-      (name === "payment_option" && value === "Full Payment") ||
-      form.payment_option === "Full Payment"
-    ) {
-      updatedForm.balance = "";
-      updatedForm.total = totalCost.toFixed(2);
-    } else if (!isNaN(downPayment) && !isNaN(totalCost)) {
-      updatedForm.balance = (totalCost - downPayment).toFixed(2);
-      updatedForm.total = totalCost.toFixed(2);
-    } else {
-      updatedForm.balance = "";
-      updatedForm.total = "";
-    }
-  }
-
-  setForm(updatedForm);
-};
-
-
 
   const handleItemChange = (index, e) => {
     const { name, value } = e.target;
     const updatedItems = [...orderItems];
     updatedItems[index][name] = value;
 
-    
     if (name === "unit_cost" || name === "quantity") {
       const unitCost = parseFloat(updatedItems[index].unit_cost) || 0;
       const quantity = parseInt(updatedItems[index].quantity) || 0;
@@ -242,11 +218,10 @@ const handleChange = (e) => {
       setForm((prevForm) => ({
         ...prevForm,
         total: totalCost.toFixed(2),
-        balance: "", 
+        balance: "",
       }));
     }
   };
-
 
   const addNewItem = () => {
     setOrderItems([
@@ -260,7 +235,6 @@ const handleChange = (e) => {
       },
     ]);
   };
-
 
   const removeItem = (index) => {
     const updatedItems = orderItems.filter((_, i) => i !== index);
@@ -280,7 +254,6 @@ const handleChange = (e) => {
     }));
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -318,21 +291,21 @@ const handleChange = (e) => {
 
       alert("Delivery added successfully!");
 
-    setForm({
-      customer_name: "",
-      customer_address: "",
-      customer_contact: "",
-      target_date_delivery: "",
-      date_of_order: "",
-      payment_method: "",
-      payment_option: "",
-      full_payment: "",
-      fp_collection_date: "",
-      down_payment: "",
-      dp_collection_date: "",
-      balance: "",
-      total: "",
-    });
+      setForm({
+        customer_name: "",
+        customer_address: "",
+        customer_contact: "",
+        target_date_delivery: "",
+        date_of_order: "",
+        payment_method: "",
+        payment_option: "",
+        full_payment: "",
+        fp_collection_date: "",
+        down_payment: "",
+        dp_collection_date: "",
+        balance: "",
+        total: "",
+      });
 
       setOrderItems([
         {
@@ -350,12 +323,6 @@ const handleChange = (e) => {
       alert("Error saving delivery.");
     }
   };
-
-
-
-    
-   
-
 
   return (
     <AdminLayout title="Add Delivery" showSearch={false}>
@@ -773,7 +740,6 @@ const handleChange = (e) => {
                 <div className="MOP d-flex justify-content-center gap-5 gap-md-5 container-fluid">
                   {["Full Payment", "Down Payment"].map((method) => (
                     <div
-                
                       className="form-check d-flex align-items-center"
                       key={method}
                     >
@@ -790,7 +756,7 @@ const handleChange = (e) => {
                       <label
                         className="form-check-label"
                         htmlFor={method.toLowerCase().replace(" ", "_")}
-                        style={{ fontSize: "18px", fontWeight:"normal" }}
+                        style={{ fontSize: "18px", fontWeight: "normal" }}
                       >
                         {method}
                       </label>

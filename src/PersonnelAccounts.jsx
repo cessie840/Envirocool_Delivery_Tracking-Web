@@ -4,6 +4,7 @@ import ViewPersonnelModal from "./ViewPersonnelModal";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaUserPlus, FaEye, FaEyeSlash } from "react-icons/fa";
+import { Table } from "react-bootstrap";
 
 const PersonnelAccounts = () => {
   const navigate = useNavigate();
@@ -69,55 +70,59 @@ const PersonnelAccounts = () => {
         </button>
       </div>
 
-      <div className="delivery-table table-responsive">
-        <table className="table table-bordered text-center">
-          <thead>
-            <tr>
-              <th>Full Name</th>
-              <th>Email</th>
-              <th>Username</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {personnel.length > 0 ? (
-              personnel.map((person) => (
-                <tr key={person.pers_username}>
-                  <td>
-                    {person.pers_fname} {person.pers_lname}
-                  </td>
-                  <td>{person.pers_email}</td>
-                  <td>{person.pers_username}</td>
-              
-                  <td>
-                    <button
-                      id="personnel-view"
-                      className="btn btn-view me-2"
-                      onClick={() => {
-                        setSelectedUser(person.pers_username);
-                        setShowModal(true);
-                      }}
-                    >
-                      View
-                    </button>
-                    <button
-                      id="personnel-cancel"
-                      className="btn cancel-btn btn-danger"
-                      onClick={() => handleDelete(person.pers_username)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5">No delivery personnel accounts found.</td>
+<Table
+        bordered
+        hover
+        responsive
+        className="delivery-table container-fluid table-responsive bg-white"
+      >
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Username</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody className="p-2">
+          {personnel.length > 0 ? (
+            personnel.map((person) => (
+              <tr key={person.pers_username}>
+                <td>
+                  {person.pers_fname} {person.pers_lname}
+                </td>
+                <td>{person.pers_email}</td>
+                <td>{person.pers_username}</td>
+                <td  className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
+                  <button
+                    id="personnel-view"
+                    className="btn btn-view"
+                    onClick={() => {
+                      setSelectedUser(person.pers_username);
+                      setShowModal(true);
+                    }}
+                  >
+                    View
+                  </button>
+                  <button
+                    id="personnel-cancel"
+                    className="btn cancel-btn btn-danger"
+                    onClick={() => handleDelete(person.pers_username)}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="4" className="text-center">
+                No delivery personnel accounts found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
 
       <ViewPersonnelModal
         show={showModal}

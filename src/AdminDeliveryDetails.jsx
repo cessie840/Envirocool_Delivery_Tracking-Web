@@ -154,82 +154,90 @@ const DeliveryDetails = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.values(groupedDeliveries)
-            .sort((a, b) => b.transaction_id - a.transaction_id)
-            .map((group, index) => (
-              <tr key={index} className="delivery-table-hover">
-                <td>{group.transaction_id}</td>
-                <td>{group.customer_name}</td>
-                <td>
-                  {group.items.map((item, idx) => (
-                    <div key={idx}>{item.description}</div>
-                  ))}
-                </td>
-                <td>
-                  {group.items.map((item, idx) => (
-                    <div key={idx}>{item.quantity}</div>
-                  ))}
-                </td>
-                <td>
-                  {Number(group.total).toLocaleString("en-PH", {
-                    style: "currency",
-                    currency: "PHP",
-                  })}
-                </td>
-                <td>
-                  <span
-                    style={{
-                      backgroundColor:
-                        group.delivery_status === "Delivered"
-                          ? "#C6FCD3"
-                          : group.delivery_status === "Cancelled"
-                          ? "#FDE0E0"
-                          : group.delivery_status === "Pending"
-                          ? "#FFF5D7"
-                          : group.delivery_status === "Out for Delivery"
-                          ? "#d2e6f5ff"
-                          : "transparent",
-                      color:
-                        group.delivery_status === "Delivered"
-                          ? "#3E5F44"
-                          : group.delivery_status === "Cancelled"
-                          ? "red"
-                          : group.delivery_status === "Pending"
-                          ? "#FF9D23"
-                          : group.delivery_status === "Out for Delivery"
-                          ? "#1762b1ff"
-                          : "black",
-                      padding: "5px",
-                      borderRadius: "8px",
-                      display: "inline-block",
-                      minWidth: "80px",
-                      textAlign: "center",
-                      fontSize: "0.9rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {group.delivery_status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="btn btn-view px-2 py-1 m-2 fw-normal border-light rounded-2"
-                    onClick={() =>
-                      navigate(`/view-delivery/${group.transaction_id}`)
-                    }
-                  >
-                    View
-                  </button>
+          {Object.values(groupedDeliveries).length > 0 ? (
+            Object.values(groupedDeliveries)
+              .sort((a, b) => b.transaction_id - a.transaction_id)
+              .map((group, index) => (
+                <tr key={index} className="delivery-table-hover">
+                  <td>{group.transaction_id}</td>
+                  <td>{group.customer_name}</td>
+                  <td>
+                    {group.items.map((item, idx) => (
+                      <div key={idx}>{item.description}</div>
+                    ))}
+                  </td>
+                  <td>
+                    {group.items.map((item, idx) => (
+                      <div key={idx}>{item.quantity}</div>
+                    ))}
+                  </td>
+                  <td>
+                    {Number(group.total).toLocaleString("en-PH", {
+                      style: "currency",
+                      currency: "PHP",
+                    })}
+                  </td>
+                  <td>
+                    <span
+                      style={{
+                        backgroundColor:
+                          group.delivery_status === "Delivered"
+                            ? "#C6FCD3"
+                            : group.delivery_status === "Cancelled"
+                            ? "#FDE0E0"
+                            : group.delivery_status === "Pending"
+                            ? "#FFF5D7"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#d2e6f5ff"
+                            : "transparent",
+                        color:
+                          group.delivery_status === "Delivered"
+                            ? "#3E5F44"
+                            : group.delivery_status === "Cancelled"
+                            ? "red"
+                            : group.delivery_status === "Pending"
+                            ? "#FF9D23"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#1762b1ff"
+                            : "black",
+                        padding: "5px",
+                        borderRadius: "8px",
+                        display: "inline-block",
+                        minWidth: "80px",
+                        textAlign: "center",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {group.delivery_status}
+                    </span>
+                  </td>
+                  <td className="action-btn d-flex text-align-center justify-content-center p-2 gap-2">
+                    <button
+                      className="btn btn-view"
+                      onClick={() =>
+                        navigate(`/view-delivery/${group.transaction_id}`)
+                      }
+                    >
+                      View
+                    </button>
 
-                  <button
-                    className="btn upd-btn btn-success px-2 py-1 m-2 fw-normal border-success rounded-2"
-                    onClick={() => handleUpdate(group.transaction_id)}
-                  >
-                    Update
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    <button
+                      className="btn upd-btn"
+                      onClick={() => handleUpdate(group.transaction_id)}
+                    >
+                      Update
+                    </button>
+                  </td>
+                </tr>
+              ))
+          ) : (
+            <tr>
+              <td colSpan="7" className="text-center py-4">
+                No deliveries found.
+              </td>
+            </tr>
+          )}
         </tbody>
       </Table>
 
