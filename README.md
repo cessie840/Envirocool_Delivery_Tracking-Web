@@ -136,14 +136,21 @@ CREATE TABLE DeliveryDetails (
     FOREIGN KEY (po_id) REFERENCES PurchaseOrder(po_id) ON DELETE CASCADE
 );
 
-CREATE TABLE coords (
-    transaction_id INT PRIMARY KEY,
-    from_lat DOUBLE,
-    from_lng DOUBLE,
-    to_lat DOUBLE,
-    to_lng DOUBLE,
-    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
+CREATE TABLE gps_coordinates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(50) NOT NULL,
+    lat DOUBLE NOT NULL,
+    lng DOUBLE NOT NULL,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE current_positions (
+    device_id VARCHAR(50) PRIMARY KEY,
+    lat DOUBLE,
+    lng DOUBLE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 
 CREATE TABLE DeliverySummary (
     summary_id INT AUTO_INCREMENT PRIMARY KEY,

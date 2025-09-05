@@ -149,22 +149,22 @@ const ViewOrder = () => {
       <div className="container mt-4 w-75">
         <div className="view-order card shadow-lg border-0 rounded-4">
           <div className="view-order card-body">
-            <div className="d-flex justify-content-between align-items-center mt-3">
-              <h3 className="card-title fw-bold text-success">
+            <div className="d-flex justify-content-between align-items-center mt-3 mb-3">
+              <h4 className="card-title fw-bold text-success">
                 Transaction No. {transaction_id}
-              </h3>
-              <h3 className="card-title fw-bold text-success">
+              </h4>
+              <h4 className="card-title fw-bold text-success">
                 Tracking No. {orderDetails.tracking_number}
-              </h3>
+              </h4>
             </div>
 
             <div className="m-2 p-3 bg-white border rounded-3 shadow-sm">
               <div className="row">
-                {/* Left title */}
+           
                 <div className="col-md-6">
                   <h5 className="text-success fw-bold">Client Details</h5>
                 </div>
-                {/* Right title */}
+           
                 <div className="col-md-6">
                   <h5 className="text-success fw-bold">Payment Details</h5>
                 </div>
