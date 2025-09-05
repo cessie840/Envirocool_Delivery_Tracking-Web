@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table } from "react-bootstrap";
+import { Table, Form } from "react-bootstrap"; // ✅ import Form for dropdown
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 
@@ -22,6 +22,9 @@ const DeliveryDetails = () => {
     total: "",
   });
   const [transactionId, setTransactionId] = useState(null);
+
+  // 🔹 New state for status filter
+  const [statusFilter, setStatusFilter] = useState("All");
 
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
@@ -94,6 +97,32 @@ const DeliveryDetails = () => {
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
+  // 🔹 Apply both search + status filter
+  const applyFilters = (list, term, status) => {
+    const lower = term.toLowerCase();
+    return list.filter((e) => {
+      const matchesSearch =
+        (e.transaction_id &&
+          e.transaction_id.toString().toLowerCase().includes(lower)) ||
+        (e.customer_name && e.customer_name.toLowerCase().includes(lower)) ||
+        (e.description && e.description.toLowerCase().includes(lower));
+
+      const matchesStatus =
+        status === "All" || e.delivery_status === status;
+
+      return matchesSearch && matchesStatus;
+    });
+  };
+
+  const handleSearch = (term) => {
+    setFiltered(applyFilters(deliveries, term, statusFilter));
+  };
+
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    setFiltered(applyFilters(deliveries, "", status));
+  };
+
   // Group from filtered list
   const groupedDeliveries = filter.reduce((acc, item) => {
     const id = item.transaction_id;
@@ -116,19 +145,6 @@ const DeliveryDetails = () => {
     return acc;
   }, {});
 
-  const handleSearch = (term) => {
-    const lower = term.toLowerCase();
-    setFiltered(
-      deliveries.filter(
-        (e) =>
-          (e.transaction_id &&
-            e.transaction_id.toString().toLowerCase().includes(lower)) ||
-          (e.customer_name && e.customer_name.toLowerCase().includes(lower)) ||
-          (e.description && e.description.toLowerCase().includes(lower))
-      )
-    );
-  };
-
   return (
     <AdminLayout
       title="Delivery Details"
@@ -136,6 +152,20 @@ const DeliveryDetails = () => {
       showSearch={true}
       onSearch={handleSearch}
     >
+      <div className="mb-3 d-flex justify-content-end">
+        <Form.Select
+          value={statusFilter}
+          onChange={(e) => handleStatusFilter(e.target.value)}
+          style={{ width: "250px", border: "1px solid #ccc", fontWeight: "500" }}
+        >
+          <option value="All">Filter Delivery Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Out for Delivery">Out for Delivery</option>
+          <option value="Delivered">Delivered</option>
+          <option value="Cancelled">Cancelled</option>
+        </Form.Select>
+      </div>
+
       <Table
         bordered
         hover
@@ -216,7 +246,9 @@ const DeliveryDetails = () => {
                     <div className="action-btn d-flex justify-content-center gap-2 py-2">
                       <button
                         className="btn btn-view"
-                        onClick={() => navigate(`/view-delivery/${group.transaction_id}`)}
+                        onClick={() =>
+                          navigate(`/view-delivery/${group.transaction_id}`)
+                        }
                       >
                         View
                       </button>
@@ -229,7 +261,6 @@ const DeliveryDetails = () => {
                       </button>
                     </div>
                   </td>
-
                 </tr>
               ))
           ) : (

@@ -102,6 +102,7 @@ const GenerateReport = () => {
   const [cancellationReasonOptions, setCancellationReasonOptions] = useState(
     []
   );
+  const [paymentOptionFilter, setPaymentOptionFilter] = useState("");
 
   const salesRef = useRef(null);
   const transactionRef = useRef(null);
@@ -113,13 +114,11 @@ const GenerateReport = () => {
   const [servicePage, setServicePage] = useState(1);
   const [customerPage, setCustomerPage] = useState(1);
 
-
-
-
   // Fetch data based on filters
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate, period, reportType]);
+  }, [startDate, endDate, period, reportType, paymentOptionFilter, deliveryStatus, deliveryPersonnel, cancellationReasonFilter]);
+
 
   useEffect(() => { }, [
     salesData,
@@ -169,6 +168,9 @@ const GenerateReport = () => {
       unit_cost: Number(r.unit_cost ?? r.unit_price ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
       delivery_status: (r.delivery_status ?? r.status ?? "delivered").toLowerCase(),
+      payment_option: r.payment_option ?? r.mode_of_payment ?? "Full Payment", // fallback
+      down_payment: Number(r.down_payment ?? 0),
+      balance: Number(r.balance ?? 0),
     })).filter(sale => sale.delivery_status === "delivered");
 
 
@@ -201,7 +203,10 @@ const GenerateReport = () => {
         ? new Date(r.completed_at).toISOString().slice(0, 10)
         : null,
       cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-      delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-", // new field
+      delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-",
+      payment_option: r.payment_option ?? "Full Payment",
+      down_payment: Number(r.down_payment ?? 0),
+      balance: Number(r.balance ?? 0),
     }));
 
   const normalizeService = (raw = []) =>
@@ -419,15 +424,28 @@ const GenerateReport = () => {
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
         const rowDate = new Date(row.date);
-        return (
-          rowDate >= new Date(startDate) &&
-          rowDate <= new Date(endDate) &&
-          row.delivery_status.toLowerCase() === "delivered"
-        );
+        if (
+          rowDate < new Date(startDate) ||
+          rowDate > new Date(endDate) ||
+          row.delivery_status.toLowerCase() !== "delivered"
+        )
+          return false;
+
+        if (
+          paymentOptionFilter &&
+          row.payment_option.toLowerCase() !== paymentOptionFilter.toLowerCase()
+        )
+          return false;
+
+        return true;
       })
       : salesData.filter(
-        (row) => row.delivery_status.toLowerCase() === "delivered"
+        (row) =>
+          row.delivery_status.toLowerCase() === "delivered" &&
+          (!paymentOptionFilter ||
+            row.payment_option.toLowerCase() === paymentOptionFilter.toLowerCase())
       );
+
 
   const filteredTransactionData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
@@ -447,6 +465,12 @@ const GenerateReport = () => {
           !row.delivery_personnel
             .toLowerCase()
             .includes(deliveryPersonnel.toLowerCase())
+        )
+          return false;
+
+        if (
+          paymentOptionFilter &&
+          row.payment_option.toLowerCase() !== paymentOptionFilter.toLowerCase()
         )
           return false;
 
@@ -478,6 +502,12 @@ const GenerateReport = () => {
         )
           return false;
 
+        if (
+          paymentOptionFilter &&
+          row.payment_option.toLowerCase() !== paymentOptionFilter.toLowerCase()
+        )
+          return false;
+
         if (cancellationReasonFilter && row.cancelled_reason) {
           if (
             !row.cancelled_reason
@@ -491,6 +521,7 @@ const GenerateReport = () => {
 
         return true;
       });
+
 
   const filteredServiceData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
@@ -1016,13 +1047,7 @@ const GenerateReport = () => {
 
     return (
       <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
+        <Table bordered hover responsive className="shadow-sm text-center" style={{ cursor: "default" }}>
           <thead className="table-success">
             <tr>
               <th>Date</th>
@@ -1031,15 +1056,14 @@ const GenerateReport = () => {
               <th>Quantity</th>
               <th>Unit Cost</th>
               <th>Total Cost</th>
+              <th>Payment Option</th>
+              <th>Down Payment</th>
+              <th>Balance</th>
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center">
-                  No sales data found.
-                </td>
-              </tr>
+              <tr><td colSpan={9} className="text-center">No sales data found.</td></tr>
             ) : (
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
@@ -1047,25 +1071,17 @@ const GenerateReport = () => {
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.qty}</td>
-                  <td>
-                    ₱
-                    {Number(row.unit_cost).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>
-                    ₱
-                    {Number(row.total_cost).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
+                  <td>₱{Number(row.unit_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td>₱{Number(row.total_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td>{row.payment_option}</td>
+                  <td>₱{Number(row.down_payment).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td>₱{Number(row.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               ))
             )}
           </tbody>
         </Table>
+
 
         {/* SALES PAGINATION */}
         <div className="custom-pagination">
@@ -1112,16 +1128,19 @@ const GenerateReport = () => {
           <thead className="table-info">
             <tr>
               <th>Transaction No.</th>
+              <th>Date of Order</th>
               <th>Customer Name</th>
               <th>Address</th>
               <th>Contact Number</th>
-              <th>Date of Order</th>
               <th>Item Name</th>
               <th>Quantity</th>
               <th>Total Cost</th>
               <th>Mode of Payment</th>
+              <th>Payment Option</th>
+              <th>Down Payment</th>
+              <th>Balance</th>
+              <th>Delivery Personnel</th>
               <th>Delivery Status</th>
-              <th>Delivery Personnel</th> 
               <th>Ship Out At</th>
               <th>Completed At</th>
               <th>Reason for Cancellation</th>
@@ -1130,7 +1149,7 @@ const GenerateReport = () => {
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={14} className="text-center">
+                <td colSpan={17} className="text-center">
                   No transaction data found.
                 </td>
               </tr>
@@ -1138,10 +1157,10 @@ const GenerateReport = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.customer_address}</td>
                   <td>{row.customer_contact}</td>
-                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.item_name}</td>
                   <td>{row.qty}</td>
                   <td>
@@ -1152,18 +1171,32 @@ const GenerateReport = () => {
                     })}
                   </td>
                   <td>{row.mode_of_payment}</td>
-                  <td>{row.delivery_status}</td>
-                  <td>{row.delivery_personnel || "-"}</td>
-                  <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
+                  <td>{row.payment_option}</td>
                   <td>
-                    {row.completed_at ? formatDate(row.completed_at) : "-"}
+                    ₱
+                    {Number(row.down_payment).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </td>
+                  <td>
+                    ₱
+                    {Number(row.balance).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>{row.delivery_personnel || "-"}</td>
+                  <td>{row.delivery_status}</td>
+                  <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
+                  <td>{row.completed_at ? formatDate(row.completed_at) : "-"}</td>
                   <td>{row.cancelled_reason || "-"}</td>
                 </tr>
               ))
             )}
           </tbody>
         </Table>
+
 
         {/* TRANSACTION PAGINATION */}
         <div className="custom-pagination">
@@ -1230,7 +1263,7 @@ const GenerateReport = () => {
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.delivery_status}</td>
-                  <td>{row.cancelled_reason || "-"}</td> 
+                  <td>{row.cancelled_reason || "-"}</td>
                 </tr>
               ))
             )}
@@ -1333,80 +1366,6 @@ const GenerateReport = () => {
     );
   };
 
-  // generatePDF left unchanged (keeps your implementation)
-  const generatePDF = async () => {
-    if (!reportRef.current) return;
-    const clone = reportRef.current.cloneNode(true);
-    clone.style.position = "fixed";
-    clone.style.top = "-9999px";
-    clone.style.left = "-9999px";
-    clone.style.width = `${reportRef.current.offsetWidth}px`;
-    document.body.appendChild(clone);
-    await new Promise((res) => setTimeout(res, 100));
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const marginX = 12;
-    const footerGap = 40;
-    const usableHeight = pageHeight - footerGap;
-    let cursorY = 10;
-    pdf.setFontSize(16);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Delivery Tracking System", pageWidth / 2, cursorY, {
-      align: "center",
-    });
-    cursorY += 10;
-    pdf.setFontSize(12);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(
-      `Report Type: ${REPORT_TYPES.find((r) => r.value === reportType)?.label || "All Reports"
-      }`,
-      marginX,
-      cursorY
-    );
-    cursorY += 7;
-    pdf.text(`Period: ${startDate} to ${endDate}`, marginX, cursorY);
-    cursorY += 10;
-    const sections = Array.from(clone.children);
-    for (const section of sections) {
-      const canvas = await html2canvas(section, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#fff",
-        windowWidth: clone.scrollWidth,
-        windowHeight: clone.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-      });
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const imgProps = pdf.getImageProperties(imgData);
-      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
-      if (cursorY + imgHeight > usableHeight) {
-        pdf.addPage();
-        cursorY = 20;
-      }
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        marginX,
-        cursorY,
-        pageWidth - 2 * marginX,
-        imgHeight
-      );
-      cursorY += imgHeight + 10;
-    }
-    const pageCount = pdf.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      pdf.setPage(i);
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "italic");
-      pdf.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, {
-        align: "center",
-      });
-    }
-    pdf.save(`report_${reportType}_${startDate}_to_${endDate}.pdf`);
-    document.body.removeChild(clone);
-  };
 
   return (
     <AdminLayout title="Generate Report">
@@ -1420,7 +1379,7 @@ const GenerateReport = () => {
       {/* BUTTONS  */}
       <br /> <br />
       <br />
-      <div className="d-flex justify-content-between align-items-center mb-3 no-print mx-4">
+      <div className="report-btn d-flex justify-content-between align-items-center mb-3 no-print mx-4">
         <div>
           <Button
             variant="primary"
@@ -1429,7 +1388,7 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded" onClick={generatePDF}>
+          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded">
             <FaFilePdf /> Generate PDF
           </Button>
         </div>
@@ -1570,6 +1529,7 @@ const GenerateReport = () => {
         </Modal.Header>
         <Modal.Body>
           <Form>
+
             <Form.Group className="mb-3" controlId="filterStartDate">
               <Form.Label className="text-success">Start Date</Form.Label>
               <Form.Control
@@ -1618,6 +1578,20 @@ const GenerateReport = () => {
                 ))}
               </Form.Select>
             </Form.Group>
+
+            {["all", "transaction", "sales"].includes(reportType) && (
+              <Form.Group controlId="filterPaymentOption" className="mb-3">
+                <Form.Label className="text-success">Payment Option</Form.Label>
+                <Form.Select
+                  value={paymentOptionFilter}
+                  onChange={(e) => setPaymentOptionFilter(e.target.value)}
+                >
+                  <option value="">Select Payment Option</option>
+                  <option value="Full Payment">Full Payment</option>
+                  <option value="Down Payment">Down Payment</option>
+                </Form.Select>
+              </Form.Group>
+            )}
 
             {["all", "transaction"].includes(reportType) && (
               <Form.Group controlId="filterDeliveryStatus" className="mb-3">

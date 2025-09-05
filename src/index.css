@@ -109,6 +109,7 @@ body {
 .nav-btn.active {
   background: #d9e6de;
   font-weight: 600;
+  border: 1px solid #0064007a;
 }
 
 .tooltip-text {
@@ -143,7 +144,7 @@ body {
 
 .nav-btn:hover {
   background-color: #d9e6de;
-  border: 1px solid #006400;
+  border: 1px solid #0064007a;
 }
 
 .nav-btn.logout {
@@ -470,7 +471,6 @@ input::placeholder {
   width: 7rem;
 }
 
-
 .view-order {
   background-color: #f0faf077;
   border-radius: 15px;
@@ -490,6 +490,15 @@ input::placeholder {
 .view-order span {
   color: #327229 !important;
   font-weight: 600;
+}
+
+.report-btn .btn-view, .report-btn .cancel-btn{
+  font-size: 14px;
+}
+
+.transaction-card#transit{
+  background-color: #e7f0fa;
+  border: 1px solid #88afbe;
 }
 
 .sidebar.collapsed {
@@ -536,7 +545,7 @@ input::placeholder {
 }
 
 .dashboard-content {
-  background-color: #e7f3e3;
+  background-color: #fcfff8;
 }
 
 /* ROUNDED DELIVERY TABLE  */
