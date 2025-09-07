@@ -57,14 +57,21 @@ body {
 
 /* DASHBOARD  */
 .sidebar {
-  width: 350px;
-  background-color: #fff;
-  padding: 20px 15px;
-  border-right: 1px solid #ddd;
   position: fixed;
-  height: 100vh;
-  z-index: 1000;
-  overflow-y: auto;
+  height: 150vh;
+  z-index: 1050;
+  left: 0;
+  top: 0;
+  background: #fff;
+  border-right: 1px solid #ddd;
+  width: 350px;
+  padding: 0.5rem;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed {
+  transform: translateX(-100%);
 }
 
 .sidebar-header {
@@ -205,7 +212,7 @@ body {
   box-sizing: border-box;
 }
 
-.add-delivery:hover {
+.add-delivery:hover, .add-delivery:hover:active {
   background-color: white;
   color: #006400 !important;
   border-color: #006400;
@@ -382,7 +389,7 @@ input::placeholder {
   box-sizing: border-box;
 }
 
-.btn-view:hover {
+.btn-view:hover, .btn-view:hover:active {
   background-color: white;
   color: #0c759d !important;
   border: 1px solid #0c759d !important;
@@ -431,7 +438,8 @@ input::placeholder {
 }
 
 .cancel-btn:hover,
-.del-btn:hover {
+.del-btn:hover, .cancel-btn:hover:hover,
+.del-btn:hover:hover {
   background-color: white !important;
   color: red !important;
   border: 1px solid red !important;
@@ -457,7 +465,7 @@ input::placeholder {
   border-radius: 7px;
 }
 
-.back-btn:hover {
+.back-btn:hover, .back-btn:hover:active {
   color: #004d00 !important;
   background-color: white;
   border: 1px solid #004d00 !important;
@@ -470,6 +478,27 @@ input::placeholder {
   padding: 5px 20px;
   width: 7rem;
 }
+
+.close-btn{
+  background-color: gray;
+  color: white;
+  padding: 0 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  display: inline-block;
+  vertical-align: middle;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.close-btn:hover, .close-btn:hover:active{
+  color: gray;
+  border: 1px solid gray;
+  background-color: white;
+}
+
 
 .view-order {
   background-color: #f0faf077;
@@ -733,14 +762,15 @@ input::placeholder {
   pointer-events: none;
 }
 
-.modal-content{
+.modal-content {
   background-color: #f0faf0;
 }
-.modal-content .list-group-item{
+
+.modal-content .list-group-item {
   --bs-list-group-bg: #f8f8f8 !important;
 }
 
-.btn-danger:hover{
+.btn-danger:hover {
   background-color: white;
   border: 1px solid red;
   color: red;
@@ -940,6 +970,10 @@ thead tr.customer-header th {
   border: 1px solid #ccc;
 }
 
+.w-75{
+  width: 80% !important;
+}
+
 /* PDF  */
 .pdf-bw {
   filter: grayscale(100%);
@@ -966,40 +1000,38 @@ thead tr.customer-header th {
 }
 
 #delivery-tabs #delivery-tabs-tab-unassigned {
-  color: #dc3545; 
+  color: #dc3545;
 }
 
 #delivery-tabs #delivery-tabs-tab-assigned {
-  color: #198754; 
+  color: #198754;
 }
 
 #delivery-tabs #delivery-tabs-tab-unassigned.active {
-  background-color: #dc3545 !important; 
-  color: #fff !important;            
+  background-color: #dc3545 !important;
+  color: #fff !important;
   border-bottom: 1px solid #dc3545;
   font-weight: 600;
 }
 
 #delivery-tabs #delivery-tabs-tab-assigned.active {
   background-color: #198754 !important;
-  color: #fff !important;   
+  color: #fff !important;
   border-bottom: 1px solid #198754;
   font-weight: 600;
 }
-
 
 .text-muted {
   color: #b3b1b1 !important;
 }
 
-.compact-card .text-muted{
+.compact-card .text-muted {
   color: rgb(49, 49, 49) !important;
 }
 
-.delivery.compact-card{
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+.delivery.compact-card {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
-
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {
@@ -1058,6 +1090,12 @@ thead tr.customer-header th {
     gap: 0.1rem;
     padding-left: 5px;
   }
+
+  .filter-generate {
+    display: flex;
+    flex-direction: row !important;
+    gap: 5px;
+  }
 }
 
 /* SMALLER DEVICES */
@@ -1072,9 +1110,14 @@ thead tr.customer-header th {
     border-right: 1px solid #ddd;
     width: 350px;
     padding: 0.5rem;
-    transform: translateX(0);
+    /* transform: translateX(0); */
     transition: transform 0.3s ease;
     position: fixed;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.show {
+    transform: translateX(0);
   }
 
   .sidebar.collapsed {
@@ -1171,4 +1214,15 @@ thead tr.customer-header th {
   color: #006400 !important;
   border-color: #006400;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.filter-generate {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  justify-content: center;
+}
+
+.filter-generate .btn-view, .filter-generate .cancel-btn{
+  width: 9rem;
 }

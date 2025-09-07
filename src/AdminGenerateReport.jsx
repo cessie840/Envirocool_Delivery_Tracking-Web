@@ -1444,7 +1444,7 @@ const GenerateReport = () => {
       <br /> <br />
       <br />
       <div className="report-btn d-flex justify-content-between align-items-center mb-3 no-print mx-4">
-        <div>
+        <div className="filter-generate">
           <Button
             variant="primary"
             className="me-2 btn btn-view px-3 py-2 rounded"
@@ -1598,7 +1598,7 @@ const GenerateReport = () => {
         <Modal.Header closeButton>
           <Modal.Title>Filter Reports</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="bg-light">
           <Form>
             <Form.Group className="mb-3" controlId="filterStartDate">
               <Form.Label className="text-success">Start Date</Form.Label>
@@ -1720,11 +1720,11 @@ const GenerateReport = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowFilter(false)}>
+          <Button className="btn close-btn px-3 py-2 fs-6 rounded-2" onClick={() => setShowFilter(false)}>
             Close
           </Button>
           <Button
-            variant="primary"
+            className="btn btn-view px-3 py-2 rounded-2 fs-6"
             onClick={() => {
               setShowFilter(false);
               setActiveTab("overall");

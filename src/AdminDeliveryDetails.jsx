@@ -189,9 +189,9 @@ const handleSubmit = () => {
         <Form.Select
           value={statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}
-          style={{ width: "250px", border: "1px solid #ccc", fontWeight: "500" }}
+          style={{ width: "250px", border: "1px solid #CADBC8FF ", fontWeight: "500" }}
         >
-          <option value="All">Filter Delivery Status</option>
+          <option value="All">Filter by Delivery Status</option>
           <option value="Pending">Pending</option>
           <option value="Out for Delivery">Out for Delivery</option>
           <option value="Delivered">Delivered</option>
