@@ -213,7 +213,7 @@ const MonitorDelivery = () => {
                       border: `1px solid ${color}`,
                       fontSize: "1.2rem",
                       boxShadow:
-                        activeTab === key ? "none" : "5px 4px 5px rgba(156, 153, 153, 0.6)", 
+                        activeTab === key ? "none" :  "0 0.5rem 0.6rem rgba(0, 0, 0, 0.14)",
                       transition: "all 0.3s ease",
                     }}
                     onMouseEnter={(e) => {
@@ -242,7 +242,7 @@ const MonitorDelivery = () => {
             {/* RIGHT: MAP */}
             <div className="col-12 col-md-7">
               <div
-                className="bg-white shadow-sm rounded overflow-hidden"
+                className="bg-white shadow-sm rounded overflow-hidden border border-info"
                 style={{
                   height: window.innerWidth < 768 ? "400px" : "1000px",
                 }}

@@ -675,6 +675,10 @@ input::placeholder {
   color: #d12525;
 }
 
+.border-light{
+  border: 1px solid #ccc !important;
+}
+
 /* OPERATIONAL MODAL  */
 .modal-header-custom {
   background-color: #e9f7ef;

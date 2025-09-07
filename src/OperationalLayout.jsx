@@ -112,11 +112,11 @@ const OperationalLayout = ({ children, title }) => {
         onHide={() => setShowLogoutModal(false)}
         centered
       >
-        <Modal.Header closeButton>
+        <Modal.Header closeButton className="bg-light">
           <Modal.Title>Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Are you sure you want to logout?</Modal.Body>
-        <Modal.Footer>
+        <Modal.Body className="bg-white">Are you sure you want to logout?</Modal.Body>
+        <Modal.Footer className="bg-light">
           <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
             Cancel
           </Button>

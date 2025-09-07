@@ -1595,8 +1595,8 @@ const GenerateReport = () => {
       )}
       {/* FILTERING MODAL */}
       <Modal show={showFilter} onHide={() => setShowFilter(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Filter Reports</Modal.Title>
+        <Modal.Header closeButton className="bg-white text-success">
+          <Modal.Title className="fw-bold">Filter Reports</Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-light">
           <Form>
@@ -1719,7 +1719,7 @@ const GenerateReport = () => {
             )}
           </Form>
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="bg-white">
           <Button className="btn close-btn px-3 py-2 fs-6 rounded-2" onClick={() => setShowFilter(false)}>
             Close
           </Button>

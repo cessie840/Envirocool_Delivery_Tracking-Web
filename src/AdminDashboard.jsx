@@ -223,7 +223,7 @@ const AdminDashboard = () => {
         <Row className="g-3">
           {/* Recent Transactions */}
           <Col lg={7} md={12}>
-            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm">
+            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="m-0 fw-bold">Recent Transactions</h5>
                 <div className="d-flex gap-3">
@@ -314,7 +314,7 @@ const AdminDashboard = () => {
 
           {/* Pending Transactions (no Status column) */}
           <Col lg={5} md={12}>
-            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm">
+            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="m-0 fw-bold">Pending Transactions</h5>
                 <div className="d-flex gap-3">
@@ -365,7 +365,7 @@ const AdminDashboard = () => {
         <Row className="mt-4 g-3">
           {/* Left: Monthly Bar Chart */}
           <Col xs={12} lg={8}>
-            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100">
+            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
               <h5 className="fw-bold mb-3 text-center text-lg-start">
                 Monthly Transactions (Year {yearlyData.year})
               </h5>
@@ -404,7 +404,7 @@ const AdminDashboard = () => {
 
           {/* Right: Yearly Distribution Pie Chart */}
           <Col xs={12} lg={4}>
-            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100">
+            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
               <h5 className="fw-bold mb-3 text-center text-lg-start">
                 Successful vs Cancelled (Year {yearlyData.year})
               </h5>
