@@ -234,7 +234,6 @@ body {
   border-radius: 10px;
 }
 
-
 .delivery-form h4,
 .order-details h4 {
   margin-top: 20px;
@@ -464,7 +463,8 @@ input::placeholder {
   border: 1px solid #004d00 !important;
 }
 
-.btn-group .cancel-btn, .btn-group .add-btn{
+.btn-group .cancel-btn,
+.btn-group .add-btn {
   border-radius: 7px;
   font-size: 1rem !important;
   padding: 5px 20px;
@@ -492,11 +492,12 @@ input::placeholder {
   font-weight: 600;
 }
 
-.report-btn .btn-view, .report-btn .cancel-btn{
+.report-btn .btn-view,
+.report-btn .cancel-btn {
   font-size: 14px;
 }
 
-.transaction-card#transit{
+.transaction-card#transit {
   background-color: #e7f0fa;
   border: 1px solid #88afbe;
 }
@@ -546,6 +547,11 @@ input::placeholder {
 
 .dashboard-content {
   background-color: #fcfff8;
+}
+
+.dashboard-panel {
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 /* ROUNDED DELIVERY TABLE  */
@@ -942,7 +948,7 @@ th.no-header {
   font-size: 1.1rem;
 }
 
-.text-muted{
+.text-muted {
   color: #b3b1b1 !important;
 }
 

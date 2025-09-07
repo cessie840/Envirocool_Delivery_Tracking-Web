@@ -41,15 +41,29 @@ $stmt->bind_param("i", $year);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Initialize monthly counts
+// Initialize monthly counts (total, successful, cancelled)
 $months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-$monthlyCounts = array_fill_keys($months, 0);
+$monthlyCounts = [];
+foreach ($months as $m) {
+    $monthlyCounts[$m] = [
+        "total" => 0,
+        "successful" => 0,
+        "cancelled" => 0
+    ];
+}
 
-// Process transactions, check which month they belong to
+// Process transactions
 while ($row = $result->fetch_assoc()) {
     $month = date("M", strtotime($row['date_of_order'])); // e.g. "Jan"
     if (isset($monthlyCounts[$month])) {
-        $monthlyCounts[$month] += 1;
+        // Count all valid transactions
+        $monthlyCounts[$month]["total"] += 1;
+
+        if ($row['status'] === "Delivered") {
+            $monthlyCounts[$month]["successful"] += 1;
+        } elseif ($row['status'] === "Cancelled") {
+            $monthlyCounts[$month]["cancelled"] += 1;
+        }
     }
 }
 
@@ -58,7 +72,9 @@ $data = [];
 foreach ($months as $m) {
     $data[] = [
         "month" => $m,
-        "count" => $monthlyCounts[$m]
+        "total" => $monthlyCounts[$m]["total"],
+        "successful" => $monthlyCounts[$m]["successful"],
+        "cancelled" => $monthlyCounts[$m]["cancelled"]
     ];
 }
 
