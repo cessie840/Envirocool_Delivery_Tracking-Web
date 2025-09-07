@@ -209,7 +209,7 @@ const handleSubmit = () => {
           <tr>
             <th>Transaction No.</th>
             <th>Tracking No.</th>
-            <th>Customer Name</th>
+            <th>Client</th>
             <th>Item Description</th>
             <th>Item/s Quantity</th>
             <th>Total Amount</th>

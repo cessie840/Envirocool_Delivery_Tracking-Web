@@ -116,7 +116,7 @@ const PersonnelAccounts = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="4" className="text-center">
+              <td colSpan="4" className="text-center p-2">
                 No delivery personnel accounts found.
               </td>
             </tr>

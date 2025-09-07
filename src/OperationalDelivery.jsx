@@ -27,7 +27,6 @@ const OperationalDelivery = () => {
     }).format(value);
   };
 
-
   useEffect(() => {
     if (showModal) {
       fetchPersonnel();
@@ -109,9 +108,9 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
-  const unassignedOrders = orders.filter(
-    (o) => !o.assigned_personnel || o.assigned_personnel === null
-  );
+  const unassignedOrders = orders
+    .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
+    .sort((a, b) => Number(a.transaction_id) - Number(b.transaction_id));
 
   const assignedOrders = orders.filter(
     (o) => o.assigned_personnel && o.assigned_personnel !== null
@@ -130,7 +129,7 @@ const OperationalDelivery = () => {
           <Tab
             eventKey="unassigned"
             title={
-              <span className="d-flex align-items-center text-danger">
+              <span className="d-flex align-items-center">
                 <BsExclamationCircleFill className="me-2" /> Unassigned Orders
               </span>
             }
@@ -143,15 +142,16 @@ const OperationalDelivery = () => {
               ) : (
                 unassignedOrders.map((order, index) => (
                   <div key={index} className="col-md-6">
-                    <div className="compact-card card shadow-sm rounded-2 p-3 m-2 border border-danger">
+                    <div className="delivery compact-card card rounded-2 p-3 m-2 border border-danger">
                       <h5 className="fw-bold text-danger">
                         Transaction No. {order.transaction_id}
                       </h5>
                       <p className="mb-2">
                         <strong>Customer:</strong> {order.customer_name}
                       </p>
-                      <p className="mb-2 text-muted">
-                        <strong>Delivery Personnel:</strong> Not Assigned
+                      <p className="mb-2 text-danger">
+                        <strong>Delivery Personnel:</strong>{" "}
+                        <span className="fw-semibold">Not Assigned</span>
                       </p>
 
                       <p className="mb-2">
@@ -178,7 +178,7 @@ const OperationalDelivery = () => {
           <Tab
             eventKey="assigned"
             title={
-              <span className="d-flex align-items-center text-success">
+              <span className="d-flex align-items-center">
                 <BsCheckCircleFill className="me-2" /> Assigned Orders
               </span>
             }
@@ -191,7 +191,7 @@ const OperationalDelivery = () => {
               ) : (
                 assignedOrders.map((order, index) => (
                   <div key={index} className="col-md-6">
-                    <div className="compact-card card shadow-sm rounded-2 p-3 m-2 border border-success">
+                    <div className="delivery compact-card card rounded-2 p-3 m-2 border border-success">
                       <h5 className="fw-bold text-success">
                         Transaction No. {order.transaction_id}
                       </h5>
@@ -200,7 +200,7 @@ const OperationalDelivery = () => {
                       </p>
                       <p className="mb-2">
                         <strong>Delivery Personnel:</strong>{" "}
-                        <span className="text-success fw-bold">
+                        <span className="text-success fw-semibold">
                           {order.assigned_personnel}
                         </span>
                       </p>
@@ -225,7 +225,7 @@ const OperationalDelivery = () => {
         </Tabs>
       </div>
 
-      {/* ✅ Details Modal */}
+      {/* Details Modal */}
       {selectedOrder && (
         <Modal
           show={showDetailModal}
@@ -240,7 +240,7 @@ const OperationalDelivery = () => {
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <div className="p-3 bg-light border rounded-3">
+            <div className="p-3 bg-white border rounded-3">
               <h5 className="text-success">Customer Details</h5>
               <p>
                 <strong>Name:</strong> {selectedOrder.customer_name}
@@ -260,10 +260,11 @@ const OperationalDelivery = () => {
               </p>
             </div>
 
-            <div className="p-3 mt-3 bg-light border rounded-3">
+            <div className="p-3 mt-3 bg-white border rounded-3">
               <h5 className="text-success">Items Ordered</h5>
-              <ul className="list-group list-group-flush">
-                {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
+              <ul className="list-group list-group-flush fw-semibold">
+                {Array.isArray(selectedOrder.items) &&
+                selectedOrder.items.length > 0 ? (
                   selectedOrder.items.map((item, idx) => (
                     <li
                       key={idx}
@@ -276,11 +277,15 @@ const OperationalDelivery = () => {
                           Unit Cost: {formatPeso(item.unit_cost)}
                         </small>
                       </div>
-                      <span className="fw-bold">{formatPeso(item.total_cost)}</span>
+                      <span className="fw-bold">
+                        {formatPeso(item.total_cost)}
+                      </span>
                     </li>
                   ))
                 ) : (
-                  <li className="list-group-item text-muted">No items found.</li>
+                  <li className="list-group-item text-muted">
+                    No items found.
+                  </li>
                 )}
               </ul>
 
@@ -292,7 +297,7 @@ const OperationalDelivery = () => {
             </div>
 
             {selectedOrder.assigned_personnel ? (
-              <div className="p-3 mt-3 bg-light border rounded-3">
+              <div className="p-3 mt-3 bg-white border rounded-3">
                 <ul className="list-group">
                   <li className="list-group-item d-flex justify-content-between align-items-center">
                     <span className="fw-bold text-success">
@@ -310,16 +315,16 @@ const OperationalDelivery = () => {
 
                 {(selectedOrder.status === "Pending" ||
                   selectedOrder.status === "To Ship") && (
-                    <div className="text-center mt-3">
-                      <Button
-                        variant="warning"
-                        className="btn btn-view px-3 py-1"
-                        onClick={handleOpenAssignModal}
-                      >
-                        Change Personnel
-                      </Button>
-                    </div>
-                  )}
+                  <div className="text-center mt-3">
+                    <Button
+                      variant="warning"
+                      className="btn btn-view px-3 py-1"
+                      onClick={handleOpenAssignModal}
+                    >
+                      Change Personnel
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               (selectedOrder.status === "Pending" ||
@@ -373,8 +378,9 @@ const OperationalDelivery = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button
-            className={`add-btn p-1 px-3 fw-normal border-0 rounded-2 ${selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
-              }`}
+            className={`add-btn p-1 px-3 fw-normal border-0 rounded-1 ${
+              selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
+            }`}
             onClick={handleAssignPersonnel}
           >
             {selectedOrder?.assigned_personnel ? "Re-assign" : "Assign"}

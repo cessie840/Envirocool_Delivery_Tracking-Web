@@ -440,7 +440,7 @@ const AddDelivery = () => {
                 id="customerName"
                 name="customer_name"
                 value={form.customer_name}
-                placeholder="Customer's Name"
+                placeholder="Client's Name"
                 onChange={handleChange}
                 required
               />
@@ -473,7 +473,7 @@ const AddDelivery = () => {
               id="customerAddress"
               name="customer_address"
               value={form.customer_address}
-              placeholder="Customer's Address"
+              placeholder="Client's Address"
               onChange={handleChange}
               required
             />
@@ -490,7 +490,7 @@ const AddDelivery = () => {
                 id="contactNumber"
                 name="customer_contact"
                 value={form.customer_contact}
-                placeholder="Customer's Contact No."
+                placeholder="Client's Contact No."
                 onChange={handleChange}
                 required
               />
@@ -881,9 +881,9 @@ const AddDelivery = () => {
                   type="date"
                   className={`form-control ${form.dp_collection_date ? "text-black" : "text-muted"
                     }`}
-                  id="dpBillingDate"
-                  name="dp_collection_date"
-                  value={form.dp_collection_date || ""}
+                  id="fpBillingDate"
+                  name="fp_collection_date"
+                  value={form.fp_collection_date || ""}
                   onChange={handleChange}
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}

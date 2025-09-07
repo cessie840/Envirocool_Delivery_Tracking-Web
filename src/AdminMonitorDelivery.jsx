@@ -148,7 +148,7 @@ const MonitorDelivery = () => {
                 }}
               >
                 {[
-                  ["Customer Name:", t.customer_name],
+                  ["Client Name:", t.customer_name],
                   ["Contact No.:", t.contact],
                   ["Shipping Address:", t.customer_address],
                   ["Order Description:", t.description],
