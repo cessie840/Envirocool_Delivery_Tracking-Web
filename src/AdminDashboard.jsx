@@ -113,10 +113,15 @@ const AdminDashboard = () => {
     axios
       .get(
         "http://localhost/DeliveryTrackingSystem/get_monthly_transactions.php",
-        { withCredentials: true }
+        {
+          withCredentials: true,
+        }
       )
       .then((res) => {
-        if (res.data.success) setTransactionStatusData(res.data.monthly);
+        if (res.data.success) {
+          // No need to overwrite with count
+          setTransactionStatusData(res.data.monthly);
+        }
       })
       .catch((err) =>
         console.error("Error fetching monthly transactions:", err)
@@ -150,7 +155,7 @@ const AdminDashboard = () => {
         {/* Top 4 Cards */}
         <Row className="mb-4 g-3">
           <Col xl={3} lg={6} md={6} sm={12}>
-            <Card className="p-3 shadow-sm h-100">
+            <Card className="p-3 h-100 dashboard-panel">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
                   <FaTruck />
@@ -166,13 +171,13 @@ const AdminDashboard = () => {
           </Col>
 
           <Col xl={3} lg={6} md={6} sm={12}>
-            <Card className="p-3 shadow-sm h-100">
+            <Card className="p-3 h-100 dashboard-panel">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
                   <FaCheckCircle />
                 </div>
                 <div>
-                  <h6 className="fw-semibold m-0">Successful</h6>
+                  <h6 className="fw-semibold m-0">Successful Deliveries</h6>
                   <p className="mb-0 fw-semibold small">
                     {dashboardCounts.successful}
                   </p>
@@ -182,13 +187,13 @@ const AdminDashboard = () => {
           </Col>
 
           <Col xl={3} lg={6} md={6} sm={12}>
-            <Card className="p-3 shadow-sm h-100">
+            <Card className="p-3 h-100 dashboard-panel">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#E57373" }}>
                   <FaTimesCircle />
                 </div>
                 <div>
-                  <h6 className="fw-semibold m-0">Cancelled</h6>
+                  <h6 className="fw-semibold m-0">Cancelled Deliveries</h6>
                   <p className="mb-0 fw-semibold small">
                     {dashboardCounts.cancelled}
                   </p>
@@ -198,13 +203,13 @@ const AdminDashboard = () => {
           </Col>
 
           <Col xl={3} lg={6} md={6} sm={12}>
-            <Card className="p-3 shadow-sm h-100">
+            <Card className="p-3 h-100 dashboard-panel">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#FFC107" }}>
                   <FaClock />
                 </div>
                 <div>
-                  <h6 className="fw-semibold m-0">Outgoing</h6>
+                  <h6 className="fw-semibold m-0">Outgoing Deliveries</h6>
                   <p className="mb-0 fw-semibold small">
                     {dashboardCounts.pending}
                   </p>
@@ -243,21 +248,47 @@ const AdminDashboard = () => {
                     {recentTransactions.length > 0 ? (
                       recentTransactions.map((tx) => (
                         <tr key={tx.transaction_id} className="table-row-hover">
-                          <td>#{tx.transaction_id}</td>
+                          <td>{tx.transaction_id}</td>
                           <td>{tx.customer_name}</td>
                           <td>{formatDate(tx.date_ordered)}</td>
                           <td>
-                            {tx.status === "Delivered" && (
-                              <span className="badge bg-success">
-                                Successful
-                              </span>
-                            )}
-                            {tx.status === "Cancelled" && (
-                              <span className="badge bg-danger">Cancelled</span>
-                            )}
-                            {tx.status === "Out for Delivery" && (
-                              <span className="badge bg-warning text-dark">
-                                Out for Delivery
+                            {[
+                              "Delivered",
+                              "Cancelled",
+                              "Out for Delivery",
+                            ].includes(tx.status) && (
+                              <span
+                                style={{
+                                  backgroundColor:
+                                    tx.status === "Delivered"
+                                      ? "#C6FCD3"
+                                      : tx.status === "Cancelled"
+                                      ? "#FDE0E0"
+                                      : tx.status === "Out for Delivery"
+                                      ? "#d2e6f5ff"
+                                      : "transparent",
+                                  color:
+                                    tx.status === "Delivered"
+                                      ? "#3E5F44"
+                                      : tx.status === "Cancelled"
+                                      ? "red"
+                                      : tx.status === "Out for Delivery"
+                                      ? "#1762b1ff"
+                                      : "black",
+                                  padding: "5px",
+                                  borderRadius: "8px",
+                                  display: "inline-block",
+                                  minWidth: "80px",
+                                  textAlign: "center",
+                                  fontSize: "0.85rem",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {tx.status === "Delivered"
+                                  ? "Delivered"
+                                  : tx.status === "Cancelled"
+                                  ? "Cancelled"
+                                  : "Out for Delivery"}
                               </span>
                             )}
                           </td>
@@ -307,7 +338,7 @@ const AdminDashboard = () => {
                     {pendingTransactions.length > 0 ? (
                       pendingTransactions.map((tx) => (
                         <tr key={tx.transaction_id} className="table-row-hover">
-                          <td>#{tx.transaction_id}</td>
+                          <td>{tx.transaction_id}</td>
                           <td>{tx.customer_name}</td>
                           <td>{formatDate(tx.date_ordered)}</td>
                         </tr>
@@ -331,69 +362,88 @@ const AdminDashboard = () => {
           </Col>
         </Row>
 
-<Row className="mt-4 g-3">
-  {/* Left: Monthly Bar Chart */}
-  <Col lg={8} md={12}>
-    <div className="dashboard-panel bg-white p-4 shadow-sm h-100">
-      <h5 className="fw-bold mb-3">
-        Monthly Transactions (Year {yearlyData.year})
-      </h5>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={transactionStatusData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="successful" fill="#4CAF50" name="Successful" />
-          <Bar dataKey="cancelled" fill="#E57373" name="Cancelled" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </Col>
+        <Row className="mt-4 g-3">
+          {/* Left: Monthly Bar Chart */}
+          <Col xs={12} lg={8}>
+            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100">
+              <h5 className="fw-bold mb-3 text-center text-lg-start">
+                Monthly Transactions (Year {yearlyData.year})
+              </h5>
+              <div style={{ width: "100%", height: "300px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={transactionStatusData}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip formatter={(value) => `${value} transactions`} />
+                    <Legend />
+                    {/* Order: Total first, then Successful, then Cancelled */}
+                    <Bar
+                      dataKey="total"
+                      fill="#2196F3"
+                      name="Total Transactions"
+                    />
+                    <Bar
+                      dataKey="successful"
+                      fill="#4CAF50"
+                      name="Successful Deliveries"
+                    />
+                    <Bar
+                      dataKey="cancelled"
+                      fill="#E57373"
+                      name="Cancelled Deliveries"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Col>
 
-  {/* Right: Yearly Distribution Pie Chart */}
-  <Col lg={4} md={12}>
-    <div className="dashboard-panel bg-white p-4 shadow-sm h-100">
-      <h5 className="fw-bold mb-3">
-        Successful vs Cancelled (Year {yearlyData.year})
-      </h5>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={yearlyData.distribution}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            label={({ name, value }) =>
-              `${name}: ${value} (${((value / yearlyData.total) * 100).toFixed(
-                1
-              )}%)`
-            }
-            labelLine={false}
-          >
-            {yearlyData.distribution.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value) => `${value} transactions`} />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="text-muted small mt-2 fw-bold">
-        Total: {yearlyData.total} transactions
-      </div>
-    </div>
-  </Col>
-</Row>
+          {/* Right: Yearly Distribution Pie Chart */}
+          <Col xs={12} lg={4}>
+            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100">
+              <h5 className="fw-bold mb-3 text-center text-lg-start">
+                Successful vs Cancelled (Year {yearlyData.year})
+              </h5>
+              <div style={{ width: "100%", height: "300px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={yearlyData.distribution}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, value }) =>
+                        `${name}: ${value} (${(
+                          (value / yearlyData.total) *
+                          100
+                        ).toFixed(1)}%)`
+                      }
+                      labelLine={false}
+                    >
+                      {yearlyData.distribution.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} transactions`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-muted small mt-2 fw-bold text-center">
+                Total: {yearlyData.total} transactions
+              </div>
+            </div>
+          </Col>
+        </Row>
       </div>
     </AdminLayout>
   );
