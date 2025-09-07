@@ -54,7 +54,7 @@ const CreatePersonnelAccount = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 1. Check for empty fields
+
     for (let key in formData) {
       if (formData[key].trim() === "") {
         setErrorMessage(
@@ -229,7 +229,7 @@ const CreatePersonnelAccount = () => {
           </form>
         </div>
         <div className="d-flex justify-content-end mt-4">
-          <button type="submit" className="btn btn-view" onClick={handleSubmit}>
+          <button type="submit" className="btn btn-view px-3 py-1 fs-6" onClick={handleSubmit}>
             Register
           </button>
         </div>

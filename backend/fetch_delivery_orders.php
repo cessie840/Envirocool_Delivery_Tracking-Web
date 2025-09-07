@@ -31,12 +31,14 @@ $baseURL = "http://localhost/DeliveryTrackingSystem/uploads/";
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        $transactionId = $row['transaction_id'];
+        $transactionId = (int) $row['transaction_id'];
 
         // Fetch purchase orders
-        $itemsSql = "SELECT quantity, description, unit_cost, (quantity * unit_cost) AS total_cost
-                     FROM PurchaseOrder 
-                     WHERE transaction_id = $transactionId";
+        $itemsSql = "SELECT quantity, description, unit_cost, total_cost
+             FROM PurchaseOrder 
+             WHERE transaction_id = $transactionId";
+
+
         $itemsResult = $conn->query($itemsSql);
 
         $items = [];
@@ -44,15 +46,16 @@ if ($result && $result->num_rows > 0) {
 
         if ($itemsResult && $itemsResult->num_rows > 0) {
             while ($item = $itemsResult->fetch_assoc()) {
-                $itemTotal = $item['total_cost'];
+                $itemTotal = floatval($item['total_cost']);
                 $calculatedTotal += $itemTotal;
-
                 $items[] = [
                     'name' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'unit_cost' => number_format($item['unit_cost'], 2),
-                    'price' => number_format($itemTotal, 2)
+                    'quantity' => intval($item['quantity']),
+                    'unit_cost' => floatval($item['unit_cost']),
+                    'total_cost' => floatval($itemTotal)
                 ];
+
+
             }
         }
 
@@ -74,15 +77,16 @@ if ($result && $result->num_rows > 0) {
             'customer_address' => $row['customer_address'],
             'contact_number' => $row['customer_contact'],
             'payment_mode' => $row['mode_of_payment'],
-            'down_payment' => number_format($row['down_payment'], 2),
-            'balance' => number_format($row['balance'], 2),
-            'total_cost' => number_format($calculatedTotal, 2),
-            'assigned_personnel' => $row['assigned_personnel'] ?? null,       
-            'assigned_personnel_username' => $row['pers_username'] ?? null,  
-            'personnel_image' => $profilePic,   // ✅ always a clean full URL
-            'status' => $row['status'], 
+            'down_payment' => floatval($row['down_payment']),
+            'balance' => floatval($row['balance']),            
+            'total_cost' => floatval($calculatedTotal),  
+            'assigned_personnel' => $row['assigned_personnel'] ?? null,
+            'assigned_personnel_username' => $row['pers_username'] ?? null,
+            'personnel_image' => $profilePic,
+            'status' => $row['status'],
             'items' => $items
         ];
+
     }
 }
 

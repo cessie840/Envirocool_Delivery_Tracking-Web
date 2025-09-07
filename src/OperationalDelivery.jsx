@@ -18,6 +18,15 @@ const OperationalDelivery = () => {
     fetchOrders();
   }, []);
 
+  const formatPeso = (value) => {
+    if (value === null || value === undefined || isNaN(value)) return "₱0.00";
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
   useEffect(() => {
     if (showModal) {
       fetchPersonnel();
@@ -99,9 +108,9 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
-  const unassignedOrders = orders.filter(
-    (o) => !o.assigned_personnel || o.assigned_personnel === null
-  );
+  const unassignedOrders = orders
+    .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
+    .sort((a, b) => Number(a.transaction_id) - Number(b.transaction_id));
 
   const assignedOrders = orders.filter(
     (o) => o.assigned_personnel && o.assigned_personnel !== null
@@ -120,7 +129,7 @@ const OperationalDelivery = () => {
           <Tab
             eventKey="unassigned"
             title={
-              <span className="d-flex align-items-center text-danger">
+              <span className="d-flex align-items-center">
                 <BsExclamationCircleFill className="me-2" /> Unassigned Orders
               </span>
             }
@@ -133,23 +142,24 @@ const OperationalDelivery = () => {
               ) : (
                 unassignedOrders.map((order, index) => (
                   <div key={index} className="col-md-6">
-                    <div className="compact-card card shadow-sm rounded-2 p-3 m-2 border border-danger">
+                    <div className="delivery compact-card card rounded-2 p-3 m-2 border border-danger">
                       <h5 className="fw-bold text-danger">
                         Transaction No. {order.transaction_id}
                       </h5>
                       <p className="mb-2">
                         <strong>Customer:</strong> {order.customer_name}
                       </p>
-                      <p className="mb-2 text-muted">
-                        <strong>Delivery Personnel:</strong> Not Assigned
+                      <p className="mb-2 text-danger">
+                        <strong>Delivery Personnel:</strong>{" "}
+                        <span className="fw-semibold">Not Assigned</span>
                       </p>
-                      {/* ✅ Show Status */}
+
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
-                      <div className="text-end">
+                      <div className="action-btn d-flex justify-content-end p-2 gap-2">
                         <Button
-                          className="btn-view"
+                          className="btn btn-view px-3 py-1"
                           size="sm"
                           variant="danger"
                           onClick={() => openDetailModal(order)}
@@ -168,7 +178,7 @@ const OperationalDelivery = () => {
           <Tab
             eventKey="assigned"
             title={
-              <span className="d-flex align-items-center text-success">
+              <span className="d-flex align-items-center">
                 <BsCheckCircleFill className="me-2" /> Assigned Orders
               </span>
             }
@@ -181,7 +191,7 @@ const OperationalDelivery = () => {
               ) : (
                 assignedOrders.map((order, index) => (
                   <div key={index} className="col-md-6">
-                    <div className="compact-card card shadow-sm rounded-2 p-3 m-2 border border-success">
+                    <div className="delivery compact-card card rounded-2 p-3 m-2 border border-success">
                       <h5 className="fw-bold text-success">
                         Transaction No. {order.transaction_id}
                       </h5>
@@ -190,17 +200,16 @@ const OperationalDelivery = () => {
                       </p>
                       <p className="mb-2">
                         <strong>Delivery Personnel:</strong>{" "}
-                        <span className="text-success fw-bold">
+                        <span className="text-success fw-semibold">
                           {order.assigned_personnel}
                         </span>
                       </p>
-                      {/* ✅ Show Status */}
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
                       <div className="text-end">
                         <Button
-                          className="btn-view"
+                          className="btn btn-view px-3 py-1"
                           size="sm"
                           onClick={() => openDetailModal(order)}
                         >
@@ -216,7 +225,7 @@ const OperationalDelivery = () => {
         </Tabs>
       </div>
 
-      {/* ✅ Details Modal */}
+      {/* Details Modal */}
       {selectedOrder && (
         <Modal
           show={showDetailModal}
@@ -231,7 +240,7 @@ const OperationalDelivery = () => {
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <div className="p-3 bg-light border rounded-3">
+            <div className="p-3 bg-white border rounded-3">
               <h5 className="text-success">Customer Details</h5>
               <p>
                 <strong>Name:</strong> {selectedOrder.customer_name}
@@ -251,9 +260,9 @@ const OperationalDelivery = () => {
               </p>
             </div>
 
-            <div className="p-3 mt-3 bg-light border rounded-3">
+            <div className="p-3 mt-3 bg-white border rounded-3">
               <h5 className="text-success">Items Ordered</h5>
-              <ul className="list-group list-group-flush">
+              <ul className="list-group list-group-flush fw-semibold">
                 {Array.isArray(selectedOrder.items) &&
                 selectedOrder.items.length > 0 ? (
                   selectedOrder.items.map((item, idx) => (
@@ -261,10 +270,16 @@ const OperationalDelivery = () => {
                       key={idx}
                       className="list-group-item d-flex justify-content-between"
                     >
-                      <span>
+                      <div>
                         {item.name} x{item.quantity}
+                        <br />
+                        <small className="text-muted">
+                          Unit Cost: {formatPeso(item.unit_cost)}
+                        </small>
+                      </div>
+                      <span className="fw-bold">
+                        {formatPeso(item.total_cost)}
                       </span>
-                      <span className="fw-bold">₱{item.price}</span>
                     </li>
                   ))
                 ) : (
@@ -273,15 +288,16 @@ const OperationalDelivery = () => {
                   </li>
                 )}
               </ul>
+
               <div className="text-end mt-3">
                 <h5 className="fw-bold text-success">
-                  Total Cost: ₱{selectedOrder.total_cost}
+                  Total Cost: {formatPeso(selectedOrder.total_cost)}
                 </h5>
               </div>
             </div>
 
             {selectedOrder.assigned_personnel ? (
-              <div className="p-3 mt-3 bg-light border rounded-3">
+              <div className="p-3 mt-3 bg-white border rounded-3">
                 <ul className="list-group">
                   <li className="list-group-item d-flex justify-content-between align-items-center">
                     <span className="fw-bold text-success">
@@ -296,13 +312,13 @@ const OperationalDelivery = () => {
                     </div>
                   </li>
                 </ul>
-                {/* ✅ Show Change Personnel button ONLY if Pending or To Ship */}
+
                 {(selectedOrder.status === "Pending" ||
                   selectedOrder.status === "To Ship") && (
                   <div className="text-center mt-3">
                     <Button
                       variant="warning"
-                      className="btn-view"
+                      className="btn btn-view px-3 py-1"
                       onClick={handleOpenAssignModal}
                     >
                       Change Personnel
@@ -311,13 +327,12 @@ const OperationalDelivery = () => {
                 )}
               </div>
             ) : (
-              /* ✅ Show Assign button ONLY if Pending or To Ship */
               (selectedOrder.status === "Pending" ||
                 selectedOrder.status === "To Ship") && (
                 <div className="text-center mt-4">
                   <Button
                     variant="success"
-                    className="btn-view"
+                    className="btn btn-view px-3 py-1"
                     onClick={handleOpenAssignModal}
                   >
                     Assign Delivery Personnel
@@ -363,12 +378,12 @@ const OperationalDelivery = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button
-            className={`add-btn p-1 px-3 fw-normal border-0 rounded-2 ${
+            className={`add-btn p-1 px-3 fw-normal border-0 rounded-1 ${
               selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
             }`}
             onClick={handleAssignPersonnel}
           >
-            {selectedOrder?.assigned_personnel ? "Reassign" : "Assign"}
+            {selectedOrder?.assigned_personnel ? "Re-assign" : "Assign"}
           </Button>
         </Modal.Footer>
       </Modal>

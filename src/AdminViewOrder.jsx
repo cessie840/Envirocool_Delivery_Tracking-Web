@@ -7,19 +7,27 @@ import UpdateOrderModal from "./UpdateOrderModal";
 const ViewOrder = () => {
   const navigate = useNavigate();
   const { transaction_id } = useParams();
-
   const [orderDetails, setOrderDetails] = useState(null);
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
+    tracking_number: "",
     customer_name: "",
     customer_address: "",
     customer_contact: "",
+    date_of_order: "",
+    target_date_delivery: "",
     mode_of_payment: "",
+    payment_option: "",
     down_payment: "",
     balance: "",
     total: "",
   });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return dateString.split("T")[0] || dateString.split(" ")[0];
+  };
 
   useEffect(() => {
     document.title = "View Order Details";
@@ -30,13 +38,17 @@ const ViewOrder = () => {
       .then((data) => {
         setOrderDetails(data);
         setFormData({
+          tracking_number: data.tracking_number,
           customer_name: data.customer_name,
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
+          date_of_order: data.date_of_order,
           mode_of_payment: data.mode_of_payment,
+          payment_option: data.payment_option,
           down_payment: data.down_payment,
           balance: data.balance,
           total: data.total,
+          target_date_delivery: formatDate(data.target_date_delivery),
         });
       })
 
@@ -46,7 +58,14 @@ const ViewOrder = () => {
   }, [transaction_id]);
 
   const handleUpdate = () => {
-    setEditableItems(JSON.parse(JSON.stringify(orderDetails.items)));
+    const fixedItems = orderDetails.items.map((item) => ({
+      quantity: item.quantity,
+      type_of_product: item.type_of_product || item.product_type || "",
+      description: item.description || item.item_name || "",
+      unit_cost: item.unit_cost,
+    }));
+
+    setEditableItems(fixedItems);
     setShowModal(true);
   };
 
@@ -132,7 +151,7 @@ const ViewOrder = () => {
     <AdminLayout title="View Order Details" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="btn back-btn d-flex align-items-center gap-2 fs-4"
+          className="back-btn btn-success d-flex align-items-center gap-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
@@ -140,43 +159,74 @@ const ViewOrder = () => {
       </div>
 
       <div className="container mt-4 w-75">
-        <div className="card shadow-lg border-0 rounded-4">
-          <div className="card-body">
-            <h2 className="card-title text-center fw-bold text-success">
-              Transaction No. {transaction_id}
-            </h2>
-            <hr />
-
-            <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
-              <h5 className="text-success">Customer Details</h5>
-              <p>
-                <strong>Name:</strong> {orderDetails.customer_name}
-              </p>
-              <p>
-                <strong>Address:</strong> {orderDetails.customer_address}
-              </p>
-              <p>
-                <strong>Contact:</strong> {orderDetails.customer_contact}
-              </p>
-              <p>
-                <strong>Payment Mode:</strong> {orderDetails.mode_of_payment}
-              </p>
-              <p>
-                <strong>Total:</strong> ₱
-                {Number(orderDetails?.total || 0).toLocaleString()}
-              </p>
-              <p>
-                <strong>Down Payment:</strong> ₱
-                {Number(orderDetails?.down_payment || 0).toLocaleString()}
-              </p>
-              <p>
-                <strong>Balance:</strong> ₱
-                {Number(orderDetails?.balance || 0).toLocaleString()}
-              </p>
+        <div className="view-order card shadow-lg border-0 rounded-4">
+          <div className="view-order card-body">
+            <div className="d-flex justify-content-between align-items-center mt-3 mb-3">
+              <h4 className="card-title fw-bold text-success">
+                Transaction No. {transaction_id}
+              </h4>
+              <h4 className="card-title fw-bold text-success">
+                Tracking No. {orderDetails.tracking_number}
+              </h4>
             </div>
 
-            <div className="mb-3 p-3 bg-light border rounded-3 shadow-sm">
-              <h5 className="text-success">Items Ordered</h5>
+            <div className="m-2 p-3 bg-white border rounded-3 shadow-sm">
+              <div className="row">
+                <div className="col-md-6">
+                  <h5 className="text-success fw-bold">Client Details</h5>
+                </div>
+
+                <div className="col-md-6">
+                  <h5 className="text-success fw-bold">Payment Details</h5>
+                </div>
+              </div>
+
+              <div className="row pt-3">
+                {/* Left column - Customer Info */}
+                <div className="col-md-6">
+                  <p>
+                    <span>Name:</span> {orderDetails.customer_name}
+                  </p>
+                  <p>
+                    <span>Address:</span> {orderDetails.customer_address}
+                  </p>
+                  <p>
+                    <span>Contact:</span> {orderDetails.customer_contact}
+                  </p>
+                  <p>
+                    <span>Date of Order:</span> {orderDetails.date_of_order}
+                  </p>
+                  <p>
+                    <span>Target Delivery Date:</span>{" "}
+                    {orderDetails.target_date_delivery}
+                  </p>
+                </div>
+
+                <div className="col-md-6 border-start">
+                  <p>
+                    <span>Payment Method:</span> {orderDetails.mode_of_payment}
+                  </p>
+                  <p>
+                    <span>Payment Option:</span> {orderDetails.payment_option}
+                  </p>
+                  <p>
+                    <span>Total:</span> ₱
+                    {Number(orderDetails?.total || 0).toLocaleString()}
+                  </p>
+                  <p>
+                    <span>Down Payment:</span> ₱
+                    {Number(orderDetails?.down_payment || 0).toLocaleString()}
+                  </p>
+                  <p>
+                    <span>Balance:</span> ₱
+                    {Number(orderDetails?.balance || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mx-2 my-3 p-3 bg-white border rounded-3 shadow-sm">
+              <h5 className="text-success fw-bold">Items Ordered</h5>
               <ul className="list-group list-group-flush">
                 {orderDetails.items.map((item, index) => (
                   <li
@@ -189,9 +239,9 @@ const ViewOrder = () => {
                         Unit Cost: ₱{Number(item.unit_cost).toLocaleString()}
                       </small>
                     </div>
-                    <strong>
+                    <span>
                       ₱{(item.unit_cost * item.quantity).toLocaleString()}
-                    </strong>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -206,18 +256,12 @@ const ViewOrder = () => {
               </div>
             </div>
 
-            <div className="buttons d-flex justify-content-center gap-5 mt-5">
+            <div className="buttons d-flex justify-content-center gap-5 mt-4">
               <button
                 className="btn upd-btn btn-success px-5 py-2 rounded-3"
                 onClick={handleUpdate}
               >
                 Update
-              </button>
-              <button
-                className="btn del-btn btn-danger px-5 py-2 rounded-3"
-                onClick={() => handleDelete(transaction_id)}
-              >
-                Delete
               </button>
             </div>
           </div>

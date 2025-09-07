@@ -12,9 +12,9 @@ $transactionResult = mysqli_query($conn, $transactionQuery);
 
 if ($transactionRow = mysqli_fetch_assoc($transactionResult)) {
     $latestTransactionId = $transactionRow['latest_transaction_id'];
-    $response['transaction_id'] = $latestTransactionId ? $latestTransactionId + 1 : 100001;
+    $response['transaction_id'] = $latestTransactionId ? $latestTransactionId + 1 : 4001;
 } else {
-    $response['transaction_id'] = 100001;
+    $response['transaction_id'] = 4001;
 }
 
 
@@ -23,9 +23,12 @@ $poResult = mysqli_query($conn, $poQuery);
 
 if ($poRow = mysqli_fetch_assoc($poResult)) {
     $latestPoId = $poRow['latest_po_id'];
-    $response['po_id'] = $latestPoId ? $latestPoId + 1 : 500001;
+    $nextPoId = $latestPoId ? $latestPoId + 1 : 1;
+
+    $response['po_id'] = str_pad($nextPoId, 4, "0", STR_PAD_LEFT);
 } else {
-    $response['po_id'] = 500001;
+    $response['po_id'] = "0001";
 }
+
 
 echo json_encode($response);

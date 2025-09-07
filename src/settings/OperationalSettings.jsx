@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import OperationalLayout from "../OperationalLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
-import AccountSecurityTab from "./AccountSecurityTab";
+
 import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
 
@@ -19,8 +19,7 @@ const OperationalSettings = () => {
         return <EditProfileTab />;
       case "change-password":
         return <ChangePasswordTab />;
-      case "security":
-        return <AccountSecurityTab />;
+      
       case "terms":
         return <ViewTermsTab />;
       default:
@@ -44,12 +43,7 @@ const OperationalSettings = () => {
         >
           Change Password
         </button>
-        <button
-          className={activeTab === "security" ? "active" : ""}
-          onClick={() => setActiveTab("security")}
-        >
-          Account Security
-        </button>
+      
         <button
           className={activeTab === "terms" ? "active" : ""}
           onClick={() => setActiveTab("terms")}
@@ -58,7 +52,6 @@ const OperationalSettings = () => {
         </button>
       </div>
 
-      {/* Content Inside Main Container */}
       <div className="settings-container">
         <div className="settings-content">{renderTabContent()}</div>
       </div>

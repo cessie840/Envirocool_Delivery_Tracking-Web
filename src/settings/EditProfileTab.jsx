@@ -121,7 +121,7 @@ const EditProfileTab = () => {
           </p>
           <hr />
           <button
-            className="btn btn-view mt-2 px-4"
+            className="btn btn-view mt-2 px-4 py-1 fs-6"
             onClick={() => setIsEditing(true)}
           >
             Edit

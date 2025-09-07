@@ -1,37 +1,149 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
-import { FaChartBar } from "react-icons/fa";
-import { Pie } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-
-ChartJS.register(ArcElement, Tooltip, Legend);
+import {
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
+  FaListAlt,
+  FaEquals,
+  FaSearch,
+  FaTruck,
+} from "react-icons/fa";
+import { Row, Col, Card } from "react-bootstrap";
+import axios from "axios";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [monthlyData, setMonthlyData] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [dashboardCounts, setDashboardCounts] = useState({
+    total: 0,
+    successful: 0,
+    cancelled: 0,
+    pending: 0,
+  });
+
+  const [yearlyData, setYearlyData] = useState({ total: 0, distribution: [] });
+  const [transactionStatusData, setTransactionStatusData] = useState([]);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date)) return dateString;
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
 
   useEffect(() => {
     document.title = "Admin Dashboard";
 
-    // Generate mock data for each month
-    const data = Array.from({ length: 12 }, () => {
-      const success = Math.floor(Math.random() * 100 + 50);
-      const cancelled = Math.floor(Math.random() * 60 + 20);
-      return { success, cancelled };
-    });
+    // Fetch dashboard totals
+    axios
+      .get("http://localhost/DeliveryTrackingSystem/get_total_dashboard.php", {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.success) {
+          setDashboardCounts(res.data);
+        }
+      })
+      .catch((err) => console.error("Error fetching dashboard data:", err));
 
-    setMonthlyData(data);
+    // Fetch recent transactions
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_recent_transactions.php",
+        {
+          withCredentials: true,
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setRecentTransactions(res.data.transactions);
+        }
+      })
+      .catch((err) =>
+        console.error("Error fetching recent transactions:", err)
+      );
+
+    // Fetch pending transactions
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_pending_transactions.php",
+        {
+          withCredentials: true,
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setPendingTransactions(res.data.transactions);
+        }
+      })
+      .catch((err) =>
+        console.error("Error fetching pending transactions:", err)
+      );
+
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_yearly_distribution.php",
+        { withCredentials: true }
+      )
+      .then((res) => {
+        if (res.data.success) setYearlyData(res.data);
+      })
+      .catch((err) =>
+        console.error("Error fetching yearly distribution:", err)
+      );
+
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_monthly_transactions.php",
+        {
+          withCredentials: true,
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          // No need to overwrite with count
+          setTransactionStatusData(res.data.monthly);
+        }
+      })
+      .catch((err) =>
+        console.error("Error fetching monthly transactions:", err)
+      );
   }, []);
-
-  const handleGenerateReport = () => {
-    navigate("/generate-report");
-  };
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
-  const totalSuccess = monthlyData.reduce((sum, m) => sum + m.success, 0);
-  const totalCancelled = monthlyData.reduce((sum, m) => sum + m.cancelled, 0);
+  const iconStyle = {
+    color: "white",
+    fontSize: "1.3rem",
+    padding: "10px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "40px",
+    height: "40px",
+    marginRight: "10px",
+  };
+
+  const COLORS = ["#4CAF50", "#E57373"];
 
   return (
     <AdminLayout
@@ -39,222 +151,299 @@ const AdminDashboard = () => {
       showSearch={false}
       onAddClick={handleAddDelivery}
     >
-      {/* DASHBOARD CONTENT */}
-      <div className="dashboard-content mt-4 fs-4 p-2 p-md-4 bg-white">
-        <div className="container-fluid">
-          {/* Cards Row */}
-          <div className="row g-4">
-            {/* Successful Deliveries */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
-                  <h6 className="text-muted">Successful Deliveries</h6>
-                  <p className="fw-bold fs-5 mb-0">1,200</p>
+      <div className="container-fluid">
+        {/* Top 4 Cards */}
+        <Row className="mb-4 g-3">
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 h-100 dashboard-panel">
+              <div className="d-flex align-items-center">
+                <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
+                  <FaTruck />
+                </div>
+                <div>
+                  <h6 className="fw-semibold m-0">Total Transactions</h6>
+                  <p className="mb-0 fw-semibold small">
+                    {dashboardCounts.total}
+                  </p>
                 </div>
               </div>
-            </div>
+            </Card>
+          </Col>
 
-            {/* Failed Deliveries */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-x-circle-fill text-danger fs-3 mb-2"></i>
-                  <h6 className="text-muted">Failed Deliveries</h6>
-                  <p className="fw-bold fs-5 mb-0">120</p>
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 h-100 dashboard-panel">
+              <div className="d-flex align-items-center">
+                <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
+                  <FaCheckCircle />
+                </div>
+                <div>
+                  <h6 className="fw-semibold m-0">Successful Deliveries</h6>
+                  <p className="mb-0 fw-semibold small">
+                    {dashboardCounts.successful}
+                  </p>
                 </div>
               </div>
-            </div>
+            </Card>
+          </Col>
 
-            {/* Daily Deliveries */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-truck text-warning fs-3 mb-2"></i>
-                  <h6 className="text-muted">Daily Deliveries</h6>
-                  <p className="fw-bold fs-5 mb-0">89</p>
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 h-100 dashboard-panel">
+              <div className="d-flex align-items-center">
+                <div style={{ ...iconStyle, backgroundColor: "#E57373" }}>
+                  <FaTimesCircle />
+                </div>
+                <div>
+                  <h6 className="fw-semibold m-0">Cancelled Deliveries</h6>
+                  <p className="mb-0 fw-semibold small">
+                    {dashboardCounts.cancelled}
+                  </p>
                 </div>
               </div>
-            </div>
+            </Card>
+          </Col>
 
-            {/* Customer Satisfaction */}
-            <div className="col-lg-3 col-md-6 col-sm-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-star-fill text-warning fs-3 mb-2"></i>
-                  <h6 className="text-muted">Customer Satisfaction</h6>
-                  <p className="fw-bold fs-5 mb-1">4.8 / 5.0</p>
-                  <small className="text-muted">1,320 reviews</small>
+          <Col xl={3} lg={6} md={6} sm={12}>
+            <Card className="p-3 h-100 dashboard-panel">
+              <div className="d-flex align-items-center">
+                <div style={{ ...iconStyle, backgroundColor: "#FFC107" }}>
+                  <FaClock />
+                </div>
+                <div>
+                  <h6 className="fw-semibold m-0">Outgoing Deliveries</h6>
+                  <p className="mb-0 fw-semibold small">
+                    {dashboardCounts.pending}
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
+            </Card>
+          </Col>
+        </Row>
 
-          {/* Classification Card */}
-          <div className="row g-4 mt-4">
-            <div className="col-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body">
-                  <h5 className="card-title text-center mb-4">
-                    Failed Delivery Classification
-                  </h5>
-                  <div className="d-flex flex-column flex-md-row justify-content-around text-center fs-6">
-                    {/* Customer Didn’t Receive */}
-                    <div className="p-3">
-                      <i className="bi bi-person-x-fill text-danger fs-3 mb-2"></i>
-                      <h6 className="text-danger">Customer Didn’t Receive</h6>
-                      <p className="fw-bold fs-5">80</p>
-                    </div>
-
-                    {/* Damaged Item */}
-                    <div className="p-3">
-                      <i className="bi bi-box-seam text-warning fs-3 mb-2"></i>
-                      <h6 className="text-danger">Damaged Item</h6>
-                      <p className="fw-bold fs-5">40</p>
-                    </div>
-                  </div>
+        {/* Bottom Panels */}
+        <Row className="g-3">
+          {/* Recent Transactions */}
+          <Col lg={7} md={12}>
+            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="m-0 fw-bold">Recent Transactions</h5>
+                <div className="d-flex gap-3">
+                  <FaSearch className="text-secondary cursor-pointer" />
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Bar Chart Card */}
-          <div className="row g-4 mt-4">
-            <div className="text-end mx-1 my-3 d-flex justify-content-end">
-              <button
-                className="btn-view rounded-2 px-3 py-2 fs-6 d-flex align-items-center gap-2"
-                onClick={handleGenerateReport}
-              >
-                <FaChartBar /> See Overall Report
-              </button>
-            </div>
-            <div className="col-12">
-              <div className="card shadow-sm h-100">
-                <div className="card-body">
-                  {/* Title + Generate Report Button */}
-                  <div className="d-flex justify-content-center align-items-center mb-4">
-                    <h5 className="card-title text-center mb-0">
-                      Monthly Delivery Overview
-                    </h5>
-                  </div>
+              <div className="table-responsive">
+                <table
+                  className="table table-bordered table-hover responsive shadow-sm text-center mb-0"
+                  style={{ cursor: "default" }}
+                >
+                  <thead className="table-success">
+                    <tr>
+                      <th>Transaction No.</th>
+                      <th>Client</th>
+                      <th>Date Ordered</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentTransactions.length > 0 ? (
+                      recentTransactions.map((tx) => (
+                        <tr key={tx.transaction_id} className="table-row-hover">
+                          <td>{tx.transaction_id}</td>
+                          <td>{tx.customer_name}</td>
+                          <td>{formatDate(tx.date_ordered)}</td>
+                          <td>
+                            {[
+                              "Delivered",
+                              "Cancelled",
+                              "Out for Delivery",
+                            ].includes(tx.status) && (
+                              <span
+                                style={{
+                                  backgroundColor:
+                                    tx.status === "Delivered"
+                                      ? "#C6FCD3"
+                                      : tx.status === "Cancelled"
+                                      ? "#FDE0E0"
+                                      : tx.status === "Out for Delivery"
+                                      ? "#d2e6f5ff"
+                                      : "transparent",
+                                  color:
+                                    tx.status === "Delivered"
+                                      ? "#3E5F44"
+                                      : tx.status === "Cancelled"
+                                      ? "red"
+                                      : tx.status === "Out for Delivery"
+                                      ? "#1762b1ff"
+                                      : "black",
+                                  padding: "5px",
+                                  borderRadius: "8px",
+                                  display: "inline-block",
+                                  minWidth: "80px",
+                                  textAlign: "center",
+                                  fontSize: "0.85rem",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {tx.status === "Delivered"
+                                  ? "Delivered"
+                                  : tx.status === "Cancelled"
+                                  ? "Cancelled"
+                                  : "Out for Delivery"}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="text-center text-muted">
+                          No recent transactions found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-                  <div className="overflow-auto">
-                    <div
-                      className="d-flex justify-content-between align-items-end"
-                      style={{ minWidth: "700px", height: "260px" }}
+              <div className="text-muted small mt-2">
+                Showing {recentTransactions.length} recent transactions out of{" "}
+                {dashboardCounts.total}
+              </div>
+            </div>
+          </Col>
+
+          {/* Pending Transactions (no Status column) */}
+          <Col lg={5} md={12}>
+            <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="m-0 fw-bold">Pending Transactions</h5>
+                <div className="d-flex gap-3">
+                  <FaSearch className="text-secondary cursor-pointer" />
+                </div>
+              </div>
+
+              <div className="table-responsive">
+                <table
+                  className="table table-bordered table-hover responsive shadow-sm text-center mb-0"
+                  style={{ cursor: "default" }}
+                >
+                  <thead className="table-success">
+                    <tr>
+                      <th>Transaction No.</th>
+                      <th>Client</th>
+                      <th>Date Ordered</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingTransactions.length > 0 ? (
+                      pendingTransactions.map((tx) => (
+                        <tr key={tx.transaction_id} className="table-row-hover">
+                          <td>{tx.transaction_id}</td>
+                          <td>{tx.customer_name}</td>
+                          <td>{formatDate(tx.date_ordered)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="text-center text-muted">
+                          No pending transactions found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="text-muted small mt-2">
+                Showing {pendingTransactions.length} pending transactions out of{" "}
+                {dashboardCounts.pending}
+              </div>
+            </div>
+          </Col>
+        </Row>
+
+        <Row className="mt-4 g-3">
+          {/* Left: Monthly Bar Chart */}
+          <Col xs={12} lg={8}>
+            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
+              <h5 className="fw-bold mb-3 text-center text-lg-start">
+                Monthly Transactions (Year {yearlyData.year})
+              </h5>
+              <div style={{ width: "100%", height: "300px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={transactionStatusData}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip formatter={(value) => `${value} transactions`} />
+                    <Legend />
+                    {/* Order: Total first, then Successful, then Cancelled */}
+                    <Bar
+                      dataKey="total"
+                      fill="#2196F3"
+                      name="Total Transactions"
+                    />
+                    <Bar
+                      dataKey="successful"
+                      fill="#4CAF50"
+                      name="Successful Deliveries"
+                    />
+                    <Bar
+                      dataKey="cancelled"
+                      fill="#E57373"
+                      name="Cancelled Deliveries"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Col>
+
+          {/* Right: Yearly Distribution Pie Chart */}
+          <Col xs={12} lg={4}>
+            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
+              <h5 className="fw-bold mb-3 text-center text-lg-start">
+                Successful vs Cancelled (Year {yearlyData.year})
+              </h5>
+              <div style={{ width: "100%", height: "300px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={yearlyData.distribution}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, value }) =>
+                        `${name}: ${value} (${(
+                          (value / yearlyData.total) *
+                          100
+                        ).toFixed(1)}%)`
+                      }
+                      labelLine={false}
                     >
-                      {monthlyData.map((data, i) => {
-                        const month = [
-                          "Jan",
-                          "Feb",
-                          "Mar",
-                          "Apr",
-                          "May",
-                          "Jun",
-                          "Jul",
-                          "Aug",
-                          "Sep",
-                          "Oct",
-                          "Nov",
-                          "Dec",
-                        ][i];
-
-                        const maxHeight = 150;
-                        const maxValue = 160;
-                        const successHeight =
-                          (data.success / maxValue) * maxHeight;
-                        const cancelledHeight =
-                          (data.cancelled / maxValue) * maxHeight;
-
-                        return (
-                          <div
-                            key={i}
-                            className="d-flex flex-column align-items-center"
-                            style={{ flex: "1", minWidth: "50px" }}
-                          >
-                            <small
-                              className="text-success fw-bold"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              {data.success}
-                            </small>
-                            <small
-                              className="text-danger fw-bold"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              {data.cancelled}
-                            </small>
-
-                            {/* Bars */}
-                            <div
-                              className="d-flex gap-1 align-items-end"
-                              style={{ height: `${maxHeight}px` }}
-                            >
-                              <div
-                                title={`${data.success} Successful`}
-                                style={{
-                                  height: `${successHeight}px`,
-                                  width: "14px",
-                                  backgroundColor: "green",
-                                  borderRadius: "3px",
-                                }}
-                              ></div>
-                              <div
-                                title={`${data.cancelled} Cancelled`}
-                                style={{
-                                  height: `${cancelledHeight}px`,
-                                  width: "14px",
-                                  backgroundColor: "red",
-                                  borderRadius: "3px",
-                                }}
-                              ></div>
-                            </div>
-
-                            <small className="mt-2 text-muted">{month}</small>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Legend */}
-                  <div className="d-flex justify-content-center gap-4 mt-4">
-                    <div className="d-flex align-items-center gap-2">
-                      <div
-                        style={{
-                          width: "15px",
-                          height: "15px",
-                          backgroundColor: "green",
-                        }}
-                      ></div>
-                      <small>Successful</small>
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <div
-                        style={{
-                          width: "15px",
-                          height: "15px",
-                          backgroundColor: "red",
-                        }}
-                      ></div>
-                      <small>Cancelled</small>
-                    </div>
-                  </div>
-
-                  {/* Totals */}
-                  <div className="d-flex justify-content-center mt-3 gap-5">
-                    <h6 className="text-success">
-                      Total Successful: {totalSuccess}
-                    </h6>
-                    <h6 className="text-danger">
-                      Total Cancelled: {totalCancelled}
-                    </h6>
-                  </div>
-                </div>
+                      {yearlyData.distribution.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} transactions`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-muted small mt-2 fw-bold text-center">
+                Total: {yearlyData.total} transactions
               </div>
             </div>
-          </div>
-        </div>
+          </Col>
+        </Row>
       </div>
     </AdminLayout>
   );

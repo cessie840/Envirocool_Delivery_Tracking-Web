@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
 import {
   FaClipboardList,
@@ -10,6 +10,8 @@ import {
   FaSearch,
   FaHome,
   FaBars,
+  FaAlignRight,
+  FaAlignJustify,
   FaTimes,
   FaPlus,
 } from "react-icons/fa";
@@ -23,12 +25,19 @@ const AdminLayout = ({
   onSearch,
   children,
 }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved === "true";
+  });
+  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
@@ -46,6 +55,28 @@ const AdminLayout = ({
     if (onSearch) onSearch(value);
   };
 
+const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+  return window.innerWidth > 991; // open if desktop, closed if mobile
+});
+
+useEffect(() => {
+  const handleResize = () => {
+    if (window.innerWidth <= 991) {
+      setIsSidebarOpen(false);
+    } else {
+      setIsSidebarOpen(true);
+    }
+  };
+
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
+
+
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
+  }, [isSidebarCollapsed]);
+
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
       {/* LOADING OVERLAY */}
@@ -59,9 +90,9 @@ const AdminLayout = ({
 
       {/* SIDEBAR */}
       <aside
-        className={`sidebar d-flex flex-column align-items-center p-3 ${
-          isSidebarOpen ? "show" : "collapsed"
-        }`}
+        className={`sidebar d-flex flex-column align-items-center p-3 
+    ${isSidebarOpen ? "show" : ""} 
+    ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
       >
         <button
           className="btn close-sidebar d-lg-none align-self-end mb-3"
@@ -70,49 +101,83 @@ const AdminLayout = ({
           <FaTimes />
         </button>
 
-        <img
-          src={logo}
-          alt="Envirocool Logo"
-          className="logo mb-4 img-fluid"
-          width="250px"
-        />
+        <div className="sidebar-header d-flex justify-content-between align-items-center w-100 mb-4">
+          <img
+            src={logo}
+            alt="Envirocool Logo"
+            className="logo img-fluid"
+            width="250px"
+          />
+          <button
+            className="btn collapse-toggle d-none d-lg-flex p-3"
+            onClick={toggleCollapse}
+            aria-label="Toggle sidebar collapse"
+          >
+            {isSidebarCollapsed ? <FaAlignJustify /> : <FaAlignRight />}{" "}
+          </button>
+        </div>
 
         <nav className="nav-buttons">
           <button
-            className="nav-btn"
+            className={`nav-btn ${
+              isActive("/admin-dashboard") ? "active" : ""
+            }`}
             onClick={() => navigate("/admin-dashboard")}
           >
-            <FaHome className="icon" /> DASHBOARD
+            <FaHome className="icon" />
+            <span className="nav-text"> DASHBOARD</span>
+            <span className="tooltip-text">Dashboard</span>
           </button>
+
           <button
-            className="nav-btn"
+            className={`nav-btn ${
+              isActive("/delivery-details") ? "active" : ""
+            }`}
             onClick={() => navigate("/delivery-details")}
           >
-            <FaClipboardList className="icon" /> DELIVERY DETAILS
+            <FaClipboardList className="icon" />
+            <span className="nav-text"> DELIVERY DETAILS</span>
+            <span className="tooltip-text">Delivery Details</span>
           </button>
+
           <button
-            className="nav-btn"
+            className={`nav-btn ${
+              isActive("/monitor-delivery") ? "active" : ""
+            }`}
             onClick={() => navigate("/monitor-delivery")}
           >
-            <FaTruck className="icon" /> MONITOR DELIVERY
+            <FaTruck className="icon" />
+            <span className="nav-text"> MONITOR DELIVERY</span>
+            <span className="tooltip-text">Monitor Delivery</span>
           </button>
+
           <button
-            className="nav-btn"
+            className={`nav-btn ${
+              isActive("/generate-report") ? "active" : ""
+            }`}
             onClick={() => navigate("/generate-report")}
           >
-            <FaChartBar className="icon" /> GENERATE REPORT
+            <FaChartBar className="icon" />
+            <span className="nav-text"> GENERATE REPORT</span>
+            <span className="tooltip-text">Generate Report</span>
           </button>
+
           <button
-            className="nav-btn"
+            className={`nav-btn ${isActive("/admin-settings") ? "active" : ""}`}
             onClick={() => navigate("/admin-settings")}
           >
-            <FaCog className="icon" /> SETTINGS
+            <FaCog className="icon" />
+            <span className="nav-text"> SETTINGS</span>
+            <span className="tooltip-text">Settings</span>
           </button>
+
           <button
-            className="nav-btn logout"
+            className={`nav-btn logout ${isActive("/logout") ? "active" : ""}`}
             onClick={() => setShowLogoutModal(true)}
           >
-            <FaSignOutAlt className="icon" /> LOGOUT
+            <FaSignOutAlt className="icon" />
+            <span className="nav-text"> LOGOUT</span>
+            <span className="tooltip-text">Logout</span>
           </button>
         </nav>
       </aside>
@@ -121,7 +186,10 @@ const AdminLayout = ({
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
-            <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
+            <button
+              className="toggle-sidebar btn d-lg-none me-0"
+              onClick={toggleSidebar}
+            >
               {isSidebarOpen ? <FaTimes /> : <FaBars />}
             </button>
             <h2 className="fs-1 fw-bold m-0">{title}</h2>

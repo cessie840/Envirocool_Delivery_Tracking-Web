@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import AdminLayout from "../AdminLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
-import AccountSecurityTab from "./AccountSecurityTab";
+
 import BackupRestoreTab from "./BackupRestoreTab";
 import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
@@ -20,8 +20,7 @@ const AdminSettings = () => {
         return <EditProfileTab />;
       case "change-password":
         return <ChangePasswordTab />;
-      case "security":
-        return <AccountSecurityTab />;
+     
       case "backup-restore":
         return <BackupRestoreTab />;
       case "terms":
@@ -46,12 +45,7 @@ const AdminSettings = () => {
         >
           Change Password
         </button>
-        <button
-          className={activeTab === "security" ? "active" : ""}
-          onClick={() => setActiveTab("security")}
-        >
-          Account Security
-        </button>
+      
         <button
           className={activeTab === "backup-restore" ? "active" : ""}
           onClick={() => setActiveTab("backup-restore")}
