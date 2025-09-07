@@ -41,6 +41,8 @@ function App() {
       <Routes>
         {/* PROTECTED ROUTES - ROLE BASED ACCESS  */}
         <Route path="/" element={<Login />} />
+        <Route path="/forgotpassword" element={<ForgotPass />} />
+        <Route path="/tracking-page" element={<CustomerTrackingPage />} />
         <Route
           path="/admin-dashboard"
           element={
@@ -65,7 +67,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/forgotpassword" element={<ForgotPass />} />
+        <Route path="/customer/:trackingNumber" element={<Customer />} />
         {/* ADMIN ROUTES  */}
         <Route path="/add-delivery" element={<AddDelivery />} />
         <Route path="/delivery-details" element={<DeliveryDetails />} />
@@ -111,8 +113,6 @@ function App() {
           />
           <Route path="/settings/view-terms" element={<ViewTermsTab />} />
         </>
-        <Route path="/tracking-page" element={<CustomerTrackingPage />} />
-        <Route path="/customer" element={<Customer />} />
       </Routes>
     </Router>
   );

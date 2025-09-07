@@ -1,98 +1,114 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Form, Button, Spinner } from "react-bootstrap";
 import logo from "./assets/envirocool-logo.png";
 
 const CustomerTrackingPage = () => {
   const [trackingNumber, setTrackingNumber] = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (trackingNumber.trim() === "") {
       alert("Please enter a tracking number.");
       return;
     }
-    setShowModal(true);
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "http://localhost/DeliveryTrackingSystem/fetch_tracking_number.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ tracking_number: trackingNumber }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem("trackingNumber", data.tracking_number);
+        navigate("/customer");
+      } else {
+        alert(data.message || "Invalid tracking number.");
+      }
+    } catch (error) {
+      console.error("Error verifying tracking number:", error);
+      alert("Server error. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <div
-      className="d-flex justify-content-center align-items-center vh-100"
+      className="d-flex justify-content-center align-items-center min-vh-100"
       style={{
         background: "linear-gradient(135deg, #e3f2fd, #bbdefb)",
+        padding: "20px",
       }}
     >
       <div
-        className="card shadow-lg p-5 border-0"
-        style={{ maxWidth: "420px", width: "100%", borderRadius: "20px" }}
+        className="card shadow-lg border-0 text-center"
+        style={{
+          maxWidth: "420px",
+          width: "100%",
+          borderRadius: "20px",
+          padding: "40px 30px",
+        }}
       >
-        <div className="text-center mb-4">
+        {/* Logo + Header */}
+        <div className="mb-4">
           <img
             src={logo}
             alt="Envirocool Logo"
-            style={{ height: "90px" }}
+            style={{ height: "80px" }}
             className="mb-3"
           />
-          <h3 className="fw-bold text-primary">Delivery Tracking</h3>
-          <p className="text-muted small">
-            Enter your tracking number to check the delivery status.
+          <h3 className="fw-bold text-primary mb-2">Delivery Tracking</h3>
+          <p className="text-muted small mb-0">
+            Enter your tracking number to check your order status.
           </p>
         </div>
 
-        <Form onSubmit={handleSubmit}>
+        {/* Tracking Form */}
+        <Form onSubmit={handleSubmit} className="text-start">
           <Form.Group className="mb-4" controlId="formTrackingNumber">
-            <Form.Label className="fw-semibold">
-              Enter Tracking Number:
-            </Form.Label>
+            <Form.Label className="fw-semibold">Tracking Number</Form.Label>
             <Form.Control
               type="text"
               placeholder="e.g. ENV123456"
               value={trackingNumber}
               onChange={(e) => setTrackingNumber(e.target.value)}
-              style={{ padding: "14px", borderRadius: "12px" }}
+              style={{
+                padding: "14px",
+                borderRadius: "12px",
+                fontSize: "15px",
+              }}
             />
           </Form.Group>
           <div className="d-grid">
             <Button
               variant="primary"
               type="submit"
+              disabled={loading}
+              className="d-flex justify-content-center align-items-center gap-2"
               style={{
                 padding: "12px",
                 borderRadius: "12px",
                 fontWeight: "600",
               }}
             >
-              Track Delivery
+              {loading && <Spinner animation="border" size="sm" />}
+              {loading ? " Verifying..." : "Track Delivery"}
             </Button>
           </div>
         </Form>
       </div>
-
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title className="fw-bold">Delivery Status</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="text-center">
-            <h5 className="mb-3">Tracking Number</h5>
-            <p className="fw-bold fs-5 text-primary">{trackingNumber}</p>
-            <div className="alert alert-info mt-3">
-              🚚 Your package is currently <strong>In Transit</strong>.
-            </div>
-            <small className="text-muted">*Sample data for demo</small>
-          </div>
-        </Modal.Body>
-        <Modal.Footer className="d-flex justify-content-center">
-          <Button
-            variant="secondary"
-            onClick={() => setShowModal(false)}
-            style={{ borderRadius: "10px" }}
-          >
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 };
