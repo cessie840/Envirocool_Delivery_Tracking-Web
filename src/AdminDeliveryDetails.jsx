@@ -9,7 +9,6 @@ const DeliveryDetails = () => {
   const [deliveries, setDeliveries] = useState([]);
   const [filter, setFiltered] = useState([]);
 
-
   const [showModal, setShowModal] = useState(false);
   const [editableItems, setEditableItems] = useState([]);
   const [formData, setFormData] = useState({
@@ -26,11 +25,13 @@ const DeliveryDetails = () => {
   // 🔹 New state for status filter
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
-const formatDate = (dateString) => {
-  if (!dateString) return "";
-  return dateString.split("T")[0] || dateString.split(" ")[0];
-};
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return dateString.split("T")[0] || dateString.split(" ")[0];
+  };
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
@@ -46,7 +47,6 @@ const formatDate = (dateString) => {
     fetchDeliveries();
   }, []);
 
-  
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
@@ -82,49 +82,47 @@ const formatDate = (dateString) => {
       .catch((err) => console.error("Failed to fetch order:", err));
   };
 
-const handleSubmit = () => {
-  if (!/^09\d{9}$/.test(formData.customer_contact)) {
-    alert("Contact number must start with '09' and be exactly 11 digits.");
-    return;
-  }
+  const handleSubmit = () => {
+    if (!/^09\d{9}$/.test(formData.customer_contact)) {
+      alert("Contact number must start with '09' and be exactly 11 digits.");
+      return;
+    }
 
-  const total = editableItems.reduce(
-    (sum, item) => sum + item.quantity * item.unit_cost,
-    0
-  );
+    const total = editableItems.reduce(
+      (sum, item) => sum + item.quantity * item.unit_cost,
+      0
+    );
 
-  const down_payment = parseFloat(formData.down_payment) || 0;
-  const balance = total - down_payment;
+    const down_payment = parseFloat(formData.down_payment) || 0;
+    const balance = total - down_payment;
 
-  fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      transaction_id: transactionId,
-      ...formData,
-      total,
-      balance,
-      items: editableItems,
-    }),
-  })
-    .then((res) => res.json())
-    .then((response) => {
-      if (response.status === "success") {
-        alert("Update successful!");
-        fetchDeliveries();
-        setShowModal(false);
-      } else {
-        console.error("Update response:", response);
-        alert("Update failed.");
-      }
+    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transaction_id: transactionId,
+        ...formData,
+        total,
+        balance,
+        items: editableItems,
+      }),
     })
-    .catch((err) => {
-      console.error("Update error:", err);
-      alert("An error occurred.");
-    });
-};
-
-
+      .then((res) => res.json())
+      .then((response) => {
+        if (response.status === "success") {
+          alert("Update successful!");
+          fetchDeliveries();
+          setShowModal(false);
+        } else {
+          console.error("Update response:", response);
+          alert("Update failed.");
+        }
+      })
+      .catch((err) => {
+        console.error("Update error:", err);
+        alert("An error occurred.");
+      });
+  };
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
@@ -138,8 +136,7 @@ const handleSubmit = () => {
         (e.customer_name && e.customer_name.toLowerCase().includes(lower)) ||
         (e.description && e.description.toLowerCase().includes(lower));
 
-      const matchesStatus =
-        status === "All" || e.delivery_status === status;
+      const matchesStatus = status === "All" || e.delivery_status === status;
 
       return matchesSearch && matchesStatus;
     });
@@ -153,8 +150,6 @@ const handleSubmit = () => {
     setStatusFilter(status);
     setFiltered(applyFilters(deliveries, "", status));
   };
-
- 
 
   const groupedDeliveries = filter.reduce((acc, item) => {
     const id = item.transaction_id;
@@ -178,6 +173,18 @@ const handleSubmit = () => {
     return acc;
   }, {});
 
+  const allDeliveries = Object.values(groupedDeliveries).sort(
+    (a, b) => b.transaction_id - a.transaction_id
+  );
+
+  // 🔹 Pagination logic
+  const totalPages = Math.ceil(allDeliveries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedDeliveries = allDeliveries.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
   return (
     <AdminLayout
       title="Delivery Details"
@@ -189,7 +196,11 @@ const handleSubmit = () => {
         <Form.Select
           value={statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}
-          style={{ width: "250px", border: "1px solid #CADBC8FF ", fontWeight: "500" }}
+          style={{
+            width: "250px",
+            border: "1px solid #CADBC8FF ",
+            fontWeight: "500",
+          }}
         >
           <option value="All">Filter by Delivery Status</option>
           <option value="Pending">Pending</option>
@@ -218,90 +229,83 @@ const handleSubmit = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.values(groupedDeliveries).length > 0 ? (
-            Object.values(groupedDeliveries)
-              .sort((a, b) => b.transaction_id - a.transaction_id)
-              .map((group, index) => (
-                <tr key={index} className="delivery-table-hover">
-                  <td>{group.transaction_id}</td>
-
-                  <td>{group.tracking_number}</td>
-
-                  <td>{group.customer_name}</td>
-                  <td className="p-1">
-                    {group.items.map((item, idx) => (
-                      <div key={idx}>{item.description}</div>
-                    ))}
-                  </td>
-                  <td>
-                    {group.items.map((item, idx) => (
-                      <div key={idx}>{item.quantity}</div>
-                    ))}
-                  </td>
-                  <td>
-                    {Number(group.total).toLocaleString("en-PH", {
-                      style: "currency",
-                      currency: "PHP",
-                    })}
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        backgroundColor:
-                          group.delivery_status === "Delivered"
-                            ? "#C6FCD3"
-                            : group.delivery_status === "Cancelled"
-                            ? "#FDE0E0"
-                            : group.delivery_status === "Pending"
-                            ? "#FFF5D7"
-                            : group.delivery_status === "Out for Delivery"
-                            ? "#d2e6f5ff"
-                            : "transparent",
-                        color:
-                          group.delivery_status === "Delivered"
-                            ? "#3E5F44"
-                            : group.delivery_status === "Cancelled"
-                            ? "red"
-                            : group.delivery_status === "Pending"
-                            ? "#FF9D23"
-                            : group.delivery_status === "Out for Delivery"
-                            ? "#1762b1ff"
-                            : "black",
-                        padding: "5px",
-                        borderRadius: "8px",
-                        display: "inline-block",
-                        minWidth: "80px",
-                        textAlign: "center",
-                        fontSize: "0.85rem",
-                        fontWeight: "600",
-                      }}
+          {paginatedDeliveries.length > 0 ? (
+            paginatedDeliveries.map((group, index) => (
+              <tr key={index} className="delivery-table-hover">
+                <td>{group.transaction_id}</td>
+                <td>{group.tracking_number}</td>
+                <td>{group.customer_name}</td>
+                <td className="p-1">
+                  {group.items.map((item, idx) => (
+                    <div key={idx}>{item.description}</div>
+                  ))}
+                </td>
+                <td>
+                  {group.items.map((item, idx) => (
+                    <div key={idx}>{item.quantity}</div>
+                  ))}
+                </td>
+                <td>
+                  {Number(group.total).toLocaleString("en-PH", {
+                    style: "currency",
+                    currency: "PHP",
+                  })}
+                </td>
+                <td>
+                  <span
+                    style={{
+                      backgroundColor:
+                        group.delivery_status === "Delivered"
+                          ? "#C6FCD3"
+                          : group.delivery_status === "Cancelled"
+                          ? "#FDE0E0"
+                          : group.delivery_status === "Pending"
+                          ? "#FFF5D7"
+                          : group.delivery_status === "Out for Delivery"
+                          ? "#d2e6f5ff"
+                          : "transparent",
+                      color:
+                        group.delivery_status === "Delivered"
+                          ? "#3E5F44"
+                          : group.delivery_status === "Cancelled"
+                          ? "red"
+                          : group.delivery_status === "Pending"
+                          ? "#FF9D23"
+                          : group.delivery_status === "Out for Delivery"
+                          ? "#1762b1ff"
+                          : "black",
+                      padding: "5px",
+                      borderRadius: "8px",
+                      display: "inline-block",
+                      minWidth: "80px",
+                      textAlign: "center",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {group.delivery_status}
+                  </span>
+                </td>
+                <td className="align-middle text-center">
+                  <div className="action-btn d-flex justify-content-center gap-2 py-2">
+                    <button
+                      className="btn btn-view"
+                      onClick={() =>
+                        navigate(`/view-delivery/${group.transaction_id}`)
+                      }
                     >
-                      {group.delivery_status}
-                    </span>
-                  </td>
-                  <td className="align-middle text-center">
-                    <div className="action-btn d-flex justify-content-center gap-2 py-2">
-                      <button
-                        className="btn btn-view"
-                        onClick={() =>
-                         
-                          navigate(`/view-delivery/${group.transaction_id}`)
-                        
-                        }
-                      >
-                        View
-                      </button>
-
-                      <button
-                        className="btn upd-btn"
-                        onClick={() => handleUpdate(group.transaction_id)}
-                      >
-                        Update
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                      View
+                    </button>
+                    <button
+                      className="btn upd-btn"
+                      onClick={() => handleUpdate(group.transaction_id)}
+                    >
+                      Update
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
           ) : (
             <tr>
               <td colSpan="7" className="text-center py-4">
@@ -311,6 +315,26 @@ const handleSubmit = () => {
           )}
         </tbody>
       </Table>
+
+      <div className="custom-pagination d-flex justify-content-center align-items-center mt-3">
+        <button
+          className="page-btn btn btn-white mx-1"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info mx-2">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn btn btn-white mx-1"
+          disabled={currentPage === totalPages || totalPages === 0}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
 
       <UpdateOrderModal
         show={showModal}
