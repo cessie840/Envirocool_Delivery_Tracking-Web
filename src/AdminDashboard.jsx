@@ -331,69 +331,69 @@ const AdminDashboard = () => {
           </Col>
         </Row>
 
-<Row className="mt-4 g-3">
-  {/* Left: Monthly Bar Chart */}
-  <Col lg={8} md={12}>
-    <div className="dashboard-panel bg-white p-4 shadow-sm h-100">
-      <h5 className="fw-bold mb-3">
-        Monthly Transactions (Year {yearlyData.year})
-      </h5>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={transactionStatusData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="successful" fill="#4CAF50" name="Successful" />
-          <Bar dataKey="cancelled" fill="#E57373" name="Cancelled" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </Col>
+        <Row className="mt-4 g-3">
+          {/* Left: Monthly Bar Chart */}
+          <Col lg={8} md={12}>
+            <div className="dashboard-panel bg-white p-4 shadow-sm h-100">
+              <h5 className="fw-bold mb-3">
+                Monthly Transactions (Year {yearlyData.year})
+              </h5>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={transactionStatusData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" fill="#2196F3" name="Transactions" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Col>
 
-  {/* Right: Yearly Distribution Pie Chart */}
-  <Col lg={4} md={12}>
-    <div className="dashboard-panel bg-white p-4 shadow-sm h-100">
-      <h5 className="fw-bold mb-3">
-        Successful vs Cancelled (Year {yearlyData.year})
-      </h5>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={yearlyData.distribution}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            label={({ name, value }) =>
-              `${name}: ${value} (${((value / yearlyData.total) * 100).toFixed(
-                1
-              )}%)`
-            }
-            labelLine={false}
-          >
-            {yearlyData.distribution.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value) => `${value} transactions`} />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="text-muted small mt-2 fw-bold">
-        Total: {yearlyData.total} transactions
-      </div>
-    </div>
-  </Col>
-</Row>
+          {/* Right: Yearly Distribution Pie Chart */}
+          <Col lg={4} md={12}>
+            <div className="dashboard-panel bg-white p-4 shadow-sm h-100">
+              <h5 className="fw-bold mb-3">
+                Successful vs Cancelled (Year {yearlyData.year})
+              </h5>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={yearlyData.distribution}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label={({ name, value }) =>
+                      `${name}: ${value} (${(
+                        (value / yearlyData.total) *
+                        100
+                      ).toFixed(1)}%)`
+                    }
+                    labelLine={false}
+                  >
+                    {yearlyData.distribution.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value} transactions`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="text-muted small mt-2 fw-bold">
+                Total: {yearlyData.total} transactions
+              </div>
+            </div>
+          </Col>
+        </Row>
       </div>
     </AdminLayout>
   );
