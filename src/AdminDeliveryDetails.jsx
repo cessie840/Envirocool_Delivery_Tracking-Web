@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Form } from "react-bootstrap"; // ✅ import Form for dropdown
+import { Table, Form } from "react-bootstrap"; 
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 
@@ -179,13 +179,15 @@ const handleSubmit = () => {
   }, {});
 
   return (
+    
     <AdminLayout
       title="Delivery Details"
       onAddClick={handleAddDelivery}
       showSearch={true}
       onSearch={handleSearch}
+      
     >
-      <div className="mb-3 d-flex justify-content-end">
+      <div className="mb-3 d-flex justify-content-end ">
         <Form.Select
           value={statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}

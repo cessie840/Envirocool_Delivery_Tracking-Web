@@ -39,7 +39,24 @@ const MonitorDelivery = () => {
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
-  // fetch deliveries from PHP
+  // Format datetime as "Date: mm/dd/yyyy Time: hh:mm AM/PM"
+  // Format datetime as "Date: mm/dd/yyyy Time: HH:mm" (24-hour format)
+  const formatDateTime = (dateTime) => {
+    if (!dateTime) return "N/A";
+    const date = new Date(dateTime);
+    if (isNaN(date.getTime())) return dateTime;
+
+    const formattedDate = date.toLocaleDateString("en-US");
+    const formattedTime = date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false, // <- 24-hour format
+    });
+
+    return `${formattedDate} |  ${formattedTime}`;
+  };
+
+  // Fetch deliveries
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
@@ -63,9 +80,7 @@ const MonitorDelivery = () => {
 
         const uniqueById = (arr) => {
           const map = new Map();
-          arr.forEach((item) => {
-            map.set(item.transaction_id, item);
-          });
+          arr.forEach((item) => map.set(item.transaction_id, item));
           return Array.from(map.values());
         };
 
@@ -84,8 +99,8 @@ const MonitorDelivery = () => {
         );
 
         const sortByTimeDesc = (a, b) =>
-          new Date(b.completed_time || b.cancelled_at || b.time) -
-          new Date(a.completed_time || a.cancelled_at || a.time);
+          new Date(b.completed_time || b.cancelled_time || b.time) -
+          new Date(a.completed_time || a.cancelled_time || a.time);
 
         setTransactions({
           inTransit: inTransit.sort(sortByTimeDesc),
@@ -101,11 +116,10 @@ const MonitorDelivery = () => {
   }, []);
 
   const renderTransactions = (transactions, activeTab) => {
-    // Define background + border per tab
     const tabColors = {
-      inTransit: { bg: "#EDF4FAFF", border: "  #95B0CEFF" },
-      completed: { bg: "#EAF8EACE", border: " #ABCFB4FF" },
-      cancelled: { bg: "#FAEEEEE1", border: " #DDB4B8FF" },
+      inTransit: { bg: "#EDF4FAFF", border: "#95B0CEFF" },
+      completed: { bg: "#EAF8EACE", border: "#ABCFB4FF" },
+      cancelled: { bg: "#FAEEEEE1", border: "#DDB4B8FF" },
     };
 
     return (
@@ -152,23 +166,23 @@ const MonitorDelivery = () => {
                   ["Contact No.:", t.contact],
                   ["Shipping Address:", t.customer_address],
                   ["Order Description:", t.description],
-                  ["Date of Order:", t.time],
+                  ["Date of Order:", formatDateTime(t.time)],
                   ...(activeTab === "completed"
                     ? [
-                      ["Shipout Date:", t.shipout_time],
-                      ["Received Date:", t.completed_time],
-                    ]
+                        ["Shipout:", formatDateTime(t.shipout_time)],
+                        ["Received:", formatDateTime(t.completed_time)],
+                      ]
                     : activeTab === "cancelled"
-                      ? [
-                        ["Ship Out Date:", t.shipout_time],
-                        ["Cancelled Date:", t.cancelled_time],
+                    ? [
+                        ["Ship Out:", formatDateTime(t.shipout_time)],
+                        ["Cancelled:", formatDateTime(t.cancelled_time)],
                         ["Cancellation Reason:", t.cancelled_reason],
                       ]
-                      : [["Ship Out Date:", t.shipout_time]]),
+                    : [["Ship Out:", formatDateTime(t.shipout_time)]]),
                   ["Delivery Incharge:", t.driver],
                   ["Shipping Process:", t.status],
                   ["Distance:", t.distance],
-                  ["ETA:", t.eta],
+                  ["ETA:", formatDateTime(t.eta)],
                 ].map(([label, value], i) => (
                   <div className="row mb-2" key={i}>
                     <div className="col-5 fw-semibold text-success">
@@ -193,16 +207,12 @@ const MonitorDelivery = () => {
       <div className="p-4 bg-white rounded-4 border border-secondary-subtle">
         <div className="container-fluid p-3">
           <div className="row g-3">
-            {/* <div style={{ fontSize: 30, fontWeight: "bold" }}>
-              Transactions:
-            </div> */}
-
             <div className="col-12 col-md-5">
               <div className="rounded p-2 d-flex flex-wrap gap-2 mb-3">
                 {[
-                  ["inTransit", "In Transit", "#1762b1ff"], // Blue
-                  ["completed", "Completed", "#53a967ff"], // Green
-                  ["cancelled", "Cancelled", "#eb5b6aff"], // Red
+                  ["inTransit", "In Transit", "#1762b1ff"],
+                  ["completed", "Completed", "#53a967ff"],
+                  ["cancelled", "Cancelled", "#eb5b6aff"],
                 ].map(([key, label, color]) => (
                   <button
                     key={key}
@@ -213,7 +223,9 @@ const MonitorDelivery = () => {
                       border: `1px solid ${color}`,
                       fontSize: "1.2rem",
                       boxShadow:
-                        activeTab === key ? "none" : "5px 4px 5px rgba(156, 153, 153, 0.6)", 
+                        activeTab === key
+                          ? "none"
+                          : "5px 4px 5px rgba(156, 153, 153, 0.6)",
                       transition: "all 0.3s ease",
                     }}
                     onMouseEnter={(e) => {
@@ -232,14 +244,12 @@ const MonitorDelivery = () => {
                   >
                     {label}
                   </button>
-
                 ))}
               </div>
 
               {renderTransactions(transactions[activeTab], activeTab)}
             </div>
 
-            {/* RIGHT: MAP */}
             <div className="col-12 col-md-7">
               <div
                 className="bg-white shadow-sm rounded overflow-hidden"
