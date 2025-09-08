@@ -39,8 +39,7 @@ const MonitorDelivery = () => {
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
-  // Format datetime as "Date: mm/dd/yyyy Time: hh:mm AM/PM"
-  // Format datetime as "Date: mm/dd/yyyy Time: HH:mm" (24-hour format)
+  
   const formatDateTime = (dateTime) => {
     if (!dateTime) return "N/A";
     const date = new Date(dateTime);
@@ -50,13 +49,12 @@ const MonitorDelivery = () => {
     const formattedTime = date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false, // <- 24-hour format
+      hour12: false,
     });
 
     return `${formattedDate} |  ${formattedTime}`;
   };
 
-  // Fetch deliveries
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
@@ -181,6 +179,7 @@ const MonitorDelivery = () => {
                     : [["Ship Out:", formatDateTime(t.shipout_time)]]),
                   ["Delivery Incharge:", t.driver],
                   ["Shipping Process:", t.status],
+                  ["Tracking No. ", t.tracking_number],
                   ["Distance:", t.distance],
                   ["ETA:", formatDateTime(t.eta)],
                 ].map(([label, value], i) => (

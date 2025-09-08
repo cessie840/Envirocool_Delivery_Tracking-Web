@@ -134,7 +134,7 @@ const OperationalDelivery = () => {
               </span>
             }
           >
-            <div className="row">
+            <div className="row ">
               {unassignedOrders.length === 0 ? (
                 <div className="col-12 text-center text-muted my-3">
                   <h6>All orders are already assigned </h6>
@@ -146,6 +146,11 @@ const OperationalDelivery = () => {
                       <h5 className="fw-bold text-danger">
                         Transaction No. {order.transaction_id}
                       </h5>
+                      <p className="mb-2 text-danger">
+                        <strong>Delivery Date: </strong>
+                        {order.target_date_delivery}
+                      </p>
+
                       <p className="mb-2">
                         <strong>Customer:</strong> {order.customer_name}
                       </p>
@@ -157,7 +162,12 @@ const OperationalDelivery = () => {
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
-                      <div className="action-btn d-flex justify-content-end p-2 gap-2">
+
+                      <div className="action-btn d-flex justify-content-between align-items-center">
+                        <p className="mb-2">
+                          <strong>Tracking No.</strong> {order.tracking_number}
+                        </p>
+
                         <Button
                           className="btn btn-view px-3 py-1"
                           size="sm"
@@ -195,6 +205,10 @@ const OperationalDelivery = () => {
                       <h5 className="fw-bold text-success">
                         Transaction No. {order.transaction_id}
                       </h5>
+                      <p className="mb-2 text-success">
+                        <strong>Delivery Date: </strong>
+                        {order.target_date_delivery}
+                      </p>
                       <p className="mb-2">
                         <strong>Customer:</strong> {order.customer_name}
                       </p>
@@ -207,7 +221,11 @@ const OperationalDelivery = () => {
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
-                      <div className="text-end">
+                      <div className="action-btn d-flex justify-content-between align-items-center">
+                        <p className="mb-2">
+                          <strong>Tracking No.</strong> {order.tracking_number}
+                        </p>
+
                         <Button
                           className="btn btn-view px-3 py-1"
                           size="sm"
@@ -254,11 +272,19 @@ const OperationalDelivery = () => {
               <p>
                 <strong>Payment Mode:</strong> {selectedOrder.payment_mode}
               </p>
-              {/* ✅ Show Status */}
+
               <p>
                 <strong>Status:</strong> {selectedOrder.status}
               </p>
+
+              <p>
+                <strong>Tracking No. </strong> {selectedOrder.tracking_number}
+              </p>
+
+              <p><strong>Delivery Date: </strong> {selectedOrder.target_date_delivery}</p>
             </div>
+
+
 
             <div className="p-3 mt-3 bg-white border rounded-3">
               <h5 className="text-success">Items Ordered</h5>

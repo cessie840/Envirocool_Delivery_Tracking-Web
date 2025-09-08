@@ -59,7 +59,7 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
-        // ✅ Normalize profile picture
+      
         $profilePic = $row['pers_profile_pic'];
 
         if (!empty($profilePic)) {
@@ -84,7 +84,9 @@ if ($result && $result->num_rows > 0) {
             'assigned_personnel_username' => $row['pers_username'] ?? null,
             'personnel_image' => $profilePic,
             'status' => $row['status'],
-            'items' => $items
+            'items' => $items,
+            'tracking_number' => $row['tracking_number'],
+            'target_date_delivery' => $row['target_date_delivery']
         ];
 
     }
