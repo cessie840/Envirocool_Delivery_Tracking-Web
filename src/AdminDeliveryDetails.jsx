@@ -221,10 +221,7 @@ const DeliveryDetails = () => {
             <tr>
               <th>Transaction No.</th>
               <th>Tracking No.</th>
-              <th>Client</th>
-              <th>Item Description</th>
-              <th>Item/s Quantity</th>
-              <th>Total Amount</th>
+              <th>Client Name</th>
               <th>Delivery Status</th>
               <th>Actions</th>
             </tr>
@@ -236,22 +233,9 @@ const DeliveryDetails = () => {
                   <td>{group.transaction_id}</td>
                   <td>{group.tracking_number}</td>
                   <td>{group.customer_name}</td>
-                  <td className="p-1">
-                    {group.items.map((item, idx) => (
-                      <div key={idx}>{item.description}</div>
-                    ))}
-                  </td>
-                  <td>
-                    {group.items.map((item, idx) => (
-                      <div key={idx}>{item.quantity}</div>
-                    ))}
-                  </td>
-                  <td>
-                    {Number(group.total).toLocaleString("en-PH", {
-                      style: "currency",
-                      currency: "PHP",
-                    })}
-                  </td>
+                 
+                 
+            
                   <td>
                     <span
                       style={{
