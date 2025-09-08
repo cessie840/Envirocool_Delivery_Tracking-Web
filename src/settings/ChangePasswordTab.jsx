@@ -27,21 +27,25 @@ const ChangePasswordTab = ({ role }) => {
       return;
     }
 
-    const url =
-      role === "admin"
-        ? "http://localhost/DeliveryTrackingSystem/change_admin_password.php"
-        : "http://localhost/DeliveryTrackingSystem/change_operational_password.php";
+    const url = "http://localhost/DeliveryTrackingSystem/change_adops_password.php";
 
     try {
-      const response = await axios.post(url, JSON.stringify(formData), {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
+      const response = await axios.post(
+        url,
+        {
+          currentPassword,
+          newPassword,
         },
-      });
+        {
+          withCredentials: true, 
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.data.success) {
-        alert("Password changed successfully.");
+        alert(response.data.message || "Password changed successfully.");
         setFormData({
           currentPassword: "",
           newPassword: "",
