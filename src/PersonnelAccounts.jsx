@@ -3,7 +3,7 @@ import OperationalLayout from "./OperationalLayout";
 import ViewPersonnelModal from "./ViewPersonnelModal";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaUserPlus, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaUserPlus, FaArrowLeft, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Table } from "react-bootstrap";
 
 const PersonnelAccounts = () => {
@@ -63,14 +63,14 @@ const PersonnelAccounts = () => {
     <OperationalLayout title="Delivery Personnel Accounts">
       <div className="d-flex justify-content-end mx-4 my-5">
         <button
-          className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
+          className="add-delivery fs-6 rounded-2 px-4 py-2 d-flex align-items-center gap-2"
           onClick={() => navigate("/create-personnel-account")}
         >
           <FaUserPlus /> Create Account
         </button>
       </div>
 
-<Table
+      <Table
         bordered
         hover
         responsive
@@ -93,7 +93,7 @@ const PersonnelAccounts = () => {
                 </td>
                 <td>{person.pers_email}</td>
                 <td>{person.pers_username}</td>
-                <td  className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
+                <td className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
                   <button
                     id="personnel-view"
                     className="btn btn-view"
