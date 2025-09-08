@@ -32,6 +32,10 @@ const AddDelivery = () => {
   const [products, setProducts] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
   const [productOptions, setProductOptions] = useState([]);
+  const [dpError, setDpError] = useState("");
+  const [contactError, setContactError] = useState("");
+
+
 
   const navigate = useNavigate();
 
@@ -54,8 +58,20 @@ const AddDelivery = () => {
     balance: "",
     total: "",
   });
+const handleContactChange = (e) => {
+  const value = e.target.value;
+  setForm((prev) => ({ ...prev, customer_contact: value }));
 
-  const [unitCostInput, setUnitCostInput] = useState("");
+  // Validate contact number
+  if (!value.startsWith("0")) {
+    setContactError("Contact number must start with '0'.");
+  } else if (value.length > 11) {
+    setContactError("Contact number cannot exceed 11 digits.");
+  } else {
+    setContactError("");
+  }
+};
+
 
   const handleUnitCostChange = (index, e) => {
     const rawValue = parsePeso(e.target.value);
@@ -237,6 +253,24 @@ const AddDelivery = () => {
       ...form,
       [name]: value,
     };
+
+    if (name === "down_payment") {
+      const downPayment = parseFloat(value) || 0;
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost) || 0;
+        return sum + cost;
+      }, 0);
+
+      if (downPayment > totalCost) {
+        setDpError("Down Payment cannot exceed Total Amount");
+      } else {
+        setDpError(""); 
+      }
+
+      updatedForm.balance = (totalCost - downPayment).toFixed(2);
+      updatedForm.total = totalCost.toFixed(2);
+    }
+
 
     if (name === "down_payment" || name === "payment_option") {
       const downPayment = parseFloat(
@@ -438,7 +472,11 @@ const AddDelivery = () => {
           </h4>
         </div>
 
-        <form id="deliveryForm" className="delivery-form bg-white" onSubmit={handleSubmit}>
+        <form
+          id="deliveryForm"
+          className="delivery-form bg-white"
+          onSubmit={handleSubmit}
+        >
           <h4 className="mb-3">Customer Details</h4>
 
           <div className="row mb-3">
@@ -463,8 +501,9 @@ const AddDelivery = () => {
               </label>
               <input
                 type="date"
-                className={`form-control ${form.date_of_order ? "text-black" : "text-muted"
-                  }`}
+                className={`form-control ${
+                  form.date_of_order ? "text-black" : "text-muted"
+                }`}
                 id="dateOfOrder"
                 name="date_of_order"
                 value={form.date_of_order}
@@ -498,14 +537,17 @@ const AddDelivery = () => {
               </label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${contactError ? "is-invalid" : ""}`}
                 id="contactNumber"
                 name="customer_contact"
                 value={form.customer_contact}
                 placeholder="Client's Contact No."
-                onChange={handleChange}
+                onChange={handleContactChange}
                 required
               />
+              {contactError && (
+                <div className="invalid-feedback">{contactError}</div>
+              )}
             </div>
             <div className="col-md-6">
               <label htmlFor="dateOfOrder" className="form-label">
@@ -516,8 +558,9 @@ const AddDelivery = () => {
                 type="date"
                 id="targetDate"
                 name="target_date_delivery"
-                className={`form-control ${form.target_date_delivery ? "text-black" : "text-muted"
-                  }`}
+                className={`form-control ${
+                  form.target_date_delivery ? "text-black" : "text-muted"
+                }`}
                 onChange={handleChange}
                 required
               />
@@ -545,10 +588,19 @@ const AddDelivery = () => {
                       <input
                         type="number"
                         name="quantity"
+                        min={1}
                         placeholder="0"
                         className="form-control"
                         value={item.quantity}
-                        onChange={(e) => handleItemChange(index, e)}
+                        onChange={(e) => {
+                          const value = Math.max(
+                            1,
+                            parseInt(e.target.value) || 1
+                          );
+                          handleItemChange(index, {
+                            target: { name: "quantity", value },
+                          });
+                        }}
                         required
                       />
                     </td>
@@ -743,7 +795,12 @@ const AddDelivery = () => {
                         placeholder="₱0.00"
                         className="form-control"
                         value={orderItems[index].unit_cost}
-                        onChange={(e) => handleUnitCostChange(index, e)}
+                        onChange={(e) => {
+                          const value = parseFloat(parsePeso(e.target.value));
+                          handleUnitCostChange(index, {
+                            target: { value: Math.max(0, value) },
+                          });
+                        }}
                         onBlur={() => handleUnitCostBlur(index)}
                         onFocus={() => handleUnitCostFocus(index)}
                         required
@@ -891,14 +948,13 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className={`form-control ${form.dp_collection_date ? "text-black" : "text-muted"
-                    }`}
+                  className={`form-control ${
+                    form.fp_collection_date ? "text-black" : "text-muted"
+                  }`}
                   id="fpBillingDate"
                   name="fp_collection_date"
                   value={form.fp_collection_date || ""}
                   onChange={handleChange}
-                  disabled={form.payment_option !== "Down Payment"}
-                  required={form.payment_option === "Down Payment"}
                   max={new Date().toISOString().split("T")[0]}
                 />
               </div>
@@ -924,8 +980,9 @@ const AddDelivery = () => {
                   onBlur={handleDownPaymentBlur}
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
-                  className="form-control"
+                  className={`form-control ${dpError ? "is-invalid" : ""}`}
                 />
+                {dpError && <div className="invalid-feedback">{dpError}</div>}
               </div>
 
               <div className="col-md-6">
@@ -935,8 +992,9 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className={`form-control ${form.dp_collection_date || "" ? "text-black" : "text-muted"
-                    }`}
+                  className={`form-control ${
+                    form.dp_collection_date || "" ? "text-black" : "text-muted"
+                  }`}
                   id="dpBillingDate"
                   name="dp_collection_date"
                   onChange={handleChange}
@@ -1024,7 +1082,11 @@ const AddDelivery = () => {
               </Button>
             </Modal.Footer>
           </Modal>
-          <button type="submit" form="deliveryForm" className="add-btn bg-success">
+          <button
+            type="submit"
+            form="deliveryForm"
+            className="add-btn bg-success"
+          >
             Add
           </button>
         </div>
