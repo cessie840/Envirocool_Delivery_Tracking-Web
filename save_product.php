@@ -1,10 +1,10 @@
 <?php
-// Allow from any origin
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// Handle preflight OPTIONS request
+
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -23,11 +23,11 @@ if (empty($type_of_product) || empty($description)) {
     exit;
 }
 
-// 🔹 Normalize values (remove extra spaces + lowercase for comparison)
+
 $normalized_type = strtolower($type_of_product);
 $normalized_desc = strtolower($description);
 
-// 🔹 Check if the same item name already exists for this product type
+
 $check = $conn->prepare("SELECT product_id 
                          FROM Product 
                          WHERE LOWER(TRIM(type_of_product)) = ? 
@@ -41,7 +41,6 @@ if ($check->num_rows > 0) {
     exit;
 }
 
-// 🔹 Insert new product (store original case, but validation is case-insensitive)
 $stmt = $conn->prepare("INSERT INTO Product (type_of_product, description, unit_cost) VALUES (?, ?, ?)");
 $stmt->bind_param("ssd", $type_of_product, $description, $unit_cost);
 

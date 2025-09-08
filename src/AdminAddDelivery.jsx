@@ -327,26 +327,38 @@ const AddDelivery = () => {
       return;
     }
 
-    for (const item of orderItems) {
-      const quantity = parseInt(item.quantity);
-      const unitCost = parseFloat(item.unit_cost);
+  if (!form.payment_method) {
+    alert("Please select a payment method.");
+    return;
+  }
 
-      if (isNaN(quantity) || quantity < 1) {
-        alert("Each item's quantity must be a number and at least 1.");
-        return;
-      }
+   for (const [index, item] of orderItems.entries()) {
+     const quantity = parseInt(item.quantity);
+     const unitCost = parseFloat(parsePeso(item.unit_cost));
+     const typeOfProduct = item.type_of_product?.trim();
+     const description = item.description?.trim();
 
-      orderItems.forEach((item, index) => {
-        const unitCost = parseFloat(
-          String(item.unit_cost).replace(/[₱,]/g, "")
-        );
+     if (!typeOfProduct) {
+       alert(`Please select a type of product for item #${index + 1}`);
+       return;
+     }
 
-        if (isNaN(unitCost) || unitCost < 0) {
-          alert(`Each item's unit cost must be a non-negative number.`);
-          return;
-        }
-      });
-    }
+     if (!description) {
+       alert(`Please select an item name for item #${index + 1}`);
+       return;
+     }
+
+     if (isNaN(quantity) || quantity < 1) {
+       alert(`Quantity for item #${index + 1} must be at least 1`);
+       return;
+     }
+
+     if (isNaN(unitCost) || unitCost < 0) {
+       alert(`Unit cost for item #${index + 1} must be a non-negative number`);
+       return;
+     }
+   }
+
 
     const normalizedOrderItems = orderItems.map((item) => ({
       quantity: parseInt(item.quantity) || 0,
