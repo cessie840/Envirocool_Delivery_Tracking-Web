@@ -12,6 +12,7 @@ const OperationalDelivery = () => {
   const [orders, setOrders] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [activeTab, setActiveTab] = useState("unassigned");
+  const [filterDate, setFilterDate] = useState(""); // For date filtering
 
   useEffect(() => {
     document.title = "Operational Delivery";
@@ -108,6 +109,7 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
+  // Separate orders
   const unassignedOrders = orders
     .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
     .sort((a, b) => Number(a.transaction_id) - Number(b.transaction_id));
@@ -116,6 +118,15 @@ const OperationalDelivery = () => {
     (o) => o.assigned_personnel && o.assigned_personnel !== null
   );
 
+  // Filtered by date
+  const filteredUnassignedOrders = filterDate
+    ? unassignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    : unassignedOrders;
+
+  const filteredAssignedOrders = filterDate
+    ? assignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    : assignedOrders;
+
   return (
     <OperationalLayout title="Delivery Orders">
       <div className="compact-container container mt-5 pb-5 px-5 rounded-2">
@@ -123,7 +134,7 @@ const OperationalDelivery = () => {
           id="delivery-tabs"
           activeKey={activeTab}
           onSelect={(k) => setActiveTab(k)}
-          className="mb-4 fw-bold"
+          className="mb-2 fw-bold"
         >
           {/* Unassigned Tab */}
           <Tab
@@ -134,13 +145,36 @@ const OperationalDelivery = () => {
               </span>
             }
           >
-            <div className="row ">
-              {unassignedOrders.length === 0 ? (
+            <div className="row">
+              <div className="d-flex justify-content-end px-4 py-2">
+                <Form.Control
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  style={{ width: "180px", height: "40px" }}
+                />
+                {filterDate && (
+                  <Button
+                    variant="success"
+                    size="sm"
+                    className="ms-2"
+                    onClick={() => setFilterDate("")}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              {filteredUnassignedOrders.length === 0 ? (
                 <div className="col-12 text-center text-muted my-3">
-                  <h6>All orders are already assigned </h6>
+                  {filterDate ? (
+                    <h6>No unassigned transactions found on {filterDate}</h6>
+                  ) : (
+                    <h6>All orders are already assigned</h6>
+                  )}
                 </div>
               ) : (
-                unassignedOrders.map((order, index) => (
+                filteredUnassignedOrders.map((order, index) => (
                   <div key={index} className="col-md-6">
                     <div className="delivery compact-card card rounded-2 p-3 m-2 border border-danger">
                       <h5 className="fw-bold text-danger">
@@ -194,12 +228,37 @@ const OperationalDelivery = () => {
             }
           >
             <div className="row">
-              {assignedOrders.length === 0 ? (
+              <div className="d-flex justify-content-end px-4 py-2">
+                <Form.Control
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  style={{ width: "180px", height: "40px" }}
+                />
+                {filterDate && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="ms-2"
+                    onClick={() => setFilterDate("")}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              {filteredAssignedOrders.length === 0 ? (
                 <div className="col-12 text-center text-muted my-3">
-                  <h6>No orders have been assigned yet.</h6>
+                  {filterDate ? (
+                    <h6>
+                      No assigned transactions found on {filterDate}
+                    </h6>
+                  ) : (
+                    <h6>No orders have been assigned yet.</h6>
+                  )}
                 </div>
               ) : (
-                assignedOrders.map((order, index) => (
+                filteredAssignedOrders.map((order, index) => (
                   <div key={index} className="col-md-6">
                     <div className="delivery compact-card card rounded-2 p-3 m-2 border border-success">
                       <h5 className="fw-bold text-success">
@@ -281,10 +340,11 @@ const OperationalDelivery = () => {
                 <strong>Tracking No. </strong> {selectedOrder.tracking_number}
               </p>
 
-              <p><strong>Delivery Date: </strong> {selectedOrder.target_date_delivery}</p>
+              <p>
+                <strong>Delivery Date: </strong>{" "}
+                {selectedOrder.target_date_delivery}
+              </p>
             </div>
-
-
 
             <div className="p-3 mt-3 bg-white border rounded-3">
               <h5 className="text-success">Items Ordered</h5>
