@@ -158,7 +158,7 @@ const UpdateOrderModal = ({
 
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
-      <Modal.Header closeButton className="bg-success" closeVariant="white">
+      <Modal.Header closeButton closeVariant="white" style={{backgroundColor: "#247E33FF "}}>
         <Modal.Title className="text-white">Update Delivery Info</Modal.Title>
       </Modal.Header>
 
@@ -394,13 +394,13 @@ const UpdateOrderModal = ({
 
       <Modal.Footer className="bg-white">
         <Button
-          className="cancel-btn btn btn- d-flex align-items-center gap-2"
+          className="cancel-btn btn btn- d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
           onClick={handleClose}
         >
           Cancel
         </Button>
         <Button
-          className="upd-btn btn-success d-flex align-items-center gap-2"
+          className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
           style={{fontSize: "16px"}}
           onClick={handleSubmit}
         >

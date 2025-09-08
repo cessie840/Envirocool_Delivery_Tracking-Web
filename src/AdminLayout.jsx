@@ -25,7 +25,7 @@ const AdminLayout = ({
   onSearch,
   children,
 }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -55,6 +55,24 @@ const AdminLayout = ({
     if (onSearch) onSearch(value);
   };
 
+const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+  return window.innerWidth > 991; // open if desktop, closed if mobile
+});
+
+useEffect(() => {
+  const handleResize = () => {
+    if (window.innerWidth <= 991) {
+      setIsSidebarOpen(false);
+    } else {
+      setIsSidebarOpen(true);
+    }
+  };
+
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
+
+
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
   }, [isSidebarCollapsed]);
@@ -72,8 +90,9 @@ const AdminLayout = ({
 
       {/* SIDEBAR */}
       <aside
-        className={`sidebar d-flex flex-column align-items-center p-3 ${isSidebarOpen ? "show" : "collapsed"
-          } ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
+        className={`sidebar d-flex flex-column align-items-center p-3 
+    ${isSidebarOpen ? "show" : ""} 
+    ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
       >
         <button
           className="btn close-sidebar d-lg-none align-self-end mb-3"
@@ -100,7 +119,9 @@ const AdminLayout = ({
 
         <nav className="nav-buttons">
           <button
-            className={`nav-btn ${isActive("/admin-dashboard") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/admin-dashboard") ? "active" : ""
+            }`}
             onClick={() => navigate("/admin-dashboard")}
           >
             <FaHome className="icon" />
@@ -109,7 +130,9 @@ const AdminLayout = ({
           </button>
 
           <button
-            className={`nav-btn ${isActive("/delivery-details") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/delivery-details") ? "active" : ""
+            }`}
             onClick={() => navigate("/delivery-details")}
           >
             <FaClipboardList className="icon" />
@@ -118,7 +141,9 @@ const AdminLayout = ({
           </button>
 
           <button
-            className={`nav-btn ${isActive("/monitor-delivery") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/monitor-delivery") ? "active" : ""
+            }`}
             onClick={() => navigate("/monitor-delivery")}
           >
             <FaTruck className="icon" />
@@ -127,7 +152,9 @@ const AdminLayout = ({
           </button>
 
           <button
-            className={`nav-btn ${isActive("/generate-report") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/generate-report") ? "active" : ""
+            }`}
             onClick={() => navigate("/generate-report")}
           >
             <FaChartBar className="icon" />
@@ -153,16 +180,16 @@ const AdminLayout = ({
             <span className="tooltip-text">Logout</span>
           </button>
         </nav>
-
-
-
       </aside>
 
       {/* MAIN PANEL */}
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
-            <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
+            <button
+              className="toggle-sidebar btn d-lg-none me-0"
+              onClick={toggleSidebar}
+            >
               {isSidebarOpen ? <FaTimes /> : <FaBars />}
             </button>
             <h2 className="fs-1 fw-bold m-0">{title}</h2>
