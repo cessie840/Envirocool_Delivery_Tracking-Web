@@ -51,7 +51,7 @@ $result = $stmt->get_result();
 
 $deliveries = [];
 while ($row = $result->fetch_assoc()) {
-    // fetch items for this transaction
+
     $itemsQuery = "SELECT description, quantity, unit_cost FROM PurchaseOrder WHERE transaction_id = ?";
     $stmtItems = $conn->prepare($itemsQuery);
     $stmtItems->bind_param("i", $row['transaction_id']);

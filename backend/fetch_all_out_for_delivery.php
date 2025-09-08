@@ -28,6 +28,7 @@ $sql = "
         po.description AS description,
         t.created_at AS time,
         t.shipout_at as shipout_time,
+        t.tracking_number AS tracking_number,
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
         t.status AS status
     FROM DeliveryAssignments da
@@ -51,6 +52,7 @@ while ($row = $result->fetch_assoc()) {
     "shipout_time"           => $row['shipout_time'],
     "driver"         => $row['driver'],
     "status"         => $row['status'],
+    "tracking_number"           => $row['tracking_number'],
     "distance"       => "N/A",
     "eta"            => "N/A"
     ];
