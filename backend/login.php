@@ -1,25 +1,19 @@
 <?php
 session_start(); 
-
-session_unset();
-session_destroy();
-session_start();
-
 include 'database.php';
 
-// Allow multiple origins
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174'
-];
+$allowed_origins = ['http://localhost:5173'];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:5173");
 }
 
+header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
 // Handle preflight request

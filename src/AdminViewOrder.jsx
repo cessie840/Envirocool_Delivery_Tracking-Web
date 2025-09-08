@@ -227,19 +227,19 @@ const ViewOrder = () => {
 
             <div className="mx-2 my-3 p-3 bg-white border rounded-3 shadow-sm">
               <h5 className="text-success fw-bold">Items Ordered</h5>
-              <ul className="list-group list-group-flush">
+              <ul className="list-group list-group-flush fw-semibold">
                 {orderDetails.items.map((item, index) => (
                   <li
                     key={index}
-                    className="list-group-item d-flex justify-content-between align-items-center"
+                    className="list-group-item d-flex justify-content-between align-items-center fw-semibold"
                   >
                     <div>
                       {item.description} x{item.quantity} <br />
-                      <small className="text-muted">
+                      <small className="text-muted fw-bold">
                         Unit Cost: ₱{Number(item.unit_cost).toLocaleString()}
                       </small>
                     </div>
-                    <span>
+                    <span className="fw-bold">
                       ₱{(item.unit_cost * item.quantity).toLocaleString()}
                     </span>
                   </li>
