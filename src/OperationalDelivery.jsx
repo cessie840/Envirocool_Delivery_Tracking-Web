@@ -107,14 +107,27 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
-  // Separate orders
+  // Separate orders and sort by target_date_delivery ascending
   const unassignedOrders = orders
     .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
-    .sort((a, b) => Number(a.transaction_id) - Number(b.transaction_id));
+    .sort(
+      (a, b) =>
+        new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
+    );
 
-  const assignedOrders = orders.filter(
-    (o) => o.assigned_personnel && o.assigned_personnel !== null
-  );
+ const assignedOrders = orders
+   .filter(
+     (o) =>
+       o.assigned_personnel &&
+       o.assigned_personnel !== null &&
+       o.status !== "Delivered" &&
+       o.status !== "Cancelled"
+   )
+   .sort(
+     (a, b) =>
+       new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
+   );
+
 
   // Filtered by date
   const filteredUnassignedOrders = filterDate
@@ -158,7 +171,6 @@ const OperationalDelivery = () => {
             </Tabs>
           </div>
 
-        
           <div className="d-flex align-items-center ms-3">
             <Form.Control
               type="date"
