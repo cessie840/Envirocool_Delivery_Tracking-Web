@@ -1,5 +1,4 @@
 <?php
-
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'
@@ -22,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include 'database.php';
 
+// ✅ Handle soft delete (set status to Inactive)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents("php://input"));
 
@@ -32,8 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $username = $conn->real_escape_string($data->username);
 
-    // Soft delete by updating the status
-    $updateSql = "UPDATE DeliveryPersonnel SET status = 'Inactive' WHERE pers_username = '$username'";
+    $updateSql = "UPDATE DeliveryPersonnel SET status = 'Inactive', assignment_status = 'Inactive' WHERE pers_username = '$username'";
     if ($conn->query($updateSql) === TRUE) {
         echo json_encode(["status" => "success", "message" => "Personnel hidden (soft deleted)."]);
     } else {
@@ -42,15 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit; 
 }
 
-// DISPLAY ACCOUNTS
-$sql = "SELECT 
-            pers_fname,
-            pers_lname,
-            pers_username,
-            pers_email,
-            pers_birth AS pers_password
-        FROM DeliveryPersonnel
-        WHERE status = 'Active'";
+// ✅ DISPLAY ACCOUNTS with assignment_status
+$sql = "SELECT pers_username, pers_fname, pers_lname, pers_email, status, assignment_status 
+        FROM DeliveryPersonnel";
 
 $result = $conn->query($sql);
 
@@ -62,3 +55,4 @@ if ($result && $result->num_rows > 0) {
 }
 
 echo json_encode($personnel);
+?>

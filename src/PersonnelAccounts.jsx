@@ -3,67 +3,94 @@ import OperationalLayout from "./OperationalLayout";
 import ViewPersonnelModal from "./ViewPersonnelModal";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaUserPlus, FaArrowLeft, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaUserPlus, FaCheck, FaTimes } from "react-icons/fa";
 import { Table } from "react-bootstrap";
 
 const PersonnelAccounts = () => {
   const navigate = useNavigate();
   const [personnel, setPersonnel] = useState([]);
-  const [visiblePasswords, setVisiblePasswords] = useState({});
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
+    fetchPersonnel();
+  }, []);
 
+  const fetchPersonnel = () => {
     axios
       .get(
         "http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php"
       )
       .then((response) => {
-        setPersonnel(response.data);
+        const dataWithStatus = response.data.map((p) => ({
+          ...p,
+          status: p.status || "Inactive", // keep main status
+          assignment_status: p.assignment_status || "Inactive", // add assignment status
+        }));
+        setPersonnel(dataWithStatus);
       })
       .catch((error) => {
         console.error("Error fetching personnel:", error);
       });
-  }, []);
-
-  const handleDelete = async (username) => {
-    if (!window.confirm("Are you sure you want to delete this account?"))
-      return;
-
-    try {
-      const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/delete_delivery_personnel.php",
-        { username }
-      );
-
-      if (response.data.status === "success") {
-        alert("Account deleted successfully.");
-        setPersonnel((prev) =>
-          prev.filter((p) => p.pers_username !== username)
-        );
-      } else {
-        alert(response.data.message || "Failed to delete the account.");
-      }
-    } catch (error) {
-      console.error("Deletion error:", error);
-      alert("An error occurred while deleting the account.");
-    }
   };
 
-  const togglePasswordVisibility = (username) => {
-    setVisiblePasswords((prev) => ({
-      ...prev,
-      [username]: !prev[username],
-    }));
+  const handleToggleStatus = (username, currentStatus) => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+
+    // Update UI immediately (temporary)
+    setPersonnel((prev) =>
+      prev.map((p) =>
+        p.pers_username === username
+          ? {
+              ...p,
+              status: newStatus,
+              assignment_status:
+                newStatus === "Inactive"
+                  ? "Inactive"
+                  : p.assignment_status || "Available",
+            }
+          : p
+      )
+    );
+
+    // Send request to backend
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/update_personnel_status.php",
+        {
+          username,
+          status: newStatus,
+        }
+      )
+      .then((response) => {
+        if (response.data.success) {
+          setPersonnel((prev) =>
+            prev.map((p) =>
+              p.pers_username === username
+                ? {
+                    ...p,
+                    status: newStatus,
+                    assignment_status:
+                      newStatus === "Inactive"
+                        ? "Inactive"
+                        : response.data.assignment_status || "Available",
+                  }
+                : p
+            )
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating status:", error);
+      });
   };
 
   return (
     <OperationalLayout title="Delivery Personnel Accounts">
       <div className="d-flex justify-content-end mx-4 my-5">
         <button
-          className="add-delivery fs-6 rounded-2 px-4 py-2 d-flex align-items-center gap-2"
+          className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
           onClick={() => navigate("/create-personnel-account")}
         >
           <FaUserPlus /> Create Account
@@ -81,6 +108,8 @@ const PersonnelAccounts = () => {
             <th>Full Name</th>
             <th>Email</th>
             <th>Username</th>
+            <th>Status</th>
+            <th>Active</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -88,11 +117,72 @@ const PersonnelAccounts = () => {
           {personnel.length > 0 ? (
             personnel.map((person) => (
               <tr key={person.pers_username}>
+                {/* Full Name */}
                 <td>
                   {person.pers_fname} {person.pers_lname}
                 </td>
                 <td>{person.pers_email}</td>
                 <td>{person.pers_username}</td>
+
+                {/* Status Column (Available, Out for Delivery, Inactive) */}
+                <td
+                  className={`text-center fw-bold ${
+                    person.assignment_status === "Available"
+                      ? "text-success"
+                      : person.assignment_status === "Out for Delivery"
+                      ? "text-warning"
+                      : "text-danger"
+                  }`}
+                >
+                  {person.assignment_status}
+                </td>
+
+                {/* Toggle Column (bar style) */}
+                <td className="text-center">
+                  <div className="d-flex flex-column align-items-center">
+                    <div
+                      onClick={() =>
+                        handleToggleStatus(person.pers_username, person.status)
+                      }
+                      style={{
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent:
+                          person.status === "Active"
+                            ? "flex-end"
+                            : "flex-start",
+                        width: "60px",
+                        height: "28px",
+                        borderRadius: "20px",
+                        backgroundColor:
+                          person.status === "Active" ? "green" : "red",
+                        padding: "0 6px",
+                        transition: "all 0.3s ease",
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: "white",
+                          borderRadius: "50%",
+                          width: "22px",
+                          height: "22px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          color: person.status === "Active" ? "green" : "red",
+                          fontWeight: "bold",
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        {person.status === "Active" ? <FaCheck /> : <FaTimes />}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Action Column */}
                 <td className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
                   <button
                     id="personnel-view"
@@ -104,19 +194,12 @@ const PersonnelAccounts = () => {
                   >
                     View
                   </button>
-                  <button
-                    id="personnel-cancel"
-                    className="btn cancel-btn btn-danger"
-                    onClick={() => handleDelete(person.pers_username)}
-                  >
-                    Delete
-                  </button>
                 </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="4" className="text-center p-2">
+              <td colSpan="6" className="text-center">
                 No delivery personnel accounts found.
               </td>
             </tr>
