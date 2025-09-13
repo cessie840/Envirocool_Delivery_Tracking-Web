@@ -995,32 +995,33 @@ const GenerateReport = () => {
   );
 
   // Render service delivery failed reasons bar chart
-  const renderServiceFailedReasonsChart = () => {
-    if (!failedReasons || Object.keys(failedReasons).length === 0) {
-      return <p>No cancellation history available.</p>;
-    }
+const renderServiceFailedReasonsChart = () => {
+  // Ensure chart always renders
+  const data =
+    failedReasons && Object.keys(failedReasons).length > 0
+      ? Object.entries(failedReasons).map(([reason, count]) => ({
+          reason,
+          count,
+        }))
+      : [{ reason: "No Data", count: 0 }]; // Dummy fallback
 
-    const data = Object.entries(failedReasons).map(([reason, count]) => ({
-      reason,
-      count,
-    }));
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart
+        data={data}
+        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="reason" />
+        <YAxis allowDecimals={false} />
+        <Tooltip />
+        <Legend />
+        <Bar dataKey="count" fill="#E57373" radius={[5, 5, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+};
 
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={data}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="reason" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="count" fill="#E57373" radius={[5, 5, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  };
 
   // Render customer satisfaction pie chart for rating percentages
   const renderCustomerRatingPieChart = () => {
@@ -1305,98 +1306,82 @@ const GenerateReport = () => {
     );
   };
 
-  const renderServiceTable = () => {
-    const itemsPerPage = getItemsPerPage();
-    const totalPages = Math.ceil(filteredServiceData.length / itemsPerPage);
-    const currentPage = Math.min(servicePage, totalPages || 1);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredServiceData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
+const renderServiceTable = () => {
+  const itemsPerPage = getItemsPerPage();
+  const totalPages = Math.ceil(filteredServiceData.length / itemsPerPage);
+  const currentPage = Math.min(servicePage, totalPages || 1);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredServiceData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
-    return (
-      <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
-          <thead className="table-warning">
+  return (
+    <>
+      <Table
+        bordered
+        hover
+        responsive
+        className="shadow-sm text-center"
+        style={{ cursor: "default" }}
+      >
+        <thead className="table-warning">
+          <tr>
+            <th>Transaction No.</th>
+            <th>Date</th>
+            <th>Client</th>
+            <th>Item Name</th>
+            <th>Delivery Status</th>
+            <th>Rescheduled Date</th>
+            <th>Reason for Cancellation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
             <tr>
-              <th>Transaction No.</th>
-              <th>Date</th>
-              <th>Client</th>
-              <th>Item Name</th>
-              <th>Delivery Status</th>
-              <th>Rescheduled Date</th>
-              <th>Reason for Cancellation</th>
+              <td colSpan={7} className="text-center">
+                No delivery service data found.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center">
-                  No delivery service data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                // Normalize cancellation reason
-                let reason = "-";
-                if (row.history && row.history.length > 0) {
-                  const lastCancel = row.history
-                    .filter((h) => h.event_type === "Cancelled" && h.reason)
-                    .pop();
-                  if (lastCancel) reason = lastCancel.reason;
-                } else if (row.cancelled_reason) {
-                  reason = row.cancelled_reason;
-                }
+          ) : (
+            paginatedData.map((row, i) => {
+              // Normalize cancellation reason
+              let reason = row.cancelled_reason || "-";
+              if (row.history && row.history.length > 0) {
+                const lastCancel = row.history
+                  .filter((h) => h.event_type === "Cancelled" && h.reason)
+                  .pop();
+                if (lastCancel) reason = lastCancel.reason;
+              }
 
-                // Display status
-                let displayStatus =
-                  row.delivery_status === "Cancelled"
-                    ? "Cancelled (For Rescheduling)"
-                    : row.delivery_status;
+              // Display status
+              let displayStatus =
+                row.delivery_status === "Cancelled"
+                  ? "Cancelled (For Rescheduling)"
+                  : row.delivery_status;
 
-                let scheduledDate =
-                  row.scheduled_date ?? row.target_date_delivery ?? "-";
+              // Use rescheduled_date from Transactions
+              let rescheduledDate = row.rescheduled_date || row.target_date_delivery || "-";
 
-                // If still empty, double-check history
-                if ((!scheduledDate || scheduledDate === "-") && row.history) {
-                  const lastReschedule = row.history
-                    .filter(
-                      (h) => h.event_type === "Rescheduled" && h.scheduled_date
-                    )
-                    .pop();
-                  if (lastReschedule) {
-                    scheduledDate = lastReschedule.scheduled_date;
-                  }
-                }
+              return (
+                <tr key={i} className="table-row-hover">
+                  <td>{row.transaction_id || "-"}</td>
+                  <td>{formatDate(row.date)}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{row.item_name}</td>
+                  <td>{displayStatus}</td>
+                  <td>{rescheduledDate}</td>
+                  <td>{reason}</td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </Table>
+    </>
+  );
+};
 
-                return (
-                  <tr key={i} className="table-row-hover">
-                    <td>{row.transaction_id || "-"}</td>
-                    <td>{formatDate(row.date)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>{row.item_name}</td>
-                    <td>{displayStatus}</td>
-                    <td>
-                      {row.scheduled_date || row.target_date_delivery || "—"}
-                    </td>
-
-                    <td>{reason}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-      </>
-    );
-  };
 
   const renderCustomerTable = () => {
     const itemsPerPage = getItemsPerPage();
