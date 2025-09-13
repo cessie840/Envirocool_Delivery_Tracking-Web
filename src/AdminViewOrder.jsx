@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
+import RescheduleModal from "./RescheduleModal";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const ViewOrder = () => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
   const [formData, setFormData] = useState({
     tracking_number: "",
     customer_name: "",
@@ -51,7 +53,6 @@ const ViewOrder = () => {
           target_date_delivery: formatDate(data.target_date_delivery),
         });
       })
-
       .catch((err) => {
         console.error("Failed to fetch order:", err);
       });
@@ -67,6 +68,15 @@ const ViewOrder = () => {
 
     setEditableItems(fixedItems);
     setShowModal(true);
+  };
+
+  const handleRescheduleUpdate = (newDate) => {
+    setOrderDetails((prev) => ({
+      ...prev,
+      target_date_delivery: newDate,
+      status: "Pending",
+      cancelled_reason: null,
+    }));
   };
 
   const handleClose = () => setShowModal(false);
@@ -147,6 +157,22 @@ const ViewOrder = () => {
     }
   };
 
+  // 🔹 Helper for status badge
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case "Delivered":
+        return <strong style={{ color: "#327229" }}>{status}</strong>;
+      case "Cancelled":
+        return <strong style={{ color: "#DC3545" }}>{status}</strong>;
+      case "Out for Delivery":
+        return <strong style={{ color: "#208EB9" }}>{status}</strong>;
+      case "Pending":
+        return <strong style={{ color: "#E7942EFF" }}>{status}</strong>;
+      default:
+        return <strong>{status}</strong>;
+    }
+  };
+
   return (
     <AdminLayout title="View Order Details" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
@@ -174,16 +200,6 @@ const ViewOrder = () => {
               <div className="row">
                 <div className="col-md-6">
                   <h5 className="text-success fw-bold">Client Details</h5>
-                </div>
-
-                <div className="col-md-6">
-                  <h5 className="text-success fw-bold">Payment Details</h5>
-                </div>
-              </div>
-
-              <div className="row pt-3">
-                {/* Left column - Customer Info */}
-                <div className="col-md-6">
                   <p>
                     <span>Name:</span> {orderDetails.customer_name}
                   </p>
@@ -200,9 +216,27 @@ const ViewOrder = () => {
                     <span>Target Delivery Date:</span>{" "}
                     {orderDetails.target_date_delivery}
                   </p>
+                  <br />
+                  <div>
+                    <h5 className="text-success fw-bold">Delivery Status</h5>
+                  </div>
+                  <p>
+                    <span>Status:</span>{" "}
+                    {renderStatusBadge(orderDetails.status)}
+                  </p>
+                  {orderDetails.status === "Cancelled" &&
+                    orderDetails.cancelled_reason && (
+                      <p>
+                        <span>Cancellation Reason:</span>{" "}
+                        <strong className="text-danger">
+                          {orderDetails.cancelled_reason}
+                        </strong>
+                      </p>
+                    )}
                 </div>
 
-                <div className="col-md-6 border-start">
+                <div className="col-md-6">
+                  <h5 className="text-success fw-bold">Payment Details</h5>
                   <p>
                     <span>Payment Method:</span> {orderDetails.mode_of_payment}
                   </p>
@@ -263,6 +297,15 @@ const ViewOrder = () => {
               >
                 Update
               </button>
+
+              {orderDetails.status === "Cancelled" && (
+                <button
+                  className="btn btn-view px-5 py-2 rounded-3 fs-5"
+                  onClick={() => setShowReschedule(true)}
+                >
+                  Reschedule
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -276,6 +319,15 @@ const ViewOrder = () => {
         setFormData={setFormData}
         editableItems={editableItems}
         setEditableItems={setEditableItems}
+      />
+
+      <RescheduleModal
+        show={showReschedule}
+        handleClose={() => setShowReschedule(false)}
+        transaction_id={transaction_id}
+        onReschedule={(updatedFields) => {
+          setOrderDetails((prev) => ({ ...prev, ...updatedFields }));
+        }}
       />
     </AdminLayout>
   );
