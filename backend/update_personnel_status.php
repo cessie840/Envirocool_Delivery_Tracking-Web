@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'
@@ -22,60 +25,81 @@ include "database.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$username = $data['username'] ?? '';
-$status   = $data['status'] ?? '';
+$username = isset($data['username']) ? trim($data['username']) : '';
+$status   = isset($data['status']) ? trim($data['status']) : '';
 
-if ($username && $status) {
-    $assignment_status = null;
-
-    // 🔹 Always check if this personnel has a transaction today that is "Out for Delivery"
-    $sql = "
-        SELECT da.assignment_id
-        FROM DeliveryAssignments da
-        INNER JOIN Transactions t ON da.transaction_id = t.transaction_id
-        WHERE da.personnel_username = ?
-          AND t.status = 'Out for Delivery'
-          AND DATE(t.target_date_delivery) = CURDATE()
-        LIMIT 1
-    ";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result && $result->num_rows > 0) {
-        // ✅ Force "Out for Delivery" if transaction exists
-        $assignment_status = "Out for Delivery";
-    } else {
-        // Otherwise, follow status logic
-        if ($status === "Active") {
-            $assignment_status = "Available";
-        } else {
-            $assignment_status = "Inactive";
-        }
-    }
-    $stmt->close();
-
-    // ✅ Update delivery personnel table
-    $stmt = $conn->prepare("
-        UPDATE DeliveryPersonnel 
-        SET status = ?, assignment_status = ? 
-        WHERE pers_username = ?
-    ");
-    $stmt->bind_param("sss", $status, $assignment_status, $username);
-
-    if ($stmt->execute()) {
-        echo json_encode([
-            "success" => true,
-            "message" => "Status updated",
-            "assignment_status" => $assignment_status
-        ]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Database update failed"]);
-    }
-    $stmt->close();
-} else {
-    echo json_encode(["success" => false, "message" => "Invalid input"]);
+if (!$username || !$status) {
+    echo json_encode(["success" => false, "message" => "Invalid input: username and status are required."]);
+    $conn->close();
+    exit;
 }
 
+// Normalize status
+$status = (strtolower($status) === 'active') ? 'Active' : 'Inactive';
+
+// ✅ Ensure personnel exists
+$stmt = $conn->prepare("SELECT pers_username, status, assignment_status 
+                        FROM DeliveryPersonnel 
+                        WHERE pers_username = ? LIMIT 1");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+if (!$result || $result->num_rows === 0) {
+    echo json_encode(["success" => false, "message" => "Personnel not found."]);
+    $stmt->close();
+    $conn->close();
+    exit;
+}
+$personRow = $result->fetch_assoc();
+$stmt->close();
+
+// ✅ Check if they are currently Out for Delivery
+$checkSql = "
+    SELECT 1
+    FROM DeliveryAssignments da
+    INNER JOIN Transactions t ON da.transaction_id = t.transaction_id
+    WHERE da.personnel_username = ?
+      AND LOWER(t.status) = 'out for delivery'
+    LIMIT 1
+";
+$stmt = $conn->prepare($checkSql);
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$checkResult = $stmt->get_result();
+$isOutForDelivery = ($checkResult && $checkResult->num_rows > 0);
+$stmt->close();
+
+// ✅ Decide assignment_status
+if ($status === "Inactive") {
+    $assignment_status = null;
+} else {
+    // Active
+    $assignment_status = $isOutForDelivery ? "Out for Delivery" : "Available";
+}
+
+// ✅ Update DeliveryPersonnel
+if ($assignment_status === null) {
+    $updateSql = "UPDATE DeliveryPersonnel SET status = ?, assignment_status = NULL WHERE pers_username = ?";
+    $stmt = $conn->prepare($updateSql);
+    $stmt->bind_param("ss", $status, $username);
+} else {
+    $updateSql = "UPDATE DeliveryPersonnel SET status = ?, assignment_status = ? WHERE pers_username = ?";
+    $stmt = $conn->prepare($updateSql);
+    $stmt->bind_param("sss", $status, $assignment_status, $username);
+}
+
+if ($stmt->execute()) {
+    echo json_encode([
+        "success" => true,
+        "message" => "Status updated successfully.",
+        "assignment_status" => $assignment_status
+    ]);
+} else {
+    echo json_encode([
+        "success" => false,
+        "message" => "Database update failed: " . $stmt->error
+    ]);
+}
+
+$stmt->close();
 $conn->close();

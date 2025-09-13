@@ -25,8 +25,8 @@ const PersonnelAccounts = () => {
       .then((response) => {
         const dataWithStatus = response.data.map((p) => ({
           ...p,
-          status: p.status || "Inactive", // keep main status
-          assignment_status: p.assignment_status || "Inactive", // add assignment status
+          status: p.status || "Inactive",
+          assignment_status: p.assignment_status || "Inactive",
         }));
         setPersonnel(dataWithStatus);
       })
@@ -35,10 +35,16 @@ const PersonnelAccounts = () => {
       });
   };
 
-  const handleToggleStatus = (username, currentStatus) => {
+  const handleToggleStatus = (username, currentStatus, assignmentStatus) => {
+    // 🚫 Restrict toggling if Out for Delivery
+    if (assignmentStatus === "Out for Delivery") {
+      alert("Cannot set personnel to Inactive while Out for Delivery.");
+      return;
+    }
+
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
-    // Update UI immediately (temporary)
+    // Update UI immediately
     setPersonnel((prev) =>
       prev.map((p) =>
         p.pers_username === username
@@ -79,6 +85,9 @@ const PersonnelAccounts = () => {
                 : p
             )
           );
+        } else {
+          alert(response.data.message);
+          fetchPersonnel(); // refresh if backend rejected toggle
         }
       })
       .catch((error) => {
@@ -124,64 +133,76 @@ const PersonnelAccounts = () => {
                 <td>{person.pers_email}</td>
                 <td>{person.pers_username}</td>
 
-                {/* Status Column (Available, Out for Delivery, Inactive) */}
-                <td
-                  className={`text-center fw-bold ${
-                    person.assignment_status === "Available"
-                      ? "text-success"
-                      : person.assignment_status === "Out for Delivery"
-                      ? "text-warning"
-                      : "text-danger"
-                  }`}
-                >
-                  {person.assignment_status}
-                </td>
+                {/* Status Column */}
+<td
+  className={`text-center fw-bold ${
+    person.assignment_status?.trim().toLowerCase() === "available"
+      ? "text-success"
+      : person.assignment_status?.trim().toLowerCase() === "out for delivery"
+      ? "text-success" // ✅ force Out for Delivery to green
+      : "text-danger"
+  }`}
+>
+  {person.assignment_status}
+</td>
 
-                {/* Toggle Column (bar style) */}
-                <td className="text-center">
-                  <div className="d-flex flex-column align-items-center">
-                    <div
-                      onClick={() =>
-                        handleToggleStatus(person.pers_username, person.status)
-                      }
-                      style={{
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent:
-                          person.status === "Active"
-                            ? "flex-end"
-                            : "flex-start",
-                        width: "60px",
-                        height: "28px",
-                        borderRadius: "20px",
-                        backgroundColor:
-                          person.status === "Active" ? "green" : "red",
-                        padding: "0 6px",
-                        transition: "all 0.3s ease",
-                      }}
-                    >
-                      <span
-                        style={{
-                          background: "white",
-                          borderRadius: "50%",
-                          width: "22px",
-                          height: "22px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          color: person.status === "Active" ? "green" : "red",
-                          fontWeight: "bold",
-                          transition: "all 0.3s ease",
-                        }}
-                      >
-                        {person.status === "Active" ? <FaCheck /> : <FaTimes />}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
+{/* Toggle Column */}
+<td className="text-center">
+  <div className="d-flex flex-column align-items-center">
+    <div
+      onClick={() => {
+        // ✅ block toggle completely if Out for Delivery
+        if (person.assignment_status?.trim().toLowerCase() === "out for delivery") {
+          alert("Cannot change status while personnel is Out for Delivery.");
+          return;
+        }
+        handleToggleStatus(
+          person.pers_username,
+          person.status,
+          person.assignment_status
+        );
+      }}
+      style={{
+        cursor:
+          person.assignment_status?.trim().toLowerCase() === "out for delivery"
+            ? "not-allowed"
+            : "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent:
+          person.status === "Active" ? "flex-end" : "flex-start",
+        width: "60px",
+        height: "28px",
+        borderRadius: "20px",
+        backgroundColor: person.status === "Active" ? "green" : "red",
+        padding: "0 6px",
+        opacity:
+          person.assignment_status?.trim().toLowerCase() === "out for delivery"
+            ? 0.5
+            : 1, // fade toggle if disabled
+        transition: "all 0.3s ease",
+      }}
+    >
+      <span
+        style={{
+          background: "white",
+          borderRadius: "50%",
+          width: "22px",
+          height: "22px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "12px",
+          color: person.status === "Active" ? "green" : "red",
+          fontWeight: "bold",
+          transition: "all 0.3s ease",
+        }}
+      >
+        {person.status === "Active" ? <FaCheck /> : <FaTimes />}
+      </span>
+    </div>
+  </div>
+</td>
                 {/* Action Column */}
                 <td className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
                   <button
