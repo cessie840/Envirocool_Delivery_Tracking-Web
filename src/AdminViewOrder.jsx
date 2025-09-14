@@ -26,10 +26,11 @@ const ViewOrder = () => {
     total: "",
   });
 
+  // 🔹 Reusable Date Formatter
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    const mm = String(date.getMonth() + 1).padStart(2, "0"); // months are 0-indexed
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     const yyyy = date.getFullYear();
     return `${mm}/${dd}/${yyyy}`;
@@ -48,7 +49,7 @@ const ViewOrder = () => {
           customer_name: data.customer_name,
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
-          date_of_order: data.date_of_order,
+          date_of_order: formatDate(data.date_of_order),
           mode_of_payment: data.mode_of_payment,
           payment_option: data.payment_option,
           down_payment: data.down_payment,
@@ -77,7 +78,7 @@ const ViewOrder = () => {
   const handleRescheduleUpdate = (newDate) => {
     setOrderDetails((prev) => ({
       ...prev,
-      target_date_delivery: newDate,
+      target_date_delivery: formatDate(newDate),
       status: "Pending",
       cancelled_reason: null,
     }));
@@ -169,9 +170,9 @@ const ViewOrder = () => {
       case "Cancelled":
         return <strong style={{ color: "#DC3545" }}>{status}</strong>;
       case "Out for Delivery":
-        return <strong style={{ color: "#208EB9" }}>{status}</strong>;
+        return <strong style={{ color: "#2193C0FF" }}>{status}</strong>;
       case "Pending":
-        return <strong style={{ color: "#E7942EFF" }}>{status}</strong>;
+        return <strong style={{ color: "#ECAE62FF" }}>{status}</strong>;
       default:
         return <strong>{status}</strong>;
     }
@@ -214,18 +215,23 @@ const ViewOrder = () => {
                     <span>Contact:</span> {orderDetails.customer_contact}
                   </p>
                   <p>
-                    <span>Date of Order:</span> {orderDetails.date_of_order}
+                    <span>Date of Order:</span>{" "}
+                    {formatDate(orderDetails.date_of_order)}
                   </p>
                   <p>
                     <span>Target Delivery Date: </span>
-                    {orderDetails.target_date_delivery}
+                    {formatDate(orderDetails.target_date_delivery)}
+                  </p>
+                  <p>
+                    <span>Rescheduled Delivery Date: </span>
+                    {orderDetails.rescheduled_date ? formatDate(orderDetails.rescheduled_date) : "—"}
                   </p>
                   <br />
                   <div>
                     <h5 className="text-success fw-bold">Delivery Status</h5>
                   </div>
                   <p>
-                    <span>Status: </span>
+                    <span>Current Delivery Status: </span>
                     {renderStatusBadge(orderDetails.status)}
                   </p>
                   {orderDetails.status === "Cancelled" &&
