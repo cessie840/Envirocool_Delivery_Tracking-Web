@@ -84,7 +84,6 @@ function OutForDelivery() {
       });
   };
 
-
   const handleCancelClick = (delivery) => {
     setSelectedDelivery(delivery);
     setShowCancelModal(true);
@@ -227,7 +226,7 @@ function OutForDelivery() {
                   }}
                   onClick={() => markAsDelivered(delivery.transactionNo)}
                 >
-                  Delivered
+                  Mark as Delivered
                 </Button>
                 <Button
                   size="sm"
@@ -235,7 +234,7 @@ function OutForDelivery() {
                   style={{ borderRadius: "10px" }}
                   onClick={() => handleCancelClick(delivery)}
                 >
-                  Cancelled/Failed
+                  Delivery Attempt Failed
                 </Button>
               </div>
             </Card>
@@ -249,7 +248,7 @@ function OutForDelivery() {
         onHide={() => setShowCancelModal(false)}
         centered
       >
-        <Modal.Header closeButton style={{ backgroundColor: "#E8F8F5" }}>
+        <Modal.Header closeButton className="bg-light">
           <Modal.Title>Select Cancellation Reason</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -261,15 +260,17 @@ function OutForDelivery() {
                 onChange={(e) => setCancelReason(e.target.value)}
               >
                 <option value="">-- Select Reason --</option>
-                <option value="Customer didn't receive">
-                  Customer didn't receive
+                <option value="Vehicle-related Issue">
+                  Vehicle-related issue
                 </option>
-                <option value="Damaged item">Damaged item</option>
+                <option value="Location Inaccessible">
+                  Location inaccessible
+                </option>
               </Form.Select>
             </Form.Group>
           </Form>
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="bg-light">
           <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
             Close
           </Button>

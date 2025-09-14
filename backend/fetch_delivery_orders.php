@@ -14,14 +14,17 @@ include 'database.php';
 $orders = [];
 
 $sql = "
-    SELECT t.*, 
-           dp.pers_username, 
-           dp.pers_profile_pic,
-           CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS assigned_personnel
-    FROM Transactions t
-    LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
-    LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
-    ORDER BY t.transaction_id DESC
+   SELECT 
+    t.*,
+    da.personnel_username,
+    dp.pers_profile_pic,
+    CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS assigned_personnel
+FROM Transactions t
+LEFT JOIN DeliveryAssignments da 
+    ON t.transaction_id = da.transaction_id
+LEFT JOIN DeliveryPersonnel dp 
+    ON da.personnel_username = dp.pers_username
+ORDER BY t.transaction_id DESC
 ";
 
 $result = $conn->query($sql);
@@ -59,7 +62,7 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
-      
+
         $profilePic = $row['pers_profile_pic'];
 
         if (!empty($profilePic)) {
@@ -78,16 +81,18 @@ if ($result && $result->num_rows > 0) {
             'contact_number' => $row['customer_contact'],
             'payment_mode' => $row['mode_of_payment'],
             'down_payment' => floatval($row['down_payment']),
-            'balance' => floatval($row['balance']),            
-            'total_cost' => floatval($calculatedTotal),  
-            'assigned_personnel' => $row['assigned_personnel'] ?? null,
-            'assigned_personnel_username' => $row['pers_username'] ?? null,
+            'balance' => floatval($row['balance']),
+            'total_cost' => floatval($calculatedTotal),
+            'assigned_personnel' => $row['personnel_username'] ? $row['assigned_personnel'] : null,   
+            'assigned_personnel_username' => $row['personnel_username'] ?? null,                    
             'personnel_image' => $profilePic,
             'status' => $row['status'],
             'items' => $items,
             'tracking_number' => $row['tracking_number'],
-            'target_date_delivery' => $row['target_date_delivery']
+            'target_date_delivery' => $row['target_date_delivery'],
+            'rescheduled_date' => $row['rescheduled_date'],
         ];
+
 
     }
 }

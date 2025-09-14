@@ -113,6 +113,8 @@ const GenerateReport = () => {
   const [servicePage, setServicePage] = useState(1);
   const [customerPage, setCustomerPage] = useState(1);
 
+  const [failedReasons, setFailedReasons] = useState({});
+
   // Fetch data based on filters
   useEffect(() => {
     fetchData();
@@ -135,13 +137,6 @@ const GenerateReport = () => {
     customerData,
   ]);
 
-  // useEffect(() => {
-  //   setSalesPage(1);
-  //   setTransactionPage(1);
-  //   setServicePage(1);
-  //   setCustomerPage(1);
-  // }, [reportType]);
-
   useEffect(() => {
     localStorage.setItem("reportPeriod", period);
   }, [period]);
@@ -162,12 +157,24 @@ const GenerateReport = () => {
     localStorage.setItem("reportActiveTab", activeTab);
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleRescheduleEvent = () => {
+      fetchServiceData(); // your function to fetch delivery service data
+    };
+
+    window.addEventListener("deliveryRescheduled", handleRescheduleEvent);
+
+    return () => {
+      window.removeEventListener("deliveryRescheduled", handleRescheduleEvent);
+    };
+  }, []);
+
   // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
-        date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+        date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
         item_name: r.item_name ?? r.description ?? "-",
         qty: Number(r.qty ?? r.quantity ?? 0),
@@ -189,7 +196,7 @@ const GenerateReport = () => {
       item_name: r.item_name ?? r.name ?? "Unknown",
       quantity_sold: Number(r.quantity_sold ?? r.qty ?? r.count ?? 0),
     }));
-
+    
   const normalizeTransactions = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
       transaction_id: r.transaction_id ?? r.id ?? null,
@@ -199,17 +206,18 @@ const GenerateReport = () => {
       customer_contact: r.customer_contact ?? r.contact ?? "-",
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
-        : r.date
-        ? new Date(r.date).toISOString().slice(0, 10)
         : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
       mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
+
+      // ✅ unified delivery date (rescheduled_date if exists, else target_date_delivery)
       shipout_at: r.shipout_at
         ? new Date(r.shipout_at).toISOString().slice(0, 10)
         : null,
+
       completed_at: r.completed_at
         ? new Date(r.completed_at).toISOString().slice(0, 10)
         : null,
@@ -221,19 +229,36 @@ const GenerateReport = () => {
     }));
 
   const normalizeService = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
-      transaction_id: r.transaction_id ?? null,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
-      customer_name: r.customer_name ?? r.customer ?? "Unknown",
-      item_name: r.item_name ?? r.description ?? "-",
-      delivery_status: r.delivery_status ?? r.status ?? "Pending",
-      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-    }));
+    (Array.isArray(raw) ? raw : []).map((r) => {
+      let normalizedReason =
+        r.cancelled_reason ?? r.cancellation_reason ?? null;
+      if (normalizedReason) {
+        const lower = String(normalizedReason).toLowerCase();
+        if (lower.includes("vehicle")) {
+          normalizedReason = "Vehicle-related Issue";
+        } else if (lower.includes("location")) {
+          normalizedReason = "Location Inaccessible";
+        }
+      }
+
+      return {
+        transaction_id: r.transaction_id ?? null,
+        date_of_order: r.date_of_order
+          ? new Date(r.date_of_order).toISOString().slice(0, 10)
+          : null,
+        customer_name: r.customer_name ?? r.customer ?? "Unknown",
+        item_name: r.item_name ?? r.description ?? "-",
+        delivery_status: r.delivery_status ?? r.status ?? "Pending",
+        cancelled_reason: normalizedReason ?? "-",
+        rescheduled_date: r.rescheduled_date ?? null,
+        target_date_delivery: r.target_date_delivery ?? null,
+      };
+    });
 
   const normalizeCustomer = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
       transaction_id: r.transaction_id ?? null,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
       customer_name: r.customer_name ?? r.customer ?? "Unknown",
       item_name: r.item_name ?? r.description ?? "-",
       customer_rating:
@@ -319,10 +344,17 @@ const GenerateReport = () => {
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
         const data = await safeJson(res);
+
         const normalizedService = normalizeService(
           data.serviceDeliveries ?? data.data ?? []
         );
         setServiceData(normalizedService);
+
+        // ⬇️ new: store failedReasons from PHP response
+        if (data.failedReasons) {
+          setFailedReasons(data.failedReasons);
+        }
+
         setSummary((prev) =>
           reportType === "service"
             ? data.summary ?? {}
@@ -382,7 +414,13 @@ const GenerateReport = () => {
   const formatDate = (d) => {
     if (!d) return "";
     const dateObj = new Date(d);
-    return dateObj.toLocaleDateString();
+    if (isNaN(dateObj)) return "";
+
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0"); // month first
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const year = dateObj.getFullYear();
+
+    return `${month}/${day}/${year}`;
   };
 
   // Helper: format date for period filtering (used in totals)
@@ -436,7 +474,7 @@ const GenerateReport = () => {
   const filteredSalesData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order);
           if (
             rowDate < new Date(startDate) ||
             rowDate > new Date(endDate) ||
@@ -464,7 +502,7 @@ const GenerateReport = () => {
   const filteredTransactionData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
-          const rowDate = new Date(row.date_of_order || row.date);
+          const rowDate = new Date(row.date_of_order || row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -541,7 +579,7 @@ const GenerateReport = () => {
   const filteredServiceData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order); // <- use date_of_order
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -575,7 +613,7 @@ const GenerateReport = () => {
   const filteredCustomerData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? customerData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -627,27 +665,20 @@ const GenerateReport = () => {
   ).length;
   const totalTransactionsService = filteredServiceData.length;
 
-  const failedReasonsCount = { "Items Not Delivered": 0, "Damaged Item": 0 };
+  const failedReasonsCount = {
+    "Vehicle-related Issue": 0,
+    "Location Inaccessible": 0,
+  };
 
   filteredServiceData.forEach((row) => {
     const status = String(row.delivery_status).toLowerCase();
     if (status.includes("cancel") && row.cancelled_reason) {
       const reason = String(row.cancelled_reason).toLowerCase();
 
-      // Check for all variants indicating item not delivered
-      if (
-        reason.includes("not delivered") ||
-        reason.includes("not received") ||
-        reason.includes("customer didn't receive") ||
-        reason.includes("customer did not receive") ||
-        reason.includes("didn't receive") ||
-        reason.includes("did not receive") ||
-        reason.includes("not received item") ||
-        reason.includes("not received goods")
-      ) {
-        failedReasonsCount["Items Not Delivered"]++;
-      } else if (reason.includes("damaged")) {
-        failedReasonsCount["Damaged Item"]++;
+      if (reason.includes("vehicle")) {
+        failedReasonsCount["Vehicle-related Issue"]++;
+      } else if (reason.includes("location")) {
+        failedReasonsCount["Location Inaccessible"]++;
       }
     }
   });
@@ -885,7 +916,7 @@ const GenerateReport = () => {
                 <FaTimesCircle />
               </div>
               <div>
-                <h6 className="fw-semibold">Failed Deliveries</h6>
+                <h6 className="fw-semibold">Rescheduled Deliveries</h6>
                 <p className="mb-0">{failedDeliveries}</p>
               </div>
             </div>
@@ -978,10 +1009,14 @@ const GenerateReport = () => {
 
   // Render service delivery failed reasons bar chart
   const renderServiceFailedReasonsChart = () => {
-    const data = Object.entries(failedReasonsCount).map(([name, count]) => ({
-      name,
-      count,
-    }));
+    // Ensure chart always renders
+    const data =
+      failedReasons && Object.keys(failedReasons).length > 0
+        ? Object.entries(failedReasons).map(([reason, count]) => ({
+            reason,
+            count,
+          }))
+        : [{ reason: "No Data", count: 0 }]; // Dummy fallback
 
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -990,7 +1025,7 @@ const GenerateReport = () => {
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
+          <XAxis dataKey="reason" />
           <YAxis allowDecimals={false} />
           <Tooltip />
           <Legend />
@@ -1077,7 +1112,7 @@ const GenerateReport = () => {
           <thead className="table-success">
             <tr>
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
               <th>Item Name</th>
               <th>Quantity</th>
@@ -1099,7 +1134,7 @@ const GenerateReport = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.qty}</td>
@@ -1250,7 +1285,7 @@ const GenerateReport = () => {
                   <td>
                     {row.completed_at ? formatDate(row.completed_at) : "-"}
                   </td>
-                  <td>{row.cancelled_reason || "-"}</td>
+                  <td>{row.cancelled_reason || "No Cancellation"}</td>
                 </tr>
               ))
             )}
@@ -1285,13 +1320,26 @@ const GenerateReport = () => {
 
   const renderServiceTable = () => {
     const itemsPerPage = getItemsPerPage();
-    const totalPages = Math.ceil(filteredCustomerData.length / itemsPerPage);
-    const currentPage = Math.min(customerPage, totalPages || 1);
+    const totalPages = Math.ceil(filteredServiceData.length / itemsPerPage);
+    const currentPage = Math.min(servicePage, totalPages || 1);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredCustomerData.slice(
+    const paginatedData = filteredServiceData.slice(
       startIndex,
       startIndex + itemsPerPage
     );
+
+    // Helper: format date for display as MM/DD/YYYY
+    const formatDate = (d) => {
+      if (!d) return "-";
+      const dateObj = new Date(d);
+      if (isNaN(dateObj)) return "-";
+
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const year = dateObj.getFullYear();
+
+      return `${month}/${day}/${year}`;
+    };
 
     return (
       <>
@@ -1305,51 +1353,83 @@ const GenerateReport = () => {
           <thead className="table-warning">
             <tr>
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
               <th>Item Name</th>
               <th>Delivery Status</th>
+              <th>Initial Delivery Date</th>
+              <th>Rescheduled Date</th>
               <th>Reason for Cancellation</th>
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center">
+                <td colSpan={8} className="text-center">
                   No delivery service data found.
                 </td>
               </tr>
             ) : (
-              paginatedData.map((row, i) => (
-                <tr key={i} className="table-row-hover">
-                  <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
-                  <td>{row.customer_name}</td>
-                  <td>{row.item_name}</td>
-                  <td>{row.delivery_status}</td>
-                  <td>{row.cancelled_reason || "-"}</td>
-                </tr>
-              ))
+              paginatedData.map((row, i) => {
+                // Cancellation reason
+                let reason =
+                  row.cancelled_reason && row.cancelled_reason !== "-"
+                    ? row.cancelled_reason
+                    : "No Cancellation";
+                if (row.history && row.history.length > 0) {
+                  const lastCancel = row.history
+                    .filter((h) => h.event_type === "Cancelled" && h.reason)
+                    .pop();
+                  if (lastCancel) reason = lastCancel.reason;
+                }
+
+                // Display status
+                let displayStatus =
+                  row.delivery_status === "Cancelled"
+                    ? "Cancelled (For Rescheduling)"
+                    : row.delivery_status;
+
+                // Dates
+                // let orderDate = row.date_of_order ? formatDate(row.date_of_order) : "-";
+                let targetDate = row.target_date_delivery
+                  ? formatDate(row.target_date_delivery)
+                  : "-";
+                let rescheduledDate = row.rescheduled_date
+                  ? formatDate(row.rescheduled_date)
+                  : "Not Rescheduled";
+
+                return (
+                  <tr key={i} className="table-row-hover">
+                    <td>{row.transaction_id || "-"}</td>
+                    <td>{formatDate(row.date_of_order)}</td>
+                    <td>{row.customer_name}</td>
+                    <td>{row.item_name}</td>
+                    <td>{displayStatus}</td>
+                    <td>{targetDate}</td>
+                    <td>{rescheduledDate}</td>
+                    <td>{reason}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </Table>
 
-        {/* DELIVERY SERVICE PAGINATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setCustomerPage(currentPage - 1)}
+            disabled={servicePage === 1}
+            onClick={() => setServicePage(servicePage - 1)}
           >
             ‹
           </button>
           <span className="page-info">
-            Page {currentPage} of {totalPages}
+            Page {servicePage} of {totalPages}
           </span>
           <button
             className="page-btn"
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setCustomerPage(currentPage + 1)}
+            disabled={servicePage === totalPages}
+            onClick={() => setServicePage(servicePage + 1)}
           >
             ›
           </button>
@@ -1379,7 +1459,7 @@ const GenerateReport = () => {
           <thead>
             <tr className="customer-header">
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
               <th>Item Name</th>
               <th>Ratings</th>
@@ -1397,7 +1477,7 @@ const GenerateReport = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
+                  <td>{row.date_of_order}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.customer_rating ?? "N/A"}</td>
@@ -1500,7 +1580,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2 className="text-success mt-3 mb-3 text-center fw-semibold">
                   Sales Report
@@ -1524,7 +1603,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"
@@ -1551,7 +1629,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"
@@ -1576,7 +1653,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"
@@ -1720,7 +1796,10 @@ const GenerateReport = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer className="bg-white">
-          <Button className="btn close-btn px-3 py-2 fs-6 rounded-2" onClick={() => setShowFilter(false)}>
+          <Button
+            className="btn close-btn px-3 py-2 fs-6 rounded-2"
+            onClick={() => setShowFilter(false)}
+          >
             Close
           </Button>
           <Button

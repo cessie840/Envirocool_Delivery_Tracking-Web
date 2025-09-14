@@ -12,7 +12,7 @@ const OperationalDelivery = () => {
   const [orders, setOrders] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [activeTab, setActiveTab] = useState("unassigned");
-  const [filterDate, setFilterDate] = useState(""); // For date filtering
+  const [filterDate, setFilterDate] = useState("");
 
   useEffect(() => {
     document.title = "Operational Delivery";
@@ -107,43 +107,47 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
-  // Separate orders and sort by target_date_delivery ascending
+  // Choose delivery date: rescheduled_date if exists, otherwise target_date_delivery
+  const getDeliveryDate = (order) => {
+    return order.rescheduled_date && order.rescheduled_date.trim() !== ""
+      ? order.rescheduled_date
+      : order.target_date_delivery;
+  };
+
+  // Unassigned orders
   const unassignedOrders = orders
-    .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
-    .sort(
-      (a, b) =>
-        new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
-    );
+    .filter(
+      (o) =>
+        (!o.assigned_personnel || String(o.assigned_personnel).trim() === "") &&
+        (o.status === "Pending" || o.status === "To Ship")
+    )
+    .sort((a, b) => new Date(getDeliveryDate(a)) - new Date(getDeliveryDate(b)));
 
- const assignedOrders = orders
-   .filter(
-     (o) =>
-       o.assigned_personnel &&
-       o.assigned_personnel !== null &&
-       o.status !== "Delivered" &&
-       o.status !== "Cancelled"
-   )
-   .sort(
-     (a, b) =>
-       new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
-   );
+  // Assigned orders
+  const assignedOrders = orders
+    .filter(
+      (o) =>
+        o.assigned_personnel &&
+        String(o.assigned_personnel).trim() !== "" &&
+        (o.status === "Pending" || o.status === "To Ship") &&
+        o.status !== "Delivered" &&
+        o.status !== "Cancelled"
+    )
+    .sort((a, b) => new Date(getDeliveryDate(a)) - new Date(getDeliveryDate(b)));
 
-
-  // Filtered by date
+  // Date filtering
   const filteredUnassignedOrders = filterDate
-    ? unassignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    ? unassignedOrders.filter((o) => getDeliveryDate(o) === filterDate)
     : unassignedOrders;
 
   const filteredAssignedOrders = filterDate
-    ? assignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    ? assignedOrders.filter((o) => getDeliveryDate(o) === filterDate)
     : assignedOrders;
 
   return (
     <OperationalLayout title="Delivery Orders">
       <div className="compact-container container mt-5 pb-5 px-5 rounded-2">
-        {/* Tabs + Date Filter in same row */}
         <div className="d-flex justify-content-between align-items-center mb-5">
-          {/* Tabs (preserve underline) */}
           <div className="flex-grow-1">
             <Tabs
               id="delivery-tabs"
@@ -175,7 +179,6 @@ const OperationalDelivery = () => {
             <Form.Control
               type="date"
               value={filterDate}
-              placeholder="valaka"
               onChange={(e) => setFilterDate(e.target.value)}
               style={{ width: "180px", height: "38px" }}
             />
@@ -213,7 +216,7 @@ const OperationalDelivery = () => {
                       </h5>
                       <p className="mb-2 text-danger">
                         <strong>Delivery Date: </strong>
-                        {order.target_date_delivery}
+                        {getDeliveryDate(order)}
                       </p>
                       <p className="mb-2">
                         <strong>Customer:</strong> {order.customer_name}
@@ -264,7 +267,7 @@ const OperationalDelivery = () => {
                       </h5>
                       <p className="mb-2 text-success">
                         <strong>Delivery Date: </strong>
-                        {order.target_date_delivery}
+                        {getDeliveryDate(order)}
                       </p>
                       <p className="mb-2">
                         <strong>Customer:</strong> {order.customer_name}
@@ -335,7 +338,9 @@ const OperationalDelivery = () => {
                 </p>
                 <p>
                   <strong>Delivery Date: </strong>{" "}
-                  {selectedOrder.target_date_delivery}
+                  {selectedOrder.rescheduled_date
+                    ? selectedOrder.rescheduled_date
+                    : selectedOrder.target_date_delivery}
                 </p>
               </div>
 

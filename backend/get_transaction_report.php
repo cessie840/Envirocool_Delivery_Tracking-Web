@@ -57,23 +57,32 @@ if (!$start || !$end) {
 $sql = "
 SELECT 
     t.transaction_id,
+    t.tracking_number,
     t.customer_name,
     t.customer_address,
     t.customer_contact,
     t.date_of_order,
+    -- 👇 Choose rescheduled_date if exists, else target_date_delivery
+    COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.description AS item_name,
     po.quantity AS qty,
     po.total_cost,
     t.mode_of_payment,
+    t.payment_option,       
+    t.down_payment,         
+    t.balance,              
     t.status AS delivery_status,
-    t.shipout_at,
+    CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS delivery_personnel,
     t.completed_at,
     t.cancelled_reason
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
+LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
+LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
 ORDER BY t.date_of_order ASC
 ";
+
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('ss', $startDate, $endDate);

@@ -56,7 +56,8 @@ if (!$start || !$end) {
 
 $sql = "
 SELECT 
-    DATE(t.date_of_order) AS date,
+    t.transaction_id,
+    DATE(t.date_of_order) AS date_of_order,
     t.customer_name,
     po.description AS item_name,
     t.customer_rating,
