@@ -1,10 +1,12 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Content-Type: application/json");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 
 require_once "database.php";
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
@@ -12,33 +14,59 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
 }
 
 $data = json_decode(file_get_contents("php://input"), true);
-
 $transaction_id = isset($data["transaction_id"]) ? intval($data["transaction_id"]) : null;
-$new_date = isset($data["rescheduled_date"]) ? $data["rescheduled_date"] : null;
+$new_date = isset($data["target_date_delivery"]) ? $data["target_date_delivery"] : null;
 
 if (!$transaction_id || !$new_date) {
-    echo json_encode(["success" => false, "message" => "Missing transaction_id or rescheduled_date"]);
+    echo json_encode(["success" => false, "message" => "Missing transaction_id or new delivery date."]);
     exit;
 }
 
-// ✅ Update transaction: set new target date, mark as "Pending" again
-$sql = $conn->prepare("
-    UPDATE Transactions
-    SET status = 'Pending', 
-        target_date_delivery = ?, 
-        rescheduled_date = NOW(),
-        cancelled_reason = NULL,
-        cancelled_at = NULL
-    WHERE transaction_id = ?
-");
-$sql->bind_param("si", $new_date, $transaction_id);
+// 1) Update transaction: set rescheduled_date and status to Pending (do NOT require previous status)
+$sql = "UPDATE Transactions SET rescheduled_date = ?, status = 'Pending' WHERE transaction_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("si", $new_date, $transaction_id);
+$stmt->execute();
+$updatedRows = $stmt->affected_rows;
+$stmt->close();
 
-if ($sql->execute()) {
-    echo json_encode(["success" => true, "message" => "Delivery successfully rescheduled"]);
+// 2) Delete all DeliveryAssignments rows for this transaction (clear assignments)
+$resetSql = "DELETE FROM DeliveryAssignments WHERE transaction_id = ?";
+$stmtReset = $conn->prepare($resetSql);
+$stmtReset->bind_param("i", $transaction_id);
+$stmtReset->execute();
+$deletedRows = $stmtReset->affected_rows;
+$stmtReset->close();
+
+// 3) Insert history record (reason holds the new date)
+$historySql = "INSERT INTO DeliveryHistory (transaction_id, event_type, reason, event_timestamp) VALUES (?, 'Rescheduled', ?, NOW())";
+$stmtHist = $conn->prepare($historySql);
+$stmtHist->bind_param("is", $transaction_id, $new_date);
+$stmtHist->execute();
+$stmtHist->close();
+
+// Return result and debug info
+if ($updatedRows > 0) {
+    echo json_encode([
+        "success" => true,
+        "message" => "Delivery rescheduled successfully.",
+        "transaction_id" => $transaction_id,
+        "new_date" => $new_date,
+        "debug" => [
+            "transactions_updated" => $updatedRows,
+            "assignment_rows_deleted" => $deletedRows
+        ]
+    ]);
 } else {
-    echo json_encode(["success" => false, "message" => "Failed to reschedule delivery"]);
+    echo json_encode([
+        "success" => false,
+        "message" => "Transaction update affected 0 rows (check transaction_id).",
+        "debug" => [
+            "transactions_updated" => $updatedRows,
+            "assignment_rows_deleted" => $deletedRows
+        ]
+    ]);
 }
 
-$sql->close();
 $conn->close();
 ?>

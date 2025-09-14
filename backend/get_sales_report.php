@@ -54,16 +54,19 @@ if (!$start || !$end) {
     $endDate = $end;
 }
 
-// Sales data query
-// Sales data query
+// Sales data query with payment fields
 $sql = "
 SELECT 
-    DATE(t.date_of_order) AS date,
+t.transaction_id,
+    DATE(t.date_of_order) AS date_of_order,
     t.customer_name,
     po.description AS item_name,
     po.quantity AS qty,
     po.unit_cost,
-    po.total_cost
+    po.total_cost,
+    t.payment_option,
+    t.down_payment,
+    t.balance
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
@@ -79,7 +82,7 @@ $result = $stmt->get_result();
 $sales = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Top selling items
+// Top selling items (no change needed here)
 $sqlTop = "
 SELECT 
     po.description AS item_name,
@@ -99,13 +102,15 @@ $resultTop = $stmtTop->get_result();
 $topSelling = $resultTop->fetch_all(MYSQLI_ASSOC);
 $stmtTop->close();
 
-// Summary
+// Summary with payment fields added
 $sqlSummary = "
 SELECT 
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
     SUM(po.quantity) AS total_items_sold,
-    SUM(po.total_cost) AS total_sales
+    SUM(po.total_cost) AS total_sales,
+    SUM(t.down_payment) AS total_down_payment,
+    SUM(t.balance) AS total_balance
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
@@ -117,7 +122,6 @@ $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();
 $stmtSum->close();
-
 
 echo json_encode([
     "sales" => $sales,
