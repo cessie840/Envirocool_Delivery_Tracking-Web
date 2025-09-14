@@ -174,7 +174,7 @@ const GenerateReport = () => {
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
-        date: r.date_of_order ? new Date(r.date_of_order).toISOString().slice(0, 10) : null,
+        date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
         item_name: r.item_name ?? r.description ?? "-",
         qty: Number(r.qty ?? r.quantity ?? 0),
@@ -196,7 +196,7 @@ const GenerateReport = () => {
       item_name: r.item_name ?? r.name ?? "Unknown",
       quantity_sold: Number(r.quantity_sold ?? r.qty ?? r.count ?? 0),
     }));
-
+    
   const normalizeTransactions = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
       transaction_id: r.transaction_id ?? r.id ?? null,
@@ -206,17 +206,18 @@ const GenerateReport = () => {
       customer_contact: r.customer_contact ?? r.contact ?? "-",
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
-        : r.date_of_order
-        ? new Date(r.date_of_order).toISOString().slice(0, 10)
         : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
       mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
+
+      // ✅ unified delivery date (rescheduled_date if exists, else target_date_delivery)
       shipout_at: r.shipout_at
         ? new Date(r.shipout_at).toISOString().slice(0, 10)
         : null,
+
       completed_at: r.completed_at
         ? new Date(r.completed_at).toISOString().slice(0, 10)
         : null,
@@ -227,48 +228,44 @@ const GenerateReport = () => {
       balance: Number(r.balance ?? 0),
     }));
 
-const normalizeService = (raw = []) =>
-  (Array.isArray(raw) ? raw : []).map((r) => {
-    let normalizedReason =
-      r.cancelled_reason ?? r.cancellation_reason ?? null;
-    if (normalizedReason) {
-      const lower = String(normalizedReason).toLowerCase();
-      if (lower.includes("vehicle")) {
-        normalizedReason = "Vehicle-related Issue";
-      } else if (lower.includes("location")) {
-        normalizedReason = "Location Inaccessible";
+  const normalizeService = (raw = []) =>
+    (Array.isArray(raw) ? raw : []).map((r) => {
+      let normalizedReason =
+        r.cancelled_reason ?? r.cancellation_reason ?? null;
+      if (normalizedReason) {
+        const lower = String(normalizedReason).toLowerCase();
+        if (lower.includes("vehicle")) {
+          normalizedReason = "Vehicle-related Issue";
+        } else if (lower.includes("location")) {
+          normalizedReason = "Location Inaccessible";
+        }
       }
-    }
 
-    return {
+      return {
+        transaction_id: r.transaction_id ?? null,
+        date_of_order: r.date_of_order
+          ? new Date(r.date_of_order).toISOString().slice(0, 10)
+          : null,
+        customer_name: r.customer_name ?? r.customer ?? "Unknown",
+        item_name: r.item_name ?? r.description ?? "-",
+        delivery_status: r.delivery_status ?? r.status ?? "Pending",
+        cancelled_reason: normalizedReason ?? "-",
+        rescheduled_date: r.rescheduled_date ?? null,
+        target_date_delivery: r.target_date_delivery ?? null,
+      };
+    });
+
+  const normalizeCustomer = (raw = []) =>
+    (Array.isArray(raw) ? raw : []).map((r) => ({
       transaction_id: r.transaction_id ?? null,
-      date_of_order: r.date_of_order
-        ? new Date(r.date_of_order).toISOString().slice(0, 10)
-        : null,
+      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
       customer_name: r.customer_name ?? r.customer ?? "Unknown",
       item_name: r.item_name ?? r.description ?? "-",
+      customer_rating:
+        r.customer_rating != null ? Number(r.customer_rating) : null,
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
-      cancelled_reason: normalizedReason ?? "-",
-      rescheduled_date: r.rescheduled_date ?? null,
-      target_date_delivery: r.target_date_delivery ?? null,
-    };
-  });
-
-
-const normalizeCustomer = (raw = []) =>
-  (Array.isArray(raw) ? raw : []).map((r) => ({
-    transaction_id: r.transaction_id ?? null,
-    date_of_order: r.date_of_order
-      ? new Date(r.date_of_order).toISOString().slice(0, 10)
-      : null,
-    customer_name: r.customer_name ?? r.customer ?? "Unknown",
-    item_name: r.item_name ?? r.description ?? "-",
-    customer_rating:
-      r.customer_rating != null ? Number(r.customer_rating) : null,
-    delivery_status: r.delivery_status ?? r.status ?? "Pending",
-    cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-  }));
-
+      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
+    }));
 
   const safeJson = async (res) => {
     try {
@@ -580,39 +577,38 @@ const normalizeCustomer = (raw = []) =>
         });
 
   const filteredServiceData =
-  isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-    ? serviceData.filter((row) => {
-        const rowDate = new Date(row.date_of_order); // <- use date_of_order
-        if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-          return false;
-
-        if (cancellationReasonFilter && row.cancelled_reason) {
-          if (
-            !row.cancelled_reason
-              .toLowerCase()
-              .includes(cancellationReasonFilter.toLowerCase())
-          )
+    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
+      ? serviceData.filter((row) => {
+          const rowDate = new Date(row.date_of_order); // <- use date_of_order
+          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
-        } else if (cancellationReasonFilter) {
-          return false;
-        }
 
-        return true;
-      })
-    : serviceData.filter((row) => {
-        if (cancellationReasonFilter && row.cancelled_reason) {
-          if (
-            !row.cancelled_reason
-              .toLowerCase()
-              .includes(cancellationReasonFilter.toLowerCase())
-          )
+          if (cancellationReasonFilter && row.cancelled_reason) {
+            if (
+              !row.cancelled_reason
+                .toLowerCase()
+                .includes(cancellationReasonFilter.toLowerCase())
+            )
+              return false;
+          } else if (cancellationReasonFilter) {
             return false;
-        } else if (cancellationReasonFilter) {
-          return false;
-        }
-        return true;
-      });
+          }
 
+          return true;
+        })
+      : serviceData.filter((row) => {
+          if (cancellationReasonFilter && row.cancelled_reason) {
+            if (
+              !row.cancelled_reason
+                .toLowerCase()
+                .includes(cancellationReasonFilter.toLowerCase())
+            )
+              return false;
+          } else if (cancellationReasonFilter) {
+            return false;
+          }
+          return true;
+        });
 
   const filteredCustomerData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
@@ -1289,7 +1285,7 @@ const normalizeCustomer = (raw = []) =>
                   <td>
                     {row.completed_at ? formatDate(row.completed_at) : "-"}
                   </td>
-                  <td>{row.cancelled_reason || "-"}</td>
+                  <td>{row.cancelled_reason || "No Cancellation"}</td>
                 </tr>
               ))
             )}
@@ -1322,122 +1318,125 @@ const normalizeCustomer = (raw = []) =>
     );
   };
 
-const renderServiceTable = () => {
-  const itemsPerPage = getItemsPerPage();
-  const totalPages = Math.ceil(filteredServiceData.length / itemsPerPage);
-  const currentPage = Math.min(servicePage, totalPages || 1);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedData = filteredServiceData.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const renderServiceTable = () => {
+    const itemsPerPage = getItemsPerPage();
+    const totalPages = Math.ceil(filteredServiceData.length / itemsPerPage);
+    const currentPage = Math.min(servicePage, totalPages || 1);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedData = filteredServiceData.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
 
-  // Helper: format date for display as MM/DD/YYYY
-  const formatDate = (d) => {
-    if (!d) return "-";
-    const dateObj = new Date(d);
-    if (isNaN(dateObj)) return "-";
+    // Helper: format date for display as MM/DD/YYYY
+    const formatDate = (d) => {
+      if (!d) return "-";
+      const dateObj = new Date(d);
+      if (isNaN(dateObj)) return "-";
 
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const year = dateObj.getFullYear();
 
-    return `${month}/${day}/${year}`;
-  };
+      return `${month}/${day}/${year}`;
+    };
 
-  return (
-    <>
-      <Table
-        bordered
-        hover
-        responsive
-        className="shadow-sm text-center"
-        style={{ cursor: "default" }}
-      >
-        <thead className="table-warning">
-          <tr>
-            <th>Transaction No.</th>
-            <th>Date of Order</th>
-            <th>Client</th>
-            <th>Item Name</th>
-            <th>Delivery Status</th>
-            <th>Initial Delivery Date</th>
-            <th>Rescheduled Date</th>
-            <th>Reason for Cancellation</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedData.length === 0 ? (
+    return (
+      <>
+        <Table
+          bordered
+          hover
+          responsive
+          className="shadow-sm text-center"
+          style={{ cursor: "default" }}
+        >
+          <thead className="table-warning">
             <tr>
-              <td colSpan={8} className="text-center">
-                No delivery service data found.
-              </td>
+              <th>Transaction No.</th>
+              <th>Date of Order</th>
+              <th>Client</th>
+              <th>Item Name</th>
+              <th>Delivery Status</th>
+              <th>Initial Delivery Date</th>
+              <th>Rescheduled Date</th>
+              <th>Reason for Cancellation</th>
             </tr>
-          ) : (
-            paginatedData.map((row, i) => {
-              // Cancellation reason
-              let reason = row.cancelled_reason && row.cancelled_reason !== "-" ? row.cancelled_reason : "No Cancellation"
-              if (row.history && row.history.length > 0) {
-                const lastCancel = row.history
-                  .filter((h) => h.event_type === "Cancelled" && h.reason)
-                  .pop();
-                if (lastCancel) reason = lastCancel.reason;
-              }
+          </thead>
+          <tbody>
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="text-center">
+                  No delivery service data found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((row, i) => {
+                // Cancellation reason
+                let reason =
+                  row.cancelled_reason && row.cancelled_reason !== "-"
+                    ? row.cancelled_reason
+                    : "No Cancellation";
+                if (row.history && row.history.length > 0) {
+                  const lastCancel = row.history
+                    .filter((h) => h.event_type === "Cancelled" && h.reason)
+                    .pop();
+                  if (lastCancel) reason = lastCancel.reason;
+                }
 
-              // Display status
-              let displayStatus =
-                row.delivery_status === "Cancelled"
-                  ? "Cancelled (For Rescheduling)"
-                  : row.delivery_status;
+                // Display status
+                let displayStatus =
+                  row.delivery_status === "Cancelled"
+                    ? "Cancelled (For Rescheduling)"
+                    : row.delivery_status;
 
-              // Dates
-              // let orderDate = row.date_of_order ? formatDate(row.date_of_order) : "-";
-              let targetDate = row.target_date_delivery
-                ? formatDate(row.target_date_delivery)
-                : "-";
-              let rescheduledDate = row.rescheduled_date ? formatDate(row.rescheduled_date) : "Not Rescheduled"
+                // Dates
+                // let orderDate = row.date_of_order ? formatDate(row.date_of_order) : "-";
+                let targetDate = row.target_date_delivery
+                  ? formatDate(row.target_date_delivery)
+                  : "-";
+                let rescheduledDate = row.rescheduled_date
+                  ? formatDate(row.rescheduled_date)
+                  : "Not Rescheduled";
 
+                return (
+                  <tr key={i} className="table-row-hover">
+                    <td>{row.transaction_id || "-"}</td>
+                    <td>{formatDate(row.date_of_order)}</td>
+                    <td>{row.customer_name}</td>
+                    <td>{row.item_name}</td>
+                    <td>{displayStatus}</td>
+                    <td>{targetDate}</td>
+                    <td>{rescheduledDate}</td>
+                    <td>{reason}</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </Table>
 
-              return (
-                <tr key={i} className="table-row-hover">
-                  <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date_of_order)}</td>
-                  <td>{row.customer_name}</td>
-                  <td>{row.item_name}</td>
-                  <td>{displayStatus}</td>
-                  <td>{targetDate}</td>
-                  <td>{rescheduledDate}</td>
-                  <td>{reason}</td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </Table>
-
-      <div className="custom-pagination">
-        <button
-          className="page-btn"
-          disabled={servicePage === 1}
-          onClick={() => setServicePage(servicePage - 1)}
-        >
-          ‹
-        </button>
-        <span className="page-info">
-          Page {servicePage} of {totalPages}
-        </span>
-        <button
-          className="page-btn"
-          disabled={servicePage === totalPages}
-          onClick={() => setServicePage(servicePage + 1)}
-        >
-          ›
-        </button>
-      </div>
-    </>
-  );
-};
-
+        <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={servicePage === 1}
+            onClick={() => setServicePage(servicePage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {servicePage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={servicePage === totalPages}
+            onClick={() => setServicePage(servicePage + 1)}
+          >
+            ›
+          </button>
+        </div>
+      </>
+    );
+  };
 
   const renderCustomerTable = () => {
     const itemsPerPage = getItemsPerPage();
@@ -1478,7 +1477,7 @@ const renderServiceTable = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date_of_order)}</td>
+                  <td>{row.date_of_order}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.customer_rating ?? "N/A"}</td>
