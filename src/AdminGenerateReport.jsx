@@ -137,13 +137,6 @@ const GenerateReport = () => {
     customerData,
   ]);
 
-  // useEffect(() => {
-  //   setSalesPage(1);
-  //   setTransactionPage(1);
-  //   setServicePage(1);
-  //   setCustomerPage(1);
-  // }, [reportType]);
-
   useEffect(() => {
     localStorage.setItem("reportPeriod", period);
   }, [period]);
@@ -164,12 +157,24 @@ const GenerateReport = () => {
     localStorage.setItem("reportActiveTab", activeTab);
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleRescheduleEvent = () => {
+      fetchServiceData(); // your function to fetch delivery service data
+    };
+
+    window.addEventListener("deliveryRescheduled", handleRescheduleEvent);
+
+    return () => {
+      window.removeEventListener("deliveryRescheduled", handleRescheduleEvent);
+    };
+  }, []);
+
   // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
-        date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+        date: r.date_of_order ? new Date(r.date_of_order).toISOString().slice(0, 10) : null,
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
         item_name: r.item_name ?? r.description ?? "-",
         qty: Number(r.qty ?? r.quantity ?? 0),
@@ -201,8 +206,8 @@ const GenerateReport = () => {
       customer_contact: r.customer_contact ?? r.contact ?? "-",
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
-        : r.date
-        ? new Date(r.date).toISOString().slice(0, 10)
+        : r.date_of_order
+        ? new Date(r.date_of_order).toISOString().slice(0, 10)
         : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
@@ -222,43 +227,48 @@ const GenerateReport = () => {
       balance: Number(r.balance ?? 0),
     }));
 
-  const normalizeService = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => {
-      // Normalize cancellation reason
-      let normalizedReason =
-        r.cancelled_reason ?? r.cancellation_reason ?? null;
-      if (normalizedReason) {
-        const lower = String(normalizedReason).toLowerCase();
-        if (lower.includes("vehicle")) {
-          normalizedReason = "Vehicle-related Issue";
-        } else if (lower.includes("location")) {
-          normalizedReason = "Location Inaccessible";
-        } else {
-          normalizedReason = "-";
-        }
+const normalizeService = (raw = []) =>
+  (Array.isArray(raw) ? raw : []).map((r) => {
+    let normalizedReason =
+      r.cancelled_reason ?? r.cancellation_reason ?? null;
+    if (normalizedReason) {
+      const lower = String(normalizedReason).toLowerCase();
+      if (lower.includes("vehicle")) {
+        normalizedReason = "Vehicle-related Issue";
+      } else if (lower.includes("location")) {
+        normalizedReason = "Location Inaccessible";
       }
+    }
 
-      return {
-        transaction_id: r.transaction_id ?? null,
-        date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
-        customer_name: r.customer_name ?? r.customer ?? "Unknown",
-        item_name: r.item_name ?? r.description ?? "-",
-        delivery_status: r.delivery_status ?? r.status ?? "Pending",
-        cancelled_reason: normalizedReason,
-      };
-    });
-
-  const normalizeCustomer = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
+    return {
       transaction_id: r.transaction_id ?? null,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+      date_of_order: r.date_of_order
+        ? new Date(r.date_of_order).toISOString().slice(0, 10)
+        : null,
       customer_name: r.customer_name ?? r.customer ?? "Unknown",
       item_name: r.item_name ?? r.description ?? "-",
-      customer_rating:
-        r.customer_rating != null ? Number(r.customer_rating) : null,
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
-      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-    }));
+      cancelled_reason: normalizedReason ?? "-",
+      rescheduled_date: r.rescheduled_date ?? null,
+      target_date_delivery: r.target_date_delivery ?? null,
+    };
+  });
+
+
+const normalizeCustomer = (raw = []) =>
+  (Array.isArray(raw) ? raw : []).map((r) => ({
+    transaction_id: r.transaction_id ?? null,
+    date_of_order: r.date_of_order
+      ? new Date(r.date_of_order).toISOString().slice(0, 10)
+      : null,
+    customer_name: r.customer_name ?? r.customer ?? "Unknown",
+    item_name: r.item_name ?? r.description ?? "-",
+    customer_rating:
+      r.customer_rating != null ? Number(r.customer_rating) : null,
+    delivery_status: r.delivery_status ?? r.status ?? "Pending",
+    cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
+  }));
+
 
   const safeJson = async (res) => {
     try {
@@ -407,7 +417,13 @@ const GenerateReport = () => {
   const formatDate = (d) => {
     if (!d) return "";
     const dateObj = new Date(d);
-    return dateObj.toLocaleDateString();
+    if (isNaN(dateObj)) return "";
+
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0"); // month first
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const year = dateObj.getFullYear();
+
+    return `${month}/${day}/${year}`;
   };
 
   // Helper: format date for period filtering (used in totals)
@@ -461,7 +477,7 @@ const GenerateReport = () => {
   const filteredSalesData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order);
           if (
             rowDate < new Date(startDate) ||
             rowDate > new Date(endDate) ||
@@ -489,7 +505,7 @@ const GenerateReport = () => {
   const filteredTransactionData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
-          const rowDate = new Date(row.date_of_order || row.date);
+          const rowDate = new Date(row.date_of_order || row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -564,43 +580,44 @@ const GenerateReport = () => {
         });
 
   const filteredServiceData =
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
+  isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
+    ? serviceData.filter((row) => {
+        const rowDate = new Date(row.date_of_order); // <- use date_of_order
+        if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+          return false;
 
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
+        if (cancellationReasonFilter && row.cancelled_reason) {
+          if (
+            !row.cancelled_reason
+              .toLowerCase()
+              .includes(cancellationReasonFilter.toLowerCase())
+          )
             return false;
-          }
+        } else if (cancellationReasonFilter) {
+          return false;
+        }
 
-          return true;
-        })
-      : serviceData.filter((row) => {
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
+        return true;
+      })
+    : serviceData.filter((row) => {
+        if (cancellationReasonFilter && row.cancelled_reason) {
+          if (
+            !row.cancelled_reason
+              .toLowerCase()
+              .includes(cancellationReasonFilter.toLowerCase())
+          )
             return false;
-          }
-          return true;
-        });
+        } else if (cancellationReasonFilter) {
+          return false;
+        }
+        return true;
+      });
+
 
   const filteredCustomerData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? customerData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -903,7 +920,7 @@ const GenerateReport = () => {
                 <FaTimesCircle />
               </div>
               <div>
-                <h6 className="fw-semibold">Failed Deliveries</h6>
+                <h6 className="fw-semibold">Rescheduled Deliveries</h6>
                 <p className="mb-0">{failedDeliveries}</p>
               </div>
             </div>
@@ -995,33 +1012,32 @@ const GenerateReport = () => {
   );
 
   // Render service delivery failed reasons bar chart
-const renderServiceFailedReasonsChart = () => {
-  // Ensure chart always renders
-  const data =
-    failedReasons && Object.keys(failedReasons).length > 0
-      ? Object.entries(failedReasons).map(([reason, count]) => ({
-          reason,
-          count,
-        }))
-      : [{ reason: "No Data", count: 0 }]; // Dummy fallback
+  const renderServiceFailedReasonsChart = () => {
+    // Ensure chart always renders
+    const data =
+      failedReasons && Object.keys(failedReasons).length > 0
+        ? Object.entries(failedReasons).map(([reason, count]) => ({
+            reason,
+            count,
+          }))
+        : [{ reason: "No Data", count: 0 }]; // Dummy fallback
 
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart
-        data={data}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="reason" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="count" fill="#E57373" radius={[5, 5, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-};
-
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart
+          data={data}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="reason" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="count" fill="#E57373" radius={[5, 5, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
 
   // Render customer satisfaction pie chart for rating percentages
   const renderCustomerRatingPieChart = () => {
@@ -1100,7 +1116,7 @@ const renderServiceFailedReasonsChart = () => {
           <thead className="table-success">
             <tr>
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
               <th>Item Name</th>
               <th>Quantity</th>
@@ -1122,7 +1138,7 @@ const renderServiceFailedReasonsChart = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.qty}</td>
@@ -1316,6 +1332,19 @@ const renderServiceTable = () => {
     startIndex + itemsPerPage
   );
 
+  // Helper: format date for display as MM/DD/YYYY
+  const formatDate = (d) => {
+    if (!d) return "-";
+    const dateObj = new Date(d);
+    if (isNaN(dateObj)) return "-";
+
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const year = dateObj.getFullYear();
+
+    return `${month}/${day}/${year}`;
+  };
+
   return (
     <>
       <Table
@@ -1328,10 +1357,11 @@ const renderServiceTable = () => {
         <thead className="table-warning">
           <tr>
             <th>Transaction No.</th>
-            <th>Date</th>
+            <th>Date of Order</th>
             <th>Client</th>
             <th>Item Name</th>
             <th>Delivery Status</th>
+            <th>Initial Delivery Date</th>
             <th>Rescheduled Date</th>
             <th>Reason for Cancellation</th>
           </tr>
@@ -1339,14 +1369,14 @@ const renderServiceTable = () => {
         <tbody>
           {paginatedData.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center">
+              <td colSpan={8} className="text-center">
                 No delivery service data found.
               </td>
             </tr>
           ) : (
             paginatedData.map((row, i) => {
-              // Normalize cancellation reason
-              let reason = row.cancelled_reason || "-";
+              // Cancellation reason
+              let reason = row.cancelled_reason && row.cancelled_reason !== "-" ? row.cancelled_reason : "No Cancellation"
               if (row.history && row.history.length > 0) {
                 const lastCancel = row.history
                   .filter((h) => h.event_type === "Cancelled" && h.reason)
@@ -1360,16 +1390,22 @@ const renderServiceTable = () => {
                   ? "Cancelled (For Rescheduling)"
                   : row.delivery_status;
 
-              // Use rescheduled_date from Transactions
-              let rescheduledDate = row.rescheduled_date || row.target_date_delivery || "-";
+              // Dates
+              // let orderDate = row.date_of_order ? formatDate(row.date_of_order) : "-";
+              let targetDate = row.target_date_delivery
+                ? formatDate(row.target_date_delivery)
+                : "-";
+              let rescheduledDate = row.rescheduled_date ? formatDate(row.rescheduled_date) : "Not Rescheduled"
+
 
               return (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{displayStatus}</td>
+                  <td>{targetDate}</td>
                   <td>{rescheduledDate}</td>
                   <td>{reason}</td>
                 </tr>
@@ -1378,6 +1414,26 @@ const renderServiceTable = () => {
           )}
         </tbody>
       </Table>
+
+      <div className="custom-pagination">
+        <button
+          className="page-btn"
+          disabled={servicePage === 1}
+          onClick={() => setServicePage(servicePage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info">
+          Page {servicePage} of {totalPages}
+        </span>
+        <button
+          className="page-btn"
+          disabled={servicePage === totalPages}
+          onClick={() => setServicePage(servicePage + 1)}
+        >
+          ›
+        </button>
+      </div>
     </>
   );
 };
@@ -1404,7 +1460,7 @@ const renderServiceTable = () => {
           <thead>
             <tr className="customer-header">
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
               <th>Item Name</th>
               <th>Ratings</th>
@@ -1422,7 +1478,7 @@ const renderServiceTable = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.item_name}</td>
                   <td>{row.customer_rating ?? "N/A"}</td>
@@ -1548,7 +1604,6 @@ const renderServiceTable = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"

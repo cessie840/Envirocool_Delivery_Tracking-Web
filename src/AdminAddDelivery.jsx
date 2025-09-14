@@ -35,8 +35,6 @@ const AddDelivery = () => {
   const [dpError, setDpError] = useState("");
   const [contactError, setContactError] = useState("");
 
-
-
   const navigate = useNavigate();
 
   const [transactionId, setTransactionId] = useState("Loading...");
@@ -58,20 +56,19 @@ const AddDelivery = () => {
     balance: "",
     total: "",
   });
-const handleContactChange = (e) => {
-  const value = e.target.value;
-  setForm((prev) => ({ ...prev, customer_contact: value }));
+  const handleContactChange = (e) => {
+    const value = e.target.value;
+    setForm((prev) => ({ ...prev, customer_contact: value }));
 
-  // Validate contact number
-  if (!value.startsWith("0")) {
-    setContactError("Contact number must start with '0'.");
-  } else if (value.length > 11) {
-    setContactError("Contact number cannot exceed 11 digits.");
-  } else {
-    setContactError("");
-  }
-};
-
+    // Validate contact number
+    if (!value.startsWith("0")) {
+      setContactError("Contact number must start with '0'.");
+    } else if (value.length > 11) {
+      setContactError("Contact number cannot exceed 11 digits.");
+    } else {
+      setContactError("");
+    }
+  };
 
   const handleUnitCostChange = (index, e) => {
     const rawValue = parsePeso(e.target.value);
@@ -264,13 +261,12 @@ const handleContactChange = (e) => {
       if (downPayment > totalCost) {
         setDpError("Down Payment cannot exceed Total Amount");
       } else {
-        setDpError(""); 
+        setDpError("");
       }
 
       updatedForm.balance = (totalCost - downPayment).toFixed(2);
       updatedForm.total = totalCost.toFixed(2);
     }
-
 
     if (name === "down_payment" || name === "payment_option") {
       const downPayment = parseFloat(
@@ -361,38 +357,37 @@ const handleContactChange = (e) => {
       return;
     }
 
-  if (!form.payment_method) {
-    alert("Please select a payment method.");
-    return;
-  }
+    if (!form.payment_method) {
+      alert("Please select a payment method.");
+      return;
+    }
 
-   for (const [index, item] of orderItems.entries()) {
-     const quantity = parseInt(item.quantity);
-     const unitCost = parseFloat(parsePeso(item.unit_cost));
-     const typeOfProduct = item.type_of_product?.trim();
-     const description = item.description?.trim();
+    for (const [index, item] of orderItems.entries()) {
+      const quantity = parseInt(item.quantity);
+      const unitCost = parseFloat(parsePeso(item.unit_cost));
+      const typeOfProduct = item.type_of_product?.trim();
+      const description = item.description?.trim();
 
-     if (!typeOfProduct) {
-       alert(`Please select a type of product for item #${index + 1}`);
-       return;
-     }
+      if (!typeOfProduct) {
+        alert(`Please select a type of product for item #${index + 1}`);
+        return;
+      }
 
-     if (!description) {
-       alert(`Please select an item name for item #${index + 1}`);
-       return;
-     }
+      if (!description) {
+        alert(`Please select an item name for item #${index + 1}`);
+        return;
+      }
 
-     if (isNaN(quantity) || quantity < 1) {
-       alert(`Quantity for item #${index + 1} must be at least 1`);
-       return;
-     }
+      if (isNaN(quantity) || quantity < 1) {
+        alert(`Quantity for item #${index + 1} must be at least 1`);
+        return;
+      }
 
-     if (isNaN(unitCost) || unitCost < 0) {
-       alert(`Unit cost for item #${index + 1} must be a non-negative number`);
-       return;
-     }
-   }
-
+      if (isNaN(unitCost) || unitCost < 0) {
+        alert(`Unit cost for item #${index + 1} must be a non-negative number`);
+        return;
+      }
+    }
 
     const normalizedOrderItems = orderItems.map((item) => ({
       quantity: parseInt(item.quantity) || 0,
@@ -506,7 +501,11 @@ const handleContactChange = (e) => {
                 }`}
                 id="dateOfOrder"
                 name="date_of_order"
-                value={form.date_of_order}
+                value={
+                  form.date_of_order
+                    ? new Date(form.date_of_order).toISOString().slice(0, 10)
+                    : ""
+                }
                 onChange={handleChange}
                 required
                 max={new Date().toISOString().split("T")[0]}

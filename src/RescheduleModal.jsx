@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 
-const RescheduleModal = ({ show, handleClose, transaction_id, onReschedule }) => {
+const RescheduleModal = ({
+  show,
+  handleClose,
+  transaction_id,
+  onReschedule,
+}) => {
   const [newDate, setNewDate] = useState("");
 
   const handleSubmit = () => {
@@ -22,16 +27,15 @@ const RescheduleModal = ({ show, handleClose, transaction_id, onReschedule }) =>
       .then((response) => {
         if (response.success) {
           alert("Reschedule successful!");
-
-          // ✅ Pass back updated data including scheduled_date
           onReschedule({
             delivery_status: "Pending",
-            target_date_delivery: response.new_date, // 🔹 so service table shows updated scheduled date
+            target_date_delivery: response.new_date,
             cancelled_reason: null,
           });
-
+          // Dispatch a custom event to notify other components
+          window.dispatchEvent(new Event("deliveryRescheduled"));
           handleClose();
-          setNewDate(""); // reset after success
+          setNewDate("");
         } else {
           alert("Failed to reschedule delivery.");
           console.error("Reschedule failed:", response.message, response.error);

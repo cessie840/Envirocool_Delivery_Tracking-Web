@@ -27,8 +27,12 @@ const ViewOrder = () => {
   });
 
   const formatDate = (dateString) => {
-    if (!dateString) return "";
-    return dateString.split("T")[0] || dateString.split(" ")[0];
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    const mm = String(date.getMonth() + 1).padStart(2, "0"); // months are 0-indexed
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
   };
 
   useEffect(() => {
@@ -129,7 +133,7 @@ const ViewOrder = () => {
 
   if (!orderDetails) return <p className="text-center mt-5">Loading...</p>;
 
-  const totalCost = orderDetails.items.reduce(
+  const totalCost = (orderDetails?.items || []).reduce(
     (sum, item) => sum + item.quantity * item.unit_cost,
     0
   );
@@ -213,7 +217,7 @@ const ViewOrder = () => {
                     <span>Date of Order:</span> {orderDetails.date_of_order}
                   </p>
                   <p>
-                    <span>Target Delivery Date:</span>{" "}
+                    <span>Target Delivery Date: </span>
                     {orderDetails.target_date_delivery}
                   </p>
                   <br />
@@ -221,13 +225,13 @@ const ViewOrder = () => {
                     <h5 className="text-success fw-bold">Delivery Status</h5>
                   </div>
                   <p>
-                    <span>Status:</span>{" "}
+                    <span>Status: </span>
                     {renderStatusBadge(orderDetails.status)}
                   </p>
                   {orderDetails.status === "Cancelled" &&
                     orderDetails.cancelled_reason && (
                       <p>
-                        <span>Cancellation Reason:</span>{" "}
+                        <span>Cancellation Reason: </span>
                         <strong className="text-danger">
                           {orderDetails.cancelled_reason}
                         </strong>
@@ -262,7 +266,7 @@ const ViewOrder = () => {
             <div className="mx-2 my-3 p-3 bg-white border rounded-3 shadow-sm">
               <h5 className="text-success fw-bold">Items Ordered</h5>
               <ul className="list-group list-group-flush fw-semibold">
-                {orderDetails.items.map((item, index) => (
+                {(orderDetails.items || []).map((item, index) => (
                   <li
                     key={index}
                     className="list-group-item d-flex justify-content-between align-items-center fw-semibold"
