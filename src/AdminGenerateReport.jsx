@@ -1452,8 +1452,19 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded">
-            <FaFilePdf /> Generate PDF
+          <Button
+            variant="danger"
+            className="me-2 btn detailed-btn px-3 py-2 rounded"
+          >
+            <FaFilePdf /> Detailed Report
+          </Button>
+
+          {/* Summary Report button */}
+          <Button
+            variant="danger"
+            className="me-2 btn detailed-btn px-3 py-2 rounded"
+          >
+            <FaFilePdf /> Summary Report
           </Button>
         </div>
         <Button
@@ -1720,7 +1731,10 @@ const GenerateReport = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer className="bg-white">
-          <Button className="btn close-btn px-3 py-2 fs-6 rounded-2" onClick={() => setShowFilter(false)}>
+          <Button
+            className="btn close-btn px-3 py-2 fs-6 rounded-2"
+            onClick={() => setShowFilter(false)}
+          >
             Close
           </Button>
           <Button
