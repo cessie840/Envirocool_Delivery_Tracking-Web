@@ -26,8 +26,8 @@ $sql = "
 
 $result = $conn->query($sql);
 
-// 👇 Make sure this matches your actual uploads folder
-$baseURL = "http://localhost/DeliveryTrackingSystem/uploads/";
+$base_url = "http://localhost/DeliveryTrackingSystem/uploads/";
+
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
@@ -35,9 +35,8 @@ if ($result && $result->num_rows > 0) {
 
         // Fetch purchase orders
         $itemsSql = "SELECT quantity, description, unit_cost, total_cost
-             FROM PurchaseOrder 
-             WHERE transaction_id = $transactionId";
-
+                     FROM PurchaseOrder 
+                     WHERE transaction_id = $transactionId";
 
         $itemsResult = $conn->query($itemsSql);
 
@@ -52,24 +51,20 @@ if ($result && $result->num_rows > 0) {
                     'name' => $item['description'],
                     'quantity' => intval($item['quantity']),
                     'unit_cost' => floatval($item['unit_cost']),
-                    'total_cost' => floatval($itemTotal)
+                    'total_cost' => $itemTotal
                 ];
-
-
             }
         }
 
-      
-        $profilePic = $row['pers_profile_pic'];
+    $profilePic = trim($row['pers_profile_pic']);
+if (!empty($profilePic)) {
+    // Only take the filename (avoid double paths)
+    $profilePic = basename($profilePic);
+    $profilePic = $base_url . $profilePic;
+} else {
+    $profilePic = $base_url . "default-profile-pic.png";
+}
 
-        if (!empty($profilePic)) {
-
-            $profilePic = ltrim($profilePic, '/');
-            $profilePic = str_replace("uploads/", "", $profilePic);
-            $profilePic = $baseURL . $profilePic;
-        } else {
-            $profilePic = $baseURL . "default-profile-pic.png";
-        }
 
         $orders[] = [
             'transaction_id' => $transactionId,
@@ -88,7 +83,6 @@ if ($result && $result->num_rows > 0) {
             'tracking_number' => $row['tracking_number'],
             'target_date_delivery' => $row['target_date_delivery']
         ];
-
     }
 }
 
