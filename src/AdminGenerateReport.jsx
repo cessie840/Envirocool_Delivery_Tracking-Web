@@ -22,6 +22,7 @@ import {
   Col,
   Spinner,
   Card,
+  Dropdown,
 } from "react-bootstrap";
 import {
   BarChart,
@@ -1452,20 +1453,25 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button
-            variant="danger"
-            className="me-2 btn detailed-btn px-3 py-2 rounded"
-          >
-            <FaFilePdf /> Detailed Report
-          </Button>
 
-          {/* Summary Report button */}
-          <Button
-            variant="danger"
-            className="me-2 btn detailed-btn px-3 py-2 rounded"
-          >
-            <FaFilePdf /> Summary Report
-          </Button>
+          <Dropdown>
+            <Dropdown.Toggle
+              variant="danger"
+              id="dropdown-basic"
+              className="btn cancel-btn px-3 py-2 rounded"
+            >
+              <FaFilePdf /> Generate PDF
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu className="generate-dropdown">
+              <Dropdown.Item className="generate-dropdown-item">
+                Detailed Report
+              </Dropdown.Item>
+              <Dropdown.Item className="generate-dropdown-item">
+                Summary Report
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
         <Button
           variant="success"
