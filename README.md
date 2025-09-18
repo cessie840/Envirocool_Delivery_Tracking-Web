@@ -1,3 +1,11 @@
+# Envirocool_Delivery-Tracking-Web
+The purpose of this repository is to manage the version history for the development of our capstone project named "Web-Based Delivery Tracking with Data Analytics"
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## The purpose of this repository is to manage the version history for the development of our capstone project named "Web-Based Delivery Tracking with Data Analytics"
+
+**DATABASE SQL**
+
 CREATE DATABASE DeliveryTrackingSystem;
 USE DeliveryTrackingSystem;
 
