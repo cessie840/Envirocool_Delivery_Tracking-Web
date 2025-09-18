@@ -7,15 +7,14 @@ import axios from "axios";
 
 function OutForDelivery() {
   const [deliveries, setDeliveries] = useState([]);
-  const [delivered, setDelivered] = useState([]);
-  const [cancelled, setCancelled] = useState([]);
+  const [filteredDeliveries, setFilteredDeliveries] = useState([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
-  // ✅ Currency formatter
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH", {
       minimumFractionDigits: 2,
@@ -34,13 +33,9 @@ function OutForDelivery() {
         }
       )
       .then((res) => {
-        if (res.data.success === false) {
-          alert(res.data.message);
-        } else if (Array.isArray(res.data)) {
-          setDeliveries(res.data);
-        } else if (Array.isArray(res.data.data)) {
-          setDeliveries(res.data.data);
-        }
+        const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+        setDeliveries(data);
+        setFilteredDeliveries(data);
       })
       .catch((err) => {
         console.error("Error fetching deliveries:", err);
@@ -48,39 +43,46 @@ function OutForDelivery() {
       });
   }, []);
 
+  // Filter deliveries based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredDeliveries(deliveries);
+    } else {
+      const filtered = deliveries.filter(
+        (d) =>
+          d.transactionNo.toString().includes(searchTerm) ||
+          d.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredDeliveries(filtered);
+    }
+  }, [searchTerm, deliveries]);
+
   const markAsDelivered = (transactionNo) => {
     const delivery = deliveries.find((d) => d.transactionNo === transactionNo);
-    if (!delivery) {
-      alert("Delivery not found.");
-      return;
-    }
+    if (!delivery) return;
 
     axios
       .post(
         "http://localhost/DeliveryTrackingSystem/update_delivered_status.php",
         {
           transaction_id: transactionNo,
-          status: "Delivered", // ✅ FIX: send status
+          status: "Delivered",
         }
       )
       .then((res) => {
-        const { success, message } = res.data;
-        if (success) {
-          const updatedDeliveries = deliveries.filter(
-            (d) => d.transactionNo !== transactionNo
+        if (res.data.success) {
+          setDeliveries(
+            deliveries.filter((d) => d.transactionNo !== transactionNo)
           );
-          setDeliveries(updatedDeliveries);
-          setDelivered([...delivered, delivery]);
-
-          alert("Delivery successfully marked as 'Delivered'.");
+          setFilteredDeliveries(
+            filteredDeliveries.filter((d) => d.transactionNo !== transactionNo)
+          );
           navigate("/successful-delivery");
-        } else {
-          alert(`Error: ${message}`);
-        }
+        } else alert(res.data.message);
       })
       .catch((err) => {
-        console.error("API error:", err);
-        alert("Failed to update delivery status. Please try again later.");
+        console.error(err);
+        alert("Failed to update delivery status.");
       });
   };
 
@@ -90,10 +92,7 @@ function OutForDelivery() {
   };
 
   const confirmCancellation = () => {
-    if (!cancelReason) {
-      alert("Please select a cancellation reason.");
-      return;
-    }
+    if (!cancelReason) return alert("Please select a cancellation reason.");
 
     axios
       .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
@@ -101,44 +100,35 @@ function OutForDelivery() {
         reason: cancelReason,
       })
       .then((res) => {
-        const { success, message } = res.data;
-        if (success) {
-          const updated = deliveries.filter(
-            (d) => d.transactionNo !== selectedDelivery.transactionNo
+        if (res.data.success) {
+          setDeliveries(
+            deliveries.filter(
+              (d) => d.transactionNo !== selectedDelivery.transactionNo
+            )
           );
-          const cancelledWithReason = {
-            ...selectedDelivery,
-            reason: cancelReason,
-          };
-
-          setDeliveries(updated);
-          setCancelled([...cancelled, cancelledWithReason]);
-
-          localStorage.setItem("outForDelivery", JSON.stringify(updated));
-          localStorage.setItem(
-            "cancelled",
-            JSON.stringify([...cancelled, cancelledWithReason])
+          setFilteredDeliveries(
+            filteredDeliveries.filter(
+              (d) => d.transactionNo !== selectedDelivery.transactionNo
+            )
           );
-
           setShowCancelModal(false);
           setSelectedDelivery(null);
           setCancelReason("");
-
-          alert("Delivery marked as 'Cancelled'.");
           navigate("/failed-delivery");
-        } else {
-          alert(`Failed to cancel delivery: ${message}`);
-        }
+        } else alert(res.data.message);
       })
       .catch((err) => {
-        console.error("Cancel error:", err);
+        console.error(err);
         alert("Error cancelling delivery.");
       });
   };
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
-      <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
+      <HeaderAndNav
+        onSidebarToggle={() => setShowSidebar(true)}
+        onSearch={setSearchTerm}
+      />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
       <Container className="py-4">
@@ -147,22 +137,19 @@ function OutForDelivery() {
           OUT FOR DELIVERY
         </h2>
         <br />
-        {deliveries.length === 0 ? (
+        {filteredDeliveries.length === 0 ? (
           <p className="text-muted text-center">No deliveries found.</p>
         ) : (
-          deliveries.map((delivery, idx) => (
+          filteredDeliveries.map((delivery, idx) => (
             <Card
               key={idx}
               className="mb-4 p-3 border border-info rounded"
               style={{ backgroundColor: "#eaf7f7" }}
             >
-              {/* Header */}
               <h5 className="text-center fw-bold text-dark mb-3">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
-
               <div className="border p-3 rounded bg-white">
-                {/* Customer Info */}
                 <div className="d-flex justify-content-between mb-1">
                   <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
@@ -199,15 +186,8 @@ function OutForDelivery() {
                   </div>
                 ))}
 
-                {/* Dashed Separator */}
-                <hr
-                  className="my-2"
-                  style={{
-                    borderTop: "2px dashed #999",
-                  }}
-                />
+                <hr className="my-2" style={{ borderTop: "2px dashed #999" }} />
 
-                {/* Total */}
                 <div className="d-flex justify-content-between mb-3">
                   <strong>Total:</strong>
                   <span className="fw-bold">
@@ -216,7 +196,6 @@ function OutForDelivery() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="d-flex justify-content-center gap-2 mt-3">
                 <Button
                   size="sm"
@@ -243,35 +222,25 @@ function OutForDelivery() {
         )}
       </Container>
 
-      {/* FAILED/CANCELLED MODAL */}
       <Modal
         show={showCancelModal}
         onHide={() => setShowCancelModal(false)}
         centered
       >
-        <Modal.Header closeButton className="bg-light">
+        <Modal.Header closeButton>
           <Modal.Title>Select Cancellation Reason</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
-            <Form.Group>
-              <Form.Label>Reason</Form.Label>
-              <Form.Select
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-              >
-                <option value="">-- Select Reason --</option>
-                <option value="Vehicle-related Issue">
-                  Vehicle-related issue
-                </option>
-                <option value="Location Inaccessible">
-                  Location inaccessible
-                </option>
-              </Form.Select>
-            </Form.Group>
-          </Form>
+          <Form.Select
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+          >
+            <option value="">-- Select Reason --</option>
+            <option value="Vehicle-related Issue">Vehicle-related issue</option>
+            <option value="Location Inaccessible">Location inaccessible</option>
+          </Form.Select>
         </Modal.Body>
-        <Modal.Footer className="bg-light">
+        <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
             Close
           </Button>

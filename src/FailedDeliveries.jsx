@@ -6,7 +6,9 @@ import axios from "axios";
 
 function FailedDeliveries() {
   const [cancelledDeliveries, setCancelledDeliveries] = useState([]);
+  const [filteredCancelled, setFilteredCancelled] = useState([]);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -20,11 +22,9 @@ function FailedDeliveries() {
         }
       )
       .then((res) => {
-        if (res.data.success === false) {
-          alert(res.data.message);
-        } else {
-          setCancelledDeliveries(res.data.data || []);
-        }
+        const data = res.data.data || [];
+        setCancelledDeliveries(data);
+        setFilteredCancelled(data);
       })
       .catch((err) => {
         console.error("Error fetching cancelled deliveries:", err);
@@ -32,39 +32,51 @@ function FailedDeliveries() {
       });
   }, []);
 
-  // ✅ Helper function for formatting
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredCancelled(cancelledDeliveries);
+    } else {
+      const filtered = cancelledDeliveries.filter(
+        (d) =>
+          d.transactionNo.toString().includes(searchTerm) ||
+          d.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredCancelled(filtered);
+    }
+  }, [searchTerm, cancelledDeliveries]);
+
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
-      <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
+      <HeaderAndNav
+        onSidebarToggle={() => setShowSidebar(true)}
+        onSearch={setSearchTerm}
+      />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
       <Container className="py-4">
-        <br />
+<br />
         <h2 className="text-center text-danger fw-bold mb-3">
           CANCELLED / FAILED DELIVERIES
         </h2>
-        <br />
-        {cancelledDeliveries.length === 0 ? (
+<br />
+        {filteredCancelled.length === 0 ? (
           <p className="text-muted text-center">
             No cancelled or failed deliveries.
           </p>
         ) : (
-          cancelledDeliveries.map((delivery, idx) => (
+          filteredCancelled.map((delivery, idx) => (
             <Card
               key={idx}
               className="mb-4 p-3 border border-danger rounded"
               style={{ backgroundColor: "#fff0f0" }}
             >
-              {/* Header */}
               <h5 className="text-center fw-bold text-dark mb-2">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
-
               <div className="border p-3 rounded bg-white">
-                {/* Customer Info */}
                 <div className="d-flex justify-content-between mb-1">
                   <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
@@ -101,14 +113,8 @@ function FailedDeliveries() {
                   </div>
                 ))}
 
-                {/* Dashed Separator */}
-                <hr
-                  className="my-2"
-                  style={{
-                    borderTop: "2px dashed #999",
-                  }}
-                />
-                {/* Total */}
+                <hr className="my-2" style={{ borderTop: "2px dashed #999" }} />
+
                 <div className="d-flex justify-content-between mb-3">
                   <strong>Total:</strong>
                   <span className="fw-bold">
@@ -116,7 +122,6 @@ function FailedDeliveries() {
                   </span>
                 </div>
 
-                {/* Cancelled Reason */}
                 <div className="d-flex justify-content-between mb-3">
                   <strong className="text-danger">
                     Reason for Cancellation:

@@ -7,6 +7,8 @@ import axios from "axios";
 function SuccessfulDelivery() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [delivered, setDelivered] = useState([]);
+  const [filteredDelivered, setFilteredDelivered] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -20,13 +22,9 @@ function SuccessfulDelivery() {
         }
       )
       .then((res) => {
-        if (res.data.success === false) {
-          alert(res.data.message);
-        } else if (Array.isArray(res.data)) {
-          setDelivered(res.data);
-        } else if (Array.isArray(res.data.data)) {
-          setDelivered(res.data.data);
-        }
+        const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+        setDelivered(data);
+        setFilteredDelivered(data);
       })
       .catch((err) => {
         console.error("Error fetching deliveries:", err);
@@ -34,13 +32,28 @@ function SuccessfulDelivery() {
       });
   }, []);
 
-  
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredDelivered(delivered);
+    } else {
+      const filtered = delivered.filter(
+        (d) =>
+          d.transactionNo.toString().includes(searchTerm) ||
+          d.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredDelivered(filtered);
+    }
+  }, [searchTerm, delivered]);
+
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
-      <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
+      <HeaderAndNav
+        onSidebarToggle={() => setShowSidebar(true)}
+        onSearch={setSearchTerm}
+      />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
       <Container className="py-4">
@@ -49,12 +62,13 @@ function SuccessfulDelivery() {
           SUCCESSFUL DELIVERIES
         </h2>
         <br />
-        {delivered.length === 0 ? (
+
+        {filteredDelivered.length === 0 ? (
           <p className="text-muted text-center">
             No Successful Deliveries found.
           </p>
         ) : (
-          delivered.map((delivery, idx) => (
+          filteredDelivered.map((delivery, idx) => (
             <Card
               key={idx}
               className="mb-4 p-3 border border-success rounded"
@@ -63,10 +77,7 @@ function SuccessfulDelivery() {
               <h5 className="text-center fw-bold text-dark mb-2">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
-
               <div className="border p-3 rounded bg-white">
-
-              {/* CUSTOMER INFO  */}
                 <div className="d-flex justify-content-between mb-1">
                   <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
@@ -84,7 +95,6 @@ function SuccessfulDelivery() {
                   <span>{delivery.paymentMode}</span>
                 </div>
 
-                {/* ITEMS  */}
                 <strong className="d-block mb-1">Items:</strong>
                 {delivery.items.map((item, i) => (
                   <div
@@ -104,14 +114,8 @@ function SuccessfulDelivery() {
                   </div>
                 ))}
 
-                {/* SEPARATOR PARANG SA RECEIPT */}
-                <hr
-                  className="my-2"
-                  style={{
-                    borderTop: "2px dashed #999",
-                  }}
-                />
-                {/* Total */}
+                <hr className="my-2" style={{ borderTop: "2px dashed #999" }} />
+
                 <div className="d-flex justify-content-between mb-3">
                   <strong>Total:</strong>
                   <span className="fw-bold">
