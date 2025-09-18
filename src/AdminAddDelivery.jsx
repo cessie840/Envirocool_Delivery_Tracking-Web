@@ -451,7 +451,7 @@ const AddDelivery = () => {
     <AdminLayout title="Add Delivery" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="back-btn btn-success d-flex align-items-center gap-2"
+          className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
@@ -1051,7 +1051,7 @@ const AddDelivery = () => {
         <div className="btn-group mx-3 mt-4 fs-6 gap-4">
           <button
             type="button"
-            className="cancel-btn bg-danger"
+            className="cancel-btn px-3 py-1 rounded-2 bg-danger"
             onClick={() => setShowCancelModal(true)}
           >
             Cancel
@@ -1084,7 +1084,7 @@ const AddDelivery = () => {
           <button
             type="submit"
             form="deliveryForm"
-            className="add-btn bg-success"
+            className="add-btn bg-success rounded-2"
           >
             Add
           </button>

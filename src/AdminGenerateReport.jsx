@@ -22,7 +22,6 @@ import {
   Col,
   Spinner,
   Card,
-  Dropdown,
 } from "react-bootstrap";
 import {
   BarChart,
@@ -114,6 +113,8 @@ const GenerateReport = () => {
   const [servicePage, setServicePage] = useState(1);
   const [customerPage, setCustomerPage] = useState(1);
 
+  const [failedReasons, setFailedReasons] = useState({});
+
   // Fetch data based on filters
   useEffect(() => {
     fetchData();
@@ -136,13 +137,6 @@ const GenerateReport = () => {
     customerData,
   ]);
 
-  // useEffect(() => {
-  //   setSalesPage(1);
-  //   setTransactionPage(1);
-  //   setServicePage(1);
-  //   setCustomerPage(1);
-  // }, [reportType]);
-
   useEffect(() => {
     localStorage.setItem("reportPeriod", period);
   }, [period]);
@@ -163,12 +157,24 @@ const GenerateReport = () => {
     localStorage.setItem("reportActiveTab", activeTab);
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleRescheduleEvent = () => {
+      fetchServiceData(); // your function to fetch delivery service data
+    };
+
+    window.addEventListener("deliveryRescheduled", handleRescheduleEvent);
+
+    return () => {
+      window.removeEventListener("deliveryRescheduled", handleRescheduleEvent);
+    };
+  }, []);
+
   // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
-        date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+        date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
         item_name: r.item_name ?? r.description ?? "-",
         qty: Number(r.qty ?? r.quantity ?? 0),
@@ -200,17 +206,18 @@ const GenerateReport = () => {
       customer_contact: r.customer_contact ?? r.contact ?? "-",
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
-        : r.date
-        ? new Date(r.date).toISOString().slice(0, 10)
         : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
       total_cost: Number(r.total_cost ?? r.total ?? 0),
       mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
+
+      // ✅ unified delivery date (rescheduled_date if exists, else target_date_delivery)
       shipout_at: r.shipout_at
         ? new Date(r.shipout_at).toISOString().slice(0, 10)
         : null,
+
       completed_at: r.completed_at
         ? new Date(r.completed_at).toISOString().slice(0, 10)
         : null,
@@ -222,19 +229,36 @@ const GenerateReport = () => {
     }));
 
   const normalizeService = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
-      transaction_id: r.transaction_id ?? null,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
-      customer_name: r.customer_name ?? r.customer ?? "Unknown",
-      item_name: r.item_name ?? r.description ?? "-",
-      delivery_status: r.delivery_status ?? r.status ?? "Pending",
-      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-    }));
+    (Array.isArray(raw) ? raw : []).map((r) => {
+      let normalizedReason =
+        r.cancelled_reason ?? r.cancellation_reason ?? null;
+      if (normalizedReason) {
+        const lower = String(normalizedReason).toLowerCase();
+        if (lower.includes("vehicle")) {
+          normalizedReason = "Vehicle-related Issue";
+        } else if (lower.includes("location")) {
+          normalizedReason = "Location Inaccessible";
+        }
+      }
+
+      return {
+        transaction_id: r.transaction_id ?? null,
+        date_of_order: r.date_of_order
+          ? new Date(r.date_of_order).toISOString().slice(0, 10)
+          : null,
+        customer_name: r.customer_name ?? r.customer ?? "Unknown",
+        item_name: r.item_name ?? r.description ?? "-",
+        delivery_status: r.delivery_status ?? r.status ?? "Pending",
+        cancelled_reason: normalizedReason ?? "-",
+        rescheduled_date: r.rescheduled_date ?? null,
+        target_date_delivery: r.target_date_delivery ?? null,
+      };
+    });
 
   const normalizeCustomer = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
       transaction_id: r.transaction_id ?? null,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
       customer_name: r.customer_name ?? r.customer ?? "Unknown",
       item_name: r.item_name ?? r.description ?? "-",
       customer_rating:
@@ -320,10 +344,17 @@ const GenerateReport = () => {
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
         const data = await safeJson(res);
+
         const normalizedService = normalizeService(
           data.serviceDeliveries ?? data.data ?? []
         );
         setServiceData(normalizedService);
+
+        // ⬇️ new: store failedReasons from PHP response
+        if (data.failedReasons) {
+          setFailedReasons(data.failedReasons);
+        }
+
         setSummary((prev) =>
           reportType === "service"
             ? data.summary ?? {}
@@ -383,7 +414,13 @@ const GenerateReport = () => {
   const formatDate = (d) => {
     if (!d) return "";
     const dateObj = new Date(d);
-    return dateObj.toLocaleDateString();
+    if (isNaN(dateObj)) return "";
+
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0"); // month first
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const year = dateObj.getFullYear();
+
+    return `${month}/${day}/${year}`;
   };
 
   // Helper: format date for period filtering (used in totals)
@@ -434,10 +471,39 @@ const GenerateReport = () => {
   // Calculate totals based on period filtering for Sales and Transaction reports
   const isValidDate = (d) => d instanceof Date && !isNaN(d);
 
+  // Utility: group transactions into single rows
+  const groupTransactions = (data) => {
+    return Object.values(
+      data.reduce((acc, row) => {
+        const id = row.transaction_id;
+        if (!acc[id]) {
+          acc[id] = {
+            ...row,
+            item_name: [],
+            qty: [],
+            unit_cost: [],
+            total_cost: [],
+          };
+        }
+        acc[id].item_name.push(row.item_name);
+        acc[id].qty.push(row.qty);
+        if (row.unit_cost) acc[id].unit_cost.push(row.unit_cost);
+        if (row.total_cost) acc[id].total_cost.push(row.total_cost);
+        return acc;
+      }, {})
+    ).map((row) => ({
+      ...row,
+      item_name: row.item_name.join(", "),
+      qty: row.qty.join(", "),
+      unit_cost: row.unit_cost.join(", "),
+      total_cost: row.total_cost.join(", "),
+    }));
+  };
+
   const filteredSalesData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order);
           if (
             rowDate < new Date(startDate) ||
             rowDate > new Date(endDate) ||
@@ -465,7 +531,7 @@ const GenerateReport = () => {
   const filteredTransactionData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
-          const rowDate = new Date(row.date_of_order || row.date);
+          const rowDate = new Date(row.date_of_order || row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -542,7 +608,7 @@ const GenerateReport = () => {
   const filteredServiceData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order); // <- use date_of_order
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -576,7 +642,7 @@ const GenerateReport = () => {
   const filteredCustomerData =
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? customerData.filter((row) => {
-          const rowDate = new Date(row.date);
+          const rowDate = new Date(row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
@@ -628,27 +694,20 @@ const GenerateReport = () => {
   ).length;
   const totalTransactionsService = filteredServiceData.length;
 
-  const failedReasonsCount = { "Items Not Delivered": 0, "Damaged Item": 0 };
+  const failedReasonsCount = {
+    "Vehicle-related Issue": 0,
+    "Location Inaccessible": 0,
+  };
 
   filteredServiceData.forEach((row) => {
     const status = String(row.delivery_status).toLowerCase();
     if (status.includes("cancel") && row.cancelled_reason) {
       const reason = String(row.cancelled_reason).toLowerCase();
 
-      // Check for all variants indicating item not delivered
-      if (
-        reason.includes("not delivered") ||
-        reason.includes("not received") ||
-        reason.includes("customer didn't receive") ||
-        reason.includes("customer did not receive") ||
-        reason.includes("didn't receive") ||
-        reason.includes("did not receive") ||
-        reason.includes("not received item") ||
-        reason.includes("not received goods")
-      ) {
-        failedReasonsCount["Items Not Delivered"]++;
-      } else if (reason.includes("damaged")) {
-        failedReasonsCount["Damaged Item"]++;
+      if (reason.includes("vehicle")) {
+        failedReasonsCount["Vehicle-related Issue"]++;
+      } else if (reason.includes("location")) {
+        failedReasonsCount["Location Inaccessible"]++;
       }
     }
   });
@@ -886,7 +945,7 @@ const GenerateReport = () => {
                 <FaTimesCircle />
               </div>
               <div>
-                <h6 className="fw-semibold">Failed Deliveries</h6>
+                <h6 className="fw-semibold">Rescheduled Deliveries</h6>
                 <p className="mb-0">{failedDeliveries}</p>
               </div>
             </div>
@@ -979,10 +1038,14 @@ const GenerateReport = () => {
 
   // Render service delivery failed reasons bar chart
   const renderServiceFailedReasonsChart = () => {
-    const data = Object.entries(failedReasonsCount).map(([name, count]) => ({
-      name,
-      count,
-    }));
+    // Ensure chart always renders
+    const data =
+      failedReasons && Object.keys(failedReasons).length > 0
+        ? Object.entries(failedReasons).map(([reason, count]) => ({
+            reason,
+            count,
+          }))
+        : [{ reason: "No Data", count: 0 }]; // Dummy fallback
 
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -991,7 +1054,7 @@ const GenerateReport = () => {
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
+          <XAxis dataKey="reason" />
           <YAxis allowDecimals={false} />
           <Tooltip />
           <Legend />
@@ -1058,10 +1121,27 @@ const GenerateReport = () => {
 
   const renderSalesTable = () => {
     const itemsPerPage = getItemsPerPage();
-    const totalPages = Math.ceil(filteredSalesData.length / itemsPerPage);
+
+    // Group by transaction_id
+    const groupedData = Object.values(
+      filteredSalesData.reduce((acc, row) => {
+        const id = row.transaction_id;
+        if (!acc[id]) {
+          acc[id] = { ...row, items: [] };
+        }
+        acc[id].items.push({
+          name: row.item_name,
+          qty: row.qty,
+          unit_cost: Number(row.unit_cost),
+        });
+        return acc;
+      }, {})
+    );
+
+    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
     const currentPage = Math.max(1, Math.min(salesPage, totalPages || 1));
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredSalesData.slice(
+    const paginatedData = groupedData.slice(
       startIndex,
       startIndex + itemsPerPage
     );
@@ -1078,11 +1158,12 @@ const GenerateReport = () => {
           <thead className="table-success">
             <tr>
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
               <th>Item Name</th>
               <th>Quantity</th>
               <th>Unit Cost</th>
+              <th>Subtotal</th>
               <th>Total Cost</th>
               <th>Payment Option</th>
               <th>Down Payment</th>
@@ -1092,49 +1173,82 @@ const GenerateReport = () => {
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center">
+                <td colSpan={11} className="text-center">
                   No sales data found.
                 </td>
               </tr>
             ) : (
-              paginatedData.map((row, i) => (
-                <tr key={i} className="table-row-hover">
-                  <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
-                  <td>{row.customer_name}</td>
-                  <td>{row.item_name}</td>
-                  <td>{row.qty}</td>
-                  <td>
-                    ₱
-                    {Number(row.unit_cost).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>
-                    ₱
-                    {Number(row.total_cost).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>{row.payment_option}</td>
-                  <td>
-                    ₱
-                    {Number(row.down_payment).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>
-                    ₱
-                    {Number(row.balance).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                </tr>
-              ))
+              paginatedData.map((row, i) => {
+                // compute subtotals per item
+                const subtotals = row.items.map(
+                  (item) => item.qty * item.unit_cost
+                );
+
+                // compute total cost
+                const totalCost = subtotals.reduce((a, b) => a + b, 0);
+
+                return (
+                  <tr key={i} className="table-row-hover">
+                    <td>{row.transaction_id || "-"}</td>
+                    <td>{formatDate(row.date_of_order)}</td>
+                    <td>{row.customer_name}</td>
+                    <td>
+                      {row.items.map((item, j) => (
+                        <div key={j}>{item.name}</div>
+                      ))}
+                    </td>
+                    <td>
+                      {row.items.map((item, j) => (
+                        <div key={j}>{item.qty}</div>
+                      ))}
+                    </td>
+                    <td>
+                      {row.items.map((item, j) => (
+                        <div key={j}>
+                          ₱
+                          {item.unit_cost.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      {subtotals.map((st, j) => (
+                        <div key={j}>
+                          ₱
+                          {st.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      ₱
+                      {totalCost.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>{row.payment_option}</td>
+                    <td>
+                      ₱
+                      {Number(row.down_payment).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>
+                      ₱
+                      {Number(row.balance).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </Table>
@@ -1163,72 +1277,135 @@ const GenerateReport = () => {
     );
   };
 
-  const renderTransactionTable = () => {
-    const itemsPerPage = getItemsPerPage();
-    const totalPages = Math.ceil(filteredTransactionData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(transactionPage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredTransactionData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
+const renderTransactionTable = () => {
+  const itemsPerPage = getItemsPerPage();
 
-    return (
-      <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
-          <thead className="table-info">
+  // Group by transaction_id
+  const groupedData = Object.values(
+    filteredTransactionData.reduce((acc, row) => {
+      const id = row.transaction_id;
+      if (!acc[id]) {
+        acc[id] = { ...row, items: [] };
+      }
+      acc[id].items.push({
+        name: row.item_name,
+        qty: Number(row.qty),
+        unit_cost: Number(row.unit_cost),
+      });
+      return acc;
+    }, {})
+  );
+
+  const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+  const currentPage = Math.max(1, Math.min(transactionPage, totalPages || 1));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = groupedData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  return (
+    <>
+      <Table bordered hover responsive className="shadow-sm text-center">
+        <thead className="table-info">
+          <tr>
+            <th>Transaction No.</th>
+            <th>Tracking No.</th>
+            <th>Date of Order</th>
+            <th>Client</th>
+            <th>Address</th>
+            <th>Contact Number</th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Unit Cost</th>
+            <th>Subtotal</th>
+            <th>Total Cost</th>
+            <th>Mode of Payment</th>
+            <th>Payment Option</th>
+            <th>Down Payment</th>
+            <th>Balance</th>
+            <th>Delivery Personnel</th>
+            <th>Delivery Status</th>
+            <th>Ship Out At</th>
+            <th>Completed At</th>
+            <th>Reason for Cancellation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
             <tr>
-              <th>Transaction No.</th>
-              <th>Tracking No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Address</th>
-              <th>Contact Number</th>
-              <th>Item Name</th>
-              <th>Quantity</th>
-              <th>Total Cost</th>
-              <th>Mode of Payment</th>
-              <th>Payment Option</th>
-              <th>Down Payment</th>
-              <th>Balance</th>
-              <th>Delivery Personnel</th>
-              <th>Delivery Status</th>
-              <th>Ship Out At</th>
-              <th>Completed At</th>
-              <th>Reason for Cancellation</th>
+              <td colSpan={20} className="text-center">
+                No transaction data found.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={18} className="text-center">
-                  No transaction data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => (
-                <tr key={i} className="table-row-hover">
-                  <td>{row.transaction_id || "-"}</td>
+          ) : (
+            paginatedData.map((row, i) => {
+              // compute subtotals per item
+              const subtotals = row.items.map(
+                (item) => item.qty * item.unit_cost
+              );
+
+              // compute total cost per transaction
+              const totalCost = subtotals.reduce((a, b) => a + b, 0);
+
+              return (
+                <tr key={i}>
+                  <td>{row.transaction_id}</td>
                   <td>{row.tracking_number || "-"}</td>
                   <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
                   <td>{row.customer_address}</td>
                   <td>{row.customer_contact}</td>
-                  <td>{row.item_name}</td>
-                  <td>{row.qty}</td>
+
+                  {/* Item names */}
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>{item.name}</div>
+                    ))}
+                  </td>
+
+                  {/* Quantities */}
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>{item.qty}</div>
+                    ))}
+                  </td>
+
+                  {/* Unit costs */}
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>
+                        ₱
+                        {item.unit_cost.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    ))}
+                  </td>
+
+                  {/* Subtotals */}
+                  <td>
+                    {subtotals.map((st, j) => (
+                      <div key={j}>
+                        ₱
+                        {st.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    ))}
+                  </td>
+
+                  {/* Total cost */}
                   <td>
                     ₱
-                    {Number(row.total_cost).toLocaleString(undefined, {
+                    {totalCost.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                   </td>
+
                   <td>{row.mode_of_payment}</td>
                   <td>{row.payment_option}</td>
                   <td>
@@ -1251,122 +1428,136 @@ const GenerateReport = () => {
                   <td>
                     {row.completed_at ? formatDate(row.completed_at) : "-"}
                   </td>
-                  <td>{row.cancelled_reason || "-"}</td>
+                  <td>{row.cancelled_reason || "No Cancellation"}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+              );
+            })
+          )}
+        </tbody>
+      </Table>
 
-        {/* Pagination controls */}
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setTransactionPage(currentPage - 1)}
-          >
-            ‹
-          </button>
+      {/* Pagination */}
+      <div className="custom-pagination">
+        <button
+          className="page-btn"
+          disabled={currentPage === 1}
+          onClick={() => setTransactionPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn"
+          disabled={currentPage === totalPages}
+          onClick={() => setTransactionPage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
+    </>
+  );
+};
 
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setTransactionPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
 
   const renderServiceTable = () => {
     const itemsPerPage = getItemsPerPage();
-    const totalPages = Math.ceil(filteredCustomerData.length / itemsPerPage);
-    const currentPage = Math.min(customerPage, totalPages || 1);
+
+    const groupedData = Object.values(
+      filteredServiceData.reduce((acc, row) => {
+        const id = row.transaction_id;
+        if (!acc[id]) acc[id] = { ...row, items: [] };
+        acc[id].items.push({ name: row.item_name });
+        return acc;
+      }, {})
+    );
+
+    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+    const currentPage = Math.max(1, Math.min(servicePage, totalPages || 1));
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredCustomerData.slice(
+    const paginatedData = groupedData.slice(
       startIndex,
       startIndex + itemsPerPage
     );
 
     return (
       <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
+        <Table bordered hover responsive className="shadow-sm text-center">
           <thead className="table-warning">
             <tr>
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
-              <th>Item Name</th>
+              {/* <th>Item Name</th> */}
               <th>Delivery Status</th>
+              <th>Initial Delivery Date</th>
+              <th>Rescheduled Date</th>
               <th>Reason for Cancellation</th>
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center">
-                  No delivery service data found.
-                </td>
+                <td colSpan={8}>No delivery service data found.</td>
               </tr>
             ) : (
-              paginatedData.map((row, i) => (
-                <tr key={i} className="table-row-hover">
-                  <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
-                  <td>{row.customer_name}</td>
-                  <td>{row.item_name}</td>
-                  <td>{row.delivery_status}</td>
-                  <td>{row.cancelled_reason || "-"}</td>
-                </tr>
-              ))
+              paginatedData.map((row, i) => {
+                let reason = row.cancelled_reason || "No Cancellation";
+                let displayStatus =
+                  row.delivery_status === "Cancelled"
+                    ? "Cancelled (For Rescheduling)"
+                    : row.delivery_status;
+                let targetDate = row.target_date_delivery
+                  ? formatDate(row.target_date_delivery)
+                  : "-";
+                let rescheduledDate = row.rescheduled_date
+                  ? formatDate(row.rescheduled_date)
+                  : "Not Rescheduled";
+
+                return (
+                  <tr key={i}>
+                    <td>{row.transaction_id}</td>
+                    <td>{formatDate(row.date_of_order)}</td>
+                    <td>{row.customer_name}</td>
+                    {/* <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>{item.name}</div>
+                    ))}
+                  </td> */}
+                    <td>{displayStatus}</td>
+                    <td>{targetDate}</td>
+                    <td>{rescheduledDate}</td>
+                    <td>{reason}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </Table>
-
-        {/* DELIVERY SERVICE PAGINATION */}
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setCustomerPage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setCustomerPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
       </>
     );
   };
 
   const renderCustomerTable = () => {
     const itemsPerPage = getItemsPerPage();
+
+    // Group by transaction_id to avoid duplicates
+    const groupedData = Object.values(
+      filteredCustomerData.reduce((acc, row) => {
+        if (!acc[row.transaction_id]) {
+          acc[row.transaction_id] = row; // keep only the first occurrence
+        }
+        return acc;
+      }, {})
+    );
+
     const startIndex = (customerPage - 1) * itemsPerPage;
-    const paginatedData = filteredCustomerData.slice(
+    const paginatedData = groupedData.slice(
       startIndex,
       startIndex + itemsPerPage
     );
-    const totalPages = Math.ceil(filteredCustomerData.length / itemsPerPage);
+    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
 
     return (
       <>
@@ -1380,9 +1571,8 @@ const GenerateReport = () => {
           <thead>
             <tr className="customer-header">
               <th>Transaction No.</th>
-              <th>Date</th>
+              <th>Date of Order</th>
               <th>Client</th>
-              <th>Item Name</th>
               <th>Ratings</th>
               <th>Delivery Status</th>
             </tr>
@@ -1390,7 +1580,7 @@ const GenerateReport = () => {
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center">
+                <td colSpan={5} className="text-center">
                   No client satisfaction data found.
                 </td>
               </tr>
@@ -1398,9 +1588,8 @@ const GenerateReport = () => {
               paginatedData.map((row, i) => (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{formatDate(row.date)}</td>
+                  <td>{row.date_of_order}</td>
                   <td>{row.customer_name}</td>
-                  <td>{row.item_name}</td>
                   <td>{row.customer_rating ?? "N/A"}</td>
                   <td>{row.delivery_status}</td>
                 </tr>
@@ -1453,25 +1642,9 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-
-          <Dropdown>
-            <Dropdown.Toggle
-              variant="danger"
-              id="dropdown-basic"
-              className="btn cancel-btn px-3 py-2 rounded"
-            >
-              <FaFilePdf /> Generate PDF
-            </Dropdown.Toggle>
-
-            <Dropdown.Menu className="generate-dropdown">
-              <Dropdown.Item className="generate-dropdown-item">
-                Detailed Report
-              </Dropdown.Item>
-              <Dropdown.Item className="generate-dropdown-item">
-                Summary Report
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded">
+            <FaFilePdf /> Generate PDF
+          </Button>
         </div>
         <Button
           variant="success"
@@ -1517,7 +1690,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2 className="text-success mt-3 mb-3 text-center fw-semibold">
                   Sales Report
@@ -1541,7 +1713,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"
@@ -1568,7 +1739,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"
@@ -1576,7 +1746,7 @@ const GenerateReport = () => {
                 >
                   Delivery Service Report
                 </h2>
-                <h5 className="mb-2 text-center">Failed Delivery Reasons</h5>
+                <h5 className="mb-2 text-center">Cancellation Reasons</h5>
                 {renderServiceFailedReasonsChart()} <br /> <br />
                 {renderServiceTable()}
               </>
@@ -1593,7 +1763,6 @@ const GenerateReport = () => {
                 borderRadius: "8px",
               }}
             >
-              {" "}
               <>
                 <h2
                   className="mt-3 mb-3 text-center fw-semibold"
