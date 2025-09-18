@@ -209,11 +209,15 @@ const GenerateReport = () => {
         : null,
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
+
+      // 👇 these were missing
+      unit_cost: Number(r.unit_cost ?? 0),
+      subtotal: Number(r.subtotal ?? (r.qty ?? 0) * (r.unit_cost ?? 0)),
+
       total_cost: Number(r.total_cost ?? r.total ?? 0),
       mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
 
-      // ✅ unified delivery date (rescheduled_date if exists, else target_date_delivery)
       shipout_at: r.shipout_at
         ? new Date(r.shipout_at).toISOString().slice(0, 10)
         : null,
@@ -1277,189 +1281,184 @@ const GenerateReport = () => {
     );
   };
 
-const renderTransactionTable = () => {
-  const itemsPerPage = getItemsPerPage();
+  const renderTransactionTable = () => {
+    const itemsPerPage = getItemsPerPage();
 
-  // Group by transaction_id
-  const groupedData = Object.values(
-    filteredTransactionData.reduce((acc, row) => {
-      const id = row.transaction_id;
-      if (!acc[id]) {
-        acc[id] = { ...row, items: [] };
-      }
-      acc[id].items.push({
-        name: row.item_name,
-        qty: Number(row.qty),
-        unit_cost: Number(row.unit_cost),
-      });
-      return acc;
-    }, {})
-  );
+    // Group by transaction_id
+    const groupedData = Object.values(
+      filteredTransactionData.reduce((acc, row) => {
+        const id = row.transaction_id;
+        if (!acc[id]) {
+          acc[id] = { ...row, items: [] };
+        }
+        acc[id].items.push({
+          name: row.item_name,
+          qty: Number(row.qty),
+          unit_cost: Number(row.unit_cost),
+        });
 
-  const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-  const currentPage = Math.max(1, Math.min(transactionPage, totalPages || 1));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedData = groupedData.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+        return acc;
+      }, {})
+    );
 
-  return (
-    <>
-      <Table bordered hover responsive className="shadow-sm text-center">
-        <thead className="table-info">
-          <tr>
-            <th>Transaction No.</th>
-            <th>Tracking No.</th>
-            <th>Date of Order</th>
-            <th>Client</th>
-            <th>Address</th>
-            <th>Contact Number</th>
-            <th>Item Name</th>
-            <th>Quantity</th>
-            <th>Unit Cost</th>
-            <th>Subtotal</th>
-            <th>Total Cost</th>
-            <th>Mode of Payment</th>
-            <th>Payment Option</th>
-            <th>Down Payment</th>
-            <th>Balance</th>
-            <th>Delivery Personnel</th>
-            <th>Delivery Status</th>
-            <th>Ship Out At</th>
-            <th>Completed At</th>
-            <th>Reason for Cancellation</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedData.length === 0 ? (
+    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+    const currentPage = Math.max(1, Math.min(transactionPage, totalPages || 1));
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedData = groupedData.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+
+    return (
+      <>
+        <Table bordered hover responsive className="shadow-sm text-center">
+          <thead className="table-info">
             <tr>
-              <td colSpan={20} className="text-center">
-                No transaction data found.
-              </td>
+              <th>Transaction No.</th>
+              <th>Tracking No.</th>
+              <th>Date of Order</th>
+              <th>Client</th>
+              <th>Address</th>
+              <th>Contact Number</th>
+              <th>Item Name</th>
+              <th>Quantity</th>
+              <th>Unit Cost</th>
+              <th>Subtotal</th>
+              <th>Total Cost</th>
+              <th>Mode of Payment</th>
+              <th>Payment Option</th>
+              <th>Down Payment</th>
+              <th>Balance</th>
+              <th>Delivery Personnel</th>
+              <th>Delivery Status</th>
+              <th>Ship Out At</th>
+              <th>Completed At</th>
+              <th>Reason for Cancellation</th>
             </tr>
-          ) : (
-            paginatedData.map((row, i) => {
-              // compute subtotals per item
-              const subtotals = row.items.map(
-                (item) => item.qty * item.unit_cost
-              );
+          </thead>
+          <tbody>
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={20} className="text-center">
+                  No transaction data found.
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((row, i) => {
+                // compute subtotals per item
+                const subtotals = row.items.map(
+                  (item) => item.qty * item.unit_cost
+                );
 
-              // compute total cost per transaction
-              const totalCost = subtotals.reduce((a, b) => a + b, 0);
+                // compute total cost
+                const totalCost = subtotals.reduce((a, b) => a + b, 0);
 
-              return (
-                <tr key={i}>
-                  <td>{row.transaction_id}</td>
-                  <td>{row.tracking_number || "-"}</td>
-                  <td>{formatDate(row.date_of_order)}</td>
-                  <td>{row.customer_name}</td>
-                  <td>{row.customer_address}</td>
-                  <td>{row.customer_contact}</td>
+                return (
+                  <tr key={i}>
+                    <td>{row.transaction_id}</td>
+                    <td>{row.tracking_number || "-"}</td>
+                    <td>{formatDate(row.date_of_order)}</td>
+                    <td>{row.customer_name}</td>
+                    <td>{row.customer_address}</td>
+                    <td>{row.customer_contact}</td>
 
-                  {/* Item names */}
-                  <td>
-                    {row.items.map((item, j) => (
-                      <div key={j}>{item.name}</div>
-                    ))}
-                  </td>
+                    {/* Item names */}
+                    <td>
+                      {row.items.map((item, j) => (
+                        <div key={j}>{item.name}</div>
+                      ))}
+                    </td>
 
-                  {/* Quantities */}
-                  <td>
-                    {row.items.map((item, j) => (
-                      <div key={j}>{item.qty}</div>
-                    ))}
-                  </td>
+                    {/* Quantities */}
+                    <td>
+                      {row.items.map((item, j) => (
+                        <div key={j}>{item.qty}</div>
+                      ))}
+                    </td>
+                    <td>
+                      {row.items.map((item, j) => (
+                        <div key={j}>
+                          ₱
+                          {item.unit_cost.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      {subtotals.map((st, j) => (
+                        <div key={j}>
+                          ₱
+                          {st.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      ₱
+                      {totalCost.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>{row.payment_option}</td>
 
-                  {/* Unit costs */}
-                  <td>
-                    {row.items.map((item, j) => (
-                      <div key={j}>
-                        ₱
-                        {item.unit_cost.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
-                    ))}
-                  </td>
+                    <td>{row.mode_of_payment}</td>
+                    <td>{row.payment_option}</td>
+                    <td>
+                      ₱
+                      {Number(row.down_payment).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>
+                      ₱
+                      {Number(row.balance).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>{row.delivery_personnel || "-"}</td>
+                    <td>{row.delivery_status}</td>
+                    <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
+                    <td>
+                      {row.completed_at ? formatDate(row.completed_at) : "-"}
+                    </td>
+                    <td>{row.cancelled_reason || "No Cancellation"}</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </Table>
 
-                  {/* Subtotals */}
-                  <td>
-                    {subtotals.map((st, j) => (
-                      <div key={j}>
-                        ₱
-                        {st.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
-                    ))}
-                  </td>
-
-                  {/* Total cost */}
-                  <td>
-                    ₱
-                    {totalCost.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-
-                  <td>{row.mode_of_payment}</td>
-                  <td>{row.payment_option}</td>
-                  <td>
-                    ₱
-                    {Number(row.down_payment).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>
-                    ₱
-                    {Number(row.balance).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>{row.delivery_personnel || "-"}</td>
-                  <td>{row.delivery_status}</td>
-                  <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
-                  <td>
-                    {row.completed_at ? formatDate(row.completed_at) : "-"}
-                  </td>
-                  <td>{row.cancelled_reason || "No Cancellation"}</td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </Table>
-
-      {/* Pagination */}
-      <div className="custom-pagination">
-        <button
-          className="page-btn"
-          disabled={currentPage === 1}
-          onClick={() => setTransactionPage(currentPage - 1)}
-        >
-          ‹
-        </button>
-        <span className="page-info">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          className="page-btn"
-          disabled={currentPage === totalPages}
-          onClick={() => setTransactionPage(currentPage + 1)}
-        >
-          ›
-        </button>
-      </div>
-    </>
-  );
-};
-
+        {/* Pagination */}
+        <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={currentPage === 1}
+            onClick={() => setTransactionPage(currentPage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setTransactionPage(currentPage + 1)}
+          >
+            ›
+          </button>
+        </div>
+      </>
+    );
+  };
 
   const renderServiceTable = () => {
     const itemsPerPage = getItemsPerPage();
@@ -1503,7 +1502,6 @@ const renderTransactionTable = () => {
               </tr>
             ) : (
               paginatedData.map((row, i) => {
-                let reason = row.cancelled_reason || "No Cancellation";
                 let displayStatus =
                   row.delivery_status === "Cancelled"
                     ? "Cancelled (For Rescheduling)"
@@ -1520,15 +1518,14 @@ const renderTransactionTable = () => {
                     <td>{row.transaction_id}</td>
                     <td>{formatDate(row.date_of_order)}</td>
                     <td>{row.customer_name}</td>
-                    {/* <td>
-                    {row.items.map((item, j) => (
-                      <div key={j}>{item.name}</div>
-                    ))}
-                  </td> */}
                     <td>{displayStatus}</td>
                     <td>{targetDate}</td>
                     <td>{rescheduledDate}</td>
-                    <td>{reason}</td>
+                    <td>
+                      {row.cancelled_reason && row.cancelled_reason !== "-"
+                        ? row.cancelled_reason
+                        : "No Cancellation"}
+                    </td>
                   </tr>
                 );
               })
