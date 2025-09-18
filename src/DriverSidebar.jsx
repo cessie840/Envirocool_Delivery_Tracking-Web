@@ -243,12 +243,12 @@ const Sidebar = ({ show, onHide }) => {
         <Modal.Header closeButton>
           <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Are you sure you want to logout?</Modal.Body>
+        <Modal.Body className="bg-light">Are you sure you want to logout?</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
+          <Button className="close-btn px-3 py-2 fs-6" variant="secondary" onClick={() => setShowLogoutModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={confirmLogout}>
+          <Button className="cancel-btn px-3 py-2 fs-6" variant="danger" onClick={confirmLogout}>
             Logout
           </Button>
         </Modal.Footer>
