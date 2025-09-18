@@ -85,6 +85,13 @@ const PersonnelAccounts = () => {
                 : p
             )
           );
+
+          // ✅ Alert after successful update
+          alert(
+            `Personnel ${username} is now ${
+              newStatus === "Active" ? "ACTIVE" : "INACTIVE"
+            }.`
+          );
         } else {
           alert(response.data.message);
           fetchPersonnel(); // refresh if backend rejected toggle
@@ -124,100 +131,126 @@ const PersonnelAccounts = () => {
         </thead>
         <tbody className="p-2">
           {personnel.length > 0 ? (
-            personnel.map((person) => (
-              <tr key={person.pers_username}>
-                {/* Full Name */}
-                <td>
-                  {person.pers_fname} {person.pers_lname}
-                </td>
-                <td>{person.pers_email}</td>
-                <td>{person.pers_username}</td>
+            [...personnel] // copy to avoid mutating state directly
+              .sort((a, b) => {
+                // ✅ Active first, Inactive last
+                if (a.status === "Active" && b.status === "Inactive") return -1;
+                if (a.status === "Inactive" && b.status === "Active") return 1;
+                return 0; // keep original order if same status
+              })
+              .map((person) => (
+                <tr key={person.pers_username}>
+                  {/* Full Name */}
+                  <td>
+                    {person.pers_fname} {person.pers_lname}
+                  </td>
+                  <td>{person.pers_email}</td>
+                  <td>{person.pers_username}</td>
 
-                {/* Status Column */}
-<td
-  className={`text-center fw-bold ${
-    person.assignment_status?.trim().toLowerCase() === "available"
-      ? "text-success"
-      : person.assignment_status?.trim().toLowerCase() === "out for delivery"
-      ? "text-success" // ✅ force Out for Delivery to green
-      : "text-danger"
-  }`}
->
-  {person.assignment_status}
-</td>
-
-{/* Toggle Column */}
-<td className="text-center">
-  <div className="d-flex flex-column align-items-center">
-    <div
-      onClick={() => {
-        // ✅ block toggle completely if Out for Delivery
-        if (person.assignment_status?.trim().toLowerCase() === "out for delivery") {
-          alert("Cannot change status while personnel is Out for Delivery.");
-          return;
-        }
-        handleToggleStatus(
-          person.pers_username,
-          person.status,
-          person.assignment_status
-        );
-      }}
-      style={{
-        cursor:
-          person.assignment_status?.trim().toLowerCase() === "out for delivery"
-            ? "not-allowed"
-            : "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent:
-          person.status === "Active" ? "flex-end" : "flex-start",
-        width: "60px",
-        height: "28px",
-        borderRadius: "20px",
-        backgroundColor: person.status === "Active" ? "green" : "red",
-        padding: "0 6px",
-        opacity:
-          person.assignment_status?.trim().toLowerCase() === "out for delivery"
-            ? 0.5
-            : 1, // fade toggle if disabled
-        transition: "all 0.3s ease",
-      }}
-    >
-      <span
-        style={{
-          background: "white",
-          borderRadius: "50%",
-          width: "22px",
-          height: "22px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "12px",
-          color: person.status === "Active" ? "green" : "red",
-          fontWeight: "bold",
-          transition: "all 0.3s ease",
-        }}
-      >
-        {person.status === "Active" ? <FaCheck /> : <FaTimes />}
-      </span>
-    </div>
-  </div>
-</td>
-                {/* Action Column */}
-                <td className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
-                  <button
-                    id="personnel-view"
-                    className="btn btn-view"
-                    onClick={() => {
-                      setSelectedUser(person.pers_username);
-                      setShowModal(true);
-                    }}
+                  {/* Status Column */}
+                  <td
+                    className={`text-center fw-bold ${
+                      person.assignment_status?.trim().toLowerCase() ===
+                      "available"
+                        ? "text-success"
+                        : person.assignment_status?.trim().toLowerCase() ===
+                          "out for delivery"
+                        ? "text-danger"
+                        : "text-danger"
+                    }`}
                   >
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))
+                    {person.assignment_status?.trim().toLowerCase() ===
+                    "out for delivery"
+                      ? "Unavailable"
+                      : person.assignment_status}
+                  </td>
+
+                  {/* Toggle Column */}
+                  <td className="text-center">
+                    <div className="d-flex flex-column align-items-center">
+                      <div
+                        onClick={() => {
+                          if (
+                            person.assignment_status?.trim().toLowerCase() ===
+                            "out for delivery"
+                          ) {
+                            alert(
+                              "Cannot change status while personnel is Out for Delivery."
+                            );
+                            return;
+                          }
+                          handleToggleStatus(
+                            person.pers_username,
+                            person.status,
+                            person.assignment_status
+                          );
+                        }}
+                        style={{
+                          cursor:
+                            person.assignment_status?.trim().toLowerCase() ===
+                            "out for delivery"
+                              ? "not-allowed"
+                              : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent:
+                            person.status === "Active"
+                              ? "flex-end"
+                              : "flex-start",
+                          width: "60px",
+                          height: "28px",
+                          borderRadius: "20px",
+                          backgroundColor:
+                            person.status === "Active" ? "green" : "red",
+                          padding: "0 6px",
+                          opacity:
+                            person.assignment_status?.trim().toLowerCase() ===
+                            "out for delivery"
+                              ? 0.5
+                              : 1,
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        <span
+                          style={{
+                            background: "white",
+                            borderRadius: "50%",
+                            width: "22px",
+                            height: "22px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "12px",
+                            color: person.status === "Active" ? "green" : "red",
+                            fontWeight: "bold",
+                            transition: "all 0.3s ease",
+                          }}
+                        >
+                          {person.status === "Active" ? (
+                            <FaCheck />
+                          ) : (
+                            <FaTimes />
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Action Column */}
+                  <td className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
+                    <button
+                      id="personnel-view"
+                      className="btn btn-view"
+                      onClick={() => {
+                        setSelectedUser(person.pers_username);
+                        setShowModal(true);
+                      }}
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))
           ) : (
             <tr>
               <td colSpan="6" className="text-center">
