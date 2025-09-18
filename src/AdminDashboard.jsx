@@ -193,7 +193,7 @@ const AdminDashboard = () => {
                   <FaTimesCircle />
                 </div>
                 <div>
-                  <h6 className="fw-semibold m-0">Cancelled Deliveries</h6>
+                  <h6 className="fw-semibold m-0">Rescheduled Deliveries</h6>
                   <p className="mb-0 fw-semibold small">
                     {dashboardCounts.cancelled}
                   </p>
@@ -394,7 +394,7 @@ const AdminDashboard = () => {
                     <Bar
                       dataKey="cancelled"
                       fill="#E57373"
-                      name="Cancelled Deliveries"
+                      name="Rescheduled Deliveries"
                     />
                   </BarChart>
                 </ResponsiveContainer>

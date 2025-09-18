@@ -200,7 +200,7 @@ const MonitorDelivery = () => {
 
   return (
     <AdminLayout
-      title="Monitor Delivery Transactions"
+      title="Monitor Deliveries"
       onAddClick={handleAddDelivery}
     >
       <div className="p-4 bg-white rounded-4 border border-secondary-subtle">

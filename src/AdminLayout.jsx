@@ -227,15 +227,15 @@ useEffect(() => {
         onHide={() => setShowLogoutModal(false)}
         centered
       >
-        <Modal.Header closeButton>
+        <Modal.Header closeButton className="bg-light">
           <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Are you sure you want to logout?</Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
+        <Modal.Body className="bg-white">Are you sure you want to logout?</Modal.Body>
+        <Modal.Footer className="bg-light">
+          <Button className="close-btn p-2 fs-6" variant="secondary" onClick={() => setShowLogoutModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={confirmLogout}>
+          <Button className="cancel-btn p-2 fs-6" onClick={confirmLogout}>
             Logout
           </Button>
         </Modal.Footer>

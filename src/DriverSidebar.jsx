@@ -240,15 +240,15 @@ const Sidebar = ({ show, onHide }) => {
         onHide={() => setShowLogoutModal(false)}
         centered
       >
-        <Modal.Header closeButton>
+        <Modal.Header className="bg-light" closeButton>
           <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Are you sure you want to logout?</Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
+        <Modal.Body className="bg-white">Are you sure you want to logout?</Modal.Body>
+        <Modal.Footer className="bg-light">
+          <Button className="close-btn px-2 py-2 fs-6" variant="secondary" onClick={() => setShowLogoutModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={confirmLogout}>
+          <Button className="cancel-btn px-2 py-2 fs-6" variant="danger" onClick={confirmLogout}>
             Logout
           </Button>
         </Modal.Footer>

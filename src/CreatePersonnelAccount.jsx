@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import OperationalLayout from "./OperationalLayout";
+import { FaArrowLeft } from "react-icons/fa";
 
 const CreatePersonnelAccount = () => {
   const navigate = useNavigate();
@@ -54,7 +55,6 @@ const CreatePersonnelAccount = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-
     for (let key in formData) {
       if (formData[key].trim() === "") {
         setErrorMessage(
@@ -92,13 +92,13 @@ const CreatePersonnelAccount = () => {
         formData
       );
 
-      console.log(response.data); // for debugging
+      console.log(response.data);
 
       if (response.data.status === "success") {
         alert(`Account created!`);
         navigate("/personnel-accounts");
       } else if (response.data.status === "existing_account") {
-        setErrorMessage(response.data.message); // shows the message from PHP
+        setErrorMessage(response.data.message);
       } else {
         setErrorMessage(
           response.data.message || "Registration failed due to a server error."
@@ -113,6 +113,14 @@ const CreatePersonnelAccount = () => {
   };
   return (
     <OperationalLayout title="Create Delivery Personnel Account">
+      <div className="d-flex justify-content-start mt-5 ms-4">
+        <button
+          className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft /> Back
+        </button>
+      </div>
       <div className="add-delivery-form-container mt-5 mx-auto">
         <div className="form-card mx-auto">
           <h2 className="form-title">PERSONAL DETAILS</h2>
@@ -229,7 +237,11 @@ const CreatePersonnelAccount = () => {
           </form>
         </div>
         <div className="d-flex justify-content-end mt-4">
-          <button type="submit" className="btn btn-view px-3 py-1 fs-6" onClick={handleSubmit}>
+          <button
+            type="submit"
+            className="btn btn-view px-3 py-1 fs-6"
+            onClick={handleSubmit}
+          >
             Register
           </button>
         </div>

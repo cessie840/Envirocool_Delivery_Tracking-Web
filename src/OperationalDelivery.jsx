@@ -115,19 +115,18 @@ const OperationalDelivery = () => {
         new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
     );
 
- const assignedOrders = orders
-   .filter(
-     (o) =>
-       o.assigned_personnel &&
-       o.assigned_personnel !== null &&
-       o.status !== "Delivered" &&
-       o.status !== "Cancelled"
-   )
-   .sort(
-     (a, b) =>
-       new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
-   );
-
+  const assignedOrders = orders
+    .filter(
+      (o) =>
+        o.assigned_personnel &&
+        o.assigned_personnel !== null &&
+        o.status !== "Delivered" &&
+        o.status !== "Cancelled"
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
+    );
 
   // Filtered by date
   const filteredUnassignedOrders = filterDate
@@ -386,10 +385,22 @@ const OperationalDelivery = () => {
                         <b className="me-3">
                           {selectedOrder.assigned_personnel}
                         </b>
-                        <img
-                          src={selectedOrder.personnel_image}
-                          className="rounded-circle border border-2 border-dark img-fluid personnel-img"
-                        />
+                       <img
+  src={
+    selectedOrder?.personnel_image &&
+    selectedOrder.personnel_image.trim() !== ""
+      ? selectedOrder.personnel_image
+      : "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+  }
+  alt={selectedOrder?.assigned_personnel || "Delivery Personnel"}
+  onError={(e) => {
+    e.target.onerror = null;
+    e.target.src =
+      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+  }}
+  className="rounded-circle border border-2 border-dark"
+  style={{ width: "60px", height: "60px", objectFit: "cover" }}
+/>
                       </div>
                     </li>
                   </ul>

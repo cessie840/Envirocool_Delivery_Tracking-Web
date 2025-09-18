@@ -9,11 +9,11 @@ $transaction_id = isset($_GET['transaction_id']) ? intval($_GET['transaction_id'
 
 $response = [];
 
-// Fetch transaction/customer details
+// Fetch transaction/customer details (now including status + cancelled_reason)
 $sql_customer = "
     SELECT tracking_number, customer_name, customer_address, customer_contact, 
-           date_of_order, target_date_delivery, mode_of_payment, payment_option, 
-           down_payment, balance, total 
+           date_of_order, target_date_delivery, rescheduled_date, mode_of_payment, payment_option, 
+           down_payment, balance, total, status, cancelled_reason
     FROM Transactions 
     WHERE transaction_id = ?
 ";
@@ -31,11 +31,14 @@ if ($result_customer->num_rows > 0) {
     $response['customer_contact'] = $customer['customer_contact'];
     $response['date_of_order'] = $customer['date_of_order'];
     $response['target_date_delivery'] = $customer['target_date_delivery'];
+    $response['rescheduled_date'] = $customer['rescheduled_date'];
     $response['mode_of_payment'] = $customer['mode_of_payment'];
     $response['payment_option'] = $customer['payment_option'];
     $response['down_payment'] = $customer['down_payment'];
     $response['balance'] = $customer['balance'];
     $response['total'] = $customer['total'];
+    $response['status'] = $customer['status'];
+    $response['cancelled_reason'] = $customer['cancelled_reason'];
 
     // Fetch items including type_of_product
     $sql_items = "
@@ -52,9 +55,9 @@ if ($result_customer->num_rows > 0) {
     while ($row = $result_items->fetch_assoc()) {
         $items[] = [
             "type_of_product" => $row['type_of_product'],
-            "description"     => $row['description'],
-            "quantity"        => $row['quantity'],
-            "unit_cost"       => $row['unit_cost']
+            "description" => $row['description'],
+            "quantity" => $row['quantity'],
+            "unit_cost" => $row['unit_cost']
         ];
     }
 

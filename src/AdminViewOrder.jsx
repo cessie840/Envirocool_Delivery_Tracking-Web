@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
+import RescheduleModal from "./RescheduleModal";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const ViewOrder = () => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
   const [formData, setFormData] = useState({
     tracking_number: "",
     customer_name: "",
@@ -24,9 +26,14 @@ const ViewOrder = () => {
     total: "",
   });
 
+  // 🔹 Reusable Date Formatter
   const formatDate = (dateString) => {
-    if (!dateString) return "";
-    return dateString.split("T")[0] || dateString.split(" ")[0];
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
   };
 
   useEffect(() => {
@@ -42,7 +49,7 @@ const ViewOrder = () => {
           customer_name: data.customer_name,
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
-          date_of_order: data.date_of_order,
+          date_of_order: formatDate(data.date_of_order),
           mode_of_payment: data.mode_of_payment,
           payment_option: data.payment_option,
           down_payment: data.down_payment,
@@ -51,7 +58,6 @@ const ViewOrder = () => {
           target_date_delivery: formatDate(data.target_date_delivery),
         });
       })
-
       .catch((err) => {
         console.error("Failed to fetch order:", err);
       });
@@ -67,6 +73,15 @@ const ViewOrder = () => {
 
     setEditableItems(fixedItems);
     setShowModal(true);
+  };
+
+  const handleRescheduleUpdate = (newDate) => {
+    setOrderDetails((prev) => ({
+      ...prev,
+      target_date_delivery: formatDate(newDate),
+      status: "Pending",
+      cancelled_reason: null,
+    }));
   };
 
   const handleClose = () => setShowModal(false);
@@ -119,7 +134,7 @@ const ViewOrder = () => {
 
   if (!orderDetails) return <p className="text-center mt-5">Loading...</p>;
 
-  const totalCost = orderDetails.items.reduce(
+  const totalCost = (orderDetails?.items || []).reduce(
     (sum, item) => sum + item.quantity * item.unit_cost,
     0
   );
@@ -144,6 +159,22 @@ const ViewOrder = () => {
           console.error("Delete error:", err);
           alert("An error occurred");
         });
+    }
+  };
+
+  // 🔹 Helper for status badge
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case "Delivered":
+        return <strong style={{ color: "#327229" }}>{status}</strong>;
+      case "Cancelled":
+        return <strong style={{ color: "#DC3545" }}>{status}</strong>;
+      case "Out for Delivery":
+        return <strong style={{ color: "#2193C0FF" }}>{status}</strong>;
+      case "Pending":
+        return <strong style={{ color: "#ECAE62FF" }}>{status}</strong>;
+      default:
+        return <strong>{status}</strong>;
     }
   };
 
@@ -174,16 +205,6 @@ const ViewOrder = () => {
               <div className="row">
                 <div className="col-md-6">
                   <h5 className="text-success fw-bold">Client Details</h5>
-                </div>
-
-                <div className="col-md-6">
-                  <h5 className="text-success fw-bold">Payment Details</h5>
-                </div>
-              </div>
-
-              <div className="row pt-3">
-                {/* Left column - Customer Info */}
-                <div className="col-md-6">
                   <p>
                     <span>Name:</span> {orderDetails.customer_name}
                   </p>
@@ -194,15 +215,38 @@ const ViewOrder = () => {
                     <span>Contact:</span> {orderDetails.customer_contact}
                   </p>
                   <p>
-                    <span>Date of Order:</span> {orderDetails.date_of_order}
+                    <span>Date of Order:</span>{" "}
+                    {formatDate(orderDetails.date_of_order)}
                   </p>
                   <p>
-                    <span>Target Delivery Date:</span>{" "}
-                    {orderDetails.target_date_delivery}
+                    <span>Target Delivery Date: </span>
+                    {formatDate(orderDetails.target_date_delivery)}
                   </p>
+                  <p>
+                    <span>Rescheduled Delivery Date: </span>
+                    {orderDetails.rescheduled_date ? formatDate(orderDetails.rescheduled_date) : "—"}
+                  </p>
+                  <br />
+                  <div>
+                    <h5 className="text-success fw-bold">Delivery Status</h5>
+                  </div>
+                  <p>
+                    <span>Current Delivery Status: </span>
+                    {renderStatusBadge(orderDetails.status)}
+                  </p>
+                  {orderDetails.status === "Cancelled" &&
+                    orderDetails.cancelled_reason && (
+                      <p>
+                        <span>Cancellation Reason: </span>
+                        <strong className="text-danger">
+                          {orderDetails.cancelled_reason}
+                        </strong>
+                      </p>
+                    )}
                 </div>
 
-                <div className="col-md-6 border-start">
+                <div className="col-md-6">
+                  <h5 className="text-success fw-bold">Payment Details</h5>
                   <p>
                     <span>Payment Method:</span> {orderDetails.mode_of_payment}
                   </p>
@@ -228,7 +272,7 @@ const ViewOrder = () => {
             <div className="mx-2 my-3 p-3 bg-white border rounded-3 shadow-sm">
               <h5 className="text-success fw-bold">Items Ordered</h5>
               <ul className="list-group list-group-flush fw-semibold">
-                {orderDetails.items.map((item, index) => (
+                {(orderDetails.items || []).map((item, index) => (
                   <li
                     key={index}
                     className="list-group-item d-flex justify-content-between align-items-center fw-semibold"
@@ -263,6 +307,15 @@ const ViewOrder = () => {
               >
                 Update
               </button>
+
+              {orderDetails.status === "Cancelled" && (
+                <button
+                  className="btn btn-view px-5 py-2 rounded-3 fs-5"
+                  onClick={() => setShowReschedule(true)}
+                >
+                  Reschedule
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -276,6 +329,15 @@ const ViewOrder = () => {
         setFormData={setFormData}
         editableItems={editableItems}
         setEditableItems={setEditableItems}
+      />
+
+      <RescheduleModal
+        show={showReschedule}
+        handleClose={() => setShowReschedule(false)}
+        transaction_id={transaction_id}
+        onReschedule={(updatedFields) => {
+          setOrderDetails((prev) => ({ ...prev, ...updatedFields }));
+        }}
       />
     </AdminLayout>
   );

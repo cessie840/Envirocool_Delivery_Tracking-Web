@@ -47,7 +47,7 @@ const ViewPersonnelModal = ({ show, onHide, username }) => {
       <Modal.Header closeButton style={{ backgroundColor: "#E8F8F5" }}>
         <Modal.Title>Personnel Details</Modal.Title>
       </Modal.Header>
-      <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
+      <Modal.Body className="bg-white">
         <div className="text-center mb-3">
           <div
             className="mx-auto rounded-circle overflow-hidden border border-3 d-flex justify-content-center align-items-center"
