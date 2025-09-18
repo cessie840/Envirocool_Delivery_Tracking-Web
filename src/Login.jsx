@@ -42,6 +42,7 @@ const Login = () => {
       const user = response.data.user;
       console.log("Login success", user);
       localStorage.setItem("user", JSON.stringify(user));
+      sessionStorage.setItem("showLoginNotif", "true");
 
       alert("Login successful!");
 

@@ -23,6 +23,7 @@ $query = "
         t.shipout_at AS shipout_time,
         t.cancelled_reason,
         t.cancelled_at AS cancelled_time,
+           t.tracking_number AS tracking_number,
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
         t.status
     FROM Transactions t
@@ -50,6 +51,8 @@ if ($result && $result->num_rows > 0) {
             "cancelled_reason" => $row['cancelled_reason'],
             "cancelled_time"   => $row['cancelled_time'],
             "driver"           => $row['driver'] ?: "N/A",
+              "tracking_number"           => $row['tracking_number'],
+  
             "status"           => $row['status'],
             "distance"         => "N/A",
             "eta"              => "N/A"

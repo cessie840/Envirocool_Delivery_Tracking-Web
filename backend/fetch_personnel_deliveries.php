@@ -38,7 +38,7 @@ FROM DeliveryAssignments da
 JOIN Transactions t ON da.transaction_id = t.transaction_id
 JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
 WHERE da.personnel_username = '$username'
-ORDER BY t.created_at DESC
+ORDER BY t.created_at ASC
 ";
 
 

@@ -143,10 +143,11 @@ function OutForDelivery() {
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
       <Container className="py-4">
+        <br />
         <h2 className="text-center text-success fw-bold mb-3">
           OUT FOR DELIVERY
         </h2>
-
+        <br />
         {deliveries.length === 0 ? (
           <p className="text-muted text-center">No deliveries found.</p>
         ) : (

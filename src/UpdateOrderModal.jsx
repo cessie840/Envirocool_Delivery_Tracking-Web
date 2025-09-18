@@ -106,6 +106,26 @@ const UpdateOrderModal = ({
     }
   }, [editableItems]);
 
+  // Format number with peso sign and commas
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined || value === "") return "";
+    const num = parseFloat(value.toString().replace(/,/g, ""));
+    if (isNaN(num)) return "";
+    return (
+      "₱" +
+      num.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    );
+  };
+
+  // Remove peso sign & commas for raw numeric storage
+  const parseCurrency = (value) => {
+    if (!value) return 0;
+    return parseFloat(value.toString().replace(/[₱,]/g, "")) || 0;
+  };
+
   // Handle product type change
   const handleProductChange = (index, selected) => {
     const newItems = [...editableItems];
@@ -154,11 +174,13 @@ const UpdateOrderModal = ({
     ]);
   };
 
-
-
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
-      <Modal.Header closeButton closeVariant="white" style={{backgroundColor: "#247E33FF "}}>
+      <Modal.Header
+        closeButton
+        closeVariant="white"
+        style={{ backgroundColor: "#008f4c" }}
+      >
         <Modal.Title className="text-white">Update Delivery Info</Modal.Title>
       </Modal.Header>
 
@@ -265,11 +287,19 @@ const UpdateOrderModal = ({
               <Form.Group className="mb-3">
                 <Form.Label>Down Payment</Form.Label>
                 <Form.Control
-                  type="number"
-                  step="0.01"
+                  type="text"
                   name="down_payment"
-                  value={formData.down_payment}
-                  onChange={handleDownPaymentChange}
+                  value={formatCurrency(formData.down_payment)}
+                  onChange={(e) => {
+                    const rawValue = parseCurrency(e.target.value);
+                    const balance = total - rawValue;
+                    setFormData({
+                      ...formData,
+                      down_payment: rawValue,
+                      balance: balance.toFixed(2),
+                      total: total.toFixed(2),
+                    });
+                  }}
                   disabled={formData.payment_option === "Full Payment"}
                 />
               </Form.Group>
@@ -365,18 +395,18 @@ const UpdateOrderModal = ({
 
                     {/* Unit Cost */}
                     <td>
-                      <Form.Control
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={item.unit_cost}
-                        onChange={(e) => {
-                          const newItems = [...editableItems];
-                          newItems[index].unit_cost =
-                            parseFloat(e.target.value) || 0;
-                          setEditableItems(newItems);
-                        }}
-                      />
+                      <td>
+                        <Form.Control
+                          type="text"
+                          value={formatCurrency(item.unit_cost)}
+                          onChange={(e) => {
+                            const rawValue = parseCurrency(e.target.value);
+                            const newItems = [...editableItems];
+                            newItems[index].unit_cost = rawValue;
+                            setEditableItems(newItems);
+                          }}
+                        />
+                      </td>
                     </td>
                   </tr>
                 ))}
@@ -401,7 +431,7 @@ const UpdateOrderModal = ({
         </Button>
         <Button
           className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
-          style={{fontSize: "16px"}}
+          style={{ fontSize: "16px" }}
           onClick={handleSubmit}
         >
           Save Changes

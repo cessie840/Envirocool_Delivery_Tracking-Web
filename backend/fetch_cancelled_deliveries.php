@@ -36,6 +36,7 @@ $query = "
         t.total AS totalCost,
         t.cancelled_reason,
         t.cancelled_at
+        
     FROM Transactions t
     JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
     JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username

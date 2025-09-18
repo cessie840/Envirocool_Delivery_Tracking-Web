@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Button, Container, Card } from "react-bootstrap";
+import { Button, Container, Card, Modal } from "react-bootstrap";
 import axios from "axios";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function DriverDashboard() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [assignedDeliveries, setAssignedDeliveries] = useState([]);
+  const [filteredDeliveries, setFilteredDeliveries] = useState([]);
   const [outForDelivery, setOutForDelivery] = useState([]);
+  const [newDeliveriesCount, setNewDeliveriesCount] = useState(0);
+  const [showNewDeliveryPopup, setShowNewDeliveryPopup] = useState(false);
+  const [newDeliveries, setNewDeliveries] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [highlightedTxn, setHighlightedTxn] = useState(null);
 
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
@@ -25,25 +31,36 @@ function DriverDashboard() {
     axios
       .post(
         "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
-        {
-          pers_username: username,
-        }
+        { pers_username: username }
       )
       .then((res) => {
-        if (Array.isArray(res.data)) {
-          const assigned = res.data.filter(
-            (d) =>
-              d.delivery_status === "To Ship" || d.delivery_status === "Pending"
-          );
+        if (!Array.isArray(res.data)) return;
 
-          const out = res.data.filter(
-            (d) => d.delivery_status === "Out for Delivery"
-          );
+        const assigned = res.data.filter(
+          (d) =>
+            d.delivery_status === "To Ship" || d.delivery_status === "Pending"
+        );
+        const out = res.data.filter(
+          (d) => d.delivery_status === "Out for Delivery"
+        );
 
-          setAssignedDeliveries(assigned);
-          setOutForDelivery(out);
-        } else {
-          console.warn("Unexpected response format:", res.data);
+        setAssignedDeliveries(assigned);
+        setFilteredDeliveries(assigned);
+        setOutForDelivery(out);
+
+        let storedNotifs = JSON.parse(localStorage.getItem("notifications"));
+        if (!storedNotifs) storedNotifs = [];
+
+        const knownTxnNos = new Set(storedNotifs.map((n) => n.transactionNo));
+        const freshOnes = assigned.filter(
+          (d) => !knownTxnNos.has(d.transactionNo)
+        );
+
+        setNewDeliveries(freshOnes);
+        setNewDeliveriesCount(freshOnes.length);
+
+        if (freshOnes.length > 0) {
+          setShowNewDeliveryPopup(true);
         }
       })
       .catch((err) => console.error("Error fetching deliveries:", err));
@@ -52,6 +69,39 @@ function DriverDashboard() {
   useEffect(() => {
     fetchAssignedDeliveries();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.scrollTo) {
+      const txnNo = location.state.scrollTo;
+      const element = document.getElementById(`transaction-${txnNo}`);
+      if (element) {
+        const yOffset = -150;
+        const y =
+          element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: "smooth" });
+
+        setHighlightedTxn(txnNo);
+        const timer = setTimeout(() => setHighlightedTxn(null), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [location.state]);
+
+  const handleClosePopup = () => {
+    const storedNotifs =
+      JSON.parse(localStorage.getItem("notifications")) || [];
+    const updatedNotifs = [
+      ...storedNotifs,
+      ...newDeliveries.map((d) => ({ transactionNo: d.transactionNo })),
+    ];
+
+    const uniqueNotifs = Array.from(
+      new Map(updatedNotifs.map((n) => [n.transactionNo, n])).values()
+    );
+
+    localStorage.setItem("notifications", JSON.stringify(uniqueNotifs));
+    setShowNewDeliveryPopup(false);
+  };
 
   const markAsOutForDelivery = (transactionNo) => {
     const delivery = assignedDeliveries.find(
@@ -69,52 +119,104 @@ function DriverDashboard() {
       )
       .then((res) => {
         const { success, message } = res.data;
-
         if (success) {
           alert("Order is now marked as 'Out for Delivery'.");
-          fetchAssignedDeliveries(); 
+
+          setNewDeliveries((prev) =>
+            prev.filter((d) => d.transactionNo !== transactionNo)
+          );
+          setNewDeliveriesCount((prev) => (prev > 0 ? prev - 1 : 0));
+
+          const storedNotifs =
+            JSON.parse(localStorage.getItem("notifications")) || [];
+          const updatedNotifs = storedNotifs.filter(
+            (n) => n.transactionNo !== transactionNo
+          );
+          localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
+
+          fetchAssignedDeliveries();
           navigate("/out-for-delivery");
         } else {
           alert(`Error: ${message}`);
         }
       })
       .catch((err) => {
-        if (err.response) {
-          const { status, data } = err.response;
-          alert(`Error ${status}: ${data?.message || "Something went wrong."}`);
-        } else {
-          console.error("API error:", err);
-          alert("Failed to update delivery status. Please try again later.");
-        }
+        console.error("API error:", err);
+        alert("Failed to update delivery status. Please try again later.");
       });
+  };
+
+  const handleSearch = (term) => {
+    if (!term) {
+      setFilteredDeliveries(assignedDeliveries);
+      return;
+    }
+
+    const filtered = assignedDeliveries.filter((delivery) => {
+      const txnMatch = delivery.transactionNo
+        .toString()
+        .toLowerCase()
+        .includes(term.toLowerCase());
+      const nameMatch = delivery.customerName
+        .toLowerCase()
+        .includes(term.toLowerCase());
+      return txnMatch || nameMatch;
+    });
+
+    setFilteredDeliveries(filtered);
   };
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
-      <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
+      <HeaderAndNav
+        onSidebarToggle={() => setShowSidebar(true)}
+        newDeliveries={newDeliveries}
+        onSearch={handleSearch} 
+      />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
+      <Modal show={showNewDeliveryPopup} onHide={handleClosePopup} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>New Assigned Deliveries</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          You have {newDeliveriesCount} new deliveries assigned!
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="success" onClick={handleClosePopup}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       <Container className="py-4">
+        <br />
         <h2 className="text-center text-success fw-bold mb-3">
           ASSIGNED DELIVERIES
         </h2>
+        <br />
 
-        {assignedDeliveries.length === 0 ? (
+        {filteredDeliveries.length === 0 ? (
           <p className="text-muted text-center">No Assigned Deliveries.</p>
         ) : (
-          assignedDeliveries.map((delivery, idx) => (
+          filteredDeliveries.map((delivery, idx) => (
             <Card
               key={idx}
+              id={`transaction-${delivery.transactionNo}`}
               className="mb-4 p-3 border border-info rounded"
-              style={{ backgroundColor: "#eaf7f7" }}
+              style={{
+                backgroundColor:
+                  highlightedTxn === delivery.transactionNo
+                    ? "#90cda6ff"
+                    : "#eaf7f7",
+                transition: "background-color 0.5s ease",
+              }}
             >
-              {/* Header */}
               <h5 className="text-center fw-bold text-dark mb-3">
                 TRANSACTION NO. {delivery.transactionNo}
               </h5>
 
               <div className="border p-3 rounded bg-white">
-                {/* Customer Info */}
                 <div className="d-flex justify-content-between mb-1">
                   <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
@@ -151,12 +253,7 @@ function DriverDashboard() {
                   </div>
                 ))}
 
-                <hr
-                  className="my-2"
-                  style={{
-                    borderTop: "2px dashed #999",
-                  }}
-                />
+                <hr className="my-2" style={{ borderTop: "2px dashed #999" }} />
 
                 <div className="d-flex justify-content-between mb-3">
                   <strong>Total:</strong>

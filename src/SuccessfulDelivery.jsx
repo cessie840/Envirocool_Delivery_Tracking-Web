@@ -34,7 +34,7 @@ function SuccessfulDelivery() {
       });
   }, []);
 
-  // THOUSAND OPERATOR 
+  
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
 

@@ -1,19 +1,76 @@
-import React, { useState } from "react";
-import { Navbar, Form, InputGroup, Modal, Button } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import {
+  Navbar,
+  Form,
+  InputGroup,
+  Modal,
+  Button,
+  Badge,
+} from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
 
-const HeaderAndNav = ({ onSidebarToggle }) => {
+const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [] ,onSearch  }) => {
   const [showNotif, setShowNotif] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const navigate = useNavigate();
+  
 
-  const sampleNotifications = [
-    "MEMA LANG TO PEDE IREMOVE PAG DI NATIN KAYA",
-    "You have 3 new deliveries assigned.",
-    "Reminder: Update your profile information.",
-  ];
+  useEffect(() => {
+    const storedNotifs =
+      JSON.parse(localStorage.getItem("notifications")) || [];
+    setNotifications(storedNotifs);
+  }, []);
+
+ 
+  useEffect(() => {
+    if (newDeliveries.length === 0) return;
+
+    setNotifications((prev) => {
+      const notifMap = new Map(prev.map((n) => [n.transactionNo, n]));
+      let updated = [...prev];
+
+      newDeliveries.forEach((delivery) => {
+        if (!notifMap.has(delivery.transactionNo)) {
+          const newNotif = {
+            transactionNo: delivery.transactionNo,
+            message: `You have new assigned deliveries for Transaction No. ${delivery.transactionNo}`,
+            read: false,
+            timestamp: Date.now(),
+          };
+          updated = [newNotif, ...updated];
+          notifMap.set(delivery.transactionNo, newNotif);
+        } else {
+          const existing = notifMap.get(delivery.transactionNo);
+          existing.message = `You have new assigned deliveries for Transaction No. ${delivery.transactionNo}`;
+        }
+      });
+
+      localStorage.setItem("notifications", JSON.stringify(updated));
+      return updated;
+    });
+  }, [newDeliveries]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleNotificationClick = (transactionNo) => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) =>
+        n.transactionNo === transactionNo ? { ...n, read: true } : n
+      );
+      localStorage.setItem("notifications", JSON.stringify(updated));
+      return updated;
+    });
+
+    setShowNotif(false);
+
+   
+    navigate("/driver-dashboard", { state: { scrollTo: transactionNo } });
+  };
 
   return (
     <>
-      {/* HEADER */}
+      {/* Header */}
       <div
         style={{
           position: "fixed",
@@ -29,7 +86,11 @@ const HeaderAndNav = ({ onSidebarToggle }) => {
 
           <div className="d-flex align-items-center gap-2">
             <InputGroup style={{ maxWidth: "180px" }}>
-              <Form.Control size="sm" placeholder="Search" />
+              <Form.Control
+                size="sm"
+                placeholder="Search"
+                onChange={(e) => onSearch && onSearch(e.target.value)}
+              />
               <InputGroup.Text className="bg-white border-start-0">
                 <i className="bi bi-search"></i>
               </InputGroup.Text>
@@ -43,21 +104,29 @@ const HeaderAndNav = ({ onSidebarToggle }) => {
                 borderRadius: "50%",
                 width: "38px",
                 height: "38px",
-                padding: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                position: "relative",
               }}
             >
               <i
                 className="bi bi-bell-fill"
                 style={{ color: "#116B8A", fontSize: "1.2rem" }}
               ></i>
+              {unreadCount > 0 && (
+                <Badge
+                  pill
+                  bg="danger"
+                  style={{ position: "absolute", top: 0, right: 0 }}
+                >
+                  {unreadCount}
+                </Badge>
+              )}
             </Button>
           </div>
         </div>
 
-        {/* NAVBAR */}
         <Navbar style={{ backgroundColor: "#116B8A" }} variant="dark">
           <Navbar.Brand
             className="ms-2 text-white"
@@ -71,27 +140,90 @@ const HeaderAndNav = ({ onSidebarToggle }) => {
 
       <div style={{ height: "112px" }}></div>
 
-      {/* NOTIFICATION MODAL*/}
+      {/* Notifications Modal */}
       <Modal show={showNotif} onHide={() => setShowNotif(false)} centered>
-        <Modal.Header closeButton style={{ backgroundColor: "#E8F8F5" }}>
+        <Modal.Header closeButton>
           <Modal.Title>Notifications</Modal.Title>
         </Modal.Header>
-        <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
-          {sampleNotifications.length > 0 ? (
-            <ul className="list-unstyled">
-              {sampleNotifications.map((notif, i) => (
-                <li key={i} className="mb-2">
-                  <i className="bi bi-dot text-success me-2"></i>
-                  {notif}
-                </li>
-              ))}
-            </ul>
+        <Modal.Body
+          style={{
+            backgroundColor: "#F2FDF4",
+            paddingRight: "25px",
+            maxHeight: "400px",
+            overflowY: "auto",
+          }}
+        >
+          {notifications.length > 0 ? (
+            <>
+              {notifications.some((n) => !n.read) && (
+                <>
+                  <h6 className="fw-bold text-success">New Notifications</h6>
+                  <ul className="list-unstyled">
+                    {notifications
+                      .filter((n) => !n.read)
+                      .map((notif) => (
+                        <li
+                          key={notif.transactionNo}
+                          className="mb-2 d-flex align-items-center"
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px 10px",
+                            borderRadius: "6px",
+                            backgroundColor: "#E6F9ED",
+                          }}
+                          onClick={() =>
+                            handleNotificationClick(notif.transactionNo)
+                          }
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#d4f5df")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#E6F9ED")
+                          }
+                        >
+                          <i className="bi bi-dot text-success me-2"></i>
+                          {notif.message}
+                        </li>
+                      ))}
+                  </ul>
+                </>
+              )}
+
+              {notifications.some((n) => n.read) && (
+                <>
+                  <h6 className="fw-bold text-muted mt-3">
+                    Previous Notifications
+                  </h6>
+                  <ul className="list-unstyled">
+                    {notifications
+                      .filter((n) => n.read)
+                      .map((notif) => (
+                        <li
+                          key={notif.transactionNo}
+                          className="mb-2 d-flex align-items-center"
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px 10px",
+                            borderRadius: "6px",
+                          }}
+                          onClick={() =>
+                            handleNotificationClick(notif.transactionNo)
+                          }
+                        >
+                          <i className="bi bi-dot text-secondary me-2"></i>
+                          {notif.message}
+                        </li>
+                      ))}
+                  </ul>
+                </>
+              )}
+            </>
           ) : (
-            <p className="text-muted">No new notifications.</p>
+            <p className="text-muted">No notifications.</p>
           )}
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}>
-          <Button variant="secondary" onClick={() => setShowNotif(false)}>
+          <Button variant="success" onClick={() => setShowNotif(false)}>
             Close
           </Button>
         </Modal.Footer>
