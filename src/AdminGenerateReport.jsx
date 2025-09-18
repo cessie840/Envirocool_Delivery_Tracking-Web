@@ -1284,7 +1284,6 @@ const GenerateReport = () => {
   const renderTransactionTable = () => {
     const itemsPerPage = getItemsPerPage();
 
-    // Group by transaction_id
     const groupedData = Object.values(
       filteredTransactionData.reduce((acc, row) => {
         const id = row.transaction_id;
@@ -1362,19 +1361,18 @@ const GenerateReport = () => {
                     <td>{row.customer_address}</td>
                     <td>{row.customer_contact}</td>
 
-                    {/* Item names */}
                     <td>
                       {row.items.map((item, j) => (
                         <div key={j}>{item.name}</div>
                       ))}
                     </td>
 
-                    {/* Quantities */}
                     <td>
                       {row.items.map((item, j) => (
                         <div key={j}>{item.qty}</div>
                       ))}
                     </td>
+
                     <td>
                       {row.items.map((item, j) => (
                         <div key={j}>
@@ -1386,6 +1384,7 @@ const GenerateReport = () => {
                         </div>
                       ))}
                     </td>
+
                     <td>
                       {subtotals.map((st, j) => (
                         <div key={j}>
@@ -1397,6 +1396,7 @@ const GenerateReport = () => {
                         </div>
                       ))}
                     </td>
+
                     <td>
                       ₱
                       {totalCost.toLocaleString(undefined, {
@@ -1404,10 +1404,11 @@ const GenerateReport = () => {
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td>{row.payment_option}</td>
 
-                    <td>{row.mode_of_payment}</td>
-                    <td>{row.payment_option}</td>
+                    <td>{row.mode_of_payment || "-"}</td>
+
+                    <td>{row.payment_option || "-"}</td>
+
                     <td>
                       ₱
                       {Number(row.down_payment).toLocaleString(undefined, {
@@ -1415,6 +1416,7 @@ const GenerateReport = () => {
                         maximumFractionDigits: 2,
                       })}
                     </td>
+
                     <td>
                       ₱
                       {Number(row.balance).toLocaleString(undefined, {
@@ -1422,13 +1424,23 @@ const GenerateReport = () => {
                         maximumFractionDigits: 2,
                       })}
                     </td>
+
                     <td>{row.delivery_personnel || "-"}</td>
-                    <td>{row.delivery_status}</td>
+
+                    <td>{row.delivery_status || "-"}</td>
+
                     <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
+
                     <td>
                       {row.completed_at ? formatDate(row.completed_at) : "-"}
                     </td>
-                    <td>{row.cancelled_reason || "No Cancellation"}</td>
+
+                    <td>
+                      {row.cancelled_reason &&
+                      row.cancelled_reason.trim() !== ""
+                        ? row.cancelled_reason
+                        : "No Cancellation"}
+                    </td>
                   </tr>
                 );
               })
