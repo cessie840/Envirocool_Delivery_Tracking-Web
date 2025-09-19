@@ -1048,10 +1048,10 @@ const AddDelivery = () => {
             </div>
           </div>
         </form>
-        <div className="btn-group mx-3 mt-4 fs-6 gap-4">
+        <div className="btn-group mx-3 mt-4 gap-4">
           <button
             type="button"
-            className="cancel-btn px-3 py-1 rounded-2 bg-danger"
+            className="cancel-btn px-3 py-1 bg-danger"
             onClick={() => setShowCancelModal(true)}
           >
             Cancel
@@ -1071,12 +1071,13 @@ const AddDelivery = () => {
             </Modal.Body>
             <Modal.Footer>
               <Button
+              className="close-btn py-2 fs-6"
                 variant="secondary"
                 onClick={() => setShowCancelModal(false)}
               >
                 No
               </Button>
-              <Button variant="danger" onClick={handleConfirmCancel}>
+              <Button className="cancel-btn py-2 px-3 fs-6" variant="danger" onClick={handleConfirmCancel}>
                 Yes, Cancel
               </Button>
             </Modal.Footer>
@@ -1084,7 +1085,7 @@ const AddDelivery = () => {
           <button
             type="submit"
             form="deliveryForm"
-            className="add-btn bg-success rounded-2"
+            className="add-btn"
           >
             Add
           </button>

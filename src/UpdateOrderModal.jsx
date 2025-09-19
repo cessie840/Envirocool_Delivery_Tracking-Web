@@ -63,7 +63,6 @@ const UpdateOrderModal = ({
     fetchOptions();
   }, []);
 
-  // Ensure old transaction values appear in dropdowns
   useEffect(() => {
     if (editableItems.length > 0) {
       setProductOptions((prev) => {
@@ -106,7 +105,6 @@ const UpdateOrderModal = ({
     }
   }, [editableItems]);
 
-  // Format number with peso sign and commas
   const formatCurrency = (value) => {
     if (value === null || value === undefined || value === "") return "";
     const num = parseFloat(value.toString().replace(/,/g, ""));
@@ -120,21 +118,18 @@ const UpdateOrderModal = ({
     );
   };
 
-  // Remove peso sign & commas for raw numeric storage
   const parseCurrency = (value) => {
     if (!value) return 0;
     return parseFloat(value.toString().replace(/[₱,]/g, "")) || 0;
   };
 
-  // Handle product type change
   const handleProductChange = (index, selected) => {
     const newItems = [...editableItems];
     newItems[index].type_of_product = selected?.value || "";
-    newItems[index].description = ""; // reset item when product changes
+    newItems[index].description = "";
     setEditableItems(newItems);
   };
 
-  // Handle item name change
   const handleItemChange = (index, selected) => {
     const newItems = [...editableItems];
     newItems[index].description = selected?.value || "";
@@ -166,7 +161,6 @@ const UpdateOrderModal = ({
     return null;
   })();
 
-  // Add new empty item row
   const handleAddItem = () => {
     setEditableItems([
       ...editableItems,
@@ -186,9 +180,7 @@ const UpdateOrderModal = ({
 
       <Modal.Body className="bg-light">
         <Form>
-          {/* Two Column Layout */}
           <Row className="p-3 bg-white rounded shadow-sm border mb-4">
-            {/* Left Column - Customer Info */}
             <Col md={6}>
               <h5 className="text-success fw-bold mb-3">
                 Customer Information
@@ -240,18 +232,23 @@ const UpdateOrderModal = ({
                 <Form.Control
                   type="date"
                   name="target_date_delivery"
-                  value={formData.target_date_delivery || ""}
+                  value={
+                    formData.target_date_delivery
+                      ? new Date(formData.target_date_delivery)
+                          .toISOString()
+                          .split("T")[0] 
+                      : ""
+                  }
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      target_date_delivery: e.target.value,
+                      target_date_delivery: e.target.value, 
                     })
                   }
                 />
               </Form.Group>
             </Col>
 
-            {/* Right Column - Payment Info */}
             <Col md={6}>
               <h5 className="text-success fw-bold mb-3">Payment Details</h5>
 
@@ -306,7 +303,6 @@ const UpdateOrderModal = ({
             </Col>
           </Row>
 
-          {/* Items Section */}
           <div className="p-3 bg-white rounded shadow-sm border">
             <h5 className="text-success fw-bold mb-3 d-flex justify-content-between align-items-center">
               Items Ordered
@@ -332,7 +328,6 @@ const UpdateOrderModal = ({
               <tbody className="text-center">
                 {editableItems.map((item, index) => (
                   <tr key={index}>
-                    {/* Quantity */}
                     <td>
                       <Form.Control
                         type="number"
@@ -347,7 +342,6 @@ const UpdateOrderModal = ({
                       />
                     </td>
 
-                    {/* Type of Product */}
                     <td>
                       <CreatableSelect
                         options={productOptions}
@@ -370,7 +364,6 @@ const UpdateOrderModal = ({
                       />
                     </td>
 
-                    {/* Item Name */}
                     <td>
                       <CreatableSelect
                         options={itemOptions[item.type_of_product] || []}
@@ -393,20 +386,17 @@ const UpdateOrderModal = ({
                       />
                     </td>
 
-                    {/* Unit Cost */}
                     <td>
-                      <td>
-                        <Form.Control
-                          type="text"
-                          value={formatCurrency(item.unit_cost)}
-                          onChange={(e) => {
-                            const rawValue = parseCurrency(e.target.value);
-                            const newItems = [...editableItems];
-                            newItems[index].unit_cost = rawValue;
-                            setEditableItems(newItems);
-                          }}
-                        />
-                      </td>
+                      <Form.Control
+                        type="text"
+                        value={formatCurrency(item.unit_cost)}
+                        onChange={(e) => {
+                          const rawValue = parseCurrency(e.target.value);
+                          const newItems = [...editableItems];
+                          newItems[index].unit_cost = rawValue;
+                          setEditableItems(newItems);
+                        }}
+                      />
                     </td>
                   </tr>
                 ))}

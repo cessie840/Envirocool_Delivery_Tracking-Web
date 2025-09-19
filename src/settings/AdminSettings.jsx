@@ -2,17 +2,24 @@ import React, { useState, useEffect } from "react";
 import AdminLayout from "../AdminLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
-
 import BackupRestoreTab from "./BackupRestoreTab";
 import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
 
 const AdminSettings = () => {
-  const [activeTab, setActiveTab] = useState("edit-profile");
+  // Initialize state from localStorage (only once)
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("adminActiveTab") || "edit-profile";
+  });
 
   useEffect(() => {
     document.title = "Admin Settings";
   }, []);
+
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("adminActiveTab", activeTab);
+  }, [activeTab]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -20,7 +27,6 @@ const AdminSettings = () => {
         return <EditProfileTab />;
       case "change-password":
         return <ChangePasswordTab />;
-     
       case "backup-restore":
         return <BackupRestoreTab />;
       case "terms":
@@ -45,7 +51,6 @@ const AdminSettings = () => {
         >
           Change Password
         </button>
-      
         <button
           className={activeTab === "backup-restore" ? "active" : ""}
           onClick={() => setActiveTab("backup-restore")}

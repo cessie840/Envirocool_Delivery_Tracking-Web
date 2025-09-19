@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import OperationalLayout from "../OperationalLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
-
 import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
 
@@ -19,7 +18,6 @@ const OperationalSettings = () => {
         return <EditProfileTab />;
       case "change-password":
         return <ChangePasswordTab />;
-      
       case "terms":
         return <ViewTermsTab />;
       default:
@@ -29,7 +27,6 @@ const OperationalSettings = () => {
 
   return (
     <OperationalLayout title="Operational Manager Settings">
-      {/* Tabs Outside Main Container */}
       <div className="settings-tabs mt-5">
         <button
           className={activeTab === "edit-profile" ? "active" : ""}
@@ -43,7 +40,6 @@ const OperationalSettings = () => {
         >
           Change Password
         </button>
-      
         <button
           className={activeTab === "terms" ? "active" : ""}
           onClick={() => setActiveTab("terms")}
