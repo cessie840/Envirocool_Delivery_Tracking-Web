@@ -12,7 +12,7 @@ const OperationalDelivery = () => {
   const [orders, setOrders] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [activeTab, setActiveTab] = useState("unassigned");
-  const [filterDate, setFilterDate] = useState(""); // For date filtering
+  const [filterDate, setFilterDate] = useState(""); 
 
   useEffect(() => {
     document.title = "Operational Delivery";
@@ -107,7 +107,6 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
-  // Separate orders and sort by target_date_delivery ascending
   const unassignedOrders = orders
     .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
     .sort(
@@ -128,7 +127,7 @@ const OperationalDelivery = () => {
         new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
     );
 
-  // Filtered by date
+
   const filteredUnassignedOrders = filterDate
     ? unassignedOrders.filter((o) => o.target_date_delivery === filterDate)
     : unassignedOrders;

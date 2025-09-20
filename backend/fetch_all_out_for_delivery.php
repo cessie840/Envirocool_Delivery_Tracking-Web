@@ -26,7 +26,7 @@ $sql = "
         t.customer_contact AS contact,
         t.customer_address AS address,
         po.description AS description,
-        t.created_at AS time,
+        t.date_of_order AS time,
         t.shipout_at as shipout_time,
         t.tracking_number AS tracking_number,
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,

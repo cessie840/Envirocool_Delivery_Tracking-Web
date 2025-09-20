@@ -18,7 +18,7 @@ $query = "
         t.customer_contact AS contact,
         t.customer_address,
         po.description,
-        t.created_at AS time,
+        t.date_of_order AS time,
         t.completed_at AS completed_time,
         t.shipout_at AS shipout_time,
         t.cancelled_reason,

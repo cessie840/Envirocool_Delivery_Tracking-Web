@@ -14,7 +14,7 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-// Handle preflight request
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -32,7 +32,6 @@ if (!isset($data->transaction_id) || !isset($data->personnelUsername)) {
 $transaction_id = intval($data->transaction_id);
 $personnelUsername = $conn->real_escape_string($data->personnelUsername);
 
-// 1. Check if order already has an assignment
 $checkSql = "SELECT assignment_id FROM DeliveryAssignments WHERE transaction_id = ?";
 $checkStmt = $conn->prepare($checkSql);
 $checkStmt->bind_param("i", $transaction_id);
@@ -50,17 +49,16 @@ if ($checkStmt->num_rows > 0) {
 }
 $checkStmt->close();
 
-// 2. Insert into DeliveryAssignments
 $insertSql = "INSERT INTO DeliveryAssignments (transaction_id, personnel_username) VALUES (?, ?)";
 $insertStmt = $conn->prepare($insertSql);
 $insertStmt->bind_param("is", $transaction_id, $personnelUsername);
 $success = $insertStmt->execute();
 $insertStmt->close();
 
-// 3. If success → update DeliveryPersonnel assignment_status
+
 if ($success) {
     $updateSql = "UPDATE DeliveryPersonnel 
-                  SET assignment_status = 'Assigned', assigned_transaction_id = ? 
+                  SET assignment_status = 'Out For Delivery', assigned_transaction_id = ? 
                   WHERE pers_username = ?";
     $updateStmt = $conn->prepare($updateSql);
     $updateStmt->bind_param("is", $transaction_id, $personnelUsername);

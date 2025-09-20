@@ -14,7 +14,7 @@ $sql = "
         t.customer_contact AS contact,
         t.customer_address AS address,
         po.description AS description,
-        t.created_at AS time,
+        t.date_of_order AS time,
         t.shipout_at AS shipout_time,
         t.completed_at AS completed_time,
         t.tracking_number AS tracking_number,
