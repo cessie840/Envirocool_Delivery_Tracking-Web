@@ -59,6 +59,7 @@ SELECT
     t.date_of_order AS date_of_order,
     t.customer_name,
     po.description AS item_name,
+    po.quantity, 
     COALESCE(dd.delivery_status, t.status) AS delivery_status,
     t.target_date_delivery,
     t.rescheduled_date,
@@ -78,10 +79,7 @@ $serviceDeliveries = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 
-
-// Attach history + cancellation reason + scheduled date
 foreach ($serviceDeliveries as &$delivery) {
-    // Fetch history
     $historySql = "
         SELECT event_type, reason, event_timestamp
         FROM DeliveryHistory

@@ -26,7 +26,6 @@ const ViewOrder = () => {
     total: "",
   });
 
-  // 🔹 Reusable Date Formatter
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -103,14 +102,25 @@ const ViewOrder = () => {
       return;
     }
 
+    // 🔹 Convert MM/DD/YYYY → YYYY-MM-DD
+    const formatDateForDB = (dateString) => {
+      if (!dateString || dateString === "-") return null;
+      const [mm, dd, yyyy] = dateString.split("/");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const payload = {
+      transaction_id,
+      ...formData,
+      date_of_order: formatDateForDB(formData.date_of_order),
+      target_date_delivery: formatDateForDB(formData.target_date_delivery),
+      items: editableItems,
+    };
+
     fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        transaction_id,
-        ...formData,
-        items: editableItems,
-      }),
+      body: JSON.stringify(payload),
     })
       .then((res) => res.json())
       .then((response) => {
@@ -123,7 +133,8 @@ const ViewOrder = () => {
           }));
           setShowModal(false);
         } else {
-          alert("Update failed.");
+          console.error("Update failed:", response.message);
+          alert("Update failed: " + (response.message || "Unknown error"));
         }
       })
       .catch((err) => {
@@ -162,7 +173,6 @@ const ViewOrder = () => {
     }
   };
 
-  // 🔹 Helper for status badge
   const renderStatusBadge = (status) => {
     switch (status) {
       case "Delivered":
@@ -224,7 +234,9 @@ const ViewOrder = () => {
                   </p>
                   <p>
                     <span>Rescheduled Delivery Date: </span>
-                    {orderDetails.rescheduled_date ? formatDate(orderDetails.rescheduled_date) : "—"}
+                    {orderDetails.rescheduled_date
+                      ? formatDate(orderDetails.rescheduled_date)
+                      : "—"}
                   </p>
                   <br />
                   <div>
@@ -302,7 +314,7 @@ const ViewOrder = () => {
 
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
               <button
-                className="btn upd-btn btn-success px-5 py-2 rounded-3"
+                className="btn upd-btn btn-success px-5 py-2 rounded-2"
                 onClick={handleUpdate}
               >
                 Update

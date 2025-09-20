@@ -159,7 +159,7 @@ const GenerateReport = () => {
 
   useEffect(() => {
     const handleRescheduleEvent = () => {
-      fetchServiceData(); // your function to fetch delivery service data
+      fetchServiceData();
     };
 
     window.addEventListener("deliveryRescheduled", handleRescheduleEvent);
@@ -210,7 +210,6 @@ const GenerateReport = () => {
       item_name: r.item_name ?? r.description ?? "-",
       qty: Number(r.qty ?? r.quantity ?? 0),
 
-      // 👇 these were missing
       unit_cost: Number(r.unit_cost ?? 0),
       subtotal: Number(r.subtotal ?? (r.qty ?? 0) * (r.unit_cost ?? 0)),
 
@@ -252,6 +251,7 @@ const GenerateReport = () => {
           : null,
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
         item_name: r.item_name ?? r.description ?? "-",
+        qty: Number(r.qty ?? r.quantity ?? 0),
         delivery_status: r.delivery_status ?? r.status ?? "Pending",
         cancelled_reason: normalizedReason ?? "-",
         rescheduled_date: r.rescheduled_date ?? null,
@@ -663,13 +663,13 @@ const GenerateReport = () => {
           return true;
         });
 
+  const overallClients = new Set(
+    transactionData.map((row) => row.customer_name)
+  ).size;
+
   // Totals for Sales report
   const totalSalesAmount = filteredSalesData.reduce(
     (acc, cur) => acc + (Number(cur.total_cost) || 0),
-    0
-  );
-  const totalItemsSold = filteredSalesData.reduce(
-    (acc, cur) => acc + (Number(cur.qty) || 0),
     0
   );
   const totalCustomersSales = new Set(
@@ -681,22 +681,33 @@ const GenerateReport = () => {
   const totalCustomersTransaction = new Set(
     filteredTransactionData.map((row) => row.customer_name)
   ).size;
+
   const totalItemsTransaction = filteredTransactionData.reduce(
     (acc, cur) => acc + (Number(cur.qty) || 0),
     0
   );
-  const totalSalesTransaction = filteredTransactionData
-    .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
-    .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
 
-  // Totals for Service Delivery report
-  const successfulDeliveries = filteredServiceData.filter(
-    (row) => String(row.delivery_status).toLowerCase() === "delivered"
-  ).length;
-  const failedDeliveries = filteredServiceData.filter(
-    (row) => String(row.delivery_status).toLowerCase() === "cancelled"
-  ).length;
-  const totalTransactionsService = filteredServiceData.length;
+  const successfulDeliveries = new Set(
+    filteredServiceData
+      .filter(
+        (row) => String(row.delivery_status).toLowerCase() === "delivered"
+      )
+      .map((row) => row.transaction_id)
+  ).size;
+
+  const failedDeliveries =
+    reportType === "all"
+      ? (summary.serviceSummary?.failed_deliveries ?? 0) +
+        (summary.transactionSummary?.cancelled_deliveries ?? 0)
+      : summary.failed_deliveries ?? summary.cancelled_deliveries ?? 0;
+
+  const totalItemsOrdered = filteredTransactionData.reduce(
+    (sum, row) => sum + (Number(row.qty) || 0),
+    0
+  );
+  const totalItemsDelivered = filteredServiceData
+    .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
+    .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
 
   const failedReasonsCount = {
     "Vehicle-related Issue": 0,
@@ -770,212 +781,141 @@ const GenerateReport = () => {
     fontSize: 20,
   };
 
+  const cardsData = {
+    totalSales: {
+      icon: <FaDollarSign />,
+      color: "#4CAF50",
+      title: "Total Sales",
+      value: `₱${totalSalesAmount.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+    },
+    totalTransactions: {
+      icon: <FaClipboardList />,
+      color: "#2196F3",
+      title: "Total Transactions",
+      value: totalTransactions,
+    },
+    successfulDeliveries: {
+      icon: <FaCheckCircle />,
+      color: "#4CAF50",
+      title: "Successful Deliveries",
+      value: successfulDeliveries,
+    },
+    cancelledDeliveries: {
+      icon: <FaTimesCircle />,
+      color: "#F44336",
+      title: "Cancelled/Rescheduled Deliveries",
+      value: failedDeliveries,
+    },
+  };
+
+  const cardsByReportType = {
+    sales: ["totalSales", "totalClients", "totalItemsDelivered"],
+    transaction: [
+      "totalClients",
+      "totalItemsSold",
+      "totalTransactions",
+      "successfulDeliveries",
+      "cancelledDeliveries",
+    ],
+    service: [
+      "totalTransactions",
+      "successfulDeliveries",
+      "cancelledDeliveries",
+    ],
+    all: [
+      ["totalSales", "totalClients", "totalItemsSold", "totalItemsDelivered"],
+      ["totalTransactions", "successfulDeliveries", "cancelledDeliveries"],
+    ],
+    customer: [],
+  };
+
   const renderTotalsCard = () => {
-    if (reportType === "service" || reportType === "customer") return null;
+    if (reportType === "customer") return null;
 
-    if (reportType === "transaction") {
+    const cardGroups = cardsByReportType[reportType] || [];
+    if (cardGroups.length === 0) return null;
+
+    const getCardData = (key) => {
+      if (key === "totalClients") {
+        return {
+          icon: <FaUsers />,
+          color: "#2196F3",
+          title: "Total Clients",
+          value: reportType === "sales" ? totalCustomersSales : overallClients,
+        };
+      }
+      if (key === "totalItemsSold") {
+        return {
+          icon: <FaBoxes />,
+          color: "#FF9800",
+          title: "Total Items Ordered",
+          value: totalItemsOrdered,
+        };
+      }
+      if (key === "totalItemsDelivered") {
+        return {
+          icon: <FaBoxes />,
+          color: "#009688",
+          title: "Total Items Delivered",
+          value: totalItemsDelivered,
+        };
+      }
+      if (key === "successfulDeliveries") {
+        return {
+          icon: <FaCheckCircle />,
+          color: "#4CAF50",
+          title: "Successful Deliveries",
+          value: successfulDeliveries,
+        };
+      }
+      if (key === "cancelledDeliveries") {
+        return {
+          icon: <FaTimesCircle />,
+          color: "#F44336",
+          title: "Cancelled/Rescheduled Deliveries",
+          value: failedDeliveries,
+        };
+      }
+      return cardsData[key];
+    };
+    const renderRow = (keys) => {
       return (
-        <Row className="mb-2">
-          <Col md={3}>
-            <Card
-              className="card-total p-3 2"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
-                  <FaDollarSign />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Sales</h6>
-                  <p className="mb-0 fw-semibold">
-                    ₱
-                    {totalSalesTransaction.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card
-              className="card-total p-3 mb-1"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
-                  <FaUsers />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Clients</h6>
-                  <p className="mb-0 fw-semibold">
-                    {totalCustomersTransaction}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card
-              className="card-total p-3 mb-1"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#FF9800" }}>
-                  <FaBoxes />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Items Sold</h6>
-                  <p className="mb-0 fw-semibold">{totalItemsTransaction}</p>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card
-              className="card-total p-3 mb-1"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#9C27B0" }}>
-                  <FaClipboardList />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Transactions</h6>
-                  <p className="mb-0 fw-semibold">{totalTransactions}</p>
-                </div>
-              </div>
-            </Card>
-          </Col>
+        <Row className="mb-3 g-3">
+          {keys.map((key) => {
+            const card = getCardData(key);
+            if (!card) return null;
+            return (
+              <Col key={key} className="d-flex">
+                <Card
+                  className="card-total p-3 flex-fill h-100"
+                  style={{ backgroundColor: "white" }}
+                >
+                  <div className="d-flex align-items-center">
+                    <div style={{ ...iconStyle, backgroundColor: card.color }}>
+                      {card.icon}
+                    </div>
+                    <div>
+                      <h6 className="fw-semibold">{card.title}</h6>
+                      <p className="mb-0 fw-semibold">{card.value}</p>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            );
+          })}
         </Row>
       );
-    }
+    };
 
-    if (reportType === "sales" || reportType === "all") {
-      return (
-        <Row className="mb-1">
-          <Col md={4}>
-            <Card
-              className="card-total p-3 mb-1"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
-                  <FaDollarSign />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Sales</h6>
-                  <p className="mb-0 fw-semibold">
-                    ₱
-                    {totalSalesAmount.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card
-              className="card-total p-3 mb-1"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
-                  <FaUsers />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Clients</h6>
-                  <p className="mb-0 fw-semibold">{totalCustomersSales}</p>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card
-              className="card-total p-3 mb-1"
-              style={{ backgroundColor: "white" }}
-            >
-              <div className="d-flex align-items-center">
-                <div style={{ ...iconStyle, backgroundColor: "#FF9800" }}>
-                  <FaBoxes />
-                </div>
-                <div>
-                  <h6 className="fw-semibold">Total Items Sold</h6>
-                  <p className="mb-0 fw-semibold">{totalItemsSold}</p>
-                </div>
-              </div>
-            </Card>
-          </Col>
-        </Row>
-      );
-    }
-
-    return null;
+    // Render rows for current report
+    return Array.isArray(cardGroups[0])
+      ? cardGroups.map((row, idx) => <div key={idx}>{renderRow(row)}</div>)
+      : renderRow(cardGroups);
   };
 
-  // Render totals card for Service Delivery report
-  const renderServiceTotalsCard = () => {
-    if (reportType !== "service" && reportType !== "all") return null;
-    if (serviceData.length === 0) return null;
-
-    return (
-      <Row className="mb-2 fw-semibold">
-        <Col md={4}>
-          <Card
-            className="card-total p-3 mb-1"
-            style={{ backgroundColor: "white" }}
-          >
-            <div className="d-flex align-items-center">
-              <div style={{ ...iconStyle, backgroundColor: "#4CAF50" }}>
-                <FaCheckCircle />
-              </div>
-              <div>
-                <h6 className="fw-semibold">Successful Deliveries</h6>
-                <p className="mb-0">{successfulDeliveries}</p>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col md={4}>
-          <Card
-            className="card-total p-3 mb-1"
-            style={{ backgroundColor: "white" }}
-          >
-            <div className="d-flex align-items-center">
-              <div style={{ ...iconStyle, backgroundColor: "#E57373" }}>
-                <FaTimesCircle />
-              </div>
-              <div>
-                <h6 className="fw-semibold">Rescheduled Deliveries</h6>
-                <p className="mb-0">{failedDeliveries}</p>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col md={4}>
-          <Card
-            className="card-total p-3 mb-4"
-            style={{ backgroundColor: "white" }}
-          >
-            <div className="d-flex align-items-center">
-              <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
-                <FaTruck />
-              </div>
-              <div>
-                <h6 className="fw-semibold">Total Transactions</h6>
-                <p className="mb-0">{totalTransactionsService}</p>
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
-    );
-  };
-
-  // Render sales growth line chart
   const renderSalesGrowthChart = () => (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart
@@ -1675,14 +1615,7 @@ const GenerateReport = () => {
         </h5>
       </div>
       {/* TOTAL CARDS  */}
-      <div className="mx-4">
-        {(reportType === "sales" ||
-          reportType === "transaction" ||
-          reportType === "all") &&
-          renderTotalsCard()}
-        {(reportType === "service" || reportType === "all") &&
-          renderServiceTotalsCard()}
-      </div>
+      <div className="mx-4">{renderTotalsCard()}</div>
       {loading ? (
         <div className="text-center py-5">
           <Spinner animation="border" variant="success" />

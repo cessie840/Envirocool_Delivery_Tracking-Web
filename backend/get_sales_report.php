@@ -114,8 +114,8 @@ SELECT
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
-AND t.status = 'Delivered'
 ";
+
 $stmtSum = $conn->prepare($sqlSummary);
 $stmtSum->bind_param('ss', $startDate, $endDate);
 $stmtSum->execute();

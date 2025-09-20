@@ -486,7 +486,7 @@ function OutForDelivery() {
         <Modal.Header closeButton>
           <Modal.Title>Select Cancellation Reason</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="bg-white">
           <Form.Select
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}

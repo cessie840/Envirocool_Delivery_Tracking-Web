@@ -31,7 +31,7 @@ if (!$start || !$end) {
             $endDate = $today->format('Y-m-t');
             break;
         case 'quarterly':
-            $month = (int)$today->format('m');
+            $month = (int) $today->format('m');
             $quarter = floor(($month - 1) / 3) + 1;
             $startMonth = ($quarter - 1) * 3 + 1;
             $startDateObj = new DateTime($today->format('Y') . "-$startMonth-01");
@@ -62,11 +62,12 @@ SELECT
     t.customer_address,
     t.customer_contact,
     t.date_of_order,
-    -- 👇 Choose rescheduled_date if exists, else target_date_delivery
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.description AS item_name,
     po.quantity AS qty,
-    po.total_cost,
+    po.unit_cost,                                  
+    (po.quantity * po.unit_cost) AS subtotal,         
+    po.total_cost,                                    
     t.mode_of_payment,
     t.payment_option,       
     t.down_payment,         
@@ -91,19 +92,32 @@ $result = $stmt->get_result();
 $transactions = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Summary
 $sqlSummary = "
 SELECT 
-    COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
+    COUNT(DISTINCT t.transaction_id) AS total_transactions,
     SUM(po.quantity) AS total_items_sold,
-    SUM(po.total_cost) AS total_sales
+    SUM(po.total_cost) AS total_sales,
+    SUM(CASE WHEN t.status='Delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
+    (
+        SELECT COUNT(*) 
+        FROM DeliveryHistory dh
+        WHERE dh.event_type = 'Cancelled'
+        AND dh.event_timestamp BETWEEN ? AND ?
+    ) AS failed_deliveries
 FROM Transactions t
+JOIN (
+    SELECT transaction_id, SUM(total_cost) AS total_per_transaction
+    FROM PurchaseOrder
+    GROUP BY transaction_id
+) AS order_totals ON t.transaction_id = order_totals.transaction_id
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
 ";
+
 $stmtSum = $conn->prepare($sqlSummary);
-$stmtSum->bind_param('ss', $startDate, $endDate);
+$stmtSum->bind_param('ssss', $startDate, $endDate, $startDate, $endDate);
+
 $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();

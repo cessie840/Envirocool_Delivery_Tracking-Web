@@ -6,12 +6,15 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./loading-overlay.css";
 
 const Login = () => {
-  const navigate = useNavigate(); // Initialize navigation function
-  const [loading, setLoading] = useState(false); // Initializes loading screen function
-  //ROLE-BASED ACCESS API
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [showTerms, setShowTerms] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (errorMessage) {
@@ -20,74 +23,79 @@ const Login = () => {
     }
   }, [errorMessage]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMessage("");
-    try {
-      const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/login.php",
-        {
-          username,
-          password,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
+const handleLogin = async (e) => {
+  e.preventDefault();
+
+  setLoading(true);
+  setErrorMessage("");
+
+  try {
+    const response = await axios.post(
+      "http://localhost/DeliveryTrackingSystem/login.php",
+      { username, password },
+      {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      }
+    );
+
+    const user = response.data.user;
+
+    if (!agreed) {
+      setErrorMessage(
+        "You must agree to the Terms and Conditions before logging in."
       );
-
-      const user = response.data.user;
-      console.log("Login success", user);
-      localStorage.setItem("user", JSON.stringify(user));
-      sessionStorage.setItem("showLoginNotif", "true");
-
-      alert("Login successful!");
-
-      // Redirect to dashboard
-      switch (user.role) {
-        case "admin":
-          navigate("/admin-dashboard");
-          break;
-        case "operationalmanager":
-          navigate("/operational-delivery-details");
-          break;
-        case "deliverypersonnel":
-          navigate("/driver-dashboard");
-          break;
-        default:
-          navigate("/");
-          break;
-      }
-    } catch (error) {
-      const errMsg = error?.response?.data?.error;
-
-      switch (errMsg) {
-        case "Missing username or password":
-          setErrorMessage("Please enter both username and password.");
-          break;
-        case "Invalid password":
-          setErrorMessage("Incorrect password. Try again.");
-          break;
-        case "Invalid username":
-          setErrorMessage("Username not found.");
-          break;
-        case "db_error":
-          setErrorMessage("A database error occurred. Try again.");
-          break;
-        case "server_error":
-          setErrorMessage("Server error. Please contact support.");
-          break;
-        default:
-          setErrorMessage("Login failed. Please try again.");
-      }
-    } finally {
       setLoading(false);
+      return;
     }
-  };
-  //FRONTEND
+
+    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("showLoginNotif", "true");
+
+    alert("Login successful!");
+
+    switch (user.role) {
+      case "admin":
+        navigate("/admin-dashboard");
+        break;
+      case "operationalmanager":
+        navigate("/operational-delivery-details");
+        break;
+      case "deliverypersonnel":
+        navigate("/driver-dashboard");
+        break;
+      default:
+        navigate("/");
+        break;
+    }
+  } catch (error) {
+    const errMsg = error?.response?.data?.error;
+
+    switch (errMsg) {
+      case "Missing username or password":
+        setErrorMessage("Please enter both username and password.");
+        break;
+      case "Invalid password":
+        setErrorMessage("The password you entered is incorrect. Try again.");
+        break;
+      case "Invalid username":
+        setErrorMessage("Username not found. Please check and try again.");
+        break;
+      case "db_error":
+        setErrorMessage("A database error occurred. Try again later.");
+        break;
+      case "server_error":
+        setErrorMessage("Server error. Please contact support.");
+        break;
+      default:
+        setErrorMessage("Login failed. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   return (
     <div className="login-container container-fluid">
       <div className="login-card text-center container-fluid">
@@ -100,7 +108,7 @@ const Login = () => {
 
         <form className="login-form text-start" onSubmit={handleLogin}>
           <div className="mb-3">
-            <label htmlFor="username" className="form-label">
+            <label htmlFor="username" className="login form-label">
               Username:
             </label>
             <input
@@ -114,7 +122,7 @@ const Login = () => {
           </div>
 
           <div className="mb-1">
-            <label htmlFor="password" className="form-label">
+            <label htmlFor="password" className="login form-label">
               Password:
             </label>
             <input
@@ -127,17 +135,37 @@ const Login = () => {
             />
           </div>
 
-          <div className="mb-3">
-            <a
-              href="#"
-              className="small fw-semibold"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/forgotpassword");
-              }}
+          <div className="d-flex justify-content-between align-items-center mt-3 mb-4 fs-6">
+            <div className="d-flex align-items-center justify-content-center">
+              <input
+                type="checkbox"
+                className="form-check-input me-2"
+                id="agree"
+                checked={agreed}
+                onChange={() => setAgreed(!agreed)}
+              />
+              <label
+                htmlFor="agree"
+                className="tnc form-check-label mb-0 fw-semibold"
+              >
+                I agree to the{" "}
+                <span
+                  className="tnc text-primary fw-semibold"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setShowTerms(true)}
+                >
+                  Terms and Conditions
+                </span>
+              </label>
+            </div>
+
+            <span
+              className="small fw-semibold text-primary"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate("/forgotpassword")}
             >
               Forgot password?
-            </a>
+            </span>
           </div>
 
           {errorMessage && (
@@ -162,6 +190,154 @@ const Login = () => {
           )}
         </form>
       </div>
+
+      {showTerms && (
+        <div className="modal d-block" tabIndex="-1">
+          <div className="modal-dialog modal-md modal-dialog-centered">
+            <div className="modal-content terms-modal">
+              <div className="modal-header bg-light">
+                <h5 className="modal-title">Terms and Conditions</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowTerms(false)}
+                ></button>
+              </div>
+              <div
+                className="modal-body bg-white terms-body"
+                style={{ maxHeight: "70vh", overflowY: "auto" }}
+              >
+                <p>
+                  Welcome to the Envirocool Delivery & Monitoring System
+                  (“System”). These Terms and Conditions (“Terms”) govern the
+                  use of the System by Admins, Operational Managers, and
+                  Delivery Personnel. By accessing or using the System, you
+                  agree to comply with these Terms.
+                </p>
+
+                <h6 className="fw-bold mt-3">1. Purpose of the System</h6>
+                <p>
+                  The Envirocool System is designed to support Envirocool
+                  Company’s operations in selling, delivering, and monitoring
+                  air conditioning units and related services. The System is
+                  strictly for official business use only.
+                </p>
+
+                <h6 className="fw-bold mt-3">
+                  2. User Roles and Responsibilities
+                </h6>
+                <p className="mb-1 fw-semibold">2.1 Admin</p>
+                <ul>
+                  <li>Add and manage delivery transactions.</li>
+                  <li>Reschedule cancelled deliveries.</li>
+                  <li>View and update transaction details.</li>
+                  <li>Monitor deliveries through GPS.</li>
+                  <li>Generate and export reports.</li>
+                  <li>Manage account settings.</li>
+                  <li>Manage these Terms & Conditions.</li>
+                </ul>
+
+                <p className="mb-1 fw-semibold">2.2 Operational Manager</p>
+                <ul>
+                  <li>Create and manage delivery personnel accounts.</li>
+                  <li>View delivery transactions.</li>
+                  <li>Assign or reassign delivery personnel.</li>
+                  <li>Monitor assigned and unassigned orders.</li>
+                  <li>Manage account settings.</li>
+                </ul>
+
+                <p className="mb-1 fw-semibold">2.3 Delivery Personnel</p>
+                <ul>
+                  <li>View assigned deliveries.</li>
+                  <li>
+                    Update delivery status (Out for Delivery, Delivered,
+                    Cancelled).
+                  </li>
+                </ul>
+
+                <h6 className="fw-bold mt-3">3. Data Privacy and Protection</h6>
+                <p>
+                  Envirocool respects and protects personal data in compliance
+                  with the{" "}
+                  <b>Data Privacy Act of 2012 (Republic Act No. 10173).</b>
+                </p>
+                <ul>
+                  <li>
+                    Only authorized users may access customer and transaction
+                    data.
+                  </li>
+                  <li>
+                    Personal information is used solely for transactions and
+                    services.
+                  </li>
+                  <li>Users may not share, disclose, or misuse data.</li>
+                  <li>
+                    Breaches of customer information may lead to disciplinary or
+                    legal action.
+                  </li>
+                </ul>
+
+                <h6 className="fw-bold mt-3">4. Security of Accounts</h6>
+                <ul>
+                  <li>Users must keep account credentials confidential.</li>
+                  <li>Sharing of usernames and passwords is prohibited.</li>
+                  <li>Report suspected unauthorized access immediately.</li>
+                </ul>
+
+                <h6 className="fw-bold mt-3">5. Acceptable Use</h6>
+                <ul>
+                  <li>Use the System only for official purposes.</li>
+                  <li>Enter accurate and truthful data.</li>
+                  <li>Do not hack, exploit, or misuse the System.</li>
+                  <li>Do not use the System for personal gain.</li>
+                </ul>
+
+                <h6 className="fw-bold mt-3">6. Reports and Monitoring</h6>
+                <ul>
+                  <li>Reports are for internal use only.</li>
+                  <li>
+                    Data visualizations must not be altered or misrepresented.
+                  </li>
+                  <li>Only management may use reports for decision-making.</li>
+                </ul>
+
+                <h6 className="fw-bold mt-3">7. Limitation of Liability</h6>
+                <ul>
+                  <li>
+                    Not liable for user errors in data or delivery handling.
+                  </li>
+                  <li>Not liable for delays due to incorrect data.</li>
+                  <li>
+                    Not liable for unauthorized use due to user negligence.
+                  </li>
+                </ul>
+
+                <h6 className="fw-bold mt-3">8. Amendments to Terms</h6>
+                <p>
+                  Envirocool Company may update these Terms anytime. Updates
+                  will be posted in the System. Continued use means acceptance
+                  of the revised Terms.
+                </p>
+
+                <h6 className="fw-bold mt-3">9. Acknowledgment</h6>
+                <p>
+                  By using the Envirocool Delivery & Monitoring System, you
+                  acknowledge that you have read, understood, and agreed to
+                  these Terms and Conditions.
+                </p>
+              </div>
+              <div className="modal-footer bg-light">
+                <button
+                  className="btn close-btn py-1 fs-6"
+                  onClick={() => setShowTerms(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

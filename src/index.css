@@ -27,7 +27,7 @@ body {
   width: 550px;
 }
 
-.login-form label {
+.login-form label.login {
   font-weight: 500;
   font-size: 1rem;
 }
@@ -36,6 +36,14 @@ body {
   border: 1px solid #aaaaaa;
   border-radius: 10px;
   height: 3rem;
+}
+
+.login-form #agree{
+  height: 1rem;
+}
+
+label.tnc, span.tnc{
+  font-size: 0.9rem !important;
 }
 
 .login-form a {
@@ -58,6 +66,27 @@ body {
   background-color: #028333;
   color: white;
 }
+
+.terms-modal {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+.terms-body h6 {
+  font-size: 1.2rem; 
+}
+
+.terms-body p.fw-semibold,
+.terms-body .fw-semibold {
+  font-size: 1rem; 
+}
+
+.terms-body p,
+.terms-body li {
+  font-size: 0.9rem;
+}
+
+
 
 /* DASHBOARD  */
 .sidebar {
@@ -231,12 +260,12 @@ body {
 }
 
 .add-delivery-container {
-  background-color: #f0faf0bd;
+  background-color: #f4fcf4da;
   max-width: 900px;
   width: 100%;
   border: 1px solid #cccccc94;
-
   border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .delivery-form {
@@ -352,7 +381,7 @@ input::placeholder {
 }
 
 .add-btn {
-  background-color: #008000;
+  background-color: #008f4c;
   color: white;
   border: none;
   padding: 5px 30px;
@@ -481,8 +510,8 @@ input::placeholder {
 
 .btn-group .cancel-btn,
 .btn-group .add-btn {
-  border-radius: 7px;
-  font-size: 1rem !important;
+  border-radius: 5px;
+  font-size: 1.1rem !important;
   padding: 5px 20px;
   width: 7rem;
 }
@@ -1069,6 +1098,20 @@ thead tr.customer-header th {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
+h5{
+  font-size: 1.5rem;
+  color: #006400;
+  font-weight: 600;
+}
+
+.terms p, li{
+  font-size: 1.1rem;
+}
+
+.terms h6{
+  font-size: 1.2rem;
+}
+
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {
@@ -1202,7 +1245,6 @@ thead tr.customer-header th {
   .add-btn {
     padding: 0.4rem 2rem !important;
     font-size: 0.9rem !important;
-    margin: 0.1rem !important;
   }
 
   .delivery-table .cancel-btn {

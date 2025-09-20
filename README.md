@@ -1,8 +1,8 @@
 # Envirocool_Delivery-Tracking-Web
-
-## The purpose of this repository is to manage the version history for the development of our capstone project named "Web-Based Delivery Tracking with Data Analytics"
-
+The purpose of this repository is to manage the version history for the development of our capstone project named "Web-Based Delivery Tracking with Data Analytics"
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
 **DATABASE SQL**
+
 CREATE DATABASE DeliveryTrackingSystem;
 USE DeliveryTrackingSystem;
 
@@ -55,64 +55,55 @@ CREATE TABLE DeliveryPersonnel (
     lock_until DATETIME DEFAULT NULL
 );
 
-CREATE TABLE Transactions ( 
-transaction_id INT AUTO_INCREMENT PRIMARY KEY, 
-customer_name VARCHAR(255), 
-customer_address TEXT, 
-customer_contact VARCHAR(20), 
-date_of_order DATE, 
-target_date_delivery DATE,
-mode_of_payment ENUM('Cash', 'Bank Transfer', 'Card', 'GCash'), 
-payment_option ENUM('Full Payment', 'Down Payment'),
-full_payment DECIMAL (10,2),
-fbilling_date DATE,
-dbilling_date DATE,
-down_payment DECIMAL(10,2), 
-balance DECIMAL(10,2), 
-total DECIMAL(10,2), 
-tracking_number VARCHAR (20),
-status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending', 
-customer_rating DECIMAL(3,1) DEFAULT NULL, 
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) AUTO_INCREMENT = 4001;
+CREATE TABLE Transactions (
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name VARCHAR(255),
+    customer_address TEXT,
+    customer_contact VARCHAR(20),
+    date_of_order DATE,
+    target_date_delivery DATE,
+    mode_of_payment VARCHAR(255),
+    payment_option ENUM('Full Payment', 'Down Payment'),
+    full_payment DECIMAL(10,2),
+    fbilling_date DATE,
+    dbilling_date DATE,
+    down_payment DECIMAL(10,2),
+    balance DECIMAL(10,2),
+    total DECIMAL(10,2),
+    tracking_number VARCHAR(20),
+    status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    completed_at DATETIME NULL,
+    proof_of_delivery VARCHAR(255) NULL,
+    shipout_at DATETIME NULL,
+    cancelled_reason TEXT NULL,
+    cancelled_at DATETIME NULL,
+    rescheduled_date DATE NULL,
+    customer_rating DECIMAL(3,1) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) AUTO_INCREMENT = 4001;
 
-ALTER TABLE Transactions 
-ADD COLUMN completed_at DATETIME NULL AFTER status;
-
-ALTER TABLE Transactions 
-ADD COLUMN shipout_at DATETIME NULL AFTER status;
-
-ALTER TABLE Transactions
-ADD COLUMN cancelled_reason TEXT NULL AFTER status;
-
-ALTER TABLE Transactions
-ADD COLUMN cancelled_at DATETIME NULL AFTER status;
-
-ALTER TABLE Transactions MODIFY mode_of_payment VARCHAR(255);
-
-ALTER TABLE Product ADD UNIQUE(type_of_product, description);
 
 CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
     type_of_product VARCHAR(255) NOT NULL,
-    description VARCHAR(255) NOT NULL, 
-    unit_cost DECIMAL(10,2) NOT NULL, 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    description VARCHAR(255) NOT NULL,
+    unit_cost DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(type_of_product, description)
 );
 
-
-CREATE TABLE PurchaseOrder ( 
-    po_id INT AUTO_INCREMENT PRIMARY KEY, 
-    transaction_id INT NOT NULL, 
-    product_id INT NOT NULL,
-     type_of_product VARCHAR(255) NOT NULL,
-    description VARCHAR(255) NOT NULL, 
-    quantity INT NOT NULL,  
-    total_cost DECIMAL(10,2) GENERATED ALWAYS AS (quantity * unit_cost) STORED, 
-    unit_cost DECIMAL(10,2), 
+CREATE TABLE PurchaseOrder (
+    po_id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id INT NOT NULL,
+    product_id INT NULL,
+    type_of_product VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL,
+    unit_cost DECIMAL(10,2),
+    total_cost DECIMAL(10,2) GENERATED ALWAYS AS (quantity * unit_cost) STORED,
     FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES Product(product_id) ON DELETE CASCADE) AUTO_INCREMENT=0001;
-
-    ALTER TABLE PurchaseOrder MODIFY product_id INT NULL;
+    FOREIGN KEY (product_id) REFERENCES Product(product_id) ON DELETE CASCADE
+) AUTO_INCREMENT = 1;
 
 CREATE TABLE DeliveryAssignments (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -127,7 +118,7 @@ CREATE TABLE DeliveryDetails (
     delivery_id INT AUTO_INCREMENT PRIMARY KEY,
     transaction_id INT,
     po_id INT,
-    delivery_status ENUM('Pending', 'To Ship' ,'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    delivery_status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     cancellation_reason TEXT NULL,
     cancelled_at DATETIME NULL,
     status ENUM('OutForDelivery', 'Delivered', 'Cancelled') DEFAULT 'OutForDelivery',
@@ -151,7 +142,6 @@ CREATE TABLE current_positions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE DeliverySummary (
     summary_id INT AUTO_INCREMENT PRIMARY KEY,
     summary_date DATE,
@@ -160,10 +150,11 @@ CREATE TABLE DeliverySummary (
     failed_deliveries INT DEFAULT 0,
     customer_reviews_count INT DEFAULT 0,
     avg_rating DECIMAL(3,2) DEFAULT 0,
-    reason_customer_didnt_receive INT DEFAULT 0,
-    reason_damaged_item INT DEFAULT 0,
+    location_reason INT DEFAULT 0,
+    vehicle_reason INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE TopSellingItems (
     top_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -174,53 +165,54 @@ CREATE TABLE TopSellingItems (
 );
 
 
+CREATE TABLE DeliveryHistory (
+    history_id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id INT NOT NULL,
+    event_type ENUM('Cancelled', 'Rescheduled', 'Delivered') NOT NULL,
+    reason TEXT NULL,
+    event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
+);
 
-INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone)
+
+INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone) 
 VALUES (
     'admin101',
     '$2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W',
-    'Liezel', 'Paciente',
+    'Liezel',
+    'Paciente',
     'contactenvirocool@gmail.com',
     '09486201591'
 );
 
-INSERT INTO OperationalManager (manager_username, manager_password, manager_fname, manager_lname, manager_email, manager_phone)
+INSERT INTO OperationalManager (manager_username, manager_password, manager_fname, manager_lname, manager_email, manager_phone) 
 VALUES (
     'opsmanager101',
     '$2y$10$GP4KbAkZKmnppOx5Z9Fuq.bRyZ84iB1YHrCAXnwnfosam1TaM9ffO',
-    'Carlos', 'Reyes',
+    'Carlos',
+    'Reyes',
     'pacienteliezel04@gmail.com',
     '09171234567'
 );
 
-INSERT INTO Transactions (customer_name, customer_address, customer_contact, date_of_order, mode_of_payment, down_payment, balance, total)
-VALUES 
-('John Doe', '123 Main St', '09123456789', CURDATE(), 'Cash', 500, 1500, 2000),
-('Jane Smith', '456 Oak St', '09234567890', CURDATE(), 'Card', 1000, 2500, 3500),
-('Alice Brown', '789 Pine St', '09345678901', DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'COD', 750, 1250, 2000);
+ALTER TABLE DeliveryPersonnel
+MODIFY assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available';
 
-INSERT INTO PurchaseOrder (transaction_id, quantity, description, unit_cost)
-VALUES
-(100001, 1, 'Eco Bottle', 200.00),
-(100002, 2, 'Reusable Bag', 150.00),
-(100003, 1, 'Solar Lamp', 500.00);
+-- CREDENTIALS
+-- Admin Credentials:
+--        Username: admin101
+--        Password: admin111219#
+--        
+-- Operational Manager Credentials:
+--          Username: opsmanager101
+--          Password: Manager1111219#
 
-INSERT INTO DeliverySummary (summary_date, summary_month, successful_deliveries, failed_deliveries, customer_reviews_count, avg_rating, reason_customer_didnt_receive, reason_damaged_item)
-VALUES 
-(CURDATE(), DATE_FORMAT(CURDATE(), '%Y-%m'), 10, 2, 5, 4.5, 1, 1),
-(DATE_SUB(CURDATE(), INTERVAL 1 DAY), DATE_FORMAT(CURDATE(), '%Y-%m'), 8, 3, 4, 4.2, 2, 0);
-
-INSERT INTO TopSellingItems (month, item_name, quantity_sold)
-VALUES 
-(DATE_FORMAT(CURDATE(), '%Y-%m'), 'Reusable Bamboo Straw Set', 320),
-(DATE_FORMAT(CURDATE(), '%Y-%m'), 'Eco-Friendly Tote Bag', 275);
-
-
-UPDATE Transactions SET status='Delivered', customer_rating=5.0 WHERE transaction_id=100001;
-UPDATE Transactions SET status='Cancelled', cancel_reason='Customer didn''t receive' WHERE transaction_id=100002;
-UPDATE Transactions SET status='Delivered', customer_rating=4.0 WHERE transaction_id=100003;
-
-
+-- HASH PASSWORDS:
+-- 	   ADMIN: $2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W 
+--        OPS: $2y$10$GP4KbAkZKmnppOx5Z9Fuq.bRyZ84iB1YHrCAXnwnfosam1TaM9ffO
+-- 	   Delivery Personnel: Based on their birthdays like (2002-04-29)
+       
+       
 SELECT * FROM Admin;
 SELECT * FROM OperationalManager;
 SELECT * FROM DeliveryPersonnel;
@@ -228,27 +220,3 @@ SELECT * FROM Transactions;
 SELECT * FROM PurchaseOrder;
 SELECT * FROM DeliveryAssignments;
 SELECT * FROM DeliverySummary;
-
-SELECT pers_username, pers_fname, pers_lname, status, assignment_status
-FROM DeliveryPersonnel;
-
-SELECT ad_username, ad_password FROM Admin;
-
-DESCRIBE Transactions;
-
-SELECT * FROM DeliveryAssignments 
-WHERE personnel_username = 'personnel02';
-
-------------- CREDENTIALS -----------------
-Admin Credentials:
-Username: admin101
-Password: admin111219#
-
-Operational Manager Credentials:
-Username: opsmanager101
-Password: Manager1111219#
-
-HASH PASSWORDS:
-ADMIN: $2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W
-OPS: $2y$10$GP4KbAkZKmnppOx5Z9Fuq.bRyZ84iB1YHrCAXnwnfosam1TaM9ffO  
-Delivery Personnel: Based on their birthdays like (2002-04-29)

@@ -444,7 +444,7 @@ const OperationalDelivery = () => {
                 : "Assign Delivery Personnel"}
             </Modal.Title>
           </Modal.Header>
-          <Modal.Body>
+          <Modal.Body className="bg-white">
             <Form.Group>
               <Form.Label>
                 <strong>Available Personnel:</strong>
