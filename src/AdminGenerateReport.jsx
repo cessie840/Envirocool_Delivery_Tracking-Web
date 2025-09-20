@@ -691,13 +691,21 @@ const GenerateReport = () => {
     .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
     .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
 
-  const successfulDeliveries = filteredServiceData.filter(
-    (row) => String(row.delivery_status).toLowerCase() === "delivered"
-  ).length;
+  const successfulDeliveries = new Set(
+    filteredServiceData
+      .filter(
+        (row) => String(row.delivery_status).toLowerCase() === "delivered"
+      )
+      .map((row) => row.transaction_id)
+  ).size;
 
-  const failedDeliveries = filteredServiceData.filter(
-    (row) => String(row.delivery_status).toLowerCase() === "cancelled"
-  ).length;
+  const failedDeliveries = new Set(
+    filteredServiceData
+      .filter(
+        (row) => String(row.delivery_status).toLowerCase() === "cancelled"
+      )
+      .map((row) => row.transaction_id)
+  ).size;
 
   // Totals for Items
   const totalItemsOrdered = filteredTransactionData.reduce(
@@ -794,7 +802,7 @@ const GenerateReport = () => {
     },
     totalTransactions: {
       icon: <FaClipboardList />,
-      color: "#9C27B0",
+      color: "#2196F3",
       title: "Total Transactions",
       value: totalTransactions,
     },
