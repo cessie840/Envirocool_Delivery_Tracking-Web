@@ -100,7 +100,7 @@ const ViewPersonnelModal = ({ show, onHide, username }) => {
             <strong>Birthdate:</strong> {profile.Birthdate}
           </p>
           <p>
-            <strong>Status:</strong> {profile.Status}
+            <strong>Account Status:</strong> {profile.Status}
           </p>
         </div>
       </Modal.Body>

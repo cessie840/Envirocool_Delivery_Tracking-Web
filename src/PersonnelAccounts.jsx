@@ -38,7 +38,7 @@ const PersonnelAccounts = () => {
   const handleToggleStatus = (username, currentStatus, assignmentStatus) => {
     // 🚫 Restrict toggling if Out for Delivery
     if (assignmentStatus === "Out for Delivery") {
-      alert("Cannot set personnel to Inactive while Out for Delivery.");
+      alert("Cannot set personnel to Inactive while on delivery.");
       return;
     }
 
@@ -88,7 +88,7 @@ const PersonnelAccounts = () => {
 
           // ✅ Alert after successful update
           alert(
-            `Personnel ${username} is now ${
+            `${username} is now ${
               newStatus === "Active" ? "ACTIVE" : "INACTIVE"
             }.`
           );
@@ -161,7 +161,7 @@ const PersonnelAccounts = () => {
                   >
                     {person.assignment_status?.trim().toLowerCase() ===
                     "out for delivery"
-                      ? "Unavailable"
+                      ? "On Delivery"
                       : person.assignment_status}
                   </td>
 
@@ -175,7 +175,7 @@ const PersonnelAccounts = () => {
                             "out for delivery"
                           ) {
                             alert(
-                              "Cannot change status while personnel is Out for Delivery."
+                              "Cannot change the account status while personnel is on delivery."
                             );
                             return;
                           }

@@ -1,5 +1,4 @@
 <?php
-
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'
@@ -40,27 +39,26 @@ $checkStmt->execute();
 $checkStmt->store_result();
 
 if ($checkStmt->num_rows > 0) {
-    echo json_encode([
-        "success" => false,
-        "message" => "This order already has a delivery personnel assigned."
-    ]);
-    $checkStmt->close();
-    $conn->close();
-    exit;
+    // Update existing assignment
+    $updateAssignSql = "UPDATE DeliveryAssignments SET personnel_username = ? WHERE transaction_id = ?";
+    $updateAssignStmt = $conn->prepare($updateAssignSql);
+    $updateAssignStmt->bind_param("si", $personnelUsername, $transaction_id);
+    $success = $updateAssignStmt->execute();
+    $updateAssignStmt->close();
+} else {
+    // Insert new assignment
+    $insertSql = "INSERT INTO DeliveryAssignments (transaction_id, personnel_username) VALUES (?, ?)";
+    $insertStmt = $conn->prepare($insertSql);
+    $insertStmt->bind_param("is", $transaction_id, $personnelUsername);
+    $success = $insertStmt->execute();
+    $insertStmt->close();
 }
 $checkStmt->close();
 
-// 2. Insert into DeliveryAssignments
-$insertSql = "INSERT INTO DeliveryAssignments (transaction_id, personnel_username) VALUES (?, ?)";
-$insertStmt = $conn->prepare($insertSql);
-$insertStmt->bind_param("is", $transaction_id, $personnelUsername);
-$success = $insertStmt->execute();
-$insertStmt->close();
-
-// 3. If success → update DeliveryPersonnel assignment_status
+// 2. If success → update DeliveryPersonnel assignment_status
 if ($success) {
     $updateSql = "UPDATE DeliveryPersonnel 
-                  SET assignment_status = 'Assigned', assigned_transaction_id = ? 
+                  SET assignment_status = 'Out For Delivery', assigned_transaction_id = ? 
                   WHERE pers_username = ?";
     $updateStmt = $conn->prepare($updateSql);
     $updateStmt->bind_param("is", $transaction_id, $personnelUsername);

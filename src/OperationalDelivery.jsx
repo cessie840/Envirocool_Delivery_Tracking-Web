@@ -438,14 +438,14 @@ const OperationalDelivery = () => {
 
         {/* Assign Modal */}
         <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-          <Modal.Header closeButton>
+          <Modal.Header className="bg-white" closeButton>
             <Modal.Title className="fw-bold text-success">
               {selectedOrder?.assigned_personnel
                 ? "Reassign Personnel"
                 : "Assign Delivery Personnel"}
             </Modal.Title>
           </Modal.Header>
-          <Modal.Body className="bg-white">
+          <Modal.Body>
             <Form.Group>
               <Form.Label>
                 <strong>Available Personnel:</strong>
@@ -468,7 +468,7 @@ const OperationalDelivery = () => {
               </Form.Select>
             </Form.Group>
           </Modal.Body>
-          <Modal.Footer>
+          <Modal.Footer className="bg-white">
             <Button
               className={`add-btn p-1 px-3 fw-normal border-0 rounded-1 ${
                 selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
