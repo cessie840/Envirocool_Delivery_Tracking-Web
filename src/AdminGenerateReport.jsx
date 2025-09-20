@@ -687,10 +687,6 @@ const GenerateReport = () => {
     0
   );
 
-  const totalSalesTransaction = filteredTransactionData
-    .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
-    .reduce((acc, cur) => acc + (Number(cur.total_cost) || 0), 0);
-
   const successfulDeliveries = new Set(
     filteredServiceData
       .filter(
@@ -699,10 +695,12 @@ const GenerateReport = () => {
       .map((row) => row.transaction_id)
   ).size;
 
- const failedDeliveries = summary.failed_deliveries ?? 0;
+  const failedDeliveries =
+    reportType === "all"
+      ? (summary.serviceSummary?.failed_deliveries ?? 0) +
+        (summary.transactionSummary?.cancelled_deliveries ?? 0)
+      : summary.failed_deliveries ?? summary.cancelled_deliveries ?? 0;
 
-
-  // Totals for Items
   const totalItemsOrdered = filteredTransactionData.reduce(
     (sum, row) => sum + (Number(row.qty) || 0),
     0
@@ -710,8 +708,6 @@ const GenerateReport = () => {
   const totalItemsDelivered = filteredServiceData
     .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
     .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
-
-  const totalTransactionsService = filteredServiceData.length;
 
   const failedReasonsCount = {
     "Vehicle-related Issue": 0,
@@ -808,12 +804,11 @@ const GenerateReport = () => {
       value: successfulDeliveries,
     },
     cancelledDeliveries: {
-  icon: <FaTimesCircle />,
-  color: "#F44336",
-  title: "Cancelled/Rescheduled Deliveries",
-  value: failedDeliveries,
-},
-
+      icon: <FaTimesCircle />,
+      color: "#F44336",
+      title: "Cancelled/Rescheduled Deliveries",
+      value: failedDeliveries,
+    },
   };
 
   const cardsByReportType = {
