@@ -163,22 +163,22 @@ const MonitorDelivery = () => {
                   ["Client Name:", t.customer_name],
                   ["Contact No.:", t.contact],
                   ["Shipping Address:", t.customer_address],
-                  ["Order Description:", t.description],
+                  ["Item Name:", t.description],
                   ["Date of Order:", formatDateTime(t.time)],
                   ...(activeTab === "completed"
                     ? [
-                        ["Shipout:", formatDateTime(t.shipout_time)],
-                        ["Received:", formatDateTime(t.completed_time)],
+                        ["Shipout Date:", formatDateTime(t.shipout_time)],
+                        ["Received Date:", formatDateTime(t.completed_time)],
                       ]
                     : activeTab === "cancelled"
                     ? [
-                        ["Ship Out:", formatDateTime(t.shipout_time)],
-                        ["Cancelled:", formatDateTime(t.cancelled_time)],
+                        ["Shipout Date:", formatDateTime(t.shipout_time)],
+                        ["Cancelled Date:", formatDateTime(t.cancelled_time)],
                         ["Cancellation Reason:", t.cancelled_reason],
                       ]
-                    : [["Ship Out:", formatDateTime(t.shipout_time)]]),
+                    : [["Shipout Date:", formatDateTime(t.shipout_time)]]),
                   ["Delivery Incharge:", t.driver],
-                  ["Shipping Process:", t.status],
+                  ["Delivery Status:", t.status],
                   ["Tracking No. ", t.tracking_number],
                   ["Distance:", t.distance],
                   ["ETA:", formatDateTime(t.eta)],

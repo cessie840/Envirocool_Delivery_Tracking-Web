@@ -1305,3 +1305,16 @@ h5{
 .filter-generate .cancel-btn {
   width: 9rem;
 }
+
+.btn-green-custom {
+  background-color: #198754;
+  border-color: #198754;
+  color: white;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn-green-custom:hover {
+  background-color: white !important;
+  color: #198754 !important;
+  border-color: #198754 !important;
+}
