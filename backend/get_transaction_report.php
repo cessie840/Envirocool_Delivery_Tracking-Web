@@ -92,8 +92,6 @@ $result = $stmt->get_result();
 $transactions = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Summary
-// Summary for Transaction Report (all transactions, no status filter)
 $sqlSummary = "
 SELECT 
     COUNT(DISTINCT t.customer_name) AS total_customers,
@@ -101,7 +99,12 @@ SELECT
     SUM(po.quantity) AS total_items_sold,
     SUM(po.total_cost) AS total_sales,
     SUM(CASE WHEN t.status='Delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
-    SUM(CASE WHEN t.status IN ('Cancelled','Rescheduled') THEN 1 ELSE 0 END) AS cancelled_deliveries
+    (
+        SELECT COUNT(*) 
+        FROM DeliveryHistory dh
+        WHERE dh.event_type = 'Cancelled'
+        AND dh.event_timestamp BETWEEN ? AND ?
+    ) AS failed_deliveries
 FROM Transactions t
 JOIN (
     SELECT transaction_id, SUM(total_cost) AS total_per_transaction
@@ -112,9 +115,9 @@ JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
 ";
 
-
 $stmtSum = $conn->prepare($sqlSummary);
-$stmtSum->bind_param('ss', $startDate, $endDate);
+$stmtSum->bind_param('ssss', $startDate, $endDate, $startDate, $endDate);
+
 $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();

@@ -699,13 +699,8 @@ const GenerateReport = () => {
       .map((row) => row.transaction_id)
   ).size;
 
-  const failedDeliveries = new Set(
-    filteredServiceData
-      .filter(
-        (row) => String(row.delivery_status).toLowerCase() === "cancelled"
-      )
-      .map((row) => row.transaction_id)
-  ).size;
+ const failedDeliveries = summary.failed_deliveries ?? 0;
+
 
   // Totals for Items
   const totalItemsOrdered = filteredTransactionData.reduce(
@@ -813,11 +808,12 @@ const GenerateReport = () => {
       value: successfulDeliveries,
     },
     cancelledDeliveries: {
-      icon: <FaTimesCircle />,
-      color: "#F44336",
-      title: "Cancelled/Rescheduled Deliveries",
-      value: failedDeliveries,
-    },
+  icon: <FaTimesCircle />,
+  color: "#F44336",
+  title: "Cancelled/Rescheduled Deliveries",
+  value: failedDeliveries,
+},
+
   };
 
   const cardsByReportType = {
