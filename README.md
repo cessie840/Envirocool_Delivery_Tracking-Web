@@ -44,7 +44,7 @@ CREATE TABLE DeliveryPersonnel (
     pers_birth DATE,
     pers_phone VARCHAR(11),
     status ENUM('Active','Inactive') DEFAULT 'Active',
-    assignment_status ENUM('Available', 'Assigned') DEFAULT 'Available',
+    assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available',
     assigned_transaction_id INT DEFAULT NULL,
     pers_resetToken VARCHAR(100),
     reset_expire DATETIME,
@@ -73,7 +73,6 @@ CREATE TABLE Transactions (
     tracking_number VARCHAR(20),
     status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     completed_at DATETIME NULL,
-    proof_of_delivery VARCHAR(255) NULL,
     shipout_at DATETIME NULL,
     cancelled_reason TEXT NULL,
     cancelled_at DATETIME NULL,
@@ -81,7 +80,6 @@ CREATE TABLE Transactions (
     customer_rating DECIMAL(3,1) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) AUTO_INCREMENT = 4001;
-
 
 CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -155,7 +153,6 @@ CREATE TABLE DeliverySummary (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE TopSellingItems (
     top_item_id INT AUTO_INCREMENT PRIMARY KEY,
     month VARCHAR(7),
@@ -163,7 +160,6 @@ CREATE TABLE TopSellingItems (
     quantity_sold INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 
 CREATE TABLE DeliveryHistory (
     history_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -194,9 +190,6 @@ VALUES (
     'pacienteliezel04@gmail.com',
     '09171234567'
 );
-
-ALTER TABLE DeliveryPersonnel
-MODIFY assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available';
 
 -- CREDENTIALS
 -- Admin Credentials:
