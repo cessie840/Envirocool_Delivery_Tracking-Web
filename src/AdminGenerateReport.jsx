@@ -40,7 +40,10 @@ import {
 } from "recharts";
 
 import jsPDF from "jspdf";
+import "jspdf-autotable";
 import html2canvas from "html2canvas";
+
+import logo from "./assets/envirocool-logo.png";
 
 const REPORT_TYPES = [
   { value: "sales", label: "Sales Report" },
@@ -756,6 +759,797 @@ const GenerateReport = () => {
       ).length,
     },
   ];
+
+  const generateReport = async (reportType) => {
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: [330.2, 215.9], // long bond paper
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // ✅ Helper: Get period label
+    const getPeriodLabel = (periodValue) => {
+      const period = PERIODS.find((p) => p.value === periodValue);
+      return period ? period.label : "Period";
+    };
+
+    const getTodayDate = () => {
+      const today = new Date();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const year = today.getFullYear();
+      return `${year}-${month}-${day}`;
+    };
+
+    const getCurrentYear = () => new Date().getFullYear();
+
+    const formatDate = (date) => {
+      return date ? new Date(date).toLocaleDateString() : "";
+    };
+
+    // ✅ Helper: Date range text
+    const getDateRangeText = () => {
+      if (period === "annually") {
+        const year = startDate
+          ? new Date(startDate).getFullYear()
+          : getCurrentYear();
+        return ` (Jan 1 - Dec 31, ${year})`;
+      }
+
+      if (period === "quarterly") {
+        const start = new Date(startDate || getTodayDate());
+        const end = new Date(endDate || getTodayDate());
+        return ` (${formatDate(start)} - ${formatDate(end)})`;
+      }
+
+      if (period === "monthly") {
+        const start = new Date(startDate || getTodayDate());
+        const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
+        const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+        return ` (${formatDate(firstDay)} - ${formatDate(lastDay)})`;
+      }
+
+      if (period === "weekly") {
+        const start = new Date(startDate || getTodayDate());
+        start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6); // Sunday
+        return ` (${formatDate(start)} - ${formatDate(end)})`;
+      }
+
+      if (period === "daily") {
+        const day = startDate || getTodayDate();
+        return ` (${formatDate(day)})`;
+      }
+
+      return "";
+    };
+
+    // ✅ Helper to get month name
+    const getMonthName = (monthIndex) => {
+      return new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+    };
+
+    // ✅ Aggregate sales by period (Quarterly expands to months)
+    const aggregateSalesData = (salesData, period) => {
+      const grouped = {};
+
+      salesData.forEach((sale) => {
+        const date = new Date(sale.date);
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0 = Jan
+        let key;
+
+        if (period === "monthly") {
+          key = `${getMonthName(month)} ${year}`;
+        } else if (period === "quarterly") {
+          // 🔹 Expand quarterly into individual months
+          key = `${getMonthName(month)} ${year}`;
+        } else if (period === "annually") {
+          key = `${year}`;
+        } else if (period === "weekly") {
+          key = formatDate(date); // each day in the week
+        } else {
+          key = formatDate(date); // fallback
+        }
+
+        if (!grouped[key]) {
+          grouped[key] = { quote: 0, awarded: 0, actual: 0, balance: 0 };
+        }
+
+        grouped[key].quote += parseFloat(sale.quoteAmount) || 0;
+        grouped[key].awarded += parseFloat(sale.awardedAmount) || 0;
+        grouped[key].actual += parseFloat(sale.actualCollection) || 0;
+        grouped[key].balance += parseFloat(sale.balance) || 0;
+      });
+
+      // Convert grouped data into table rows
+      const rows = Object.entries(grouped).map(([period, values]) => [
+        period,
+        values.quote.toFixed(2),
+        values.awarded.toFixed(2),
+        values.actual.toFixed(2),
+        values.balance.toFixed(2),
+      ]);
+
+      // Add TOTAL row at the bottom
+      const totals = Object.values(grouped).reduce(
+        (acc, val) => ({
+          quote: acc.quote + val.quote,
+          awarded: acc.awarded + val.awarded,
+          actual: acc.actual + val.actual,
+          balance: acc.balance + val.balance,
+        }),
+        { quote: 0, awarded: 0, actual: 0, balance: 0 }
+      );
+
+      rows.push([
+        "TOTAL",
+        totals.quote.toFixed(2),
+        totals.awarded.toFixed(2),
+        totals.actual.toFixed(2),
+        totals.balance.toFixed(2),
+      ]);
+
+      return rows;
+    };
+
+    // ✅ Fetch sales data
+    const fetchSalesData = async () => {
+      try {
+        const effectiveStartDate = startDate || getTodayDate();
+        const effectiveEndDate = endDate || getTodayDate();
+
+        const url = `http://localhost/DeliveryTrackingSystem/get_transaction_report.php?period=${period}&start=${effectiveStartDate}&end=${effectiveEndDate}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        const sales = data.sales || [];
+
+        return aggregateSalesData(sales, period); // ✅ aggregated rows
+      } catch (error) {
+        console.error("Error fetching sales data:", error);
+        return [];
+      }
+    };
+
+    // ✅ Compact Header
+    const renderHeader = (title) => {
+      const now = new Date();
+      const generatedDate =
+        now.toLocaleDateString("en-US", {
+          month: "numeric",
+          day: "numeric",
+          year: "numeric",
+        }) +
+        ", " +
+        now.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generated: ${generatedDate}`, pageWidth - 3, 5, {
+        align: "right",
+      });
+
+      let yPos = 8;
+
+      try {
+        const logoWidth = 25;
+        const logoHeight = 12;
+        const logoX = pageWidth / 2 - logoWidth / 2;
+        if (logo) {
+          doc.addImage(logo, "PNG", logoX, yPos, logoWidth, logoHeight);
+        }
+      } catch (error) {
+        console.warn("Logo not found or failed to load:", error);
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(240, 240, 240);
+        const logoX = pageWidth / 2 - 12.5;
+        doc.rect(logoX, yPos, 25, 12, "F");
+      }
+
+      yPos += 16;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Envirocool Corporation", pageWidth / 2, yPos, {
+        align: "center",
+      });
+
+      yPos += 3;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("Calamba Sales Office", pageWidth / 2, yPos, {
+        align: "center",
+      });
+
+      yPos += 3;
+      doc.setFontSize(7);
+      doc.text(
+        "FP Perez, Brgy. Parian, Calamba City, Laguna",
+        pageWidth / 2,
+        yPos,
+        { align: "center" }
+      );
+      yPos += 3;
+      doc.text("Tel: (049) 540-306 / 0917-158-7013", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 3;
+
+      yPos += 1;
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.2);
+      doc.line(15, yPos, pageWidth - 15, yPos);
+
+      yPos += 6;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      const periodLabel = getPeriodLabel(period);
+      const dateRangeText = getDateRangeText();
+      const fullTitle = `${title} Report - ${periodLabel}${dateRangeText}`;
+      doc.text(fullTitle, pageWidth / 2, yPos, { align: "center" });
+
+      return yPos + 6;
+    };
+
+    // ✅ Footer
+    const addFooter = (pageNum, totalPages) => {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.1);
+      doc.line(15, pageHeight - 8, pageWidth - 15, pageHeight - 8);
+
+      doc.text(
+        `Page ${pageNum} of ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 5,
+        { align: "center" }
+      );
+    };
+
+    const type = (
+      typeof reportType === "string" ? reportType : ""
+    ).toLowerCase();
+
+    try {
+      if (type === "all") {
+        const reports = [
+          { title: "Sales", type: "sales" },
+          { title: "Transaction", type: "transaction" },
+          { title: "Delivery Service", type: "service" },
+          { title: "Client Satisfaction", type: "customer" },
+        ];
+
+        for (let idx = 0; idx < reports.length; idx++) {
+          const r = reports[idx];
+          if (idx > 0) doc.addPage();
+
+          const headerY = renderHeader(r.title);
+
+          if (r.type === "sales") {
+            const salesData = await fetchSalesData();
+            await createSalesReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              salesData,
+              period
+            );
+            }else if(r.type == "transaction") {
+              const transactionData =  await fetchTransactionsData();
+              await createTransactionReportTable(doc,pageWidth,pageHeight,
+                headerY, transactionData);
+          } else {
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(
+              `${r.title} content would go here...`,
+              pageWidth / 2,
+              headerY + 10,
+              { align: "center" }
+            );
+          }
+
+          addFooter(idx + 1, reports.length);
+        }
+
+        doc.save("envirocool-overall-report.pdf");
+        const periodLabel = getPeriodLabel(period);
+        alert(
+          `Overall Report PDF (${periodLabel}) has been generated and downloaded successfully!`
+        );
+      } else {
+        let title;
+        switch (type) {
+          case "sales":
+            title = "Sales";
+            break;
+          case "transaction":
+            title = "Transaction";
+            break;
+          case "service":
+            title = "Delivery Service";
+            break;
+          case "customer":
+            title = "Client Satisfaction";
+            break;
+          default:
+            alert("Please select a report type.");
+            return;
+        }
+
+        const headerY = renderHeader(title);
+
+        if (type === "sales") {
+          const salesData = await fetchSalesData(); // already aggregated
+          await createSalesReportTable(
+            doc,
+            pageWidth,
+            pageHeight,
+            headerY,
+            salesData,
+            period
+          );
+        } else if (type == "transaction"){
+           const transactionData = await fetchTransactionsData();
+           await createTransactionReportTable(doc,pageHeight, headerY, transactionData);
+        }else {
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "normal");
+          doc.text(
+            `${title} content would go here...`,
+            pageWidth / 2,
+            headerY + 10,
+            { align: "center" }
+          );
+        }
+
+        addFooter(1, 1);
+
+        let fileName;
+        const effectiveStartDate = startDate || getTodayDate();
+        const effectiveEndDate = endDate || getTodayDate();
+
+        if (period === "annually") {
+          const year = startDate
+            ? new Date(effectiveStartDate).getFullYear()
+            : getCurrentYear();
+          fileName = `envirocool-${type}-report-${period}-${year}.pdf`;
+        } else if (period === "daily") {
+          fileName = `envirocool-${type}-report-${period}-${effectiveStartDate}.pdf`;
+        } else if (period === "weekly") {
+          if (startDate && endDate) {
+            fileName = `envirocool-${type}-report-${period}-${effectiveStartDate}-to-${effectiveEndDate}.pdf`;
+          } else {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const monday = new Date(today);
+            monday.setDate(
+              today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)
+            );
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            const weekStart = monday.toISOString().slice(0, 10);
+            const weekEnd = sunday.toISOString().slice(0, 10);
+            fileName = `envirocool-${type}-report-${period}-${weekStart}-to-${weekEnd}.pdf`;
+          }
+        } else {
+          fileName = `envirocool-${type}-report-${period}-${
+            effectiveStartDate || "all"
+          }.pdf`;
+        }
+
+        doc.save(fileName);
+
+        const periodLabel = getPeriodLabel(period);
+        alert(
+          `${title} Report PDF (${periodLabel}) has been generated and downloaded successfully!`
+        );
+      }
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      alert("Error generating PDF. Please try again.");
+    }
+  };
+
+  const createSalesReportTable = async (
+    doc,
+    pageWidth,
+    pageHeight,
+    yStartPosition,
+    aggregatedData, // Now consistent with generateReport
+    period
+  ) => {
+    let yPosition = yStartPosition;
+
+    // Config
+    const tableConfig = {
+      marginLeft: 15,
+      marginRight: 15,
+      rowHeight: 8,
+      headerHeight: 12,
+      headerFontSize: 10,
+      subHeaderFontSize: 9,
+      cellFontSize: 8,
+    };
+
+    // Width setup (5 columns)
+    const availableWidth =
+      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
+    const colWidths = [
+      availableWidth * 0.2, // Period
+      availableWidth * 0.2, // Quote
+      availableWidth * 0.2, // Awarded
+      availableWidth * 0.2, // Actual
+      availableWidth * 0.2, // Balance
+    ];
+
+    // Helper: draw text centered
+    const drawCenteredText = (text, x, y, width, fontSize) => {
+      doc.setFontSize(fontSize);
+      const textWidth = doc.getTextWidth(text);
+      const textX = x + (width - textWidth) / 2;
+      doc.text(text, textX, y, { maxWidth: width - 4 });
+    };
+
+    // ✅ Header Row 1
+    doc.setFont("helvetica", "bold");
+
+    const awardedX = tableConfig.marginLeft + colWidths[0];
+
+    // Sales Opportunity
+    doc.setFillColor(173, 216, 230);
+    doc.setTextColor(0, 0, 0);
+    doc.rect(
+      tableConfig.marginLeft,
+      yPosition,
+      colWidths[0],
+      tableConfig.headerHeight,
+      "FD"
+    );
+    drawCenteredText(
+      "SALES OPPORTUNITY",
+      tableConfig.marginLeft,
+      yPosition + 8,
+      colWidths[0],
+      tableConfig.headerFontSize
+    );
+
+    // Awarded Sales
+    doc.setFillColor(221, 160, 221);
+    doc.setTextColor(0, 0, 0);
+    doc.rect(
+      awardedX,
+      yPosition,
+      colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+      tableConfig.headerHeight,
+      "FD"
+    );
+    drawCenteredText(
+      "AWARDED SALES",
+      awardedX,
+      yPosition + 8,
+      colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+      tableConfig.headerFontSize
+    );
+
+    yPosition += tableConfig.headerHeight;
+
+    // ✅ Header Row 2
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(tableConfig.subHeaderFontSize);
+    doc.setTextColor(0, 0, 0);
+
+    // RESPONSIBLES
+    doc.setFillColor(255, 255, 255);
+    doc.rect(
+      tableConfig.marginLeft,
+      yPosition,
+      colWidths[0],
+      tableConfig.rowHeight,
+      "FD"
+    );
+    drawCenteredText(
+      "RESPONSIBLES",
+      tableConfig.marginLeft,
+      yPosition + 6,
+      colWidths[0],
+      tableConfig.subHeaderFontSize
+    );
+
+    // ALL
+    doc.setFillColor(255, 255, 255);
+    doc.rect(
+      awardedX,
+      yPosition,
+      colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+      tableConfig.rowHeight,
+      "FD"
+    );
+    drawCenteredText(
+      "ALL",
+      awardedX,
+      yPosition + 6,
+      colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+      tableConfig.subHeaderFontSize
+    );
+
+    yPosition += tableConfig.rowHeight;
+
+    // ✅ Header Row 3
+    doc.setFillColor(255, 255, 255);
+    doc.rect(
+      tableConfig.marginLeft,
+      yPosition,
+      availableWidth,
+      tableConfig.rowHeight,
+      "FD"
+    );
+    drawCenteredText(
+      "CATEGORY: RES. & COM. WALK IN SALES",
+      tableConfig.marginLeft,
+      yPosition + 6,
+      availableWidth,
+      tableConfig.subHeaderFontSize
+    );
+
+    yPosition += tableConfig.rowHeight;
+
+    // ✅ Column Headers
+    let periodLabel = "MONTHS";
+    if (period === "monthly") periodLabel = "DAYS";
+    else if (period === "weekly") periodLabel = "WEEKDAYS";
+    else if (period === "daily") periodLabel = "DATE";
+    else if (period === "quarterly") periodLabel = "QUARTERS";
+
+    const headers = [
+      periodLabel,
+      "QUOTE AMOUNT",
+      "AWARDED AMOUNT",
+      "ACTUAL COLLECTION",
+      "BALANCE FOR COLLECTION",
+    ];
+    doc.setFont("helvetica", "bold");
+
+    let xPos = tableConfig.marginLeft;
+    headers.forEach((header, i) => {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(xPos, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
+      drawCenteredText(
+        header,
+        xPos,
+        yPosition + 6,
+        colWidths[i],
+        tableConfig.subHeaderFontSize
+      );
+      xPos += colWidths[i];
+    });
+
+    yPosition += tableConfig.rowHeight;
+
+    // ✅ Render aggregatedData rows (no totals here)
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(tableConfig.cellFontSize);
+
+    if (Array.isArray(aggregatedData)) {
+      aggregatedData.forEach((row, rowIndex) => {
+        let x = tableConfig.marginLeft;
+
+        row.forEach((cell, i) => {
+          doc.setFillColor(rowIndex % 2 === 1 ? 248 : 255, 248, 248);
+          doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
+          doc.setDrawColor(0, 0, 0);
+          doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
+
+          let displayText = cell || "";
+
+          // Red text if Balance = 0
+          if (i === 4 && parseFloat(cell) === 0) {
+            doc.setTextColor(255, 0, 0);
+          } else {
+            doc.setTextColor(0, 0, 0);
+          }
+
+          drawCenteredText(
+            displayText,
+            x,
+            yPosition + 6,
+            colWidths[i],
+            tableConfig.cellFontSize
+          );
+          doc.setTextColor(0, 0, 0);
+
+          x += colWidths[i];
+        });
+
+        yPosition += tableConfig.rowHeight;
+      });
+    }
+
+    return {
+      finalYPosition: yPosition,
+      tableHeight: yPosition - yStartPosition,
+      rowCount: aggregatedData ? aggregatedData.length + 5 : 5,
+    };
+  };
+
+  // ✅ Fetch transaction data
+// ✅ Fetch transaction data with filters
+const fetchTransactionsData = async () => {
+  try {
+    const effectiveStartDate = startDate || getTodayDate();
+    const effectiveEndDate = endDate || getTodayDate();
+
+    const url = `http://localhost/DeliveryTrackingSystem/get_transaction_report.php?period=${period}&start=${effectiveStartDate}&end=${effectiveEndDate}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+
+    // Backend should return already filtered transactions
+    return data.transactions || [];
+  } catch (error) {
+    console.error("Error fetching transactions data:", error);
+    return [];
+  }
+};
+
+// ✅ Transaction Report Table with Totals
+const createTransactionReportTable = async (
+  doc,
+  pageWidth,
+  pageHeight,
+  startY,
+  transactionData
+) => {
+  const headers = [
+    [
+      "Transaction No.",
+      "Tracking No.",
+      "Date of Order",
+      "Client",
+      "Address",
+      "Contact Number",
+      "Item Name",
+      "Quantity",
+      "Unit Cost",
+      "Subtotal",
+      "Total Cost",
+      "Mode of Payment",
+      "Payment Option",
+      "Down Payment",
+      "Balance",
+      "Delivery Personnel",
+      "Delivery Status",
+      "Ship Out At",
+      "Completed At",
+      "Reason for Cancellation",
+    ],
+  ];
+
+  // ✅ Calculate totals
+  let totals = {
+    quantity: 0,
+    subtotal: 0,
+    totalCost: 0,
+    downPayment: 0,
+    balance: 0,
+  };
+
+  const rows = transactionData.map((t) => {
+    const qty = parseFloat(t.quantity || 0);
+    const subtotal = parseFloat(t.subtotal || 0);
+    const totalCost = parseFloat(t.total_cost || 0);
+    const downPayment = parseFloat(t.down_payment || 0);
+    const balance = parseFloat(t.balance || 0);
+
+    totals.quantity += qty;
+    totals.subtotal += subtotal;
+    totals.totalCost += totalCost;
+    totals.downPayment += downPayment;
+    totals.balance += balance;
+
+    return [
+      t.transaction_no || "",
+      t.tracking_no || "",
+      formatDate(t.date_of_order) || "",
+      t.client || "",
+      t.address || "",
+      t.contact_number || "",
+      t.item_name || "",
+      qty.toFixed(2),
+      `₱${parseFloat(t.unit_cost || 0).toFixed(2)}`,
+      `₱${subtotal.toFixed(2)}`,
+      `₱${totalCost.toFixed(2)}`,
+      t.mode_of_payment || "",
+      t.payment_option || "",
+      `₱${downPayment.toFixed(2)}`,
+      `₱${balance.toFixed(2)}`,
+      t.delivery_personnel || "",
+      t.delivery_status || "",
+      formatDate(t.ship_out_at) || "",
+      formatDate(t.completed_at) || "",
+      t.cancellation_reason || "",
+    ];
+  });
+
+  // ✅ Add TOTAL row at the bottom
+  rows.push([
+    "TOTAL",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    totals.quantity.toFixed(2),
+    "",
+    `₱${totals.subtotal.toFixed(2)}`,
+    `₱${totals.totalCost.toFixed(2)}`,
+    "",
+    "",
+    `₱${totals.downPayment.toFixed(2)}`,
+    `₱${totals.balance.toFixed(2)}`,
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
+
+  doc.autoTable({
+    head: headers,
+    body: rows,
+    startY,
+    theme: "grid",
+    styles: { fontSize: 6, cellPadding: 1 },
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: "center" },
+    columnStyles: {
+      0: { cellWidth: 18 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 25 },
+      4: { cellWidth: 35 },
+      5: { cellWidth: 25 },
+      6: { cellWidth: 40 },
+      7: { cellWidth: 12 },
+      8: { cellWidth: 18 },
+      9: { cellWidth: 18 },
+      10: { cellWidth: 18 },
+      11: { cellWidth: 20 },
+      12: { cellWidth: 20 },
+      13: { cellWidth: 20 },
+      14: { cellWidth: 20 },
+      15: { cellWidth: 30 },
+      16: { cellWidth: 25 },
+      17: { cellWidth: 20 },
+      18: { cellWidth: 20 },
+      19: { cellWidth: 35 },
+    },
+  });
+};
 
   const iconStyle = {
     width: 40,
@@ -1651,7 +2445,11 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded">
+          <Button
+            variant="danger"
+            className="btn cancel-btn px-3 py-2 rounded"
+            onClick={() => generateReport(reportType)}
+          >
             <FaFilePdf /> Generate PDF
           </Button>
         </div>
