@@ -760,6 +760,369 @@ const GenerateReport = () => {
     },
   ];
 
+  const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
+    const rows = [];
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    const formatDate = (date) =>
+      date ? new Date(date).toISOString().split("T")[0] : "";
+
+    const addRow = (
+      label,
+      totalQuote,
+      totalAwarded,
+      totalActual,
+      totalBalance
+    ) => {
+      rows.push([
+        label,
+        totalQuote.toFixed(2),
+        totalAwarded.toFixed(2),
+        totalActual.toFixed(2),
+        totalBalance.toFixed(2),
+      ]);
+    };
+
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthSales = salesData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
+        const totals = monthSales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+        addRow(
+          getMonthName(m),
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    } else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const end = endDate ? new Date(endDate) : new Date();
+
+      // Determine the quarter months based on start date
+      const month = start.getMonth();
+      let quarterMonths = [];
+
+      if (month <= 2) quarterMonths = [0, 1, 2]; // Jan-Mar
+      else if (month <= 5) quarterMonths = [3, 4, 5]; // Apr-Jun
+      else if (month <= 8) quarterMonths = [6, 7, 8]; // Jul-Sep
+      else quarterMonths = [9, 10, 11]; // Oct-Dec
+
+      quarterMonths.forEach((m) => {
+        const monthSales = salesData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
+
+        const totals = monthSales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+
+        rows.push([
+          getMonthName(m),
+          totals.quote.toFixed(2),
+          totals.awarded.toFixed(2),
+          totals.actual.toFixed(2),
+          totals.balance.toFixed(2),
+        ]);
+      });
+    } else if (period === "monthly") {
+      const start = new Date(startDate || new Date());
+      const daysInMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0
+      ).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${start.getFullYear()}-${String(
+          start.getMonth() + 1
+        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const daySales = salesData.filter((s) => s.date_of_order === dateStr);
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    } else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = formatDate(d);
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    } else if (period === "daily") {
+      const uniqueDates = [...new Set(salesData.map((s) => s.date_of_order))];
+      uniqueDates.forEach((dateStr) => {
+        const daySales = salesData.filter((s) => s.date_of_order === dateStr);
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      });
+    }
+
+    // Add totals row
+    const total = rows.reduce(
+      (acc, r) => ({
+        quote: acc.quote + parseFloat(r[1]),
+        awarded: acc.awarded + parseFloat(r[2]),
+        actual: acc.actual + parseFloat(r[3]),
+        balance: acc.balance + parseFloat(r[4]),
+      }),
+      { quote: 0, awarded: 0, actual: 0, balance: 0 }
+    );
+    addRow("TOTAL", total.quote, total.awarded, total.actual, total.balance);
+
+    return rows;
+  };
+
+  const generateTransactionPeriodRows = (
+    transactionData,
+    period,
+    startDate,
+    endDate
+  ) => {
+    const rows = [];
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    const formatDate = (date) =>
+      date ? new Date(date).toISOString().split("T")[0] : "";
+
+    const pushTxRow = (label, tx) => {
+      rows.push([
+        label || "",
+        tx.transaction_id ?? "-",
+        tx.tracking_number ?? "-",
+        tx.date_of_order ?? "-",
+        tx.customer_name ?? "-",
+        tx.customer_address ?? "-",
+        tx.item_name ?? "-",
+        (tx.qty ?? 0).toFixed(2),
+        `₱${(tx.unit_cost ?? 0).toFixed(2)}`,
+        `₱${(tx.subtotal ?? 0).toFixed(2)}`,
+        tx.delivery_status ?? "-",
+        tx.shipout_at ?? "-",
+        tx.completed_at ?? "-",
+      ]);
+    };
+
+    const pushZeroRow = (label) => {
+      rows.push([
+        label,
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "0.00",
+        "₱0.00",
+        "₱0.00",
+        "-",
+        "-",
+        "-",
+      ]);
+    };
+
+    // === PERIOD LOGIC (Annually, Quarterly, Monthly, Weekly, Daily) ===
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthTxs = transactionData.filter(
+          (t) => new Date(t.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([
+            getMonthName(m),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+          ]);
+          monthTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      }
+    } else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const month = start.getMonth();
+      let quarterMonths = [];
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
+      else quarterMonths = [9, 10, 11];
+
+      quarterMonths.forEach((m) => {
+        const monthTxs = transactionData.filter(
+          (t) => new Date(t.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([
+            getMonthName(m),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+          ]);
+          monthTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      });
+    } else if (period === "monthly") {
+      const start = new Date(startDate || new Date());
+      const daysInMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0
+      ).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${start.getFullYear()}-${String(
+          start.getMonth() + 1
+        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dayTxs = transactionData.filter(
+          (t) => t.date_of_order === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+          dayTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = formatDate(d);
+        const dayTxs = transactionData.filter(
+          (t) => formatDate(new Date(t.date_of_order)) === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+          dayTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "daily") {
+      if (transactionData.length > 0) {
+        transactionData.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(formatDate(new Date(startDate || new Date())));
+      }
+    }
+
+    // === GRAND TOTAL ===
+    const totals = transactionData.reduce(
+      (acc, t) => ({
+        qty: acc.qty + (t.qty ?? 0),
+        subtotal: acc.subtotal + (t.subtotal ?? 0),
+      }),
+      { qty: 0, subtotal: 0 }
+    );
+    rows.push([
+      "TOTAL",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      totals.qty.toFixed(2),
+      "-",
+      `₱${totals.subtotal.toFixed(2)}`,
+      "-",
+      "-",
+      "-",
+    ]);
+
+    return rows;
+  };
+
   const generateReport = async (reportType) => {
     const doc = new jsPDF({
       orientation: "landscape",
@@ -770,7 +1133,6 @@ const GenerateReport = () => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // ✅ Helper: Get period label
     const getPeriodLabel = (periodValue) => {
       const period = PERIODS.find((p) => p.value === periodValue);
       return period ? period.label : "Period";
@@ -785,12 +1147,9 @@ const GenerateReport = () => {
     };
 
     const getCurrentYear = () => new Date().getFullYear();
+    const formatDate = (date) =>
+      date ? new Date(date).toLocaleDateString() : "";
 
-    const formatDate = (date) => {
-      return date ? new Date(date).toLocaleDateString() : "";
-    };
-
-    // ✅ Helper: Date range text
     const getDateRangeText = () => {
       if (period === "annually") {
         const year = startDate
@@ -798,11 +1157,22 @@ const GenerateReport = () => {
           : getCurrentYear();
         return ` (Jan 1 - Dec 31, ${year})`;
       }
-
       if (period === "quarterly") {
         const start = new Date(startDate || getTodayDate());
-        const end = new Date(endDate || getTodayDate());
-        return ` (${formatDate(start)} - ${formatDate(end)})`;
+        const monthNumber = start.toISOString().slice(5, 7); // "01" to "12"
+        let quarterMonths = [];
+
+        if (monthNumber >= "01" && monthNumber <= "03")
+          quarterMonths = ["January", "February", "March"];
+        else if (monthNumber >= "04" && monthNumber <= "06")
+          quarterMonths = ["April", "May", "June"];
+        else if (monthNumber >= "07" && monthNumber <= "09")
+          quarterMonths = ["July", "August", "September"];
+        else quarterMonths = ["October", "November", "December"];
+
+        return ` (${quarterMonths[0]} to ${
+          quarterMonths[quarterMonths.length - 1]
+        })`;
       }
 
       if (period === "monthly") {
@@ -811,120 +1181,27 @@ const GenerateReport = () => {
         const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
         return ` (${formatDate(firstDay)} - ${formatDate(lastDay)})`;
       }
-
       if (period === "weekly") {
         const start = new Date(startDate || getTodayDate());
-        start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+        start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
         const end = new Date(start);
-        end.setDate(start.getDate() + 6); // Sunday
+        end.setDate(start.getDate() + 6);
         return ` (${formatDate(start)} - ${formatDate(end)})`;
       }
-
       if (period === "daily") {
-        const day = startDate || getTodayDate();
-        return ` (${formatDate(day)})`;
+        // Use startDate if provided, otherwise today
+        const today = startDate ? new Date(startDate) : new Date();
+        // Format as MM/DD/YYYY for display
+        const formattedDay = `${String(today.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}/${String(today.getDate()).padStart(2, "0")}/${today.getFullYear()}`;
+        return ` (${formattedDay})`;
       }
 
       return "";
     };
 
-    // ✅ Helper to get month name
-    const getMonthName = (monthIndex) => {
-      return new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
-    };
-
-    // ✅ Aggregate sales by period (Quarterly expands to months)
-    const aggregateSalesData = (salesData, period) => {
-      const grouped = {};
-
-      salesData.forEach((sale) => {
-        const date = new Date(sale.date);
-        const year = date.getFullYear();
-        const month = date.getMonth(); // 0 = Jan
-        let key;
-
-        if (period === "monthly") {
-          key = `${getMonthName(month)} ${year}`;
-        } else if (period === "quarterly") {
-          // 🔹 Expand quarterly into individual months
-          key = `${getMonthName(month)} ${year}`;
-        } else if (period === "annually") {
-          key = `${year}`;
-        } else if (period === "weekly") {
-          key = formatDate(date); // each day in the week
-        } else {
-          key = formatDate(date); // fallback
-        }
-
-        if (!grouped[key]) {
-          grouped[key] = { quote: 0, awarded: 0, actual: 0, balance: 0 };
-        }
-
-        grouped[key].quote += parseFloat(sale.quoteAmount) || 0;
-        grouped[key].awarded += parseFloat(sale.awardedAmount) || 0;
-        grouped[key].actual += parseFloat(sale.actualCollection) || 0;
-        grouped[key].balance += parseFloat(sale.balance) || 0;
-      });
-
-      // Convert grouped data into table rows
-      const rows = Object.entries(grouped).map(([period, values]) => [
-        period,
-        values.quote.toFixed(2),
-        values.awarded.toFixed(2),
-        values.actual.toFixed(2),
-        values.balance.toFixed(2),
-      ]);
-
-      // Add TOTAL row at the bottom
-      const totals = Object.values(grouped).reduce(
-        (acc, val) => ({
-          quote: acc.quote + val.quote,
-          awarded: acc.awarded + val.awarded,
-          actual: acc.actual + val.actual,
-          balance: acc.balance + val.balance,
-        }),
-        { quote: 0, awarded: 0, actual: 0, balance: 0 }
-      );
-
-      rows.push([
-        "TOTAL",
-        totals.quote.toFixed(2),
-        totals.awarded.toFixed(2),
-        totals.actual.toFixed(2),
-        totals.balance.toFixed(2),
-      ]);
-
-      return rows;
-    };
-
-    // ✅ Fetch sales data
-    const fetchSalesData = async () => {
-      try {
-        const effectiveStartDate = startDate || getTodayDate();
-        const effectiveEndDate = endDate || getTodayDate();
-
-        const url = `http://localhost/DeliveryTrackingSystem/get_transaction_report.php?period=${period}&start=${effectiveStartDate}&end=${effectiveEndDate}`;
-
-        const response = await fetch(url, {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (!response.ok) throw new Error("Network response was not ok");
-
-        const data = await response.json();
-        const sales = data.sales || [];
-
-        return aggregateSalesData(sales, period); // ✅ aggregated rows
-      } catch (error) {
-        console.error("Error fetching sales data:", error);
-        return [];
-      }
-    };
-
-    // ✅ Compact Header
     const renderHeader = (title) => {
       const now = new Date();
       const generatedDate =
@@ -947,19 +1224,15 @@ const GenerateReport = () => {
       });
 
       let yPos = 8;
-
       try {
         const logoWidth = 25;
         const logoHeight = 12;
         const logoX = pageWidth / 2 - logoWidth / 2;
-        if (logo) {
-          doc.addImage(logo, "PNG", logoX, yPos, logoWidth, logoHeight);
-        }
+        if (logo) doc.addImage(logo, "PNG", logoX, yPos, logoWidth, logoHeight);
       } catch (error) {
-        console.warn("Logo not found or failed to load:", error);
+        const logoX = pageWidth / 2 - 12.5;
         doc.setDrawColor(200, 200, 200);
         doc.setFillColor(240, 240, 240);
-        const logoX = pageWidth / 2 - 12.5;
         doc.rect(logoX, yPos, 25, 12, "F");
       }
 
@@ -969,14 +1242,12 @@ const GenerateReport = () => {
       doc.text("Envirocool Corporation", pageWidth / 2, yPos, {
         align: "center",
       });
-
       yPos += 3;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.text("Calamba Sales Office", pageWidth / 2, yPos, {
         align: "center",
       });
-
       yPos += 3;
       doc.setFontSize(7);
       doc.text(
@@ -989,25 +1260,26 @@ const GenerateReport = () => {
       doc.text("Tel: (049) 540-306 / 0917-158-7013", pageWidth / 2, yPos, {
         align: "center",
       });
-      yPos += 3;
-
-      yPos += 1;
+      yPos += 4;
       doc.setDrawColor(150, 150, 150);
       doc.setLineWidth(0.2);
       doc.line(15, yPos, pageWidth - 15, yPos);
-
       yPos += 6;
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       const periodLabel = getPeriodLabel(period);
       const dateRangeText = getDateRangeText();
-      const fullTitle = `${title} Report - ${periodLabel}${dateRangeText}`;
-      doc.text(fullTitle, pageWidth / 2, yPos, { align: "center" });
+      doc.text(
+        `${title} Report - ${periodLabel}${dateRangeText}`,
+        pageWidth / 2,
+        yPos,
+        { align: "center" }
+      );
 
       return yPos + 6;
     };
 
-    // ✅ Footer
     const addFooter = (pageNum, totalPages) => {
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
@@ -1023,6 +1295,61 @@ const GenerateReport = () => {
       );
     };
 
+    const fetchSalesData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_sales_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_sales_report failed");
+
+        const data = await res.json();
+        let normalizedSales = normalizeSales(data.sales ?? []);
+        normalizedSales = normalizedSales.filter(
+          (sale) => sale.delivery_status.toLowerCase() === "delivered"
+        );
+
+        return generateSalesPeriodRows(
+          normalizedSales,
+          period,
+          startDate,
+          endDate
+        );
+      } catch (error) {
+        console.error("Error fetching sales data:", error);
+        return [];
+      }
+    };
+
+    const fetchTransactionData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_transaction_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_transaction_report failed");
+
+        const data = await res.json();
+        const normalizedTransactions = normalizeTransactions(
+          data.transactions ?? []
+        );
+
+        // Generate rows based on period (daily, weekly, monthly, annually)
+        const transactionRows = generateTransactionPeriodRows(
+          normalizedTransactions,
+          period,
+          startDate,
+          endDate
+        );
+
+        return transactionRows;
+      } catch (error) {
+        console.error("Error fetching transaction data:", error);
+        return [];
+      }
+    };
+
+    // Main report logic
     const type = (
       typeof reportType === "string" ? reportType : ""
     ).toLowerCase();
@@ -1043,7 +1370,17 @@ const GenerateReport = () => {
           const headerY = renderHeader(r.title);
 
           if (r.type === "sales") {
-            const salesData = await fetchSalesData();
+            let salesData = await fetchSalesData();
+            if (period === "daily") {
+              // Replace salesData with today's date row
+              salesData = salesData.map((row) => [
+                new Date().toLocaleDateString("en-US"), // Current day
+                row.quoteAmount || "0.00",
+                row.awardedAmount || "0.00",
+                row.actualCollection || "0.00",
+                row.balance || "0.00",
+              ]);
+            }
             await createSalesReportTable(
               doc,
               pageWidth,
@@ -1052,10 +1389,16 @@ const GenerateReport = () => {
               salesData,
               period
             );
-            }else if(r.type == "transaction") {
-              const transactionData =  await fetchTransactionsData();
-              await createTransactionReportTable(doc,pageWidth,pageHeight,
-                headerY, transactionData);
+          } else if (r.type === "transaction") {
+            const transactionRows = await fetchTransactionData();
+            await createTransactionReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              transactionRows,
+              period
+            );
           } else {
             doc.setFontSize(12);
             doc.setFont("helvetica", "normal");
@@ -1071,9 +1414,10 @@ const GenerateReport = () => {
         }
 
         doc.save("envirocool-overall-report.pdf");
-        const periodLabel = getPeriodLabel(period);
         alert(
-          `Overall Report PDF (${periodLabel}) has been generated and downloaded successfully!`
+          `Overall Report PDF (${getPeriodLabel(
+            period
+          )}) has been generated and downloaded successfully!`
         );
       } else {
         let title;
@@ -1098,7 +1442,17 @@ const GenerateReport = () => {
         const headerY = renderHeader(title);
 
         if (type === "sales") {
-          const salesData = await fetchSalesData(); // already aggregated
+          let salesData = await fetchSalesData();
+          if (period === "daily") {
+            // Replace salesData wi.00",
+              row.awardedAmount || "0.00",
+              row.actualCollection || "0.00",
+              row.balance || "0.00th today's date row
+            salesData = salesData.map((row) => [
+              new Date().toLocaleDateString("en-US"), // Current day
+              row.quoteAmount || "0",
+            ]);
+          }
           await createSalesReportTable(
             doc,
             pageWidth,
@@ -1107,10 +1461,17 @@ const GenerateReport = () => {
             salesData,
             period
           );
-        } else if (type == "transaction"){
-           const transactionData = await fetchTransactionsData();
-           await createTransactionReportTable(doc,pageHeight, headerY, transactionData);
-        }else {
+        } else if (type === "transaction") {
+          const transactionRows = await fetchTransactionData();
+          await createTransactionReportTable(
+            doc,
+            pageWidth,
+            pageHeight,
+            headerY,
+            transactionRows,
+            period
+          );
+        } else {
           doc.setFontSize(12);
           doc.setFont("helvetica", "normal");
           doc.text(
@@ -1123,44 +1484,12 @@ const GenerateReport = () => {
 
         addFooter(1, 1);
 
-        let fileName;
-        const effectiveStartDate = startDate || getTodayDate();
-        const effectiveEndDate = endDate || getTodayDate();
-
-        if (period === "annually") {
-          const year = startDate
-            ? new Date(effectiveStartDate).getFullYear()
-            : getCurrentYear();
-          fileName = `envirocool-${type}-report-${period}-${year}.pdf`;
-        } else if (period === "daily") {
-          fileName = `envirocool-${type}-report-${period}-${effectiveStartDate}.pdf`;
-        } else if (period === "weekly") {
-          if (startDate && endDate) {
-            fileName = `envirocool-${type}-report-${period}-${effectiveStartDate}-to-${effectiveEndDate}.pdf`;
-          } else {
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            const monday = new Date(today);
-            monday.setDate(
-              today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)
-            );
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-            const weekStart = monday.toISOString().slice(0, 10);
-            const weekEnd = sunday.toISOString().slice(0, 10);
-            fileName = `envirocool-${type}-report-${period}-${weekStart}-to-${weekEnd}.pdf`;
-          }
-        } else {
-          fileName = `envirocool-${type}-report-${period}-${
-            effectiveStartDate || "all"
-          }.pdf`;
-        }
-
+        const fileName = `envirocool-${type}-report-${period}-${getTodayDate()}.pdf`;
         doc.save(fileName);
-
-        const periodLabel = getPeriodLabel(period);
         alert(
-          `${title} Report PDF (${periodLabel}) has been generated and downloaded successfully!`
+          `${title} Report PDF (${getPeriodLabel(
+            period
+          )}) has been generated and downloaded successfully!`
         );
       }
     } catch (error) {
@@ -1293,25 +1622,6 @@ const GenerateReport = () => {
 
     yPosition += tableConfig.rowHeight;
 
-    // ✅ Header Row 3
-    doc.setFillColor(255, 255, 255);
-    doc.rect(
-      tableConfig.marginLeft,
-      yPosition,
-      availableWidth,
-      tableConfig.rowHeight,
-      "FD"
-    );
-    drawCenteredText(
-      "CATEGORY: RES. & COM. WALK IN SALES",
-      tableConfig.marginLeft,
-      yPosition + 6,
-      availableWidth,
-      tableConfig.subHeaderFontSize
-    );
-
-    yPosition += tableConfig.rowHeight;
-
     // ✅ Column Headers
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
@@ -1344,7 +1654,7 @@ const GenerateReport = () => {
 
     yPosition += tableConfig.rowHeight;
 
-    // ✅ Render aggregatedData rows (no totals here)
+    // ✅ Render aggregatedData rows (with page breaks)
     doc.setFont("helvetica", "normal");
     doc.setFontSize(tableConfig.cellFontSize);
 
@@ -1380,6 +1690,12 @@ const GenerateReport = () => {
         });
 
         yPosition += tableConfig.rowHeight;
+
+        // ✅ Page break
+        if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
       });
     }
 
@@ -1390,165 +1706,125 @@ const GenerateReport = () => {
     };
   };
 
-  // ✅ Fetch transaction data
-// ✅ Fetch transaction data with filters
-const fetchTransactionsData = async () => {
-  try {
-    const effectiveStartDate = startDate || getTodayDate();
-    const effectiveEndDate = endDate || getTodayDate();
-
-    const url = `http://localhost/DeliveryTrackingSystem/get_transaction_report.php?period=${period}&start=${effectiveStartDate}&end=${effectiveEndDate}`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "include",
-    });
-
-    if (!response.ok) throw new Error("Network response was not ok");
-
-    const data = await response.json();
-
-    // Backend should return already filtered transactions
-    return data.transactions || [];
-  } catch (error) {
-    console.error("Error fetching transactions data:", error);
-    return [];
-  }
-};
-
-// ✅ Transaction Report Table with Totals
-const createTransactionReportTable = async (
+  const createTransactionReportTable = async (
   doc,
   pageWidth,
   pageHeight,
-  startY,
+  yStartPosition,
   transactionData
 ) => {
-  const headers = [
-    [
-      "Transaction No.",
-      "Tracking No.",
-      "Date of Order",
-      "Client",
-      "Address",
-      "Contact Number",
-      "Item Name",
-      "Quantity",
-      "Unit Cost",
-      "Subtotal",
-      "Total Cost",
-      "Mode of Payment",
-      "Payment Option",
-      "Down Payment",
-      "Balance",
-      "Delivery Personnel",
-      "Delivery Status",
-      "Ship Out At",
-      "Completed At",
-      "Reason for Cancellation",
-    ],
-  ];
+  let yPosition = yStartPosition;
 
-  // ✅ Calculate totals
-  let totals = {
-    quantity: 0,
-    subtotal: 0,
-    totalCost: 0,
-    downPayment: 0,
-    balance: 0,
+  const tableConfig = {
+    marginLeft: 10,
+    marginRight: 10,
+    rowHeight: 8,
+    headerHeight: 12,
+    headerFontSize: 8,
+    subHeaderFontSize: 7,
+    cellFontSize: 6,
+    lineSpacing: 1.2, // spacing multiplier for wrapped text
   };
 
-  const rows = transactionData.map((t) => {
-    const qty = parseFloat(t.quantity || 0);
-    const subtotal = parseFloat(t.subtotal || 0);
-    const totalCost = parseFloat(t.total_cost || 0);
-    const downPayment = parseFloat(t.down_payment || 0);
-    const balance = parseFloat(t.balance || 0);
+  const headers = [
+    "Filter",
+    "Transaction No",
+    "Tracking No",
+    "Date of Order",
+    "Client",
+    "Address",
+    "Item Name",
+    "Quantity",
+    "Unit Cost",
+    "Subtotal",
+    "Delivery Status",
+    "Ship Out At",
+    "Completed At",
+  ];
 
-    totals.quantity += qty;
-    totals.subtotal += subtotal;
-    totals.totalCost += totalCost;
-    totals.downPayment += downPayment;
-    totals.balance += balance;
+  const colWidths = [15, 20, 20, 20, 30, 25, 25, 12, 15, 15, 20, 20, 20];
+  const totalColsWidth = colWidths.reduce((a, b) => a + b, 0);
 
-    return [
-      t.transaction_no || "",
-      t.tracking_no || "",
-      formatDate(t.date_of_order) || "",
-      t.client || "",
-      t.address || "",
-      t.contact_number || "",
-      t.item_name || "",
-      qty.toFixed(2),
-      `₱${parseFloat(t.unit_cost || 0).toFixed(2)}`,
-      `₱${subtotal.toFixed(2)}`,
-      `₱${totalCost.toFixed(2)}`,
-      t.mode_of_payment || "",
-      t.payment_option || "",
-      `₱${downPayment.toFixed(2)}`,
-      `₱${balance.toFixed(2)}`,
-      t.delivery_personnel || "",
-      t.delivery_status || "",
-      formatDate(t.ship_out_at) || "",
-      formatDate(t.completed_at) || "",
-      t.cancellation_reason || "",
-    ];
+  // ✅ Center the table
+  const tableStartX = (pageWidth - totalColsWidth) / 2;
+
+  const drawWrappedText = (text, x, y, width, fontSize, rowHeight) => {
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(text.toString(), width - 2);
+    const textHeight =
+      lines.length * fontSize * 0.3528 * tableConfig.lineSpacing; // mm height estimate
+    const yOffset = (rowHeight - textHeight) / 2 + fontSize * 0.3528; // vertical centering
+    doc.text(lines, x + 1, y + yOffset); // small left padding
+    return lines.length;
+  };
+
+  // ===== Column Headers =====
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(tableConfig.subHeaderFontSize);
+
+  let xPos = tableStartX;
+  headers.forEach((header, i) => {
+    doc.setFillColor(200, 220, 255); // ✅ light blue header background
+    doc.rect(xPos, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
+    drawWrappedText(
+      header,
+      xPos,
+      yPosition,
+      colWidths[i],
+      tableConfig.subHeaderFontSize,
+      tableConfig.rowHeight
+    );
+    xPos += colWidths[i];
+  });
+  yPosition += tableConfig.rowHeight;
+
+  // ===== Rows (passed in from generateTransactionPeriodRows) =====
+  transactionData.forEach((row, rowIndex) => {
+    xPos = tableStartX;
+    let maxLines = 1;
+
+    // Calculate number of lines for each cell
+    const cellLinesArray = row.map((cell, i) => {
+      const lines = doc.splitTextToSize(cell.toString(), colWidths[i] - 2);
+      maxLines = Math.max(maxLines, lines.length);
+      return lines;
+    });
+
+    // Adjust row height
+    const rowHeight =
+      tableConfig.rowHeight * maxLines * tableConfig.lineSpacing;
+
+    // ✅ Alternate background color
+    const isEvenRow = rowIndex % 2 === 0;
+    const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
+
+    // Draw each cell with vertical centering
+    row.forEach((cell, i) => {
+      doc.setFillColor(...bgColor);
+      doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
+      const textHeight =
+        cellLinesArray[i].length *
+        tableConfig.cellFontSize *
+        0.3528 *
+        tableConfig.lineSpacing;
+      const yOffset =
+        (rowHeight - textHeight) / 2 + tableConfig.cellFontSize * 0.3528;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(tableConfig.cellFontSize);
+      doc.text(cellLinesArray[i], xPos + 1, yPosition + yOffset);
+      xPos += colWidths[i];
+    });
+
+    yPosition += rowHeight;
+
+    // Page break
+    if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
+      doc.addPage();
+      yPosition = 20;
+    }
   });
 
-  // ✅ Add TOTAL row at the bottom
-  rows.push([
-    "TOTAL",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    totals.quantity.toFixed(2),
-    "",
-    `₱${totals.subtotal.toFixed(2)}`,
-    `₱${totals.totalCost.toFixed(2)}`,
-    "",
-    "",
-    `₱${totals.downPayment.toFixed(2)}`,
-    `₱${totals.balance.toFixed(2)}`,
-    "",
-    "",
-    "",
-    "",
-    "",
-  ]);
-
-  doc.autoTable({
-    head: headers,
-    body: rows,
-    startY,
-    theme: "grid",
-    styles: { fontSize: 6, cellPadding: 1 },
-    headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: "center" },
-    columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 22 },
-      2: { cellWidth: 20 },
-      3: { cellWidth: 25 },
-      4: { cellWidth: 35 },
-      5: { cellWidth: 25 },
-      6: { cellWidth: 40 },
-      7: { cellWidth: 12 },
-      8: { cellWidth: 18 },
-      9: { cellWidth: 18 },
-      10: { cellWidth: 18 },
-      11: { cellWidth: 20 },
-      12: { cellWidth: 20 },
-      13: { cellWidth: 20 },
-      14: { cellWidth: 20 },
-      15: { cellWidth: 30 },
-      16: { cellWidth: 25 },
-      17: { cellWidth: 20 },
-      18: { cellWidth: 20 },
-      19: { cellWidth: 35 },
-    },
-  });
+  return yPosition;
 };
 
   const iconStyle = {
