@@ -13,6 +13,73 @@ const paymentOptions = [
     
 ];
 
+
+
+import { components } from "react-select";
+
+const CustomMenuList = (props) => {
+  const { children, selectProps } = props;
+
+  return (
+    <components.MenuList {...props}>
+      {children}
+
+      <div
+        className="d-flex justify-content-around mt-2 py-2 px-2  border-top"
+        style={{ gap: "8px" }}
+      >
+        <button
+          type="button"
+          className="btn btn-success btn-sm"
+          style={{
+            flex: 1,
+            transition: "background-color 0.2s",
+          }}
+          onClick={() => selectProps.onEdit?.()}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = "white";
+            e.currentTarget.style.color = "#135d2aff";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = "#198754";
+            e.currentTarget.style.color = "white";
+          }}
+        >
+          EDIT
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          style={{
+            flex: 1,
+            transition: "background-color 0.2s",
+          }}
+          onClick={() => selectProps.onDelete?.()}
+          onMouseOver={(e) => {
+            (e.currentTarget.style.color = "#a71d2a"),
+              (e.currentTarget.style.backgroundColor = "white");
+          }}
+          onMouseOut={(e) =>
+            {
+              (e.currentTarget.style.backgroundColor = "#dc3545"),
+              (e.currentTarget.style.color = "white")
+            ; 
+            }
+          }
+        >
+          DELETE
+        </button>
+      </div>
+    </components.MenuList>
+  );
+};
+
+
+
+
+
+
 const AddDelivery = () => {
   const [products, setProducts] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
@@ -25,6 +92,15 @@ const AddDelivery = () => {
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  const [editModal, setEditModal] = useState({
+    show: false,
+    type: "", 
+    currentValue: "",
+    index: null,
+    typeOfProduct: "", 
+  });
+  const [newValue, setNewValue] = useState("");
 
   const [form, setForm] = useState({
     customer_name: "",
@@ -41,6 +117,56 @@ const AddDelivery = () => {
     balance: "",
     total: "",
   });
+
+  const handleEditClick = (type, currentValue, index, typeOfProduct = "") => {
+    setEditModal({ show: true, type, currentValue, index, typeOfProduct });
+    setNewValue(currentValue);
+  };
+
+  const handleDeleteClick = async (type, value, index, typeOfProduct = "") => {
+    if (!window.confirm(`Are you sure you want to delete "${value}"?`)) return;
+
+    try {
+      await axios.post(
+        "http://localhost/DeliveryTrackingSystem/delete_product.php",
+        {
+          type_of_product: typeOfProduct || value,
+          description: type === "item" ? value : "",
+        }
+      );
+
+      if (type === "product") {
+        setProductOptions((prev) => prev.filter((opt) => opt.value !== value));
+        setOrderItems((prev) =>
+          prev.map((item) =>
+            item.type_of_product === value
+              ? { ...item, type_of_product: "" }
+              : item
+          )
+        );
+      } else {
+        setItemOptions((prev) => ({
+          ...prev,
+          [typeOfProduct]: prev[typeOfProduct].filter(
+            (opt) => opt.value !== value
+          ),
+        }));
+        setOrderItems((prev) =>
+          prev.map((item) =>
+            item.type_of_product === typeOfProduct && item.description === value
+              ? { ...item, description: "" }
+              : item
+          )
+        );
+      }
+
+      alert("Deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting item");
+    }
+  };
+
   const handleContactChange = (e) => {
     const value = e.target.value;
     setForm((prev) => ({ ...prev, customer_contact: value }));
@@ -594,34 +720,32 @@ const AddDelivery = () => {
 
                     <td style={{ width: "200px" }}>
                       <CreatableSelect
-                        options={productOptions}
+                        options={[...productOptions]}
                         value={
                           productOptions.find(
                             (opt) => opt.value === item.type_of_product
                           ) || null
                         }
                         onChange={(selected) => {
-                          const e = {
+                          if (selected?.value === "__actions__") return;
+                          handleItemChange(index, {
                             target: {
                               name: "type_of_product",
                               value: selected?.value || "",
                             },
-                          };
-                          handleItemChange(index, e);
+                          });
                         }}
                         onCreateOption={async (newValue) => {
                           const newOption = {
                             label: newValue,
                             value: newValue,
                           };
-
-                          setProductOptions((prev) => {
-                            const exists = prev.some(
-                              (opt) =>
-                                opt.value.toLowerCase() ===
-                                newValue.toLowerCase()
-                            );
-                            return exists ? prev : [...prev, newOption];
+                          setProductOptions((prev) => [...prev, newOption]);
+                          handleItemChange(index, {
+                            target: {
+                              name: "type_of_product",
+                              value: newValue,
+                            },
                           });
 
                           try {
@@ -636,22 +760,24 @@ const AddDelivery = () => {
                           } catch (err) {
                             console.error("Error saving product type", err);
                           }
-                          const e = {
-                            target: {
-                              name: "type_of_product",
-                              value: newValue,
-                            },
-                          };
-
-                          handleItemChange(index, {
-                            target: {
-                              name: "type_of_product",
-                              value: newValue,
-                            },
-                          });
                         }}
                         placeholder="Select type"
                         isSearchable
+                        components={{ MenuList: CustomMenuList }}
+                        onEdit={() =>
+                          handleEditClick(
+                            "product",
+                            item.type_of_product,
+                            index
+                          )
+                        }
+                        onDelete={() =>
+                          handleDeleteClick(
+                            "product",
+                            item.type_of_product,
+                            index
+                          )
+                        }
                         styles={{
                           control: (provided) => ({
                             ...provided,
@@ -679,33 +805,54 @@ const AddDelivery = () => {
                             color: "#b4b4b4",
                             opacity: "1",
                           }),
+
+                          option: (provided, state) => ({
+                            ...provided,
+
+                            border: "7px solid white",
+                            backgroundColor: state.isSelected
+                              ? "#84cf95ff"
+                              : state.isFocused
+                              ? "#bbd2c1ff"
+                              : "#e6f4ea",
+                            color: state.isSelected ? "#fff" : "#000",
+                            cursor: "pointer",
+                          }),
                         }}
                       />
                     </td>
 
                     <td>
                       <CreatableSelect
-                        options={itemOptions[item.type_of_product] || []}
+                        options={
+                          item.type_of_product
+                            ? itemOptions[item.type_of_product]?.filter(
+                                (opt) => opt.value && opt.value.trim() !== ""
+                              ) || []
+                            : []
+                        }
                         value={
-                          itemOptions[item.type_of_product]?.find(
-                            (opt) => opt.value === item.description
-                          ) || null
+                          item.description
+                            ? itemOptions[item.type_of_product]?.find(
+                                (opt) => opt.value === item.description
+                              ) || null
+                            : null
                         }
                         onChange={(selected) => {
-                          const e = {
+                          if (!selected) return;
+                          handleItemChange(index, {
                             target: {
                               name: "description",
-                              value: selected?.value || "",
+                              value: selected.value,
                             },
-                          };
-                          handleItemChange(index, e);
+                          });
                         }}
                         onCreateOption={async (newValue) => {
+                          if (!newValue.trim()) return; 
                           const newOption = {
                             label: newValue,
                             value: newValue,
                           };
-
                           setItemOptions((prev) => ({
                             ...prev,
                             [item.type_of_product]: [
@@ -713,6 +860,9 @@ const AddDelivery = () => {
                               newOption,
                             ],
                           }));
+                          handleItemChange(index, {
+                            target: { name: "description", value: newValue },
+                          });
 
                           try {
                             await axios.post(
@@ -726,31 +876,38 @@ const AddDelivery = () => {
                           } catch (err) {
                             console.error("Error saving product item", err);
                           }
-
-                          const e = {
-                            target: { name: "description", value: newValue },
-                          };
-                          handleItemChange(index, e);
                         }}
                         placeholder={
                           item.type_of_product
-                            ? `${item.type_of_product} Items`
+                            ? itemOptions[item.type_of_product]?.length > 0
+                              ? `${item.type_of_product} Items`
+                              : "No options"
                             : "Select Item"
                         }
                         isDisabled={!item.type_of_product}
                         isSearchable
+                        components={{ MenuList: CustomMenuList }}
+                        onEdit={() =>
+                          handleEditClick(
+                            "item",
+                            item.description,
+                            index,
+                            item.type_of_product
+                          )
+                        }
+                        onDelete={() =>
+                          handleDeleteClick(
+                            "item",
+                            item.description,
+                            index,
+                            item.type_of_product
+                          )
+                        }
                         styles={{
-                          control: (provided, state) => ({
+                          control: (provided) => ({
                             ...provided,
                             minHeight: "41px",
                             height: "41px",
-                            backgroundColor: !item.type_of_product
-                              ? "#f5f5f5"
-                              : "white",
-                            opacity: !item.type_of_product ? 0.6 : 1,
-                            cursor: !item.type_of_product
-                              ? "not-allowed"
-                              : "default",
                           }),
                           valueContainer: (provided) => ({
                             ...provided,
@@ -766,14 +923,120 @@ const AddDelivery = () => {
                             ...provided,
                             height: "41px",
                           }),
-                          placeholder: (provided) => ({
+                          option: (provided, state) => ({
                             ...provided,
-                            textTransform: "none",
-                            color: "#b4b4b4",
+                            border: "7px solid white",
+                            backgroundColor: state.isSelected
+                              ? "#84cf95ff"
+                              : state.isFocused
+                              ? "#bbd2c1ff"
+                              : "#e6f4ea",
+                            color: state.isSelected ? "#fff" : "#000",
+                            cursor: "pointer",
                           }),
                         }}
                       />
                     </td>
+
+                    <Modal
+                      show={editModal.show}
+                      onHide={() => setEditModal({ ...editModal, show: false })}
+                      centered
+                    >
+                      <Modal.Header closeButton>
+                        <Modal.Title>
+                          Edit{" "}
+                          {editModal.type === "product"
+                            ? "Product Type"
+                            : "Item"}
+                        </Modal.Title>
+                      </Modal.Header>
+                      <Modal.Body>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={newValue}
+                          onChange={(e) => setNewValue(e.target.value)}
+                        />
+                      </Modal.Body>
+                      <Modal.Footer>
+                        <Button
+                          className="hover-cancel-btn"
+                          variant="secondary"
+                          onClick={() =>
+                            setEditModal({ ...editModal, show: false })
+                          }
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="success"
+                          onClick={async () => {
+                            try {
+                              await axios.post(
+                                "http://localhost/DeliveryTrackingSystem/update_product.php",
+                                {
+                                  type_of_product_current:
+                                    editModal.type === "product"
+                                      ? editModal.currentValue
+                                      : editModal.typeOfProduct,
+                                  type_of_product_new:
+                                    editModal.type === "product"
+                                      ? newValue
+                                      : editModal.typeOfProduct,
+                                  description_current:
+                                    editModal.type === "item"
+                                      ? editModal.currentValue
+                                      : "",
+                                  description_new:
+                                    editModal.type === "item" ? newValue : "",
+                                }
+                              );
+
+                              if (editModal.type === "product") {
+                                setProductOptions((prev) =>
+                                  prev.map((opt) =>
+                                    opt.value === editModal.currentValue
+                                      ? { label: newValue, value: newValue }
+                                      : opt
+                                  )
+                                );
+
+                          
+                                setOrderItems((prev) =>
+                                  prev.map((item) =>
+                                    item.type_of_product ===
+                                    editModal.currentValue
+                                      ? { ...item, type_of_product: newValue }
+                                      : item
+                                  )
+                                );
+
+                                
+                                setItemOptions((prev) => {
+                                  const updated = { ...prev };
+                                  if (updated[editModal.currentValue]) {
+                                    updated[newValue] = [
+                                      ...updated[editModal.currentValue],
+                                    ];
+                                    delete updated[editModal.currentValue];
+                                  }
+                                  return updated;
+                                });
+                              }
+
+                              setEditModal({ ...editModal, show: false });
+                              alert("Updated successfully!");
+                            } catch (err) {
+                              console.error(err);
+                              alert("Error updating!");
+                            }
+                          }}
+                        >
+                          Save Changes
+                        </Button>
+                      </Modal.Footer>
+                    </Modal>
 
                     <td>
                       <input
@@ -1059,22 +1322,22 @@ const AddDelivery = () => {
             </Modal.Body>
             <Modal.Footer>
               <Button
-              className="close-btn py-2 fs-6"
+                className="close-btn py-2 fs-6"
                 variant="secondary"
                 onClick={() => setShowCancelModal(false)}
               >
                 No
               </Button>
-              <Button className="cancel-btn py-2 px-3 fs-6" variant="danger" onClick={handleConfirmCancel}>
+              <Button
+                className="cancel-btn py-2 px-3 fs-6"
+                variant="danger"
+                onClick={handleConfirmCancel}
+              >
                 Yes, Cancel
               </Button>
             </Modal.Footer>
           </Modal>
-          <button
-            type="submit"
-            form="deliveryForm"
-            className="add-btn"
-          >
+          <button type="submit" form="deliveryForm" className="add-btn">
             Add
           </button>
         </div>

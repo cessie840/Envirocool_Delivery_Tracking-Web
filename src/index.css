@@ -1318,3 +1318,24 @@ h5{
   color: #198754 !important;
   border-color: #198754 !important;
 }
+
+.hover-cancel-btn {
+  transition: all 0.3s ease;
+}
+
+.hover-cancel-btn:hover {
+  background-color: #ffffff !important;
+  color: #5a6268  !important;
+}
+
+
+.hover-save-btn {
+ 
+  transition: all 0.3s ease;
+}
+
+.hover-save-btn:hover {
+  background-color: white !important;
+  color: #28a745 !important; 
+  border-color: #28a745 !important;
+}
