@@ -134,7 +134,7 @@ const fetchAssignedDeliveries = () => {
     axios
       .post(
         "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
-        { transaction_id: transactionNo }
+        { transaction_id: transactionNo } 
       )
       .then((res) => {
         const { success, message } = res.data;
@@ -151,9 +151,14 @@ const fetchAssignedDeliveries = () => {
             const notifKey = `notifications_${storedProfile.pers_username}`;
             const storedNotifs =
               JSON.parse(localStorage.getItem(notifKey)) || [];
-            const updatedNotifs = storedNotifs.filter(
-              (n) => n.transactionNo !== transactionNo
+
+           
+            const updatedNotifs = storedNotifs.map((notif) =>
+              notif.transactionNo === transactionNo
+                ? { ...notif, read: true }
+                : notif
             );
+
             localStorage.setItem(notifKey, JSON.stringify(updatedNotifs));
           }
 

@@ -9,7 +9,7 @@ import CreatableSelect from "react-select/creatable";
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
-  { label: "BANK TRANSFER"}
+  { label: "BANK TRANSFER" ,value: "Bank Transfer"}
     
 ];
 
