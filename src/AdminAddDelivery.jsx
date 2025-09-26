@@ -9,23 +9,8 @@ import CreatableSelect from "react-select/creatable";
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
-  { label: "GCASH", value: "GCASH" },
-  {
-    label: "Bank Transfer",
-    options: [
-      { label: "Bank 1", value: "Bank 1" },
-      { label: "Bank 2", value: "Bank 2" },
-      { label: "Bank 3", value: "Bank 3" },
-    ],
-  },
-  {
-    label: "Card",
-    options: [
-      { label: "Card 1", value: "Visa" },
-      { label: "Card 2", value: "Mastercard" },
-      { label: "Card 3", value: "AmEx" },
-    ],
-  },
+  { label: "BANK TRANSFER"}
+    
 ];
 
 const AddDelivery = () => {
@@ -60,7 +45,7 @@ const AddDelivery = () => {
     const value = e.target.value;
     setForm((prev) => ({ ...prev, customer_contact: value }));
 
-    // Validate contact number
+  
     if (!value.startsWith("0")) {
       setContactError("Contact number must start with '0'.");
     } else if (value.length > 11) {
@@ -406,13 +391,16 @@ const AddDelivery = () => {
     };
 
     try {
-      const res = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/add_delivery.php",
-        dataToSend,
-        { headers: { "Content-Type": "application/json" } }
-      );
+  const res = await axios.post(
+    "http://localhost/DeliveryTrackingSystem/add_delivery.php",
+    dataToSend,
+    { headers: { "Content-Type": "application/json" } }
+  );
 
-      alert("Delivery added successfully!");
+  alert("Delivery added successfully!");
+
+ 
+  window.location.reload();
 
       setForm({
         customer_name: "",
