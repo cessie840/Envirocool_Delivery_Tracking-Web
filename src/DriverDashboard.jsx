@@ -20,53 +20,57 @@ function DriverDashboard() {
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
 
-  const fetchAssignedDeliveries = () => {
-    const storedProfile = localStorage.getItem("user");
-    if (!storedProfile) return;
+const fetchAssignedDeliveries = () => {
+  const storedProfile = localStorage.getItem("user");
+  if (!storedProfile) return;
 
-    const parsedProfile = JSON.parse(storedProfile);
-    const username = parsedProfile.pers_username;
-    if (!username) return;
+  const parsedProfile = JSON.parse(storedProfile);
+  const username = parsedProfile.pers_username;
+  if (!username) return;
 
-    axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
-        { pers_username: username }
-      )
-      .then((res) => {
-        if (!Array.isArray(res.data)) return;
+  axios
+    .post(
+      "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
+      { pers_username: username }
+    )
+    .then((res) => {
+      if (!Array.isArray(res.data)) return;
 
-        const assigned = res.data.filter(
-          (d) =>
-            d.delivery_status === "To Ship" || d.delivery_status === "Pending"
-        );
-        const out = res.data.filter(
-          (d) => d.delivery_status === "Out for Delivery"
-        );
+      const assigned = res.data.filter(
+        (d) =>
+          d.delivery_status === "To Ship" || d.delivery_status === "Pending"
+      );
+      const out = res.data.filter(
+        (d) => d.delivery_status === "Out for Delivery"
+      );
 
-        setAssignedDeliveries(assigned);
-        setFilteredDeliveries(assigned);
-        setOutForDelivery(out);
+      setAssignedDeliveries(assigned);
+      setFilteredDeliveries(assigned);
+      setOutForDelivery(out);
 
-        // 🔑 per-user notifications key
-        const notifKey = `notifications_${username}`;
-        let storedNotifs = JSON.parse(localStorage.getItem(notifKey));
-        if (!storedNotifs) storedNotifs = [];
+      const notifKey = `notifications_${username}`;
+      let storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
 
-        const knownTxnNos = new Set(storedNotifs.map((n) => n.transactionNo));
-        const freshOnes = assigned.filter(
-          (d) => !knownTxnNos.has(d.transactionNo)
-        );
+      const storedTxnNos = new Set(storedNotifs.map((n) => n.transactionNo));
 
+
+      const freshOnes = assigned.filter(
+        (d) => !storedTxnNos.has(d.transactionNo)
+      );
+
+      if (freshOnes.length > 0) {
         setNewDeliveries(freshOnes);
         setNewDeliveriesCount(freshOnes.length);
+        setShowNewDeliveryPopup(true);
+      } else {
+        setNewDeliveries([]);
+        setNewDeliveriesCount(0);
+        setShowNewDeliveryPopup(false);
+      }
+    })
+    .catch((err) => console.error("Error fetching deliveries:", err));
+};
 
-        if (freshOnes.length > 0) {
-          setShowNewDeliveryPopup(true);
-        }
-      })
-      .catch((err) => console.error("Error fetching deliveries:", err));
-  };
 
   useEffect(() => {
     fetchAssignedDeliveries();
@@ -89,25 +93,34 @@ function DriverDashboard() {
     }
   }, [location.state]);
 
-  const handleClosePopup = () => {
-    const storedProfile = JSON.parse(localStorage.getItem("user"));
-    if (!storedProfile || !storedProfile.pers_username) return;
+ const handleClosePopup = () => {
+   const storedProfile = JSON.parse(localStorage.getItem("user"));
+   if (!storedProfile || !storedProfile.pers_username) return;
 
-    const notifKey = `notifications_${storedProfile.pers_username}`;
+   const notifKey = `notifications_${storedProfile.pers_username}`;
+   const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
 
-    const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
-    const updatedNotifs = [
-      ...storedNotifs,
-      ...newDeliveries.map((d) => ({ transactionNo: d.transactionNo })),
-    ];
+   const updatedNotifs = [
+     ...storedNotifs,
+     ...newDeliveries.map((d) => ({
+       transactionNo: d.transactionNo,
+       message: `You have new assigned deliveries for Transaction No. ${d.transactionNo}`,
+       read: false,
+       timestamp: Date.now(),
+     })),
+   ];
 
-    const uniqueNotifs = Array.from(
-      new Map(updatedNotifs.map((n) => [n.transactionNo, n])).values()
-    );
+   const uniqueNotifs = Array.from(
+     new Map(updatedNotifs.map((n) => [n.transactionNo, n])).values()
+   );
 
-    localStorage.setItem(notifKey, JSON.stringify(uniqueNotifs));
-    setShowNewDeliveryPopup(false);
-  };
+   localStorage.setItem(notifKey, JSON.stringify(uniqueNotifs));
+
+   setShowNewDeliveryPopup(false);
+   setNewDeliveries([]); 
+   setNewDeliveriesCount(0);
+ };
+
 
   const markAsOutForDelivery = (transactionNo) => {
     const delivery = assignedDeliveries.find(
