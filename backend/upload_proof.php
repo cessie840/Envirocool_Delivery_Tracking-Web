@@ -25,10 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
  
-    $fileExt = pathinfo($_FILES["proof_of_delivery"]["name"], PATHINFO_EXTENSION);
-    if ($fileExt == "") $fileExt = "jpg";
-    $fileName = uniqid("proof_", true) . "." . $fileExt;
-    $targetFile = $targetDir . $fileName;
+ $fileExt = pathinfo($_FILES["proof_of_delivery"]["name"], PATHINFO_EXTENSION);
+if ($fileExt == "") $fileExt = "jpg";
+
+
+$dateTime = date("Ymd_Hi");
+$fileName = "TN#" . $transaction_id . "_" . $dateTime . "." . $fileExt;
+
+$targetFile = $targetDir . $fileName;
+
 
     if (move_uploaded_file($_FILES["proof_of_delivery"]["tmp_name"], $targetFile)) {
         
