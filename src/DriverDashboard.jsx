@@ -48,7 +48,9 @@ function DriverDashboard() {
         setFilteredDeliveries(assigned);
         setOutForDelivery(out);
 
-        let storedNotifs = JSON.parse(localStorage.getItem("notifications"));
+        // 🔑 per-user notifications key
+        const notifKey = `notifications_${username}`;
+        let storedNotifs = JSON.parse(localStorage.getItem(notifKey));
         if (!storedNotifs) storedNotifs = [];
 
         const knownTxnNos = new Set(storedNotifs.map((n) => n.transactionNo));
@@ -88,8 +90,12 @@ function DriverDashboard() {
   }, [location.state]);
 
   const handleClosePopup = () => {
-    const storedNotifs =
-      JSON.parse(localStorage.getItem("notifications")) || [];
+    const storedProfile = JSON.parse(localStorage.getItem("user"));
+    if (!storedProfile || !storedProfile.pers_username) return;
+
+    const notifKey = `notifications_${storedProfile.pers_username}`;
+
+    const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
     const updatedNotifs = [
       ...storedNotifs,
       ...newDeliveries.map((d) => ({ transactionNo: d.transactionNo })),
@@ -99,7 +105,7 @@ function DriverDashboard() {
       new Map(updatedNotifs.map((n) => [n.transactionNo, n])).values()
     );
 
-    localStorage.setItem("notifications", JSON.stringify(uniqueNotifs));
+    localStorage.setItem(notifKey, JSON.stringify(uniqueNotifs));
     setShowNewDeliveryPopup(false);
   };
 
@@ -127,12 +133,16 @@ function DriverDashboard() {
           );
           setNewDeliveriesCount((prev) => (prev > 0 ? prev - 1 : 0));
 
-          const storedNotifs =
-            JSON.parse(localStorage.getItem("notifications")) || [];
-          const updatedNotifs = storedNotifs.filter(
-            (n) => n.transactionNo !== transactionNo
-          );
-          localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
+          const storedProfile = JSON.parse(localStorage.getItem("user"));
+          if (storedProfile && storedProfile.pers_username) {
+            const notifKey = `notifications_${storedProfile.pers_username}`;
+            const storedNotifs =
+              JSON.parse(localStorage.getItem(notifKey)) || [];
+            const updatedNotifs = storedNotifs.filter(
+              (n) => n.transactionNo !== transactionNo
+            );
+            localStorage.setItem(notifKey, JSON.stringify(updatedNotifs));
+          }
 
           fetchAssignedDeliveries();
           navigate("/out-for-delivery");
@@ -171,7 +181,7 @@ function DriverDashboard() {
       <HeaderAndNav
         onSidebarToggle={() => setShowSidebar(true)}
         newDeliveries={newDeliveries}
-        onSearch={handleSearch} 
+        onSearch={handleSearch}
       />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 

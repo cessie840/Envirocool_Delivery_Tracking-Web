@@ -10,21 +10,30 @@ import {
 import { useNavigate } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
 
-const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [] ,onSearch  }) => {
+const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [], onSearch }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
-  
+
+  // helper para makuha notif key base sa user
+  const getNotifKey = () => {
+    const storedProfile = JSON.parse(localStorage.getItem("user"));
+    if (!storedProfile || !storedProfile.pers_username) return null;
+    return `notifications_${storedProfile.pers_username}`;
+  };
 
   useEffect(() => {
-    const storedNotifs =
-      JSON.parse(localStorage.getItem("notifications")) || [];
+    const notifKey = getNotifKey();
+    if (!notifKey) return;
+
+    const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
     setNotifications(storedNotifs);
   }, []);
 
- 
   useEffect(() => {
     if (newDeliveries.length === 0) return;
+    const notifKey = getNotifKey();
+    if (!notifKey) return;
 
     setNotifications((prev) => {
       const notifMap = new Map(prev.map((n) => [n.transactionNo, n]));
@@ -46,7 +55,7 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [] ,onSearch  }) => {
         }
       });
 
-      localStorage.setItem("notifications", JSON.stringify(updated));
+      localStorage.setItem(notifKey, JSON.stringify(updated));
       return updated;
     });
   }, [newDeliveries]);
@@ -54,17 +63,18 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [] ,onSearch  }) => {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = (transactionNo) => {
+    const notifKey = getNotifKey();
+    if (!notifKey) return;
+
     setNotifications((prev) => {
       const updated = prev.map((n) =>
         n.transactionNo === transactionNo ? { ...n, read: true } : n
       );
-      localStorage.setItem("notifications", JSON.stringify(updated));
+      localStorage.setItem(notifKey, JSON.stringify(updated));
       return updated;
     });
 
     setShowNotif(false);
-
-   
     navigate("/driver-dashboard", { state: { scrollTo: transactionNo } });
   };
 
