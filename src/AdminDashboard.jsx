@@ -8,7 +8,7 @@ import {
   FaListAlt,
   FaEquals,
   FaSearch,
-  FaTruck,
+  FaFileInvoice,
 } from "react-icons/fa";
 import { Row, Col, Card } from "react-bootstrap";
 import axios from "axios";
@@ -158,7 +158,7 @@ const AdminDashboard = () => {
             <Card className="p-3 h-100 dashboard-panel">
               <div className="d-flex align-items-center">
                 <div style={{ ...iconStyle, backgroundColor: "#2196F3" }}>
-                  <FaTruck />
+                  <FaFileInvoice />
                 </div>
                 <div>
                   <h6 className="fw-semibold m-0">Total Transactions</h6>

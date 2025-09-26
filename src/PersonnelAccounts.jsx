@@ -9,8 +9,9 @@ import { Table } from "react-bootstrap";
 const PersonnelAccounts = () => {
   const navigate = useNavigate();
   const [personnel, setPersonnel] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUser , setSelectedUser ] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
@@ -34,6 +35,23 @@ const PersonnelAccounts = () => {
         console.error("Error fetching personnel:", error);
       });
   };
+
+  const filteredPersonnel = personnel.filter((person) => {
+    const fullName = `${person.pers_fname || ""} ${person.pers_lname || ""}`.toLowerCase();
+    const email = (person.pers_email || "").toLowerCase();
+    const username = (person.pers_username || "").toLowerCase();
+    const status = (person.status || "").toLowerCase();
+    const assignmentStatus = (person.assignment_status || "").toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    return (
+      fullName.includes(search) ||
+      email.includes(search) ||
+      username.includes(search) ||
+      status.includes(search) ||
+      assignmentStatus.includes(search)
+    );
+  });
 
   const handleToggleStatus = (username, currentStatus, assignmentStatus) => {
     // 🚫 Restrict toggling if Out for Delivery
@@ -103,7 +121,11 @@ const PersonnelAccounts = () => {
   };
 
   return (
-    <OperationalLayout title="Delivery Personnel Accounts">
+    <OperationalLayout 
+      title="Delivery Personnel Accounts" 
+      searchTerm={searchTerm} 
+      onSearchChange={setSearchTerm}
+    >
       <div className="d-flex justify-content-end mx-4 my-5">
         <button
           className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
@@ -130,10 +152,9 @@ const PersonnelAccounts = () => {
           </tr>
         </thead>
         <tbody className="p-2">
-          {personnel.length > 0 ? (
-            [...personnel] // copy to avoid mutating state directly
+          {filteredPersonnel.length > 0 ? (
+            [...filteredPersonnel] 
               .sort((a, b) => {
-                // ✅ Active first, Inactive last
                 if (a.status === "Active" && b.status === "Inactive") return -1;
                 if (a.status === "Inactive" && b.status === "Active") return 1;
                 return 0; // keep original order if same status
@@ -242,7 +263,7 @@ const PersonnelAccounts = () => {
                       id="personnel-view"
                       className="btn btn-view"
                       onClick={() => {
-                        setSelectedUser(person.pers_username);
+                        setSelectedUser (person.pers_username);
                         setShowModal(true);
                       }}
                     >
@@ -254,7 +275,7 @@ const PersonnelAccounts = () => {
           ) : (
             <tr>
               <td colSpan="6" className="text-center">
-                No delivery personnel accounts found.
+                {searchTerm ? "No matching personnel found." : "No delivery personnel accounts found."}
               </td>
             </tr>
           )}
@@ -264,7 +285,7 @@ const PersonnelAccounts = () => {
       <ViewPersonnelModal
         show={showModal}
         onHide={() => setShowModal(false)}
-        username={selectedUser}
+        username={selectedUser }
       />
     </OperationalLayout>
   );

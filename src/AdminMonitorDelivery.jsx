@@ -39,7 +39,6 @@ const MonitorDelivery = () => {
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
-  
   const formatDateTime = (dateTime) => {
     if (!dateTime) return "N/A";
     const date = new Date(dateTime);
@@ -202,6 +201,7 @@ const MonitorDelivery = () => {
     <AdminLayout
       title="Monitor Deliveries"
       onAddClick={handleAddDelivery}
+      showSearch={false}
     >
       <div className="p-4 bg-white rounded-4 border border-secondary-subtle">
         <div className="container-fluid p-3">
@@ -222,7 +222,9 @@ const MonitorDelivery = () => {
                       border: `1px solid ${color}`,
                       fontSize: "1.2rem",
                       boxShadow:
-                        activeTab === key ? "none" :  "0 0.5rem 0.6rem rgba(0, 0, 0, 0.14)",
+                        activeTab === key
+                          ? "none"
+                          : "0 0.5rem 0.6rem rgba(0, 0, 0, 0.14)",
                       transition: "all 0.3s ease",
                     }}
                     onMouseEnter={(e) => {

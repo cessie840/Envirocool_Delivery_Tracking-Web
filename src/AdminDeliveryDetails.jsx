@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Form } from "react-bootstrap"; 
+import { Table, Form } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 
@@ -125,14 +125,17 @@ const DeliveryDetails = () => {
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
-  // 🔹 Apply both search + status filter
   const applyFilters = (list, term, status) => {
     const lower = term.toLowerCase();
     return list.filter((e) => {
       const matchesSearch =
         (e.transaction_id &&
           e.transaction_id.toString().toLowerCase().includes(lower)) ||
+        (e.tracking_number &&
+          e.tracking_number.toString().toLowerCase().includes(lower)) ||
         (e.customer_name && e.customer_name.toLowerCase().includes(lower)) ||
+        (e.delivery_status &&
+          e.delivery_status.toLowerCase().includes(lower)) ||
         (e.description && e.description.toLowerCase().includes(lower));
 
       const matchesStatus = status === "All" || e.delivery_status === status;
@@ -185,13 +188,11 @@ const DeliveryDetails = () => {
   );
 
   return (
-    
     <AdminLayout
       title="Delivery Details"
       onAddClick={handleAddDelivery}
       showSearch={true}
       onSearch={handleSearch}
-      
     >
       <div className="mb-3 d-flex justify-content-end ">
         <Form.Select
@@ -211,115 +212,113 @@ const DeliveryDetails = () => {
         </Form.Select>
       </div>
 
-        <Table
-          bordered
-          hover
-          responsive
-          className="delivery-table container-fluid table-responsive bg-white"
-        >
-          <thead>
-            <tr>
-              <th>Transaction No.</th>
-              <th>Tracking No.</th>
-              <th>Client Name</th>
-              <th>Delivery Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedDeliveries.length > 0 ? (
-              paginatedDeliveries.map((group, index) => (
-                <tr key={index} className="delivery-table-hover">
-                  <td>{group.transaction_id}</td>
-                  <td>{group.tracking_number}</td>
-                  <td>{group.customer_name}</td>
-                 
-                 
-            
-                  <td>
-                    <span
-                      style={{
-                        backgroundColor:
-                          group.delivery_status === "Delivered"
-                            ? "#C6FCD3"
-                            : group.delivery_status === "Cancelled"
-                            ? "#FDE0E0"
-                            : group.delivery_status === "Pending"
-                            ? "#FFF5D7"
-                            : group.delivery_status === "Out for Delivery"
-                            ? "#d2e6f5ff"
-                            : "transparent",
-                        color:
-                          group.delivery_status === "Delivered"
-                            ? "#3E5F44"
-                            : group.delivery_status === "Cancelled"
-                            ? "red"
-                            : group.delivery_status === "Pending"
-                            ? "#FF9D23"
-                            : group.delivery_status === "Out for Delivery"
-                            ? "#1762b1ff"
-                            : "black",
-                        padding: "5px",
-                        borderRadius: "8px",
-                        display: "inline-block",
-                        minWidth: "80px",
-                        textAlign: "center",
-                        fontSize: "0.85rem",
-                        fontWeight: "600",
-                      }}
+      <Table
+        bordered
+        hover
+        responsive
+        className="delivery-table container-fluid table-responsive bg-white"
+      >
+        <thead>
+          <tr>
+            <th>Transaction No.</th>
+            <th>Tracking No.</th>
+            <th>Client Name</th>
+            <th>Delivery Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedDeliveries.length > 0 ? (
+            paginatedDeliveries.map((group, index) => (
+              <tr key={index} className="delivery-table-hover">
+                <td>{group.transaction_id}</td>
+                <td>{group.tracking_number}</td>
+                <td>{group.customer_name}</td>
+
+                <td>
+                  <span
+                    style={{
+                      backgroundColor:
+                        group.delivery_status === "Delivered"
+                          ? "#C6FCD3"
+                          : group.delivery_status === "Cancelled"
+                          ? "#FDE0E0"
+                          : group.delivery_status === "Pending"
+                          ? "#FFF5D7"
+                          : group.delivery_status === "Out for Delivery"
+                          ? "#d2e6f5ff"
+                          : "transparent",
+                      color:
+                        group.delivery_status === "Delivered"
+                          ? "#3E5F44"
+                          : group.delivery_status === "Cancelled"
+                          ? "red"
+                          : group.delivery_status === "Pending"
+                          ? "#FF9D23"
+                          : group.delivery_status === "Out for Delivery"
+                          ? "#1762b1ff"
+                          : "black",
+                      padding: "5px",
+                      borderRadius: "8px",
+                      display: "inline-block",
+                      minWidth: "80px",
+                      textAlign: "center",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {group.delivery_status}
+                  </span>
+                </td>
+                <td className="align-middle text-center">
+                  <div className="action-btn d-flex justify-content-center gap-2 py-2">
+                    <button
+                      className="btn btn-view"
+                      onClick={() =>
+                        navigate(`/view-delivery/${group.transaction_id}`)
+                      }
                     >
-                      {group.delivery_status}
-                    </span>
-                  </td>
-                  <td className="align-middle text-center">
-                    <div className="action-btn d-flex justify-content-center gap-2 py-2">
-                      <button
-                        className="btn btn-view"
-                        onClick={() =>
-                          navigate(`/view-delivery/${group.transaction_id}`)
-                        }
-                      >
-                        View
-                      </button>
-                      <button
-                        className="btn upd-btn"
-                        onClick={() => handleUpdate(group.transaction_id)}
-                      >
-                        Update
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className="text-center py-4">
-                  No deliveries found.
+                      View
+                    </button>
+                    <button
+                      className="btn upd-btn"
+                      onClick={() => handleUpdate(group.transaction_id)}
+                    >
+                      Update
+                    </button>
+                  </div>
                 </td>
               </tr>
-            )}
-          </tbody>
-        </Table>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="7" className="text-center py-4">
+                No deliveries found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
 
-        <div className="custom-pagination d-flex justify-content-center align-items-center mt-3">
-          <button
-            className="page-btn btn btn-white mx-1"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info mx-2">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn btn btn-white mx-1"
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
+      <div className="custom-pagination d-flex justify-content-center align-items-center mt-3">
+        <button
+          className="page-btn btn btn-white mx-1"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info mx-2">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn btn btn-white mx-1"
+          disabled={currentPage === totalPages || totalPages === 0}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
 
       <UpdateOrderModal
         show={showModal}

@@ -13,7 +13,7 @@ import {
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
-const OperationalLayout = ({ children, title }) => {
+const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -98,7 +98,12 @@ const OperationalLayout = ({ children, title }) => {
             <h2 className="fs-2 fw-bold m-0">{title}</h2>
           </div>
           <div className="search-bar position-relative me-3">
-            <input type="text" placeholder="Search..." />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm || ""}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+            />
             <FaSearch className="search-icon" />
           </div>
         </div>

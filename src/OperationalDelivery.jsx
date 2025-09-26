@@ -13,6 +13,7 @@ const OperationalDelivery = () => {
   const [personnelList, setPersonnelList] = useState([]);
   const [activeTab, setActiveTab] = useState("unassigned");
   const [filterDate, setFilterDate] = useState(""); 
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     document.title = "Operational Delivery";
@@ -107,6 +108,7 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
+  // Base filtered lists by assignment status
   const unassignedOrders = orders
     .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
     .sort(
@@ -127,17 +129,47 @@ const OperationalDelivery = () => {
         new Date(a.target_date_delivery) - new Date(b.target_date_delivery)
     );
 
+  const searchedUnassignedOrders = unassignedOrders.filter((order) => {
+    if (!searchTerm.trim()) return true; 
+    const search = searchTerm.toLowerCase();
+    const assignedText = "not assigned"; 
+    return (
+      String(order.transaction_id || "").toLowerCase().includes(search) ||
+      (order.customer_name || "").toLowerCase().includes(search) ||
+      assignedText.toLowerCase().includes(search) ||
+      (order.status || "").toLowerCase().includes(search) ||
+      String(order.tracking_number || "").toLowerCase().includes(search) ||
+      (order.target_date_delivery || "").toLowerCase().includes(search)
+    );
+  });
+
+  const searchedAssignedOrders = assignedOrders.filter((order) => {
+    if (!searchTerm.trim()) return true; 
+    const search = searchTerm.toLowerCase();
+    return (
+      String(order.transaction_id || "").toLowerCase().includes(search) ||
+      (order.customer_name || "").toLowerCase().includes(search) ||
+      (order.assigned_personnel || "").toLowerCase().includes(search) ||
+      (order.status || "").toLowerCase().includes(search) ||
+      String(order.tracking_number || "").toLowerCase().includes(search) ||
+      (order.target_date_delivery || "").toLowerCase().includes(search)
+    );
+  });
 
   const filteredUnassignedOrders = filterDate
-    ? unassignedOrders.filter((o) => o.target_date_delivery === filterDate)
-    : unassignedOrders;
+    ? searchedUnassignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    : searchedUnassignedOrders;
 
   const filteredAssignedOrders = filterDate
-    ? assignedOrders.filter((o) => o.target_date_delivery === filterDate)
-    : assignedOrders;
+    ? searchedAssignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    : searchedAssignedOrders;
 
   return (
-    <OperationalLayout title="Delivery Orders">
+    <OperationalLayout 
+      title="Delivery Orders"
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+    >
       <div className="compact-container container mt-5 pb-5 px-5 rounded-2">
         {/* Tabs + Date Filter in same row */}
         <div className="d-flex justify-content-between align-items-center mb-5">
@@ -196,7 +228,12 @@ const OperationalDelivery = () => {
             <div className="row">
               {filteredUnassignedOrders.length === 0 ? (
                 <div className="col-12 text-center text-muted my-3">
-                  {filterDate ? (
+                  {searchTerm ? (
+                    <h6>
+                      No matching unassigned orders found.
+                      {filterDate ? ` on ${filterDate}` : ""}
+                    </h6>
+                  ) : filterDate ? (
                     <h6>No unassigned transactions found on {filterDate}</h6>
                   ) : (
                     <h6>All orders are already assigned</h6>
@@ -247,7 +284,12 @@ const OperationalDelivery = () => {
             <div className="row">
               {filteredAssignedOrders.length === 0 ? (
                 <div className="col-12 text-center text-muted my-3">
-                  {filterDate ? (
+                  {searchTerm ? (
+                    <h6>
+                      No matching assigned orders found.
+                      {filterDate ? ` on ${filterDate}` : ""}
+                    </h6>
+                  ) : filterDate ? (
                     <h6>No assigned transactions found on {filterDate}</h6>
                   ) : (
                     <h6>No orders have been assigned yet.</h6>

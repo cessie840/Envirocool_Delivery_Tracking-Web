@@ -139,23 +139,26 @@ $summary = $resultSum->fetch_assoc();
 $stmtSum->close();
 
 // 🔹 Aggregate cancellation reasons history (for charts)
-// Failed reasons grouped
 $sqlReasons = "
-    SELECT reason, COUNT(*) as count
+    SELECT 
+        SUM(CASE WHEN LOWER(reason) LIKE '%vehicle%' THEN 1 ELSE 0 END) AS vehicle_related,
+        SUM(CASE WHEN LOWER(reason) LIKE '%location%' THEN 1 ELSE 0 END) AS location_inaccessible
     FROM DeliveryHistory
     WHERE event_type = 'Cancelled'
     AND event_timestamp BETWEEN ? AND ?
-    GROUP BY reason
 ";
 $stmtReasons = $conn->prepare($sqlReasons);
 $stmtReasons->bind_param('ss', $startDate, $endDate);
 $stmtReasons->execute();
 $resultReasons = $stmtReasons->get_result();
-$failedReasons = [];
-while ($row = $resultReasons->fetch_assoc()) {
-    $failedReasons[$row['reason']] = (int) $row['count'];
-}
+$row = $resultReasons->fetch_assoc();
 $stmtReasons->close();
+
+$failedReasons = [
+    "Vehicle-related Issue" => (int) $row['vehicle_related'],
+    "Location Inaccessible" => (int) $row['location_inaccessible'],
+];
+
 
 echo json_encode([
     "serviceDeliveries" => $serviceDeliveries,

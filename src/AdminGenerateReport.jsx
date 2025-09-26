@@ -5,13 +5,13 @@ import {
   FaPlus,
   FaFilePdf,
   FaFilter,
-  FaDollarSign,
-  FaUsers,
-  FaBoxes,
-  FaClipboardList,
+  FaChartLine,
+  FaUserFriends,
+  FaShoppingCart,
+  FaTruck,
+  FaFileInvoice,
   FaCheckCircle,
   FaTimesCircle,
-  FaTruck,
 } from "react-icons/fa";
 import {
   Modal,
@@ -108,6 +108,7 @@ const GenerateReport = () => {
   const serviceRef = useRef(null);
   const customerRef = useRef(null);
 
+  // PAGINATION STATES
   const [salesPage, setSalesPage] = useState(1);
   const [transactionPage, setTransactionPage] = useState(1);
   const [servicePage, setServicePage] = useState(1);
@@ -168,6 +169,20 @@ const GenerateReport = () => {
       window.removeEventListener("deliveryRescheduled", handleRescheduleEvent);
     };
   }, []);
+
+  const getReportTitle = () => {
+    const reportLabel =
+      REPORT_TYPES.find((r) => r.value === reportType)?.label || "Report";
+
+    if (startDate && endDate) {
+      return `${reportLabel} for the period ${formatDate(
+        startDate
+      )} - ${formatDate(endDate)}`;
+    }
+
+    const periodLabel = PERIODS.find((p) => p.value === period)?.label || "";
+    return `${reportLabel} for the ${periodLabel} Period`;
+  };
 
   // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
@@ -368,13 +383,10 @@ const GenerateReport = () => {
         );
 
         // Extract unique Reason for Cancellations for dropdown
-        const reasonsSet = new Set();
-        normalizedService.forEach((s) => {
-          if (s.cancelled_reason) {
-            reasonsSet.add(s.cancelled_reason);
-          }
-        });
-        setCancellationReasonOptions(Array.from(reasonsSet).sort());
+        setCancellationReasonOptions([
+          "Vehicle-related Issue",
+          "Location Inaccessible",
+        ]);
       }
 
       if (reportType === "customer" || reportType === "all") {
@@ -504,7 +516,19 @@ const GenerateReport = () => {
     }));
   };
 
-  const filteredSalesData =
+  // add new state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // helper function
+  const matchesSearch = (row) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return Object.values(row).some((val) =>
+      String(val).toLowerCase().includes(query)
+    );
+  };
+
+  const filteredSalesData = (
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? salesData.filter((row) => {
           const rowDate = new Date(row.date_of_order);
@@ -530,9 +554,10 @@ const GenerateReport = () => {
             (!paymentOptionFilter ||
               row.payment_option.toLowerCase() ===
                 paymentOptionFilter.toLowerCase())
-        );
+        )
+  ).filter(matchesSearch);
 
-  const filteredTransactionData =
+  const filteredTransactionData = (
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? transactionData.filter((row) => {
           const rowDate = new Date(row.date_of_order || row.date_of_order);
@@ -541,7 +566,7 @@ const GenerateReport = () => {
 
           if (
             deliveryStatus &&
-            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
+            row.delivery_status?.toLowerCase() === deliveryStatus.toLowerCase()
           )
             return false;
 
@@ -607,13 +632,21 @@ const GenerateReport = () => {
           }
 
           return true;
-        });
+        })
+  ).filter(matchesSearch);
 
-  const filteredServiceData =
+  const filteredServiceData = (
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date_of_order); // <- use date_of_order
+          const rowDate = new Date(row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
+            return false;
+
+          // ✅ Delivery Status filter
+          if (
+            deliveryStatus &&
+            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
+          )
             return false;
 
           if (cancellationReasonFilter && row.cancelled_reason) {
@@ -630,6 +663,13 @@ const GenerateReport = () => {
           return true;
         })
       : serviceData.filter((row) => {
+          // ✅ Delivery Status filter
+          if (
+            deliveryStatus &&
+            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
+          )
+            return false;
+
           if (cancellationReasonFilter && row.cancelled_reason) {
             if (
               !row.cancelled_reason
@@ -641,27 +681,27 @@ const GenerateReport = () => {
             return false;
           }
           return true;
-        });
+        })
+  ).filter(matchesSearch);
 
-  const filteredCustomerData =
+  const filteredCustomerData = (
     isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
       ? customerData.filter((row) => {
           const rowDate = new Date(row.date_of_order);
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
-          // Only include delivered transactions
           if (String(row.delivery_status).toLowerCase() !== "delivered")
             return false;
 
           return true;
         })
       : customerData.filter((row) => {
-          // Only include delivered transactions
           if (String(row.delivery_status).toLowerCase() !== "delivered")
             return false;
           return true;
-        });
+        })
+  ).filter(matchesSearch);
 
   const overallClients = new Set(
     transactionData.map((row) => row.customer_name)
@@ -677,7 +717,9 @@ const GenerateReport = () => {
   ).size;
 
   // Totals for Transaction report
-  const totalTransactions = filteredTransactionData.length;
+  const totalTransactions = new Set(
+    filteredTransactionData.map((row) => row.transaction_id)
+  ).size;
   const totalCustomersTransaction = new Set(
     filteredTransactionData.map((row) => row.customer_name)
   ).size;
@@ -783,7 +825,7 @@ const GenerateReport = () => {
 
   const cardsData = {
     totalSales: {
-      icon: <FaDollarSign />,
+      icon: <FaChartLine />,
       color: "#4CAF50",
       title: "Total Sales",
       value: `₱${totalSalesAmount.toLocaleString(undefined, {
@@ -792,7 +834,7 @@ const GenerateReport = () => {
       })}`,
     },
     totalTransactions: {
-      icon: <FaClipboardList />,
+      icon: <FaFileInvoice />,
       color: "#2196F3",
       title: "Total Transactions",
       value: totalTransactions,
@@ -841,7 +883,7 @@ const GenerateReport = () => {
     const getCardData = (key) => {
       if (key === "totalClients") {
         return {
-          icon: <FaUsers />,
+          icon: <FaUserFriends />,
           color: "#2196F3",
           title: "Total Clients",
           value: reportType === "sales" ? totalCustomersSales : overallClients,
@@ -849,7 +891,7 @@ const GenerateReport = () => {
       }
       if (key === "totalItemsSold") {
         return {
-          icon: <FaBoxes />,
+          icon: <FaShoppingCart />, 
           color: "#FF9800",
           title: "Total Items Ordered",
           value: totalItemsOrdered,
@@ -857,7 +899,7 @@ const GenerateReport = () => {
       }
       if (key === "totalItemsDelivered") {
         return {
-          icon: <FaBoxes />,
+          icon: <FaTruck />, 
           color: "#009688",
           title: "Total Items Delivered",
           value: totalItemsDelivered,
@@ -881,6 +923,7 @@ const GenerateReport = () => {
       }
       return cardsData[key];
     };
+
     const renderRow = (keys) => {
       return (
         <Row className="mb-3 g-3">
@@ -989,7 +1032,7 @@ const GenerateReport = () => {
             reason,
             count,
           }))
-        : [{ reason: "No Data", count: 0 }]; // Dummy fallback
+        : [{ reason: "No Data", count: 0 }]; 
 
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -1572,7 +1615,7 @@ const GenerateReport = () => {
   };
 
   return (
-    <AdminLayout title="Generate Report">
+    <AdminLayout title="Generate Report" onSearch={setSearchQuery}>
       <style>{`
         .table-row-hover:hover { background-color: #f1f3f5 !important; transition: background-color 0.3s ease; }
         .btn-primary, .btn-success, .btn-danger { transition: box-shadow 0.3s ease; }
@@ -1607,11 +1650,7 @@ const GenerateReport = () => {
       {/* REPORT CONTENT  */}
       <div className="period-title text-center" ref={reportRef}>
         <h5 className="text-success fs-1 mt-3 mb-4 fw-semibold">
-          {`${
-            REPORT_TYPES.find((r) => r.value === reportType)?.label || "Report"
-          } for the ${
-            PERIODS.find((p) => p.value === period)?.label || ""
-          } Period`}
+          {getReportTitle()}
         </h5>
       </div>
       {/* TOTAL CARDS  */}
