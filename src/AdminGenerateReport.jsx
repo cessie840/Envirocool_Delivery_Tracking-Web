@@ -261,17 +261,18 @@ const GenerateReport = () => {
       };
     });
 
-  const normalizeCustomer = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
-      transaction_id: r.transaction_id ?? null,
-      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
-      customer_name: r.customer_name ?? r.customer ?? "Unknown",
-      item_name: r.item_name ?? r.description ?? "-",
-      customer_rating:
-        r.customer_rating != null ? Number(r.customer_rating) : null,
-      delivery_status: r.delivery_status ?? r.status ?? "Pending",
-      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-    }));
+const normalizeCustomer = (raw = []) =>
+  (Array.isArray(raw) ? raw : []).map((r) => ({
+    transaction_id: r.transaction_id ?? null,
+    date_of_order: r.date_of_order
+      ? new Date(r.date_of_order).toISOString().split("T")[0]
+      : "-", // formatted once here
+    customer_name: r.customer_name ?? r.customer ?? "Unknown",
+    item_name: r.item_name ?? r.description ?? "-",
+    customer_rating: r.customer_rating != null ? Number(r.customer_rating) : null,
+    delivery_status: r.delivery_status ?? r.status ?? "Pending",
+    cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
+  }));
 
   const safeJson = async (res) => {
     try {
@@ -1274,33 +1275,26 @@ const GenerateReport = () => {
     return rows;
   };
 
-  // ✅ Generate rows for Customer Satisfaction Report (no cancellation column)
+  // ✅ Generate rows (WITH Item column, no double formatting)
 const generateCustomerSatisfactionRows = (
-  customerData,
+  satisfactionData,
   period,
   startDate,
   endDate
 ) => {
   const rows = [];
 
-  // --- Helpers ---
   const getMonthName = (monthIndex) =>
     new Date(2000, monthIndex, 1).toLocaleString("default", {
       month: "long",
     });
 
-  const formatDate = (date) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    if (isNaN(d)) return "-";
-    return d.toISOString().split("T")[0]; // always YYYY-MM-DD
-  };
-
+  // Row builders
   const pushCustomerRow = (label, c) => {
     rows.push([
       label || "",
       c.transaction_id ?? "-",
-      formatDate(c.date_of_order),
+      c.date_of_order ?? "-",
       c.customer_name ?? "-",
       c.item_name ?? "-",
       c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
@@ -1312,11 +1306,8 @@ const generateCustomerSatisfactionRows = (
     rows.push([label, "-", "-", "-", "-", "-", "-"]);
   };
 
-  // --- Normalize dates once ---
-  const normalizedData = customerData.map((c) => ({
-    ...c,
-    date_of_order: formatDate(c.date_of_order),
-  }));
+  // ✅ Already normalized → just use it
+  const normalizedData = satisfactionData;
 
   // --- Period Logic ---
   if (period === "annually") {
@@ -1379,11 +1370,9 @@ const generateCustomerSatisfactionRows = (
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      const dateStr = formatDate(d);
+      const dateStr = d.toISOString().split("T")[0];
 
-      const dayTxs = normalizedData.filter(
-        (c) => formatDate(new Date(c.date_of_order)) === dateStr
-      );
+      const dayTxs = normalizedData.filter((c) => c.date_of_order === dateStr);
       if (dayTxs.length > 0) {
         rows.push([dateStr, "", "", "", "", "", ""]);
         dayTxs.forEach((c) => pushCustomerRow("", c));
@@ -1395,7 +1384,9 @@ const generateCustomerSatisfactionRows = (
     if (normalizedData.length > 0) {
       normalizedData.forEach((c) => pushCustomerRow("", c));
     } else {
-      pushZeroRow(formatDate(new Date(startDate || new Date())));
+      pushZeroRow(
+        new Date(startDate || new Date()).toISOString().split("T")[0]
+      );
     }
   }
 
@@ -1422,9 +1413,9 @@ const generateCustomerSatisfactionRows = (
     "-",
     "-",
     "-",
-    `Completed: ${totals.completed}`,
+    "-",
     `Avg Rating: ${avgRating}`,
-    `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+    `Completed: ${totals.completed} / Cancelled: ${totals.cancelled} / All: ${totals.total}`,
   ]);
 
   return rows;
@@ -1681,30 +1672,30 @@ const generateCustomerSatisfactionRows = (
       }
     };
 
-     const fetchCustomerSatisfactionData = async () => {
-    try {
-      const res = await fetch(
-        "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
-        { method: "GET", credentials: "include" }
-      );
-      if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
+    const fetchCustomerSatisfactionData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
 
-      const data = await res.json();
-      const normalizedSatisfaction = normalizeCustomerSatisfaction(
-        data.satisfaction ?? data.data ?? []
-      );
+        const data = await res.json();
+        const normalizedSatisfaction = normalizeCustomer(
+          data.satisfaction ?? data.data ?? []
+        );
 
-      return generateCustomerSatisfactionRows(
-        normalizedSatisfaction,
-        period,
-        startDate,
-        endDate
-      );
-    } catch (error) {
-      console.error("Error fetching satisfaction data:", error);
-      return [];
-    }
-  };
+        return generateCustomerSatisfactionRows(
+          normalizedSatisfaction,
+          period,
+          startDate,
+          endDate
+        );
+      } catch (error) {
+        console.error("Error fetching satisfaction data:", error);
+        return [];
+      }
+    };
 
     // Main report logic
     const type = (
@@ -1766,16 +1757,16 @@ const generateCustomerSatisfactionRows = (
               serviceRows,
               period
             );
-            } else if (r.type === "customer") {
-          const satisfactionRows = await fetchCustomerSatisfactionData();
-          await createCustomerSatisfactionReportTable(
-            doc,
-            pageWidth,
-            pageHeight,
-            headerY,
-            satisfactionRows,
-            period
-          );
+          } else if (r.type === "customer") {
+            const satisfactionRows = await fetchCustomerSatisfactionData();
+            await createCustomerSatisfactionReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              satisfactionRows,
+              period
+            );
           } else {
             doc.setFontSize(12);
             doc.setFont("helvetica", "normal");
@@ -1858,7 +1849,7 @@ const generateCustomerSatisfactionRows = (
             serviceRows,
             period
           );
-          } else if (type === "customer") {
+        } else if (type === "customer") {
           const satisfactionRows = await fetchCustomerSatisfactionData();
           await createCustomerSatisfactionReportTable(
             doc,
@@ -2351,7 +2342,7 @@ const generateCustomerSatisfactionRows = (
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
+        // ✅ Draw headers first time
     drawHeaders();
 
     // ===== Rows =====
@@ -2400,14 +2391,14 @@ const generateCustomerSatisfactionRows = (
     return yPosition;
   };
 
-  // ================== CUSTOMER SATISFACTION REPORT TABLE ==================
+ // ================== CUSTOMER SATISFACTION REPORT TABLE ==================
 const createCustomerSatisfactionReportTable = async (
   doc,
   pageWidth,
   pageHeight,
   yStartPosition,
-  satisfactionData,
-  period // ✅ Added as parameter
+  satisfactionRows,
+  period
 ) => {
   let yPosition = yStartPosition;
 
@@ -2430,21 +2421,21 @@ const createCustomerSatisfactionReportTable = async (
   else if (period === "quarterly") periodLabel = "QUARTERS";
   else if (period === "annually") periodLabel = "MONTHS";
 
-  // ✅ Headers for Customer Satisfaction
   const headers = [
     periodLabel,
     "Transaction No.",
+    "Date of Order",
     "Client",
-    "Satisfaction Rating",
-    "Feedback / Comments",
+    "Item",
+    "Customer Rating",
+    "Delivery Status",
   ];
 
   // ===== Column Config =====
   const availableWidth =
     pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
-  // ✅ Adjusted widths for 5 columns
-  const originalWidths = [25, 35, 40, 40, 80];
+  const originalWidths = [20, 25, 30, 30, 30, 25, 30];
   const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
   const colWidths = originalWidths.map(
     (w) => (w / totalOriginal) * availableWidth
@@ -2452,7 +2443,6 @@ const createCustomerSatisfactionReportTable = async (
 
   const tableStartX = tableConfig.marginLeft;
 
-  // Helper: draw centered text
   const drawCenteredText = (text, x, y, width, fontSize) => {
     doc.setFontSize(fontSize);
     const textWidth = doc.getTextWidth(text);
@@ -2460,16 +2450,16 @@ const createCustomerSatisfactionReportTable = async (
     doc.text(text, textX, y, { maxWidth: width - 4 });
   };
 
-  // ✅ Different header colors
   const headerColors = [
-    [173, 216, 230], // Period
-    [221, 160, 221], // Transaction No.
-    [144, 238, 144], // Client
-    [255, 218, 185], // Rating
-    [176, 224, 230], // Feedback
+    [173, 216, 230],
+    [221, 160, 221],
+    [255, 250, 205],
+    [144, 238, 144],
+    [255, 182, 193],
+    [255, 218, 185],
+    [176, 224, 230],
   ];
 
-  // ✅ Draw headers
   const drawHeaders = () => {
     let xPos = tableStartX;
     doc.setFont("helvetica", "bold");
@@ -2490,11 +2480,11 @@ const createCustomerSatisfactionReportTable = async (
     yPosition += tableConfig.headerHeight;
   };
 
-  // ✅ First headers
+  // ✅ Draw headers first time
   drawHeaders();
 
   // ===== Rows =====
-  satisfactionData.forEach((row, rowIndex) => {
+  satisfactionRows.forEach((row, rowIndex) => {
     let xPos = tableStartX;
     let maxLines = 1;
 
@@ -2511,6 +2501,13 @@ const createCustomerSatisfactionReportTable = async (
     const isEvenRow = rowIndex % 2 === 0;
     const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
+    // ✅ Page break check BEFORE drawing row
+    if (yPosition + rowHeight > pageHeight - 20) {
+      doc.addPage();
+      yPosition = 20;
+      drawHeaders();
+    }
+
     row.forEach((cell, i) => {
       doc.setFillColor(...bgColor);
       doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
@@ -2523,18 +2520,10 @@ const createCustomerSatisfactionReportTable = async (
     });
 
     yPosition += rowHeight;
-
-    // ✅ Page break + redraw headers
-    if (yPosition + rowHeight > pageHeight - 20) {
-      doc.addPage();
-      yPosition = 20;
-      drawHeaders();
-    }
   });
 
   return yPosition;
 };
-
 
   const iconStyle = {
     width: 40,
