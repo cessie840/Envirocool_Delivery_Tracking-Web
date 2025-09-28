@@ -1,23 +1,8 @@
 <?php
 header("Content-Type: application/json");
-
-// Allow only your React frontend
 header("Access-Control-Allow-Origin: http://localhost:5173");
-
-// Must be true when using credentials (cookies/sessions)
-header("Access-Control-Allow-Credentials: true");
-
-// Allow these methods
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-
-// Allow headers
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
 require 'Database.php';
 
 $period = $_GET['period'] ?? 'monthly';

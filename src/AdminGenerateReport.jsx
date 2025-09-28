@@ -188,7 +188,7 @@ const GenerateReport = () => {
   };
 
   // Normalizers (defensive)
-  const normalizeSales = (raw = []) =>
+const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
@@ -268,19 +268,19 @@ const GenerateReport = () => {
           ? new Date(r.date_of_order).toISOString().slice(0, 10)
           : null,
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
+        item_name: r.item_name ?? r.description ?? "-",
+        qty: Number(r.qty ?? r.quantity ?? 0),
         delivery_status: r.delivery_status ?? r.status ?? "Pending",
-        target_date_delivery: r.target_date_delivery ?? null,
-        rescheduled_date: r.rescheduled_date ?? null,
         cancelled_reason: normalizedReason ?? "-",
+        rescheduled_date: r.rescheduled_date ?? null,
+        target_date_delivery: r.target_date_delivery ?? null,
       };
     });
 
   const normalizeCustomer = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
       transaction_id: r.transaction_id ?? null,
-      date_of_order: r.date_of_order
-        ? new Date(r.date_of_order).toISOString().split("T")[0]
-        : "-", // formatted once here
+      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
       customer_name: r.customer_name ?? r.customer ?? "Unknown",
       item_name: r.item_name ?? r.description ?? "-",
       customer_rating:
@@ -750,7 +750,7 @@ const GenerateReport = () => {
     (sum, row) => sum + (Number(row.qty) || 0),
     0
   );
-  const totalItemsDelivered = filteredServiceData
+ const totalItemsDelivered = filteredServiceData
     .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
     .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
 
@@ -2739,7 +2739,7 @@ const GenerateReport = () => {
     },
   };
 
-  const cardsByReportType = {
+ const cardsByReportType = {
     sales: ["totalSales", "totalClients", "totalItemsDelivered"],
     transaction: [
       "totalClients",
@@ -2777,7 +2777,7 @@ const GenerateReport = () => {
       }
       if (key === "totalItemsSold") {
         return {
-          icon: <FaShoppingCart />,
+          icon: <FaShoppingCart />, 
           color: "#FF9800",
           title: "Total Items Ordered",
           value: totalItemsOrdered,
@@ -2785,7 +2785,7 @@ const GenerateReport = () => {
       }
       if (key === "totalItemsDelivered") {
         return {
-          icon: <FaTruck />,
+          icon: <FaTruck />, 
           color: "#009688",
           title: "Total Items Delivered",
           value: totalItemsDelivered,
