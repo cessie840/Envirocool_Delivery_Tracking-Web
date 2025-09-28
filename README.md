@@ -73,6 +73,7 @@ CREATE TABLE Transactions (
     tracking_number VARCHAR(20),
     status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     completed_at DATETIME NULL,
+    proof_of_delivery VARCHAR(255) NULL,
     shipout_at DATETIME NULL,
     cancelled_reason TEXT NULL,
     cancelled_at DATETIME NULL,
