@@ -57,39 +57,24 @@ if (!$start || !$end) {
 $sql = "
 SELECT 
     t.transaction_id,
-    t.tracking_number,
+    DATE(t.date_of_order) AS date_of_order,
     t.customer_name,
-    t.customer_address,
-    t.customer_contact,
-    t.date_of_order,
-    -- 👇 Choose rescheduled_date if exists, else target_date_delivery
-    COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.description AS item_name,
-    po.quantity AS qty,
-    po.unit_cost,                        
-    (po.quantity * po.unit_cost) AS subtotal, 
-    t.mode_of_payment,
-    t.payment_option,       
-    t.down_payment,         
-    t.balance,              
+    t.customer_rating,
     t.status AS delivery_status,
-    CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS delivery_personnel,
-    t.completed_at,
     t.cancelled_reason
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
-LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+AND t.status IN ('Delivered', 'Cancelled')
 ORDER BY t.date_of_order ASC
 ";
-
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('ss', $startDate, $endDate);
 $stmt->execute();
 $result = $stmt->get_result();
-$transactions = $result->fetch_all(MYSQLI_ASSOC);
+$customerSatisfaction = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 // Summary
@@ -97,11 +82,10 @@ $sqlSummary = "
 SELECT 
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
-    SUM(po.quantity) AS total_items_sold,
-    SUM(po.quantity * po.unit_cost) AS total_sales 
+    AVG(t.customer_rating) AS avg_rating
 FROM Transactions t
-JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+AND t.status IN ('Delivered', 'Cancelled')
 ";
 $stmtSum = $conn->prepare($sqlSummary);
 $stmtSum->bind_param('ss', $startDate, $endDate);
@@ -111,7 +95,7 @@ $summary = $resultSum->fetch_assoc();
 $stmtSum->close();
 
 echo json_encode([
-    "transactions" => $transactions,
+    "customerSatisfaction" => $customerSatisfaction,
     "summary" => $summary
 ]);
 ?>
