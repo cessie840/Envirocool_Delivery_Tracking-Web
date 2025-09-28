@@ -65,9 +65,8 @@ SELECT
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.description AS item_name,
     po.quantity AS qty,
-    po.unit_cost,                                  
-    (po.quantity * po.unit_cost) AS subtotal,         
-    po.total_cost,                                    
+    po.unit_cost,                        
+    (po.quantity * po.unit_cost) AS subtotal, 
     t.mode_of_payment,
     t.payment_option,       
     t.down_payment,         
@@ -97,14 +96,7 @@ SELECT
     COUNT(DISTINCT t.customer_name) AS total_customers,
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     SUM(po.quantity) AS total_items_sold,
-    SUM(po.total_cost) AS total_sales,
-    SUM(CASE WHEN t.status='Delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
-    (
-        SELECT COUNT(*) 
-        FROM DeliveryHistory dh
-        WHERE dh.event_type = 'Cancelled'
-        AND dh.event_timestamp BETWEEN ? AND ?
-    ) AS failed_deliveries
+    SUM(po.quantity * po.unit_cost) AS total_sales 
 FROM Transactions t
 JOIN (
     SELECT transaction_id, SUM(total_cost) AS total_per_transaction
