@@ -40,7 +40,10 @@ import {
 } from "recharts";
 
 import jsPDF from "jspdf";
+import "jspdf-autotable";
 import html2canvas from "html2canvas";
+
+import logo from "./assets/envirocool-logo.png";
 
 const REPORT_TYPES = [
   { value: "sales", label: "Sales Report" },
@@ -185,7 +188,7 @@ const GenerateReport = () => {
   };
 
   // Normalizers (defensive)
-  const normalizeSales = (raw = []) =>
+const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
@@ -747,7 +750,7 @@ const GenerateReport = () => {
     (sum, row) => sum + (Number(row.qty) || 0),
     0
   );
-  const totalItemsDelivered = filteredServiceData
+ const totalItemsDelivered = filteredServiceData
     .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
     .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
 
@@ -810,6 +813,1889 @@ const GenerateReport = () => {
     },
   ];
 
+  const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
+    const rows = [];
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    const formatDate = (date) => {
+      if (!date) return "";
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    // ✅ Format numbers with commas
+    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
+      if (num == null || isNaN(num)) return "0.00";
+      let fixed = Number(num).toFixed(decimals);
+      if (stripDecimals && fixed.endsWith(".00")) {
+        fixed = fixed.replace(".00", "");
+      }
+      return Number(fixed).toLocaleString();
+    };
+
+    const addRow = (
+      label,
+      totalQuote,
+      totalAwarded,
+      totalActual,
+      totalBalance
+    ) => {
+      rows.push([
+        label,
+        formatNumber(totalQuote, 2),
+        formatNumber(totalAwarded, 2),
+        formatNumber(totalActual, 2),
+        formatNumber(totalBalance, 2),
+      ]);
+    };
+
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthSales = salesData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
+        const totals = monthSales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
+        );
+        addRow(
+          getMonthName(m),
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    } else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const month = start.getMonth();
+      let quarterMonths = [];
+
+      if (month <= 2) quarterMonths = [0, 1, 2]; // Jan-Mar
+      else if (month <= 5) quarterMonths = [3, 4, 5]; // Apr-Jun
+      else if (month <= 8) quarterMonths = [6, 7, 8]; // Jul-Sep
+      else quarterMonths = [9, 10, 11]; // Oct-Dec
+
+      quarterMonths.forEach((m) => {
+        const monthSales = salesData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
+        const totals = monthSales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+        addRow(
+          getMonthName(m),
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      });
+    } else if (period === "monthly") {
+      const base = new Date(startDate || new Date());
+
+      // ✅ Force start at the 1st of the month
+      const start = new Date(base.getFullYear(), base.getMonth(), 1);
+
+      // ✅ Get the last day of the same month
+      const daysInMonth = new Date(
+        base.getFullYear(),
+        base.getMonth() + 1,
+        0
+      ).getDate();
+
+      // ✅ Loop through the whole month (always 1 → last day)
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dObj = new Date(start.getFullYear(), start.getMonth(), d);
+        const dateStr = formatDate(dObj);
+
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
+
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
+        );
+
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    } else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = formatDate(d);
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
+        );
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    } else if (period === "daily") {
+      const uniqueDates = [
+        ...new Set(salesData.map((s) => formatDate(new Date(s.date_of_order)))),
+      ];
+      uniqueDates.forEach((dateStr) => {
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
+        );
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      });
+    }
+
+    return rows;
+  };
+
+  const generateTransactionPeriodRows = (
+    transactionData,
+    period,
+    startDate,
+    endDate
+  ) => {
+    const rows = [];
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    // ✅ Format numbers with commas
+    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
+      if (num == null || isNaN(num)) return " "; // blank instead of 0/-
+      let fixed = Number(num).toFixed(decimals);
+      if (stripDecimals && fixed.endsWith(".00")) {
+        fixed = fixed.replace(".00", "");
+      }
+      return Number(fixed).toLocaleString();
+    };
+
+    const formatDate = (date) =>
+      date ? new Date(date).toISOString().split("T")[0] : "";
+
+    const pushTxRow = (label, tx) => {
+      rows.push([
+        label || "",
+        tx.transaction_id ?? "-",
+        tx.tracking_number ?? "-",
+        tx.date_of_order ?? "-",
+        tx.customer_name ?? "-",
+        tx.customer_address ?? "-",
+        tx.item_name ?? "-",
+        formatNumber(tx.qty, 0), // ✅ Quantity as whole number
+        formatNumber(tx.unit_cost, 2), // ✅ Unit Cost (no ₱ sign)
+        formatNumber(tx.subtotal, 2), // ✅ Subtotal (no ₱ sign)
+        tx.delivery_status ?? "-",
+        tx.shipout_at ?? "-",
+        tx.completed_at ?? "-",
+      ]);
+    };
+
+    const pushZeroRow = (label) => {
+      rows.push([
+        label,
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "0", // qty
+        "0.00", // unit cost
+        "0.00", // subtotal
+        "-",
+        "-",
+        "-",
+      ]);
+    };
+
+    // === PERIOD LOGIC (Annually, Quarterly, Monthly, Weekly, Daily) ===
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthTxs = transactionData.filter(
+          (t) => new Date(t.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([
+            getMonthName(m),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+          ]);
+          monthTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      }
+    } else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const month = start.getMonth();
+      let quarterMonths = [];
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
+      else quarterMonths = [9, 10, 11];
+
+      quarterMonths.forEach((m) => {
+        const monthTxs = transactionData.filter(
+          (t) => new Date(t.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([
+            getMonthName(m),
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+          ]);
+          monthTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      });
+    } else if (period === "monthly") {
+      const start = new Date(startDate || new Date());
+      const daysInMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0
+      ).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${start.getFullYear()}-${String(
+          start.getMonth() + 1
+        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dayTxs = transactionData.filter(
+          (t) => t.date_of_order === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+          dayTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = formatDate(d);
+        const dayTxs = transactionData.filter(
+          (t) => formatDate(new Date(t.date_of_order)) === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+          dayTxs.forEach((tx) => pushTxRow("", tx));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "daily") {
+      const todayStr = formatDate(new Date()); // Always today's date
+      const dayTxs = transactionData.filter(
+        (t) => formatDate(new Date(t.date_of_order)) === todayStr
+      );
+
+      if (dayTxs.length > 0) {
+        rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+        dayTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(todayStr);
+      }
+
+      // === DAILY TOTAL ===
+      const totals = dayTxs.reduce(
+        (acc, s) => {
+          acc.total++;
+          if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+          if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+          return acc;
+        },
+        { total: 0, cancelled: 0, completed: 0 }
+      );
+
+      rows.push([
+        "TOTAL",
+        "-",
+        "-",
+        "-",
+        `Completed: ${totals.completed}`,
+        "-",
+        "-",
+        `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+      ]);
+      return rows;
+    }
+
+    // === GRAND TOTAL ===
+    const totals = transactionData.reduce(
+      (acc, t) => ({
+        qty: acc.qty + (t.qty ?? 0),
+        subtotal: acc.subtotal + (t.subtotal ?? 0),
+      }),
+      { qty: 0, subtotal: 0 }
+    );
+    rows.push([
+      "TOTAL",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      formatNumber(totals.qty, 0), // qty total
+      "-", // unit cost not summed
+      formatNumber(totals.subtotal, 2), // subtotal total
+      "-",
+      "-",
+      "-",
+    ]);
+
+    return rows;
+  };
+
+  const generateServicePeriodRows = (
+    serviceData,
+    period,
+    startDate,
+    endDate
+  ) => {
+    const rows = [];
+
+    // --- Helpers ---
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    const formatDate = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d)) return "-"; // invalid date
+      return d.toISOString().split("T")[0]; // always YYYY-MM-DD
+    };
+
+    const pushServiceRow = (label, svc) => {
+      rows.push([
+        label || "",
+        svc.transaction_id ?? "-",
+        formatDate(svc.date_of_order),
+        svc.customer_name ?? "-",
+        svc.delivery_status ?? "-",
+        formatDate(svc.original_target_date ?? svc.target_date_delivery),
+        formatDate(svc.latest_rescheduled_date ?? svc.rescheduled_date),
+        svc.cancelled_reason ?? "-",
+      ]);
+    };
+
+    const pushZeroRow = (label) => {
+      rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
+    };
+
+    // --- Normalize all data dates once ---
+    const normalizedData = serviceData.map((s) => ({
+      ...s,
+      date_of_order: formatDate(s.date_of_order),
+    }));
+
+    // --- Period Logic ---
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthTxs = normalizedData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
+          monthTxs.forEach((svc) => pushServiceRow("", svc));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      }
+    } else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const month = start.getMonth();
+      let quarterMonths = [];
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
+      else quarterMonths = [9, 10, 11];
+
+      quarterMonths.forEach((m) => {
+        const monthTxs = normalizedData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
+          monthTxs.forEach((svc) => pushServiceRow("", svc));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      });
+    } else if (period === "monthly") {
+      const start = new Date(startDate || new Date());
+      const daysInMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0
+      ).getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${start.getFullYear()}-${String(
+          start.getMonth() + 1
+        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+        const dayTxs = normalizedData.filter(
+          (s) => s.date_of_order === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", "", ""]);
+          dayTxs.forEach((svc) => pushServiceRow("", svc));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = formatDate(d);
+
+        const dayTxs = normalizedData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", "", ""]);
+          dayTxs.forEach((svc) => pushServiceRow("", svc));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "daily") {
+      const todayStr = formatDate(new Date()); // Always today's date
+      const dayTxs = normalizedData.filter(
+        (s) => formatDate(new Date(s.date_of_order)) === todayStr
+      );
+
+      if (dayTxs.length > 0) {
+        rows.push([todayStr, "", "", "", "", "", "", ""]);
+        dayTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(todayStr);
+      }
+    }
+
+    // --- Summary Row ---
+    const totals = normalizedData.reduce(
+      (acc, s) => {
+        acc.total++;
+        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+        return acc;
+      },
+      { total: 0, cancelled: 0, completed: 0 }
+    );
+
+    rows.push([
+      "TOTAL",
+      "-",
+      "-",
+      "-",
+      `Completed: ${totals.completed}`,
+      "-",
+      "-",
+      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+    ]);
+
+    return rows;
+  };
+
+  // ✅ Generate rows (WITH Item column, no double formatting)
+  const generateCustomerSatisfactionRows = (
+    satisfactionData,
+    period,
+    startDate,
+    endDate
+  ) => {
+    const rows = [];
+
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    // Row builders
+    const pushCustomerRow = (label, c) => {
+      rows.push([
+        label || "",
+        c.transaction_id ?? "-",
+        c.date_of_order ?? "-",
+        c.customer_name ?? "-",
+        c.item_name ?? "-",
+        c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
+        c.delivery_status ?? "-",
+      ]);
+    };
+
+    const pushZeroRow = (label) => {
+      rows.push([label, "-", "-", "-", "-", "-", "-"]);
+    };
+
+    // ✅ Already normalized → just use it
+    const normalizedData = satisfactionData;
+
+    // --- Period Logic ---
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthTxs = normalizedData.filter(
+          (c) => new Date(c.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([getMonthName(m), "", "", "", "", "", ""]);
+          monthTxs.forEach((c) => pushCustomerRow("", c));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      }
+    } else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const month = start.getMonth();
+      let quarterMonths = [];
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
+      else quarterMonths = [9, 10, 11];
+
+      quarterMonths.forEach((m) => {
+        const monthTxs = normalizedData.filter(
+          (c) => new Date(c.date_of_order).getMonth() === m
+        );
+        if (monthTxs.length > 0) {
+          rows.push([getMonthName(m), "", "", "", "", "", ""]);
+          monthTxs.forEach((c) => pushCustomerRow("", c));
+        } else {
+          pushZeroRow(getMonthName(m));
+        }
+      });
+    } else if (period === "monthly") {
+      const start = new Date(startDate || new Date());
+      const daysInMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0
+      ).getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${start.getFullYear()}-${String(
+          start.getMonth() + 1
+        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+        const dayTxs = normalizedData.filter(
+          (c) => c.date_of_order === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", ""]);
+          dayTxs.forEach((c) => pushCustomerRow("", c));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = d.toISOString().split("T")[0];
+
+        const dayTxs = normalizedData.filter(
+          (c) => c.date_of_order === dateStr
+        );
+        if (dayTxs.length > 0) {
+          rows.push([dateStr, "", "", "", "", "", ""]);
+          dayTxs.forEach((c) => pushCustomerRow("", c));
+        } else {
+          pushZeroRow(dateStr);
+        }
+      }
+    } else if (period === "daily") {
+      const todayStr = new Date().toISOString().split("T")[0]; // Always today's date
+      const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
+
+      if (dayTxs.length > 0) {
+        rows.push([todayStr, "", "", "", "", "", ""]);
+        dayTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(todayStr);
+      }
+    }
+
+    // --- Summary Row ---
+    const totals = normalizedData.reduce(
+      (acc, c) => {
+        acc.total++;
+        if (c.customer_rating != null) {
+          acc.rated++;
+          acc.ratingSum += c.customer_rating;
+        }
+        if (c.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+        if (c.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+        return acc;
+      },
+      { total: 0, rated: 0, ratingSum: 0, cancelled: 0, completed: 0 }
+    );
+
+    const avgRating =
+      totals.rated > 0 ? (totals.ratingSum / totals.rated).toFixed(2) : "N/A";
+
+    rows.push([
+      "TOTAL",
+      "-",
+      "-",
+      "-",
+      "-",
+      `Avg Rating: ${avgRating}`,
+      `Completed: ${totals.completed} / Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+    ]);
+
+    return rows;
+  };
+
+  const generateReport = async (reportType) => {
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: [330.2, 215.9], // long bond paper
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    const getPeriodLabel = (periodValue) => {
+      const period = PERIODS.find((p) => p.value === periodValue);
+      return period ? period.label : "Period";
+    };
+
+    const getTodayDate = () => {
+      const today = new Date();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const year = today.getFullYear();
+      return `${year}-${month}-${day}`;
+    };
+
+    const getCurrentYear = () => new Date().getFullYear();
+    const formatDate = (date) =>
+      date ? new Date(date).toLocaleDateString() : "";
+
+    const getDateRangeText = () => {
+      if (period === "annually") {
+        const year = startDate
+          ? new Date(startDate).getFullYear()
+          : getCurrentYear();
+        return ` (January 1, ${year} - December 31, ${year})`;
+      }
+      if (period === "quarterly") {
+        const start = new Date(startDate || getTodayDate());
+        const monthNumber = start.toISOString().slice(5, 7); // "01" to "12"
+        let quarterMonths = [];
+
+        if (monthNumber >= "01" && monthNumber <= "03")
+          quarterMonths = ["January", "February", "March"];
+        else if (monthNumber >= "04" && monthNumber <= "06")
+          quarterMonths = ["April", "May", "June"];
+        else if (monthNumber >= "07" && monthNumber <= "09")
+          quarterMonths = ["July", "August", "September"];
+        else quarterMonths = ["October", "November", "December"];
+
+        return ` (${quarterMonths[0]} to ${
+          quarterMonths[quarterMonths.length - 1]
+        })`;
+      }
+
+      if (period === "monthly") {
+        const start = new Date(startDate || getTodayDate());
+        const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
+        const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+        return ` (${formatDate(firstDay)} - ${formatDate(lastDay)})`;
+      }
+      if (period === "weekly") {
+        const start = new Date(startDate || getTodayDate());
+        start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return ` (${formatDate(start)} - ${formatDate(end)})`;
+      }
+      if (period === "daily") {
+        // Use startDate if provided, otherwise today
+        const today = startDate ? new Date(startDate) : new Date();
+        // Format as MM/DD/YYYY for display
+        const formattedDay = `${String(today.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}/${String(today.getDate()).padStart(2, "0")}/${today.getFullYear()}`;
+        return ` (${formattedDay})`;
+      }
+
+      return "";
+    };
+
+    const renderHeader = (withTitle = false, title = "") => {
+      const now = new Date();
+      const generatedDate =
+        now.toLocaleDateString("en-US", {
+          month: "numeric",
+          day: "numeric",
+          year: "numeric",
+        }) +
+        ", " +
+        now.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generated: ${generatedDate}`, pageWidth - 3, 5, {
+        align: "right",
+      });
+
+      let yPos = 8;
+      try {
+        const logoWidth = 25;
+        const logoHeight = 12;
+        const logoX = pageWidth / 2 - logoWidth / 2;
+        if (logo) doc.addImage(logo, "PNG", logoX, yPos, logoWidth, logoHeight);
+      } catch (error) {
+        const logoX = pageWidth / 2 - 12.5;
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(240, 240, 240);
+        doc.rect(logoX, yPos, 25, 12, "F");
+      }
+
+      yPos += 16;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Envirocool Corporation", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 3;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("Calamba Sales Office", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 3;
+      doc.setFontSize(7);
+      doc.text(
+        "FP Perez, Brgy. Parian, Calamba City, Laguna",
+        pageWidth / 2,
+        yPos,
+        { align: "center" }
+      );
+      yPos += 3;
+      doc.text("Tel: (049) 540-306 / 0917-158-7013", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 4;
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.2);
+      doc.line(15, yPos, pageWidth - 15, yPos);
+      yPos += 6;
+
+      // Only print title on the first page of each report
+      if (withTitle) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        const periodLabel = getPeriodLabel(period);
+        const dateRangeText = getDateRangeText();
+        doc.text(
+          `${title} Report - ${periodLabel}${dateRangeText}`,
+          pageWidth / 2,
+          yPos,
+          { align: "center" }
+        );
+        yPos += 6;
+      }
+
+      return yPos;
+    };
+
+    const applyHeaderFooterToAllPages = (reports) => {
+      const totalPages = doc.getNumberOfPages();
+      if (!reports || reports.length === 0) return;
+
+      let reportIndex = 0;
+
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+
+        // Show title only on the first page of each report
+        if (i === reports[reportIndex].startPage) {
+          renderHeader(true, reports[reportIndex].title);
+        } else {
+          renderHeader(false);
+        }
+
+        addFooter(i, totalPages);
+
+        // Move to next report if needed
+        if (
+          reportIndex < reports.length - 1 &&
+          i === reports[reportIndex + 1].startPage
+        ) {
+          reportIndex++;
+        }
+      }
+    };
+
+    const addFooter = (pageNum, totalPages) => {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.1);
+      doc.line(15, pageHeight - 8, pageWidth - 15, pageHeight - 8);
+
+      doc.text(
+        `Page ${pageNum} of ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 5,
+        { align: "center" }
+      );
+    };
+
+    const fetchSalesData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_sales_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_sales_report failed");
+
+        const data = await res.json();
+        let normalizedSales = normalizeSales(data.sales ?? []);
+        normalizedSales = normalizedSales.filter(
+          (sale) => sale.delivery_status.toLowerCase() === "delivered"
+        );
+
+        return generateSalesPeriodRows(
+          normalizedSales,
+          period,
+          startDate,
+          endDate
+        );
+      } catch (error) {
+        console.error("Error fetching sales data:", error);
+        return [];
+      }
+    };
+
+    const fetchTransactionData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_transaction_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_transaction_report failed");
+
+        const data = await res.json();
+        const normalizedTransactions = normalizeTransactions(
+          data.transactions ?? []
+        );
+
+        // Generate rows based on period (daily, weekly, monthly, annually)
+        const transactionRows = generateTransactionPeriodRows(
+          normalizedTransactions,
+          period,
+          startDate,
+          endDate
+        );
+
+        return transactionRows;
+      } catch (error) {
+        console.error("Error fetching transaction data:", error);
+        return [];
+      }
+    };
+
+    const fetchServiceData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_service_delivery_report failed");
+
+        const data = await res.json();
+        const normalizedService = normalizeService(
+          data.serviceDeliveries ?? data.data ?? []
+        );
+
+        return generateServicePeriodRows(
+          normalizedService,
+          period,
+          startDate,
+          endDate
+        );
+      } catch (error) {
+        console.error("Error fetching service data:", error);
+        return [];
+      }
+    };
+
+    const fetchCustomerSatisfactionData = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
+          { method: "GET", credentials: "include" }
+        );
+        if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
+
+        const data = await res.json();
+        const normalizedSatisfaction = normalizeCustomer(
+          data.customerSatisfaction ?? data.satisfaction ?? data.data ?? []
+        );
+
+        return generateCustomerSatisfactionRows(
+          normalizedSatisfaction,
+          period,
+          startDate,
+          endDate
+        );
+      } catch (error) {
+        console.error("Error fetching satisfaction data:", error);
+        return [];
+      }
+    };
+
+    // Main report logic
+    const type = (
+      typeof reportType === "string" ? reportType : ""
+    ).toLowerCase();
+
+    try {
+      if (type === "all") {
+        const reports = [
+          { title: "Sales", type: "sales" },
+          { title: "Transaction", type: "transaction" },
+          { title: "Delivery Service", type: "service" },
+          { title: "Client Satisfaction", type: "customer" },
+        ];
+
+        for (let idx = 0; idx < reports.length; idx++) {
+          const r = reports[idx];
+          if (idx > 0) doc.addPage();
+
+          // record where this report starts
+          r.startPage = doc.internal.getCurrentPageInfo().pageNumber;
+
+          let headerY = renderHeader(true, r.title);
+
+          if (r.type === "sales") {
+            let salesData = await fetchSalesData();
+            if (period === "daily") {
+              // Replace salesData with today's date row
+              salesData = salesData.map((row) => [
+                new Date().toLocaleDateString("en-US"), // Current day
+                row.quoteAmount || "0.00",
+                row.awardedAmount || "0.00",
+                row.actualCollection || "0.00",
+                row.balance || "0.00",
+              ]);
+            }
+            await createSalesReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              salesData,
+              period
+            );
+          } else if (r.type === "transaction") {
+            const transactionRows = await fetchTransactionData();
+            await createTransactionReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              transactionRows,
+              period
+            );
+          } else if (r.type === "service") {
+            const serviceRows = await fetchServiceData();
+            await createDeliveryServiceReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              serviceRows,
+              period
+            );
+          } else if (r.type === "customer") {
+            const satisfactionRows = await fetchCustomerSatisfactionData();
+            await createCustomerSatisfactionReportTable(
+              doc,
+              pageWidth,
+              pageHeight,
+              headerY,
+              satisfactionRows,
+              period
+            );
+          } else {
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(
+              `${r.title} content would go here...`,
+              pageWidth / 2,
+              headerY + 10,
+              { align: "center" }
+            );
+          }
+
+          addFooter(idx + 1, reports.length);
+        }
+
+        // ✅ Now apply headers & footers correctly
+        applyHeaderFooterToAllPages(reports);
+        doc.save("envirocool-overall-report.pdf");
+        alert(
+          `Overall Report PDF (${getPeriodLabel(
+            period
+          )}) has been generated and downloaded successfully!`
+        );
+      } else {
+        let title;
+        switch (type) {
+          case "sales":
+            title = "Sales";
+            break;
+          case "transaction":
+            title = "Transaction";
+            break;
+          case "service":
+            title = "Delivery Service";
+            break;
+          case "customer":
+            title = "Client Satisfaction";
+            break;
+          default:
+            alert("Please select a report type.");
+            return;
+        }
+
+        let headerY = renderHeader(true, title);
+
+        if (type === "sales") {
+          let salesData = await fetchSalesData();
+          if (period === "daily") {
+            // Replace salesData with today's date row
+            salesData = salesData.map((row) => [
+              new Date().toLocaleDateString("en-US"), // Current day
+              row.quoteAmount || "0.00",
+              row.awardedAmount || "0.00",
+              row.actualCollection || "0.00",
+              row.balance || "0.00",
+            ]);
+          }
+          await createSalesReportTable(
+            doc,
+            pageWidth,
+            pageHeight,
+            headerY,
+            salesData,
+            period
+          );
+        } else if (type === "transaction") {
+          const transactionRows = await fetchTransactionData();
+          await createTransactionReportTable(
+            doc,
+            pageWidth,
+            pageHeight,
+            headerY,
+            transactionRows,
+            period
+          );
+        } else if (type === "service") {
+          const serviceRows = await fetchServiceData();
+          await createDeliveryServiceReportTable(
+            doc,
+            pageWidth,
+            pageHeight,
+            headerY,
+            serviceRows,
+            period
+          );
+        } else if (type === "customer") {
+          const satisfactionRows = await fetchCustomerSatisfactionData();
+          await createCustomerSatisfactionReportTable(
+            doc,
+            pageWidth,
+            pageHeight,
+            headerY,
+            satisfactionRows,
+            period
+          );
+        } else {
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "normal");
+          doc.text(
+            `${title} content would go here...`,
+            pageWidth / 2,
+            headerY + 10,
+            { align: "center" }
+          );
+        }
+
+        // Apply headers/footers to all pages
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          doc.setPage(i);
+
+          if (i === 1) {
+            renderHeader(true, title); // first page → with title
+          } else {
+            renderHeader(false); // overflow → no title
+          }
+
+          addFooter(i, totalPages);
+        }
+
+        const fileName = `envirocool-${type}-report-${period}-${getTodayDate()}.pdf`;
+        doc.save(fileName);
+        alert(
+          `${title} Report PDF (${getPeriodLabel(
+            period
+          )}) has been generated and downloaded successfully!`
+        );
+      }
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      alert("Error generating PDF. Please try again.");
+    }
+  };
+
+  const createSalesReportTable = async (
+    doc,
+    pageWidth,
+    pageHeight,
+    yStartPosition,
+    aggregatedData,
+    period
+  ) => {
+    let yPosition = yStartPosition;
+    const headerTopMargin = yStartPosition; // safe top for subsequent pages
+
+    // Config
+    const tableConfig = {
+      marginLeft: 15,
+      marginRight: 15,
+      rowHeight: 8,
+      headerHeight: 12,
+      headerFontSize: 10,
+      subHeaderFontSize: 9,
+      cellFontSize: 8,
+    };
+
+    // Width setup (5 columns)
+    const availableWidth =
+      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
+    const colWidths = [
+      availableWidth * 0.2,
+      availableWidth * 0.2,
+      availableWidth * 0.2,
+      availableWidth * 0.2,
+      availableWidth * 0.2,
+    ];
+
+    const drawCenteredText = (text, x, y, width, fontSize) => {
+      doc.setFontSize(fontSize);
+      const textWidth = doc.getTextWidth(text);
+      const textX = x + (width - textWidth) / 2;
+      doc.text(text, textX, y, { maxWidth: width - 4 });
+    };
+
+    const drawHeaders = () => {
+      let currentY = yPosition;
+      doc.setFont("helvetica", "bold");
+
+      const awardedX = tableConfig.marginLeft + colWidths[0];
+
+      // Sales Opportunity
+      doc.setFillColor(173, 216, 230);
+      doc.setTextColor(0, 0, 0);
+      doc.rect(
+        tableConfig.marginLeft,
+        currentY,
+        colWidths[0],
+        tableConfig.headerHeight,
+        "FD"
+      );
+      drawCenteredText(
+        "SALES OPPORTUNITY",
+        tableConfig.marginLeft,
+        currentY + 8,
+        colWidths[0],
+        tableConfig.headerFontSize
+      );
+
+      // Awarded Sales
+      doc.setFillColor(221, 160, 221);
+      doc.rect(
+        awardedX,
+        currentY,
+        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+        tableConfig.headerHeight,
+        "FD"
+      );
+      drawCenteredText(
+        "AWARDED SALES",
+        awardedX,
+        currentY + 8,
+        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+        tableConfig.headerFontSize
+      );
+
+      currentY += tableConfig.headerHeight;
+
+      // Second Header Row
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(tableConfig.subHeaderFontSize);
+
+      doc.setFillColor(255, 255, 255);
+      doc.rect(
+        tableConfig.marginLeft,
+        currentY,
+        colWidths[0],
+        tableConfig.rowHeight,
+        "FD"
+      );
+      drawCenteredText(
+        "RESPONSIBLES",
+        tableConfig.marginLeft,
+        currentY + 6,
+        colWidths[0],
+        tableConfig.subHeaderFontSize
+      );
+
+      doc.setFillColor(255, 255, 255);
+      doc.rect(
+        awardedX,
+        currentY,
+        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+        tableConfig.rowHeight,
+        "FD"
+      );
+      drawCenteredText(
+        "ALL",
+        awardedX,
+        currentY + 6,
+        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
+        tableConfig.subHeaderFontSize
+      );
+
+      currentY += tableConfig.rowHeight;
+
+      // Column Headers
+      let periodLabel = "MONTHS";
+      if (period === "monthly") periodLabel = "DAYS";
+      else if (period === "weekly") periodLabel = "WEEKDAYS";
+      else if (period === "daily") periodLabel = "DATE";
+      else if (period === "quarterly") periodLabel = "QUARTERS";
+
+      const headers = [
+        periodLabel,
+        "QUOTE AMOUNT",
+        "AWARDED AMOUNT",
+        "ACTUAL COLLECTION",
+        "BALANCE FOR COLLECTION",
+      ];
+
+      let xPos = tableConfig.marginLeft;
+      headers.forEach((header, i) => {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(xPos, currentY, colWidths[i], tableConfig.rowHeight, "FD");
+        drawCenteredText(
+          header,
+          xPos,
+          currentY + 6,
+          colWidths[i],
+          tableConfig.subHeaderFontSize
+        );
+        xPos += colWidths[i];
+      });
+
+      currentY += tableConfig.rowHeight;
+      yPosition = currentY;
+    };
+
+    // Draw headers initially
+    drawHeaders();
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(tableConfig.cellFontSize);
+
+    if (Array.isArray(aggregatedData)) {
+      aggregatedData.forEach((row, rowIndex) => {
+        // For sales each row uses the fixed rowHeight:
+        const rowHeight = tableConfig.rowHeight;
+
+        // Page break check BEFORE drawing row (use headerTopMargin)
+        if (yPosition + rowHeight > pageHeight - 20) {
+          doc.addPage();
+          yPosition = headerTopMargin; // start below the page header
+          drawHeaders();
+        }
+
+        let x = tableConfig.marginLeft;
+
+        row.forEach((cell, i) => {
+          doc.setFillColor(rowIndex % 2 === 1 ? 248 : 255, 248, 248);
+          doc.rect(x, yPosition, colWidths[i], rowHeight, "FD");
+          doc.setDrawColor(0, 0, 0);
+          doc.rect(x, yPosition, colWidths[i], rowHeight, "S");
+
+          let displayText = cell || "";
+
+          // Red text if Balance = 0
+          if (i === 4 && parseFloat(cell) === 0) {
+            doc.setTextColor(255, 0, 0);
+          } else {
+            doc.setTextColor(0, 0, 0);
+          }
+
+          drawCenteredText(
+            displayText,
+            x,
+            yPosition + 6,
+            colWidths[i],
+            tableConfig.cellFontSize
+          );
+          doc.setTextColor(0, 0, 0);
+
+          x += colWidths[i];
+        });
+
+        yPosition += rowHeight;
+      });
+    }
+
+    return {
+      finalYPosition: yPosition,
+      tableHeight: yPosition - yStartPosition,
+      rowCount: aggregatedData ? aggregatedData.length + 5 : 5,
+    };
+  };
+
+  const createTransactionReportTable = async (
+    doc,
+    pageWidth,
+    pageHeight,
+    yStartPosition,
+    transactionData,
+    period // ✅ Added as parameter
+  ) => {
+    let yPosition = yStartPosition;
+
+    const tableConfig = {
+      marginLeft: 10,
+      marginRight: 10,
+      rowHeight: 8,
+      headerHeight: 15,
+      headerFontSize: 10,
+      subHeaderFontSize: 9,
+      cellFontSize: 10,
+      lineSpacing: 1.2, // spacing multiplier for wrapped text
+    };
+
+    // ✅ Dynamic Filter Column Label
+    let periodLabel = "MONTHS";
+    if (period === "monthly") periodLabel = "DAYS";
+    else if (period === "weekly") periodLabel = "WEEKDAYS";
+    else if (period === "daily") periodLabel = "DATE";
+    else if (period === "quarterly") periodLabel = "QUARTERS";
+    else if (period === "annually") periodLabel = "MONTHS"; // fallback
+
+    const headers = [
+      periodLabel,
+      "Transaction No",
+      "Tracking No",
+      "Date of Order",
+      "Client",
+      "Address",
+      "Item Name",
+      "Quantity",
+      "Unit Cost",
+      "Subtotal",
+      "Delivery Status",
+      "Ship Out At",
+      "Completed At",
+    ];
+
+    // ===== Column Config =====
+    const availableWidth =
+      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
+
+    const originalWidths = [20, 22, 20, 22, 29, 25, 25, 20, 20, 20, 25, 20, 22];
+    const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
+    const colWidths = originalWidths.map(
+      (w) => (w / totalOriginal) * availableWidth
+    );
+
+    const tableStartX = tableConfig.marginLeft;
+
+    // Helper: draw centered text
+    const drawCenteredText = (text, x, y, width, fontSize) => {
+      doc.setFontSize(fontSize);
+      const textWidth = doc.getTextWidth(text);
+      const textX = x + (width - textWidth) / 2;
+      doc.text(text, textX, y, { maxWidth: width - 4 });
+    };
+
+    // ✅ Different background colors per header
+    const headerColors = [
+      [173, 216, 230], // Filter
+      [221, 160, 221], // Transaction No
+      [144, 238, 144], // Tracking No
+      [255, 218, 185], // Date of Order
+      [176, 224, 230], // Client
+      [240, 230, 140], // Address
+      [250, 200, 200], // Item Name
+      [200, 255, 200], // Quantity
+      [200, 200, 255], // Unit Cost
+      [255, 200, 150], // Subtotal
+      [210, 180, 140], // Delivery Status
+      [135, 206, 250], // Ship Out At
+      [255, 182, 193], // Completed At
+    ];
+
+    // ✅ Function to draw headers (for first page + repeated on new pages)
+    const drawHeaders = () => {
+      let xPos = tableStartX;
+      doc.setFont("helvetica", "bold");
+      headers.forEach((header, i) => {
+        const fillColor = headerColors[i] || [200, 200, 200];
+        doc.setFillColor(...fillColor);
+        doc.setTextColor(0, 0, 0);
+        doc.rect(xPos, yPosition, colWidths[i], tableConfig.headerHeight, "FD");
+        drawCenteredText(
+          header,
+          xPos,
+          yPosition + tableConfig.headerHeight / 2 + 2,
+          colWidths[i],
+          tableConfig.subHeaderFontSize
+        );
+        xPos += colWidths[i];
+      });
+      yPosition += tableConfig.headerHeight;
+    };
+
+    // ✅ Draw headers first time
+    drawHeaders();
+
+    // ===== Rows =====
+    transactionData.forEach((row, rowIndex) => {
+      let xPos = tableStartX;
+      let maxLines = 1;
+
+      const cellLinesArray = row.map((cell, i) => {
+        const text = cell !== null && cell !== undefined ? cell.toString() : "";
+        const lines = doc.splitTextToSize(text, colWidths[i] - 2);
+        maxLines = Math.max(maxLines, lines.length);
+        return lines;
+      });
+
+      // ✅ Adjust row height
+      const rowHeight =
+        tableConfig.cellFontSize * 0.5 * maxLines * tableConfig.lineSpacing + 2;
+
+      // Alternate row colors
+      const isEvenRow = rowIndex % 2 === 0;
+      const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
+
+      row.forEach((cell, i) => {
+        doc.setFillColor(...bgColor);
+        doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(tableConfig.cellFontSize);
+        doc.text(
+          cellLinesArray[i],
+          xPos + 1,
+          yPosition + tableConfig.cellFontSize * 0.4,
+          { maxWidth: colWidths[i] - 2 }
+        );
+        xPos += colWidths[i];
+      });
+
+      yPosition += rowHeight;
+
+      // ✅ Page break + redraw headers
+      // ✅ Page break check BEFORE drawing row
+      if (yPosition + rowHeight > pageHeight - 20) {
+        doc.addPage();
+        const topMargin = 50; // 👈 margin-top to push table under the header
+        yPosition = topMargin;
+        drawHeaders();
+      }
+    });
+
+    return yPosition;
+  };
+
+  const createDeliveryServiceReportTable = async (
+    doc,
+    pageWidth,
+    pageHeight,
+    yStartPosition,
+    serviceData,
+    period // ✅ Added as parameter
+  ) => {
+    let yPosition = yStartPosition;
+
+    const tableConfig = {
+      marginLeft: 10,
+      marginRight: 10,
+      rowHeight: 8,
+      headerHeight: 15,
+      headerFontSize: 11,
+      subHeaderFontSize: 10,
+      cellFontSize: 10,
+      lineSpacing: 1.2, // spacing multiplier for wrapped text
+    };
+
+    // ✅ Dynamic Filter Column Label
+    let periodLabel = "MONTHS";
+    if (period === "monthly") periodLabel = "DAYS";
+    else if (period === "weekly") periodLabel = "WEEKDAYS";
+    else if (period === "daily") periodLabel = "DATE";
+    else if (period === "quarterly") periodLabel = "QUARTERS";
+    else if (period === "annually") periodLabel = "MONTHS"; // fallback
+
+    // ✅ Headers (new structure)
+    const headers = [
+      periodLabel,
+      "Transaction No.",
+      "Date of Order",
+      "Client",
+      "Delivery Status",
+      "Initial Delivery Date",
+      "Rescheduled Date",
+      "Reason for Cancellation",
+    ];
+
+    // ===== Column Config =====
+    const availableWidth =
+      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
+
+    // ✅ Adjusted widths for 8 columns (must match headers length)
+    const originalWidths = [25, 28, 30, 28, 32, 32, 32, 40];
+    const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
+    const colWidths = originalWidths.map(
+      (w) => (w / totalOriginal) * availableWidth
+    );
+
+    const tableStartX = tableConfig.marginLeft;
+
+    // Helper: draw centered text
+    const drawCenteredText = (text, x, y, width, fontSize) => {
+      doc.setFontSize(fontSize);
+      const textWidth = doc.getTextWidth(text);
+      const textX = x + (width - textWidth) / 2;
+      doc.text(text, textX, y, { maxWidth: width - 4 });
+    };
+
+    // ✅ Different background colors per header (8 colors)
+    const headerColors = [
+      [173, 216, 230], // Filter (periodLabel)
+      [221, 160, 221], // Transaction No.
+      [144, 238, 144], // Date of Order
+      [255, 218, 185], // Client
+      [176, 224, 230], // Delivery Status
+      [240, 230, 140], // Initial Delivery Date
+      [250, 200, 200], // Rescheduled Date
+      [255, 182, 193], // Reason for Cancellation
+    ];
+
+    // ✅ Function to draw headers (first page + repeated on new pages)
+    const drawHeaders = () => {
+      let xPos = tableStartX;
+      doc.setFont("helvetica", "bold");
+      headers.forEach((header, i) => {
+        const fillColor = headerColors[i] || [200, 200, 200];
+        doc.setFillColor(...fillColor);
+        doc.setTextColor(0, 0, 0);
+        doc.rect(xPos, yPosition, colWidths[i], tableConfig.headerHeight, "FD");
+        drawCenteredText(
+          header,
+          xPos,
+          yPosition + tableConfig.headerHeight / 2 + 3,
+          colWidths[i],
+          tableConfig.subHeaderFontSize
+        );
+        xPos += colWidths[i];
+      });
+      yPosition += tableConfig.headerHeight;
+    };
+
+    // ✅ Draw headers first time
+    drawHeaders();
+
+    serviceData.forEach((row, rowIndex) => {
+      let xPos = tableStartX;
+      let maxLines = 1;
+
+      // Split text into lines per cell
+      const cellLinesArray = row.map((cell, i) => {
+        const text = cell !== null && cell !== undefined ? cell.toString() : "";
+        const lines = doc.splitTextToSize(text, colWidths[i] - 2);
+        maxLines = Math.max(maxLines, lines.length);
+        return lines;
+      });
+
+      // ✅ Calculate row height first
+      const rowHeight =
+        maxLines * tableConfig.cellFontSize * tableConfig.lineSpacing * 0.5 + 4;
+
+      // ✅ Page break check BEFORE drawing
+      if (yPosition + rowHeight > pageHeight - 20) {
+        doc.addPage();
+        const topMargin = 50; // 👈 margin-top to push table under header
+        yPosition = topMargin;
+        drawHeaders();
+      }
+
+      // Alternate row colors
+      const isEvenRow = rowIndex % 2 === 0;
+      const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
+
+      // Draw row
+      row.forEach((cell, i) => {
+        doc.setFillColor(...bgColor);
+        doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(tableConfig.cellFontSize);
+        doc.text(cellLinesArray[i], xPos + 1, yPosition + 5, {
+          maxWidth: colWidths[i] - 2,
+        });
+        xPos += colWidths[i];
+      });
+
+      yPosition += rowHeight;
+    });
+    return yPosition;
+  };
+
+  // ================== CUSTOMER SATISFACTION REPORT TABLE ==================
+  const createCustomerSatisfactionReportTable = async (
+    doc,
+    pageWidth,
+    pageHeight,
+    yStartPosition,
+    satisfactionRows,
+    period
+  ) => {
+    let yPosition = yStartPosition;
+
+    const tableConfig = {
+      marginLeft: 10,
+      marginRight: 10,
+      rowHeight: 8,
+      headerHeight: 15,
+      headerFontSize: 11,
+      subHeaderFontSize: 10,
+      cellFontSize: 10,
+      lineSpacing: 1.2,
+    };
+
+    // ✅ Dynamic Filter Column Label
+    let periodLabel = "MONTHS";
+    if (period === "monthly") periodLabel = "DAYS";
+    else if (period === "weekly") periodLabel = "WEEKDAYS";
+    else if (period === "daily") periodLabel = "DATE";
+    else if (period === "quarterly") periodLabel = "QUARTERS";
+    else if (period === "annually") periodLabel = "MONTHS";
+
+    const headers = [
+      periodLabel,
+      "Transaction No.",
+      "Date of Order",
+      "Client",
+      "Item",
+      "Customer Rating",
+      "Delivery Status",
+    ];
+
+    // ===== Column Config =====
+    const availableWidth =
+      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
+
+    const originalWidths = [20, 25, 30, 30, 30, 25, 30];
+    const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
+    const colWidths = originalWidths.map(
+      (w) => (w / totalOriginal) * availableWidth
+    );
+
+    const tableStartX = tableConfig.marginLeft;
+
+    const drawCenteredText = (text, x, y, width, fontSize) => {
+      doc.setFontSize(fontSize);
+      const textWidth = doc.getTextWidth(text);
+      const textX = x + (width - textWidth) / 2;
+      doc.text(text, textX, y, { maxWidth: width - 4 });
+    };
+
+    const headerColors = [
+      [173, 216, 230],
+      [221, 160, 221],
+      [255, 250, 205],
+      [144, 238, 144],
+      [255, 182, 193],
+      [255, 218, 185],
+      [176, 224, 230],
+    ];
+
+    const drawHeaders = () => {
+      let xPos = tableStartX;
+      doc.setFont("helvetica", "bold");
+      headers.forEach((header, i) => {
+        const fillColor = headerColors[i] || [200, 200, 200];
+        doc.setFillColor(...fillColor);
+        doc.setTextColor(0, 0, 0);
+        doc.rect(xPos, yPosition, colWidths[i], tableConfig.headerHeight, "FD");
+        drawCenteredText(
+          header,
+          xPos,
+          yPosition + tableConfig.headerHeight / 2 + 3,
+          colWidths[i],
+          tableConfig.subHeaderFontSize
+        );
+        xPos += colWidths[i];
+      });
+      yPosition += tableConfig.headerHeight;
+    };
+
+    // ✅ Draw headers first time
+    drawHeaders();
+
+    // ===== Rows =====
+    satisfactionRows.forEach((row, rowIndex) => {
+      let xPos = tableStartX;
+      let maxLines = 1;
+
+      const cellLinesArray = row.map((cell, i) => {
+        const text = cell !== null && cell !== undefined ? cell.toString() : "";
+        const lines = doc.splitTextToSize(text, colWidths[i] - 2);
+        maxLines = Math.max(maxLines, lines.length);
+        return lines;
+      });
+
+      const rowHeight =
+        maxLines * tableConfig.cellFontSize * tableConfig.lineSpacing * 0.5 + 4;
+
+      const isEvenRow = rowIndex % 2 === 0;
+      const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
+
+      // ✅ Page break check BEFORE drawing row
+      if (yPosition + rowHeight > pageHeight - 20) {
+        doc.addPage();
+        const topMargin = 50; // 👈 margin-top to push table under the header
+        yPosition = topMargin;
+        drawHeaders();
+      }
+      row.forEach((cell, i) => {
+        doc.setFillColor(...bgColor);
+        doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(tableConfig.cellFontSize);
+        doc.text(cellLinesArray[i], xPos + 1, yPosition + 5, {
+          maxWidth: colWidths[i] - 2,
+        });
+        xPos += colWidths[i];
+      });
+
+      yPosition += rowHeight;
+    });
+
+    return yPosition;
+  };
+
   const iconStyle = {
     width: 40,
     height: 40,
@@ -853,7 +2739,7 @@ const GenerateReport = () => {
     },
   };
 
-  const cardsByReportType = {
+ const cardsByReportType = {
     sales: ["totalSales", "totalClients", "totalItemsDelivered"],
     transaction: [
       "totalClients",
@@ -1032,7 +2918,7 @@ const GenerateReport = () => {
             reason,
             count,
           }))
-        : [{ reason: "No Data", count: 0 }]; 
+        : [{ reason: "No Data", count: 0 }];
 
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -1634,7 +3520,11 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button variant="danger" className="btn cancel-btn px-3 py-2 rounded">
+          <Button
+            variant="danger"
+            className="btn cancel-btn px-3 py-2 rounded"
+            onClick={() => generateReport(reportType)}
+          >
             <FaFilePdf /> Generate PDF
           </Button>
         </div>

@@ -73,6 +73,7 @@ CREATE TABLE Transactions (
     tracking_number VARCHAR(20),
     status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     completed_at DATETIME NULL,
+    proof_of_delivery VARCHAR(255) NULL,
     shipout_at DATETIME NULL,
     cancelled_reason TEXT NULL,
     cancelled_at DATETIME NULL,
@@ -190,6 +191,30 @@ VALUES (
     'pacienteliezel04@gmail.com',
     '09171234567'
 );
+
+INSERT INTO Product (type_of_product, description, unit_cost) 
+VALUES 
+("SPEED FAN ", "HIGH VOLUME 4.9M", NULL),
+("SPEED FAN ", "HIGH VOLUME 7.3M", NULL),
+("SPEED FAN ", "LOW VOLUME 4.9M", NULL),
+("SPEED FAN ", "LOW VOLUME 7.3M", NULL),
+("AIRCON", "WINDOW TYPE 1.0HP", NULL),
+("AIRCON", "WINDOW TYPE 1.5HP", NULL),
+("AIRCON", "WINDOW TYPE 2.0HP", NULL),
+("AIRCON", "WINDOW TYPE 2.5HP", NULL),
+("AIRCON", "WINDOW TYPE 3.0HP", NULL),
+("AIRCON", "HIGHWALL 1.0HP", NULL),
+("AIRCON", "HIGHWALL TYPE 1.5HP", NULL),
+("AIRCON", "HIGHWALL TYPE 2.0HP", NULL),
+("AIRCON", "HIGHWALL TYPE 2.5HP", NULL),
+("AIRCON", "HIGHWALL TYPE 3.0HP", NULL),
+("AIRCON", "CASETTE TYPE 3TR", NULL),
+("AIRCON", "CASETTE TYPE 5TR", NULL),
+("AIRCON", "UNDERCEILING TYPE 3TR",NULL),
+("AIRCON", "UNDERCEILING TYPE 5TR", NULL),
+("AIRCON", "FLOOR MOUNTED TYPE 3TR", NULL),
+("AIRCON", "FLOOR MOUNTED TYPE 5TR", NULL);
+
 
 -- CREDENTIALS
 -- Admin Credentials:
