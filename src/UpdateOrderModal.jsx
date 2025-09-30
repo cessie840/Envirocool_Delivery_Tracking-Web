@@ -285,17 +285,42 @@ const UpdateOrderModal = ({
                 <Form.Label>Down Payment</Form.Label>
                 <Form.Control
                   type="text"
-                  name="down_payment"
-                  value={formatCurrency(formData.down_payment)}
+                  value={
+                    formData.down_payment !== ""
+                      ? `₱${formData.down_payment}`
+                      : ""
+                  }
                   onChange={(e) => {
-                    const rawValue = parseCurrency(e.target.value);
-                    const balance = total - rawValue;
+                    const rawValue = e.target.value.replace(/[₱,]/g, "");
+                    const numericValue =
+                      rawValue === "" ? "" : parseFloat(rawValue);
+                    const balance =
+                      total - (isNaN(numericValue) ? 0 : numericValue);
+
                     setFormData({
                       ...formData,
-                      down_payment: rawValue,
+                      down_payment: isNaN(numericValue) ? "" : numericValue,
                       balance: balance.toFixed(2),
                       total: total.toFixed(2),
                     });
+                  }}
+                  onBlur={(e) => {
+                    const rawValue = e.target.value.replace(/[₱,]/g, "");
+                    const numericValue = parseFloat(rawValue);
+                    if (!isNaN(numericValue)) {
+                      setFormData({
+                        ...formData,
+                        down_payment: numericValue.toFixed(2),
+                        balance: (total - numericValue).toFixed(2),
+                        total: total.toFixed(2),
+                      });
+                      e.target.value =
+                        "₱" +
+                        numericValue.toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        });
+                    }
                   }}
                   disabled={formData.payment_option === "Full Payment"}
                 />
@@ -393,7 +418,6 @@ const UpdateOrderModal = ({
                           item.unit_cost !== "" ? `₱${item.unit_cost}` : ""
                         }
                         onChange={(e) => {
-                          
                           const rawValue = e.target.value.replace(/[₱,]/g, "");
                           const numericValue =
                             rawValue === "" ? "" : parseFloat(rawValue);
@@ -405,7 +429,6 @@ const UpdateOrderModal = ({
                           setEditableItems(newItems);
                         }}
                         onBlur={(e) => {
-                       
                           const rawValue = e.target.value.replace(/[₱,]/g, "");
                           const numericValue = parseFloat(rawValue);
                           if (!isNaN(numericValue)) {
