@@ -20,60 +20,71 @@ function DriverDashboard() {
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
 
-const fetchAssignedDeliveries = () => {
-  const storedProfile = localStorage.getItem("user");
-  if (!storedProfile) return;
+  const fetchAssignedDeliveries = () => {
+    const storedProfile = localStorage.getItem("user");
+    if (!storedProfile) return;
 
-  const parsedProfile = JSON.parse(storedProfile);
-  const username = parsedProfile.pers_username;
-  if (!username) return;
+    const parsedProfile = JSON.parse(storedProfile);
+    const username = parsedProfile.pers_username;
+    if (!username) return;
 
-  axios
-    .post(
-      "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
-      { pers_username: username }
-    )
-    .then((res) => {
-      if (!Array.isArray(res.data)) return;
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
+        { pers_username: username }
+      )
+      .then((res) => {
+        if (!Array.isArray(res.data)) return;
 
-      const assigned = res.data.filter(
-        (d) =>
-          d.delivery_status === "To Ship" || d.delivery_status === "Pending"
-      );
-      const out = res.data.filter(
-        (d) => d.delivery_status === "Out for Delivery"
-      );
+        const assigned = res.data.filter(
+          (d) =>
+            d.delivery_status === "To Ship" || d.delivery_status === "Pending"
+        );
+        const out = res.data.filter(
+          (d) => d.delivery_status === "Out for Delivery"
+        );
 
-      setAssignedDeliveries(assigned);
-      setFilteredDeliveries(assigned);
-      setOutForDelivery(out);
+        setAssignedDeliveries(assigned);
+        setFilteredDeliveries(assigned);
+        setOutForDelivery(out);
 
-      const notifKey = `notifications_${username}`;
-      let storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
+        const notifKey = `notifications_${username}`;
+        let storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
+        const storedTxnNos = new Set(storedNotifs.map((n) => n.transactionNo));
 
-      const storedTxnNos = new Set(storedNotifs.map((n) => n.transactionNo));
+        const freshOnes = assigned.filter(
+          (d) => !storedTxnNos.has(d.transactionNo)
+        );
 
+        if (freshOnes.length > 0) {
+          setNewDeliveries(freshOnes);
+          setNewDeliveriesCount(freshOnes.length);
+          setShowNewDeliveryPopup(true);
 
-      const freshOnes = assigned.filter(
-        (d) => !storedTxnNos.has(d.transactionNo)
-      );
+        
+          const newNotifs = freshOnes.map((d) => ({
+            transactionNo: d.transactionNo,
+            message: `You have a new assigned delivery for Transaction No. ${d.transactionNo}`,
+            read: false,
+            timestamp: Date.now(),
+          }));
 
-      if (freshOnes.length > 0) {
-        setNewDeliveries(freshOnes);
-        setNewDeliveriesCount(freshOnes.length);
-        setShowNewDeliveryPopup(true);
-      } else {
-        setNewDeliveries([]);
-        setNewDeliveriesCount(0);
-        setShowNewDeliveryPopup(false);
-      }
-    })
-    .catch((err) => console.error("Error fetching deliveries:", err));
-};
+          const updatedNotifs = [...storedNotifs, ...newNotifs];
+          const uniqueNotifs = Array.from(
+            new Map(updatedNotifs.map((n) => [n.transactionNo, n])).values()
+          );
 
+          localStorage.setItem(notifKey, JSON.stringify(uniqueNotifs));
+        }
+      })
+      .catch((err) => console.error("Error fetching deliveries:", err));
+  };
 
+ 
   useEffect(() => {
     fetchAssignedDeliveries();
+    const interval = setInterval(fetchAssignedDeliveries, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -93,34 +104,11 @@ const fetchAssignedDeliveries = () => {
     }
   }, [location.state]);
 
- const handleClosePopup = () => {
-   const storedProfile = JSON.parse(localStorage.getItem("user"));
-   if (!storedProfile || !storedProfile.pers_username) return;
-
-   const notifKey = `notifications_${storedProfile.pers_username}`;
-   const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
-
-   const updatedNotifs = [
-     ...storedNotifs,
-     ...newDeliveries.map((d) => ({
-       transactionNo: d.transactionNo,
-       message: `You have new assigned deliveries for Transaction No. ${d.transactionNo}`,
-       read: false,
-       timestamp: Date.now(),
-     })),
-   ];
-
-   const uniqueNotifs = Array.from(
-     new Map(updatedNotifs.map((n) => [n.transactionNo, n])).values()
-   );
-
-   localStorage.setItem(notifKey, JSON.stringify(uniqueNotifs));
-
-   setShowNewDeliveryPopup(false);
-   setNewDeliveries([]); 
-   setNewDeliveriesCount(0);
- };
-
+  const handleClosePopup = () => {
+    setShowNewDeliveryPopup(false);
+    setNewDeliveries([]);
+    setNewDeliveriesCount(0);
+  };
 
   const markAsOutForDelivery = (transactionNo) => {
     const delivery = assignedDeliveries.find(
@@ -134,34 +122,12 @@ const fetchAssignedDeliveries = () => {
     axios
       .post(
         "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
-        { transaction_id: transactionNo } 
+        { transaction_id: transactionNo }
       )
       .then((res) => {
         const { success, message } = res.data;
         if (success) {
           alert("Order is now marked as 'Out for Delivery'.");
-
-          setNewDeliveries((prev) =>
-            prev.filter((d) => d.transactionNo !== transactionNo)
-          );
-          setNewDeliveriesCount((prev) => (prev > 0 ? prev - 1 : 0));
-
-          const storedProfile = JSON.parse(localStorage.getItem("user"));
-          if (storedProfile && storedProfile.pers_username) {
-            const notifKey = `notifications_${storedProfile.pers_username}`;
-            const storedNotifs =
-              JSON.parse(localStorage.getItem(notifKey)) || [];
-
-           
-            const updatedNotifs = storedNotifs.map((notif) =>
-              notif.transactionNo === transactionNo
-                ? { ...notif, read: true }
-                : notif
-            );
-
-            localStorage.setItem(notifKey, JSON.stringify(updatedNotifs));
-          }
-
           fetchAssignedDeliveries();
           navigate("/out-for-delivery");
         } else {
@@ -208,7 +174,9 @@ const fetchAssignedDeliveries = () => {
           <Modal.Title>New Assigned Deliveries</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          You have {newDeliveriesCount} new deliveries assigned!
+          {newDeliveriesCount === 1
+            ? "You have 1 new assigned delivery."
+            : `You have ${newDeliveriesCount} new assigned deliveries.`}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="success" onClick={handleClosePopup}>

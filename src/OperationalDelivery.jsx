@@ -108,7 +108,6 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
-  // Base filtered lists by assignment status
   const unassignedOrders = orders
     .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
     .sort(

@@ -268,7 +268,6 @@ function DriverProfileSettings() {
           >
             {[
               { label: "Full Name", key: "Name" },
-              { label: "Username", key: "username" },
               { label: "Email", key: "Email" },
               { label: "Contact Number", key: "Contact" },
               { label: "Age", key: "Age" },

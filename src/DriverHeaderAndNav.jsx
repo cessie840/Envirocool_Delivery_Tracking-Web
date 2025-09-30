@@ -15,33 +15,30 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [], onSearch }) => {
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
 
- 
   const getNotifKey = () => {
     const storedProfile = JSON.parse(localStorage.getItem("user"));
     if (!storedProfile || !storedProfile.pers_username) return null;
     return `notifications_${storedProfile.pers_username}`;
   };
 
- useEffect(() => {
-   const storedProfile = JSON.parse(localStorage.getItem("user"));
-   const username = storedProfile?.pers_username;
+  useEffect(() => {
+    const storedProfile = JSON.parse(localStorage.getItem("user"));
+    const username = storedProfile?.pers_username;
 
-   if (!username) {
-     setNotifications([]);
-     return;
-   }
+    if (!username) {
+      setNotifications([]);
+      return;
+    }
 
-   const notifKey = `notifications_${username}`;
-   const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
+    const notifKey = `notifications_${username}`;
+    const storedNotifs = JSON.parse(localStorage.getItem(notifKey)) || [];
 
-  
-   if (storedNotifs.length === 0) {
-     setNotifications([]);
-   } else {
-     setNotifications(storedNotifs);
-   }
- }, [localStorage.getItem("user")]);
-
+    if (storedNotifs.length === 0) {
+      setNotifications([]);
+    } else {
+      setNotifications(storedNotifs);
+    }
+  }, [localStorage.getItem("user")]);
 
   useEffect(() => {
     if (newDeliveries.length === 0) return;
