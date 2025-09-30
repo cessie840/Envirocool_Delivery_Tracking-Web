@@ -236,13 +236,13 @@ const UpdateOrderModal = ({
                     formData.target_date_delivery
                       ? new Date(formData.target_date_delivery)
                           .toISOString()
-                          .split("T")[0] 
+                          .split("T")[0]
                       : ""
                   }
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      target_date_delivery: e.target.value, 
+                      target_date_delivery: e.target.value,
                     })
                   }
                 />
@@ -389,12 +389,36 @@ const UpdateOrderModal = ({
                     <td>
                       <Form.Control
                         type="text"
-                        value={formatCurrency(item.unit_cost)}
+                        value={
+                          item.unit_cost !== "" ? `₱${item.unit_cost}` : ""
+                        }
                         onChange={(e) => {
-                          const rawValue = parseCurrency(e.target.value);
+                          
+                          const rawValue = e.target.value.replace(/[₱,]/g, "");
+                          const numericValue =
+                            rawValue === "" ? "" : parseFloat(rawValue);
+
                           const newItems = [...editableItems];
-                          newItems[index].unit_cost = rawValue;
+                          newItems[index].unit_cost = isNaN(numericValue)
+                            ? ""
+                            : numericValue;
                           setEditableItems(newItems);
+                        }}
+                        onBlur={(e) => {
+                       
+                          const rawValue = e.target.value.replace(/[₱,]/g, "");
+                          const numericValue = parseFloat(rawValue);
+                          if (!isNaN(numericValue)) {
+                            const newItems = [...editableItems];
+                            newItems[index].unit_cost = numericValue.toFixed(2);
+                            setEditableItems(newItems);
+                            e.target.value =
+                              "₱" +
+                              numericValue.toLocaleString("en-PH", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              });
+                          }
                         }}
                       />
                     </td>

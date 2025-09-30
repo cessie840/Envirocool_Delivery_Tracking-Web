@@ -28,7 +28,6 @@ const ViewOrder = () => {
     proof_of_delivery: "",
   });
 
-  // New state for Proof of Delivery modal
   const [showProofViewModal, setShowProofViewModal] = useState(false);
   const [proofUrl, setProofUrl] = useState("");
 
@@ -155,28 +154,6 @@ const ViewOrder = () => {
     0
   );
 
-  const handleDelete = (transaction_id) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      fetch("http://localhost/DeliveryTrackingSystem/delete_deliveries.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transaction_id }),
-      })
-        .then((res) => res.json())
-        .then((response) => {
-          if (response.status === "success") {
-            alert("Transaction deleted successfully");
-            navigate(-1);
-          } else {
-            alert("Failed to delete");
-          }
-        })
-        .catch((err) => {
-          console.error("Delete error:", err);
-          alert("An error occurred");
-        });
-    }
-  };
 
   const renderStatusBadge = (status) => {
     switch (status) {

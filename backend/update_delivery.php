@@ -6,7 +6,6 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
 header("Content-Type: application/json");
 
-// Get POST data
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!$data || !isset($data['transaction_id'])) {
@@ -28,23 +27,23 @@ $items                = $data['items'] ?? [];
 $conn->begin_transaction();
 
 try {
-    // Recalculate total and balance
+ 
     $total = 0;
     foreach ($items as $item) {
-        $total += $item['quantity'] * $item['unit_cost'];
+        $total += ((float)$item['unit_cost']) * ((int)$item['quantity']);
     }
     $balance = $total - $down_payment;
 
-    // Update Transactions table
-    $stmtTrans = $conn->prepare("
+   
+    $stmt = $conn->prepare("
         UPDATE Transactions 
         SET customer_name=?, customer_address=?, customer_contact=?, 
             date_of_order=?, target_date_delivery=?, 
             mode_of_payment=?, payment_option=?, 
-            total=?, down_payment=?, balance=? 
+            down_payment=?, balance=?, total=? 
         WHERE transaction_id=?
     ");
-    $stmtTrans->bind_param(
+    $stmt->bind_param(
         "sssssssdddi",
         $customer_name,
         $customer_address,
@@ -53,67 +52,76 @@ try {
         $target_date_delivery,
         $mode_of_payment,
         $payment_option,
-        $total,
         $down_payment,
         $balance,
+        $total,
         $transaction_id
     );
-    $stmtTrans->execute();
+    $stmt->execute();
+    $stmt->close();
 
-    // Update or Insert each item in PurchaseOrder
-    foreach ($items as $item) {
-        $type_of_product = $item['type_of_product'] ?? '';
-        $description     = $item['description'] ?? '';
-        $quantity        = (int)$item['quantity'];
-        $unit_cost       = (float)$item['unit_cost'];
 
-        // Check if item exists
-        $checkStmt = $conn->prepare("
-            SELECT COUNT(*) as count 
-            FROM PurchaseOrder 
-            WHERE transaction_id=? AND description=?
+    $existingItems = [];
+    $result = $conn->query("SELECT po_id FROM PurchaseOrder WHERE transaction_id = " . intval($transaction_id) . " ORDER BY po_id ASC");
+    while ($row = $result->fetch_assoc()) {
+        $existingItems[] = $row['po_id'];
+    }
+    $existingCount = count($existingItems);
+    $newCount = count($items);
+
+
+    $limit = min($existingCount, $newCount);
+    for ($i = 0; $i < $limit; $i++) {
+        $po_id = $existingItems[$i];
+        $item = $items[$i];
+
+        $stmt = $conn->prepare("
+            UPDATE PurchaseOrder 
+            SET quantity=?, type_of_product=?, description=?, unit_cost=? 
+            WHERE po_id=? AND transaction_id=?
         ");
-        $checkStmt->bind_param("is", $transaction_id, $description);
-        $checkStmt->execute();
-        $res = $checkStmt->get_result()->fetch_assoc();
+        $stmt->bind_param(
+            "issdii",
+            $item['quantity'],
+            $item['type_of_product'],
+            $item['description'],
+            $item['unit_cost'],
+            $po_id,
+            $transaction_id
+        );
+        $stmt->execute();
+        $stmt->close();
+    }
 
-        if ($res['count'] > 0) {
-            // Update existing item
-            $updateItem = $conn->prepare("
-                UPDATE PurchaseOrder 
-                SET type_of_product=?, quantity=?, unit_cost=? 
-                WHERE transaction_id=? AND description=?
-            ");
-            $updateItem->bind_param(
-                "sidis",
-                $type_of_product,
-                $quantity,
-                $unit_cost,
+   
+    if ($newCount < $existingCount) {
+        $toDelete = array_slice($existingItems, $newCount);
+        $ids = implode(",", array_map('intval', $toDelete));
+        $conn->query("DELETE FROM PurchaseOrder WHERE po_id IN ($ids)");
+    }
+
+    if ($newCount > $existingCount) {
+        $stmt = $conn->prepare("
+            INSERT INTO PurchaseOrder (transaction_id, quantity, type_of_product, description, unit_cost) 
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        for ($i = $existingCount; $i < $newCount; $i++) {
+            $item = $items[$i];
+            $stmt->bind_param(
+                "iissd",
                 $transaction_id,
-                $description
+                $item['quantity'],
+                $item['type_of_product'],
+                $item['description'],
+                $item['unit_cost']
             );
-            $updateItem->execute();
-        } else {
-            // Insert new item
-            $insertItem = $conn->prepare("
-                INSERT INTO PurchaseOrder (transaction_id, type_of_product, description, quantity, unit_cost)
-                VALUES (?, ?, ?, ?, ?)
-            ");
-            $insertItem->bind_param(
-                "issid",
-                $transaction_id,
-                $type_of_product,
-                $description,
-                $quantity,
-                $unit_cost
-            );
-            $insertItem->execute();
+            $stmt->execute();
         }
+        $stmt->close();
     }
 
     $conn->commit();
     echo json_encode(["status" => "success"]);
-
 } catch (Exception $e) {
     $conn->rollback();
     echo json_encode(["status" => "error", "message" => $e->getMessage()]);

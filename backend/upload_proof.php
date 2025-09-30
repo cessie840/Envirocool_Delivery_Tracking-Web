@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (move_uploaded_file($_FILES["proof_of_delivery"]["tmp_name"], $targetFile)) {
         
-        // Save relative path only (portable across servers)
+      
         $relativePath = "proofs/" . $fileName;
 
         $stmt = $conn->prepare("UPDATE Transactions 

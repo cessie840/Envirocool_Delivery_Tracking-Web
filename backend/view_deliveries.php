@@ -23,17 +23,17 @@ $result_customer = $stmt->get_result();
 if ($result_customer->num_rows > 0) {
     $customer = $result_customer->fetch_assoc();
 
-    // Define the base URL for your server
+   
 $baseUrl = "http://localhost/DeliveryTrackingSystem/";
 
 
   $proofPath = $customer['proof_of_delivery'];
 if ($proofPath) {
-    // If DB already has full URL, just use it
+ 
     if (preg_match('/^https?:\/\//', $proofPath)) {
         $proofUrl = $proofPath;
     } else {
-        // Otherwise, build full URL
+  
         $proofPath = ltrim($proofPath, '/');
         $dirname = dirname($proofPath);
         $basename = basename($proofPath);
