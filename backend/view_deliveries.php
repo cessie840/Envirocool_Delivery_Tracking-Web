@@ -4,16 +4,14 @@ header("Content-Type: application/json");
 
 include 'database.php';
 
-// Get transaction ID safely
 $transaction_id = isset($_GET['transaction_id']) ? intval($_GET['transaction_id']) : 0;
 
 $response = [];
 
-// Fetch transaction/customer details (now including status + cancelled_reason)
 $sql_customer = "
     SELECT tracking_number, customer_name, customer_address, customer_contact, 
            date_of_order, target_date_delivery, rescheduled_date, mode_of_payment, payment_option, 
-           down_payment, balance, total, status, cancelled_reason
+           down_payment, balance, total, status, cancelled_reason, proof_of_delivery
     FROM Transactions 
     WHERE transaction_id = ?
 ";
@@ -25,22 +23,45 @@ $result_customer = $stmt->get_result();
 if ($result_customer->num_rows > 0) {
     $customer = $result_customer->fetch_assoc();
 
-    $response['tracking_number'] = $customer['tracking_number'];
-    $response['customer_name'] = $customer['customer_name'];
-    $response['customer_address'] = $customer['customer_address'];
-    $response['customer_contact'] = $customer['customer_contact'];
-    $response['date_of_order'] = $customer['date_of_order'];
-    $response['target_date_delivery'] = $customer['target_date_delivery'];
-    $response['rescheduled_date'] = $customer['rescheduled_date'];
-    $response['mode_of_payment'] = $customer['mode_of_payment'];
-    $response['payment_option'] = $customer['payment_option'];
-    $response['down_payment'] = $customer['down_payment'];
-    $response['balance'] = $customer['balance'];
-    $response['total'] = $customer['total'];
-    $response['status'] = $customer['status'];
-    $response['cancelled_reason'] = $customer['cancelled_reason'];
+    // Define the base URL for your server
+$baseUrl = "http://localhost/DeliveryTrackingSystem/";
 
-    // Fetch items including type_of_product
+
+  $proofPath = $customer['proof_of_delivery'];
+if ($proofPath) {
+    // If DB already has full URL, just use it
+    if (preg_match('/^https?:\/\//', $proofPath)) {
+        $proofUrl = $proofPath;
+    } else {
+        // Otherwise, build full URL
+        $proofPath = ltrim($proofPath, '/');
+        $dirname = dirname($proofPath);
+        $basename = basename($proofPath);
+        $proofUrl = $baseUrl . $dirname . "/" . rawurlencode($basename);
+    }
+} else {
+    $proofUrl = null;
+}
+
+$response = [
+    'tracking_number' => $customer['tracking_number'],
+    'customer_name' => $customer['customer_name'],
+    'customer_address' => $customer['customer_address'],
+    'customer_contact' => $customer['customer_contact'],
+    'date_of_order' => $customer['date_of_order'],
+    'target_date_delivery' => $customer['target_date_delivery'],
+    'rescheduled_date' => $customer['rescheduled_date'],
+    'mode_of_payment' => $customer['mode_of_payment'],
+    'payment_option' => $customer['payment_option'],
+    'down_payment' => $customer['down_payment'],
+    'balance' => $customer['balance'],
+    'total' => $customer['total'],
+    'status' => $customer['status'],
+    'cancelled_reason' => $customer['cancelled_reason'],
+    'proof_of_delivery' => $proofUrl,
+];
+
+
     $sql_items = "
         SELECT type_of_product, description, quantity, unit_cost 
         FROM PurchaseOrder 
@@ -64,7 +85,6 @@ if ($result_customer->num_rows > 0) {
     $response['items'] = $items;
 
     echo json_encode($response);
-
 } else {
     echo json_encode(["error" => "Transaction not found"]);
 }

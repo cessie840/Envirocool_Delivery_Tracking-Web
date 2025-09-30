@@ -26,31 +26,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mkdir($targetDir, 0777, true);
     }
 
- 
- $fileExt = pathinfo($_FILES["proof_of_delivery"]["name"], PATHINFO_EXTENSION);
-if ($fileExt == "") $fileExt = "jpg";
+    $fileExt = pathinfo($_FILES["proof_of_delivery"]["name"], PATHINFO_EXTENSION);
+    if ($fileExt == "") $fileExt = "jpg";
 
+    $dateTime = date("Ymd_Hi");
+    $fileName = "TN#" . $transaction_id . "_" . $dateTime . "." . $fileExt;
 
-$dateTime = date("Ymd_Hi");
-$fileName = "TN#" . $transaction_id . "_" . $dateTime . "." . $fileExt;
-
-$targetFile = $targetDir . $fileName;
-
+    $targetFile = $targetDir . $fileName;
 
     if (move_uploaded_file($_FILES["proof_of_delivery"]["tmp_name"], $targetFile)) {
         
-        $proofPath = "proofs/" . $fileName;
+        // Save relative path only (portable across servers)
+        $relativePath = "proofs/" . $fileName;
 
         $stmt = $conn->prepare("UPDATE Transactions 
             SET status = 'Delivered', proof_of_delivery = ?, completed_at = NOW() 
             WHERE transaction_id = ?");
-        $stmt->bind_param("si", $proofPath, $transaction_id);
+        $stmt->bind_param("si", $relativePath, $transaction_id);
 
         if ($stmt->execute()) {
             echo json_encode([
                 "success" => true,
                 "message" => "Proof uploaded successfully.",
-                "file" => $proofPath
+                "file" => $relativePath
             ]);
         } else {
             echo json_encode(["success" => false, "message" => "Database update failed."]);
@@ -62,3 +60,4 @@ $targetFile = $targetDir . $fileName;
 } else {
     echo json_encode(["success" => false, "message" => "Invalid request method."]);
 }
+?>

@@ -4,6 +4,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
+import { Button, Modal, Form } from "react-bootstrap";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -24,7 +25,12 @@ const ViewOrder = () => {
     down_payment: "",
     balance: "",
     total: "",
+    proof_of_delivery: "",
   });
+
+  // New state for Proof of Delivery modal
+  const [showProofViewModal, setShowProofViewModal] = useState(false);
+  const [proofUrl, setProofUrl] = useState("");
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
@@ -55,6 +61,7 @@ const ViewOrder = () => {
           balance: data.balance,
           total: data.total,
           target_date_delivery: formatDate(data.target_date_delivery),
+          proof_of_delivery: data.proof_of_delivery
         });
       })
       .catch((err) => {
@@ -69,7 +76,6 @@ const ViewOrder = () => {
       description: item.description || item.item_name || "",
       unit_cost: item.unit_cost,
     }));
-
     setEditableItems(fixedItems);
     setShowModal(true);
   };
@@ -102,7 +108,6 @@ const ViewOrder = () => {
       return;
     }
 
-    // 🔹 Convert MM/DD/YYYY → YYYY-MM-DD
     const formatDateForDB = (dateString) => {
       if (!dateString || dateString === "-") return null;
       const [mm, dd, yyyy] = dateString.split("/");
@@ -246,6 +251,7 @@ const ViewOrder = () => {
                     <span>Current Delivery Status: </span>
                     {renderStatusBadge(orderDetails.status)}
                   </p>
+
                   {orderDetails.status === "Cancelled" &&
                     orderDetails.cancelled_reason && (
                       <p>
@@ -254,6 +260,22 @@ const ViewOrder = () => {
                           {orderDetails.cancelled_reason}
                         </strong>
                       </p>
+                    )}
+
+                  {/* Proof of Delivery Button */}
+                  {orderDetails.status === "Delivered" &&
+                    orderDetails.proof_of_delivery && (
+                      <div className="mt-3">
+                        <button
+                          className="btn btn-success"
+                          onClick={() => {
+                            setProofUrl(orderDetails.proof_of_delivery);
+                            setShowProofViewModal(true);
+                          }}
+                        >
+                          View Proof of Delivery
+                        </button>
+                      </div>
                     )}
                 </div>
 
@@ -333,6 +355,7 @@ const ViewOrder = () => {
         </div>
       </div>
 
+      {/* Update Modal */}
       <UpdateOrderModal
         show={showModal}
         handleClose={handleClose}
@@ -343,6 +366,7 @@ const ViewOrder = () => {
         setEditableItems={setEditableItems}
       />
 
+      {/* Reschedule Modal */}
       <RescheduleModal
         show={showReschedule}
         handleClose={() => setShowReschedule(false)}
@@ -351,6 +375,44 @@ const ViewOrder = () => {
           setOrderDetails((prev) => ({ ...prev, ...updatedFields }));
         }}
       />
+
+      <Modal
+        show={showProofViewModal}
+        onHide={() => setShowProofViewModal(false)}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Proof of Delivery</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="d-flex justify-content-center">
+          {proofUrl ? (
+            <img
+              src={proofUrl}
+              alt="Proof of Delivery"
+              className="w-100 h-auto" 
+              style={{
+                maxHeight: "85vh", 
+                objectFit: "contain", 
+                borderRadius: "10px",
+                boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
+              }}
+            />
+          ) : (
+            <p className="text-muted">No proof of delivery available.</p>
+          )}
+        </Modal.Body>
+
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowProofViewModal(false)}
+          >
+            Close
+          </Button>
+         
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };
