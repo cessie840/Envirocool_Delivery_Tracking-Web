@@ -20,16 +20,13 @@ function generateTrackingNumber($length = 10) {
     $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     $randomPart = '';
 
-    
     $remainingLength = $length - strlen($prefix);
-
     for ($i = 0; $i < $remainingLength; $i++) {
         $randomPart .= $characters[random_int(0, strlen($characters) - 1)];
     }
 
     return $prefix . $randomPart;
 }
-
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
@@ -52,10 +49,9 @@ try {
 
     $order_items = $data['order_items'] ?? [];
 
- 
     $tracking_number = generateTrackingNumber();
 
-
+    // Insert into Transactions
     $stmt = $conn->prepare("INSERT INTO Transactions
         (tracking_number, customer_name, customer_address, customer_contact, date_of_order, target_date_delivery,
          mode_of_payment, payment_option, full_payment, fbilling_date, down_payment, dbilling_date, balance, total)
@@ -85,10 +81,15 @@ try {
     $transaction_id = $conn->insert_id;
     $stmt->close();
 
-  
+    // Insert Purchase Orders
     if (!empty($order_items)) {
-        $stmt_product_check = $conn->prepare("SELECT product_id FROM Product WHERE type_of_product = ? AND description = ?");
-        $stmt_product_insert = $conn->prepare("INSERT INTO Product (type_of_product, description, unit_cost) VALUES (?, ?, ?)");
+        $stmt_product_check = $conn->prepare("
+            SELECT product_id 
+            FROM Product 
+            WHERE TRIM(LOWER(type_of_product)) = TRIM(LOWER(?)) 
+              AND TRIM(LOWER(description)) = TRIM(LOWER(?))
+        ");
+
         $stmt_po = $conn->prepare("INSERT INTO PurchaseOrder 
             (transaction_id, product_id, type_of_product, description, quantity, unit_cost)
             VALUES (?, ?, ?, ?, ?, ?)");
@@ -103,6 +104,7 @@ try {
                 throw new Exception("Product type and description cannot be empty");
             }
 
+            // Check if product exists
             $stmt_product_check->bind_param("ss", $type_of_product, $description);
             $stmt_product_check->execute();
             $stmt_product_check->store_result();
@@ -111,13 +113,10 @@ try {
             if ($stmt_product_check->num_rows > 0) {
                 $stmt_product_check->fetch();
             } else {
-                $stmt_product_insert->bind_param("ssd", $type_of_product, $description, $unit_cost);
-                if (!$stmt_product_insert->execute()) {
-                    throw new Exception("Product insert failed: " . $stmt_product_insert->error);
-                }
-                $product_id = $stmt_product_insert->insert_id;
+                throw new Exception("Invalid product: $type_of_product - $description not found in Product table");
             }
 
+            // Insert Purchase Order
             $stmt_po->bind_param(
                 "iissid",
                 $transaction_id,
@@ -133,7 +132,6 @@ try {
         }
 
         $stmt_product_check->close();
-        $stmt_product_insert->close();
         $stmt_po->close();
     }
 

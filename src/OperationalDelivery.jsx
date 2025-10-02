@@ -12,7 +12,7 @@ const OperationalDelivery = () => {
   const [orders, setOrders] = useState([]);
   const [personnelList, setPersonnelList] = useState([]);
   const [activeTab, setActiveTab] = useState("unassigned");
-  const [filterDate, setFilterDate] = useState(""); 
+  const [filterDate, setFilterDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -129,42 +129,54 @@ const OperationalDelivery = () => {
     );
 
   const searchedUnassignedOrders = unassignedOrders.filter((order) => {
-    if (!searchTerm.trim()) return true; 
+    if (!searchTerm.trim()) return true;
     const search = searchTerm.toLowerCase();
-    const assignedText = "not assigned"; 
+    const assignedText = "not assigned";
     return (
-      String(order.transaction_id || "").toLowerCase().includes(search) ||
+      String(order.transaction_id || "")
+        .toLowerCase()
+        .includes(search) ||
       (order.customer_name || "").toLowerCase().includes(search) ||
       assignedText.toLowerCase().includes(search) ||
       (order.status || "").toLowerCase().includes(search) ||
-      String(order.tracking_number || "").toLowerCase().includes(search) ||
+      String(order.tracking_number || "")
+        .toLowerCase()
+        .includes(search) ||
       (order.target_date_delivery || "").toLowerCase().includes(search)
     );
   });
 
   const searchedAssignedOrders = assignedOrders.filter((order) => {
-    if (!searchTerm.trim()) return true; 
+    if (!searchTerm.trim()) return true;
     const search = searchTerm.toLowerCase();
     return (
-      String(order.transaction_id || "").toLowerCase().includes(search) ||
+      String(order.transaction_id || "")
+        .toLowerCase()
+        .includes(search) ||
       (order.customer_name || "").toLowerCase().includes(search) ||
       (order.assigned_personnel || "").toLowerCase().includes(search) ||
       (order.status || "").toLowerCase().includes(search) ||
-      String(order.tracking_number || "").toLowerCase().includes(search) ||
+      String(order.tracking_number || "")
+        .toLowerCase()
+        .includes(search) ||
       (order.target_date_delivery || "").toLowerCase().includes(search)
     );
   });
 
   const filteredUnassignedOrders = filterDate
-    ? searchedUnassignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    ? searchedUnassignedOrders.filter(
+        (o) => o.target_date_delivery === filterDate
+      )
     : searchedUnassignedOrders;
 
   const filteredAssignedOrders = filterDate
-    ? searchedAssignedOrders.filter((o) => o.target_date_delivery === filterDate)
+    ? searchedAssignedOrders.filter(
+        (o) => o.target_date_delivery === filterDate
+      )
     : searchedAssignedOrders;
 
   return (
-    <OperationalLayout 
+    <OperationalLayout
       title="Delivery Orders"
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
@@ -425,22 +437,29 @@ const OperationalDelivery = () => {
                         <b className="me-3">
                           {selectedOrder.assigned_personnel}
                         </b>
-                       <img
-  src={
-    selectedOrder?.personnel_image &&
-    selectedOrder.personnel_image.trim() !== ""
-      ? selectedOrder.personnel_image
-      : "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
-  }
-  alt={selectedOrder?.assigned_personnel || "Delivery Personnel"}
-  onError={(e) => {
-    e.target.onerror = null;
-    e.target.src =
-      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
-  }}
-  className="rounded-circle border border-2 border-dark"
-  style={{ width: "60px", height: "60px", objectFit: "cover" }}
-/>
+                        <img
+                          src={
+                            selectedOrder?.personnel_image &&
+                            selectedOrder.personnel_image.trim() !== ""
+                              ? selectedOrder.personnel_image
+                              : "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                          }
+                          alt={
+                            selectedOrder?.assigned_personnel ||
+                            "Delivery Personnel"
+                          }
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src =
+                              "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+                          }}
+                          className="rounded-circle border border-2 border-dark"
+                          style={{
+                            width: "60px",
+                            height: "60px",
+                            objectFit: "cover",
+                          }}
+                        />
                       </div>
                     </li>
                   </ul>
