@@ -6,16 +6,35 @@ import {
   TileLayer,
   Marker,
   Polyline,
+  Tooltip,
   Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import axios from "axios";
+import { FaTruckFront } from "react-icons/fa6";
+
+import ReactDOMServer from "react-dom/server"; 
+
+
+
+  import { useMap } from "react-leaflet";
+
+
+const truckIcon = L.divIcon({
+  html: ReactDOMServer.renderToString(<FaTruckFront size={25} color="#420000ff" />),
+  className: "custom-truck-icon",
+  iconSize: [25, 25],
+  iconAnchor: [12, 22],
+});
+
 
 const MonitorDelivery = () => {
   const navigate = useNavigate();
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
+
+
 
   const [transactions, setTransactions] = useState({
     inTransit: [],
@@ -23,19 +42,22 @@ const MonitorDelivery = () => {
     cancelled: [],
   });
 
-  const [route, setRoute] = useState([
-    [14.5995, 120.9842],
-    [14.6042, 120.9825],
-    [14.6164, 121.003],
-  ]);
-  const pickup = route[0];
-  const dropoff = route[route.length - 1];
 
-  const carIcon = new L.Icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/61/61205.png",
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-  });
+  const RecenterMap = ({ lat, lng }) => {
+    const map = useMap();
+
+    useEffect(() => {
+      if (lat && lng) {
+        map.setView([lat, lng], 15); 
+      }
+    }, [lat, lng, map]);
+
+    return null;
+  };
+
+  
+
+
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
@@ -53,6 +75,25 @@ const MonitorDelivery = () => {
 
     return `${formattedDate} |  ${formattedTime}`;
   };
+
+  const [gpsLocations, setGpsLocations] = useState([]);
+
+  useEffect(() => {
+    const fetchGps = async () => {
+      try {
+        const res = await axios.get("http://13.239.143.31/all_devices.php");
+        setGpsLocations(res.data || []);
+      } catch (err) {
+        console.error("Error fetching GPS:", err);
+      }
+    };
+
+    fetchGps();
+    const interval = setInterval(fetchGps, 10000); 
+    return () => clearInterval(interval);
+  }, []);
+
+
 
   useEffect(() => {
     const fetchDeliveries = async () => {
@@ -251,30 +292,86 @@ const MonitorDelivery = () => {
 
             <div className="col-12 col-md-7">
               <div
-                className="bg-white shadow-sm rounded overflow-hidden border border-info"
+                className="bg-white shadow-sm rounded overflow-hidden border"
                 style={{
                   height: window.innerWidth < 768 ? "400px" : "1000px",
                 }}
               >
                 <MapContainer
-                  center={pickup}
-                  zoom={14}
+                  center={
+                    gpsLocations.length > 0
+                      ? [
+                          parseFloat(gpsLocations[gpsLocations.length - 1].lat),
+                          parseFloat(gpsLocations[gpsLocations.length - 1].lng),
+                        ]
+                      : [14.5995, 120.9842]
+                  }
+                  zoom={15}
                   style={{ height: "100%", width: "100%" }}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
-                  <Polyline positions={route} color="blue" weight={4} />
-                  <Marker position={pickup}>
-                    <Popup>Pickup</Popup>
-                  </Marker>
-                  <Marker position={dropoff}>
-                    <Popup>Dropoff</Popup>
-                  </Marker>
-                  <Marker position={route[1]} icon={carIcon}>
-                    <Popup>In Transit</Popup>
-                  </Marker>
+                  {gpsLocations.length > 0 && (
+                    <>
+                    
+
+                      <Marker
+                        position={[
+                          parseFloat(gpsLocations[gpsLocations.length - 1].lat),
+                          parseFloat(gpsLocations[gpsLocations.length - 1].lng),
+                        ]}
+                        icon={truckIcon}
+                      >
+                        <Tooltip permanent direction="top" offset={[0, -20]}>
+                          <b>Truck-1</b>
+                        </Tooltip>
+                        <Popup>
+                          <b>Delivery Truck 1</b>
+                          <br />
+                          <b>Device:</b>{" "}
+                          {gpsLocations[gpsLocations.length - 1].device_id}
+                          <br />
+                          <b>Updated:</b>{" "}
+                          {gpsLocations[gpsLocations.length - 1].updated_at}
+                        </Popup>
+                      </Marker>
+
+                      <Marker position={[14.2091835, 121.1368418]}>
+                        <Tooltip permanent direction="top" offset={[0, -10]}>
+                          <b>Enviroccool Company</b>
+                        </Tooltip>
+                      </Marker>
+
+                      <Polyline
+                        positions={[
+                          [14.2091835, 121.1368418],
+                          [
+                            parseFloat(
+                              gpsLocations[gpsLocations.length - 1].lat
+                            ),
+                            parseFloat(
+                              gpsLocations[gpsLocations.length - 1].lng
+                            ),
+                          ],
+                        ]}
+                        color="blue"
+                        weight={4}
+                        opacity={0.7}
+                      />
+
+      
+                      <RecenterMap
+                        lat={parseFloat(
+                          gpsLocations[gpsLocations.length - 1].lat
+                        )}
+                        lng={parseFloat(
+                          gpsLocations[gpsLocations.length - 1].lng
+                        )}
+                      />
+                    </>
+                  )}
                 </MapContainer>
               </div>
             </div>

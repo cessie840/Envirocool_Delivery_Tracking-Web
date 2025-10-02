@@ -218,6 +218,9 @@ VALUES
 ("AIRCON", "FLOOR MOUNTED TYPE 5TR", NULL);
 
 
+ALTER TABLE Transactions ADD COLUMN customer_feedback VARCHAR(500) NULL;
+
+
 -- CREDENTIALS
 -- Admin Credentials:
 --        Username: admin101
