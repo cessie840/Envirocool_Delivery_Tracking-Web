@@ -192,6 +192,8 @@ VALUES (
     '09171234567'
 );
 
+ALTER TABLE Product MODIFY unit_cost DECIMAL(10,2) NULL;
+
 INSERT INTO Product (type_of_product, description, unit_cost) 
 VALUES 
 ("SPEED FAN ", "HIGH VOLUME 4.9M", NULL),
