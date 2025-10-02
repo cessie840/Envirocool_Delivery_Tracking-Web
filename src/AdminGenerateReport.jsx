@@ -569,7 +569,7 @@ const normalizeSales = (raw = []) =>
 
           if (
             deliveryStatus &&
-            row.delivery_status?.toLowerCase() === deliveryStatus.toLowerCase()
+            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
           )
             return false;
 

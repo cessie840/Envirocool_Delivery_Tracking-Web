@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import logo from "./assets/envirocool-logo.png";
 import {
   FaBars,
@@ -9,17 +9,48 @@ import {
   FaCog,
   FaSignOutAlt,
   FaSearch,
+  FaAlignRight,
+  FaAlignJustify,
 } from "react-icons/fa";
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
 const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // ✅ Sidebar toggle (open/close for mobile)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    return window.innerWidth > 991; // open if desktop, closed if mobile
+  });
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // ✅ Sidebar collapse (desktop)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved === "true";
+  });
+  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+
+  // ✅ Responsive resize handler
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 991) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ✅ Persist collapse state
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
+  }, [isSidebarCollapsed]);
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
@@ -30,6 +61,9 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
       navigate("/");
     }, 500);
   };
+
+  // ✅ Active link checker
+  const isActive = (path) => location.pathname === path;
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
@@ -44,46 +78,76 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
 
       {/* SIDEBAR */}
       <aside
-        className={`sidebar d-flex flex-column align-items-center p-3 ${
-          isSidebarOpen ? "show" : "collapsed"
-        }`}
+        className={`sidebar d-flex flex-column align-items-center p-3 
+          ${isSidebarOpen ? "show" : ""} 
+          ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
       >
+        {/* Close button (mobile only) */}
         <button
           className="btn close-sidebar d-lg-none align-self-end mb-3"
           onClick={toggleSidebar}
         >
           <FaTimes />
         </button>
-        <img
-          src={logo}
-          alt="Envirocool Logo"
-          className="logo mb-4 img-fluid"
-          width="250px"
-        />
-        <nav className="nav-buttons">
+
+        {/* Logo + Collapse toggle */}
+        <div className="sidebar-header d-flex justify-content-between align-items-center w-100 mb-4">
+          {!isSidebarCollapsed && (
+            <img
+              src={logo}
+              alt="Envirocool Logo"
+              className="logo img-fluid"
+              width="200px"
+            />
+          )}
           <button
-            className="nav-btn"
+            className="btn collapse-toggle d-none d-lg-flex p-3"
+            onClick={toggleCollapse}
+            aria-label="Toggle sidebar collapse"
+          >
+            {isSidebarCollapsed ? <FaAlignJustify /> : <FaAlignRight />}
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="nav-buttons w-100">
+          <button
+            className={`nav-btn ${
+              isActive("/personnel-accounts") ? "active" : ""
+            }`}
             onClick={() => navigate("/personnel-accounts")}
           >
-            <FaUserFriends className="icon" /> DELIVERY PERSONNEL ACCOUNTS
+            <FaUserFriends className="icon" />
+            {!isSidebarCollapsed && (
+              <span className="nav-text">DELIVERY PERSONNEL ACCOUNTS</span>
+            )}
           </button>
           <button
-            className="nav-btn"
+            className={`nav-btn ${
+              isActive("/operational-delivery-details") ? "active" : ""
+            }`}
             onClick={() => navigate("/operational-delivery-details")}
           >
-            <FaClipboardList className="icon" /> DELIVERY DETAILS
+            <FaClipboardList className="icon" />
+            {!isSidebarCollapsed && (
+              <span className="nav-text">DELIVERY DETAILS</span>
+            )}
           </button>
           <button
-            className="nav-btn"
+            className={`nav-btn ${
+              isActive("/operational-settings") ? "active" : ""
+            }`}
             onClick={() => navigate("/operational-settings")}
           >
-            <FaCog className="icon" /> SETTINGS
+            <FaCog className="icon" />
+            {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
           </button>
           <button
             className="nav-btn logout"
             onClick={() => setShowLogoutModal(true)}
           >
-            <FaSignOutAlt className="icon" /> LOGOUT
+            <FaSignOutAlt className="icon" />
+            {!isSidebarCollapsed && <span className="nav-text">LOGOUT</span>}
           </button>
         </nav>
       </aside>
@@ -92,6 +156,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
+            {/* Sidebar toggle (mobile) */}
             <button className="btn d-lg-none me-0" onClick={toggleSidebar}>
               {isSidebarOpen ? <FaTimes /> : <FaBars />}
             </button>
