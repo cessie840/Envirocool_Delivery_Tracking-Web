@@ -28,7 +28,10 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // ✅ Sidebar collapse (desktop)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved === "true";
+  });
   const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   // ✅ Responsive resize handler
@@ -116,6 +119,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
             {!isSidebarCollapsed && (
               <span className="nav-text">DELIVERY PERSONNEL ACCOUNTS</span>
             )}
+            <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
           <button
             className={`nav-btn ${
@@ -127,6 +131,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
             {!isSidebarCollapsed && (
               <span className="nav-text">DELIVERY DETAILS</span>
             )}
+            <span className="tooltip-text">Delivery Details</span>
           </button>
           <button
             className={`nav-btn ${
@@ -136,6 +141,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
           >
             <FaCog className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
+            <span className="tooltip-text">Settings</span>
           </button>
           <button
             className="nav-btn logout"
@@ -143,6 +149,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
           >
             <FaSignOutAlt className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">LOGOUT</span>}
+            <span className="tooltip-text">Logout</span>
           </button>
         </nav>
       </aside>
