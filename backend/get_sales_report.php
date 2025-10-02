@@ -54,9 +54,19 @@ if (!$start || !$end) {
     $endDate = $end;
 }
 
+$whereClause = "";
+$params = [];
+$types = "";
+
+if ($start && $end) {
+    $whereClause = "AND DATE(t.date_of_order) BETWEEN ? AND ?";
+    $params = [$startDate, $endDate];
+    $types = "ss";
+}
+
 // Sales data query with payment fields
 $sql = "
-SELECT 
+SELECT
 t.transaction_id,
     DATE(t.date_of_order) AS date_of_order,
     t.customer_name,
@@ -69,14 +79,15 @@ t.transaction_id,
     t.balance
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
-AND t.status = 'Delivered'
+WHERE t.status = 'Delivered' $whereClause
 ORDER BY t.date_of_order ASC
 ";
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) { echo json_encode(["error" => $conn->error]); exit; }
-$stmt->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $sales = $result->fetch_all(MYSQLI_ASSOC);
@@ -84,19 +95,20 @@ $stmt->close();
 
 // Top selling items (no change needed here)
 $sqlTop = "
-SELECT 
+SELECT
     po.description AS item_name,
     SUM(po.quantity) AS quantity_sold
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
-AND t.status = 'Delivered'
+WHERE t.status = 'Delivered' $whereClause
 GROUP BY po.description
 ORDER BY quantity_sold DESC
 LIMIT 10
 ";
 $stmtTop = $conn->prepare($sqlTop);
-$stmtTop->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmtTop->bind_param($types, ...$params);
+}
 $stmtTop->execute();
 $resultTop = $stmtTop->get_result();
 $topSelling = $resultTop->fetch_all(MYSQLI_ASSOC);
@@ -104,7 +116,7 @@ $stmtTop->close();
 
 // Summary with payment fields added
 $sqlSummary = "
-SELECT 
+SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
     SUM(po.quantity) AS total_items_sold,
@@ -113,11 +125,13 @@ SELECT
     SUM(t.balance) AS total_balance
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+WHERE t.status = 'Delivered' $whereClause
 ";
 
 $stmtSum = $conn->prepare($sqlSummary);
-$stmtSum->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmtSum->bind_param($types, ...$params);
+}
 $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();

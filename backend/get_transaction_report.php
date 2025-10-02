@@ -54,8 +54,18 @@ if (!$start || !$end) {
     $endDate = $end;
 }
 
+$whereClause = "";
+$params = [];
+$types = "";
+
+if ($start && $end) {
+    $whereClause = "WHERE DATE(t.date_of_order) BETWEEN ? AND ?";
+    $params = [$startDate, $endDate];
+    $types = "ss";
+}
+
 $sql = "
-SELECT 
+SELECT
     t.transaction_id,
     t.tracking_number,
     t.customer_name,
@@ -66,12 +76,12 @@ SELECT
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.description AS item_name,
     po.quantity AS qty,
-    po.unit_cost,                        
-    (po.quantity * po.unit_cost) AS subtotal, 
+    po.unit_cost,
+    (po.quantity * po.unit_cost) AS subtotal,
     t.mode_of_payment,
-    t.payment_option,       
-    t.down_payment,         
-    t.balance,              
+    t.payment_option,
+    t.down_payment,
+    t.balance,
     t.status AS delivery_status,
     CONCAT(dp.pers_fname, ' ', dp.pers_lname) AS delivery_personnel,
     t.completed_at,
@@ -80,13 +90,14 @@ FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
 LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+$whereClause
 ORDER BY t.date_of_order ASC
 ";
 
-
 $stmt = $conn->prepare($sql);
-$stmt->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $transactions = $result->fetch_all(MYSQLI_ASSOC);
@@ -94,17 +105,19 @@ $stmt->close();
 
 // Summary
 $sqlSummary = "
-SELECT 
+SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
     SUM(po.quantity) AS total_items_sold,
-    SUM(po.quantity * po.unit_cost) AS total_sales 
+    SUM(po.quantity * po.unit_cost) AS total_sales
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+$whereClause
 ";
 $stmtSum = $conn->prepare($sqlSummary);
-$stmtSum->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmtSum->bind_param($types, ...$params);
+}
 $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();

@@ -54,8 +54,18 @@ if (!$start || !$end) {
     $endDate = $end;
 }
 
+$whereClause = "";
+$params = [];
+$types = "";
+
+if ($start && $end) {
+    $whereClause = "AND DATE(t.date_of_order) BETWEEN ? AND ?";
+    $params = [$startDate, $endDate];
+    $types = "ss";
+}
+
 $sql = "
-SELECT 
+SELECT
     t.transaction_id,
     DATE(t.date_of_order) AS date_of_order,
     t.customer_name,
@@ -65,13 +75,14 @@ SELECT
     t.cancelled_reason
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
-AND t.status IN ('Delivered', 'Cancelled')
+WHERE t.status IN ('Delivered', 'Cancelled') $whereClause
 ORDER BY t.date_of_order ASC
 ";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $customerSatisfaction = $result->fetch_all(MYSQLI_ASSOC);
@@ -79,16 +90,17 @@ $stmt->close();
 
 // Summary
 $sqlSummary = "
-SELECT 
+SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
     AVG(t.customer_rating) AS avg_rating
 FROM Transactions t
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
-AND t.status IN ('Delivered', 'Cancelled')
+WHERE t.status IN ('Delivered', 'Cancelled') $whereClause
 ";
 $stmtSum = $conn->prepare($sqlSummary);
-$stmtSum->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmtSum->bind_param($types, ...$params);
+}
 $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();
