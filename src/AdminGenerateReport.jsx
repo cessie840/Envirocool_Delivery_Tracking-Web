@@ -358,7 +358,7 @@ const normalizeSales = (raw = []) =>
         setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
       }
 
-      if (reportType === "service" || reportType === "all") {
+      if (reportType === "service" || reportType === "transaction" || reportType === "sales" || reportType === "all") {
         const res = await fetch(
           buildUrl(
             "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
@@ -742,8 +742,7 @@ const normalizeSales = (raw = []) =>
 
   const failedDeliveries =
     reportType === "all"
-      ? (summary.serviceSummary?.failed_deliveries ?? 0) +
-        (summary.transactionSummary?.cancelled_deliveries ?? 0)
+      ? (summary.serviceSummary?.failed_deliveries ?? 0)
       : summary.failed_deliveries ?? summary.cancelled_deliveries ?? 0;
 
   const totalItemsOrdered = filteredTransactionData.reduce(

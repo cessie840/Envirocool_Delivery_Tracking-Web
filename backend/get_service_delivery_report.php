@@ -89,7 +89,7 @@ SELECT
     COUNT(DISTINCT t.customer_name) AS total_customers,
     SUM(po.quantity) AS total_items_sold,
     SUM(po.total_cost) AS total_sales,
-    SUM(CASE WHEN COALESCE(dd.delivery_status, t.status) = 'Delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
+    SUM(CASE WHEN LOWER(COALESCE(dd.delivery_status, t.status)) = 'delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
     (
         SELECT COUNT(*)
         FROM DeliveryHistory dh
