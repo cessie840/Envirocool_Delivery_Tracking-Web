@@ -28,10 +28,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // ✅ Sidebar collapse (desktop)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    return saved === "true";
-  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   // ✅ Responsive resize handler
@@ -92,14 +89,12 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
 
         {/* Logo + Collapse toggle */}
         <div className="sidebar-header d-flex justify-content-between align-items-center w-100 mb-4">
-          {!isSidebarCollapsed && (
-            <img
-              src={logo}
-              alt="Envirocool Logo"
-              className="logo img-fluid"
-              width="200px"
-            />
-          )}
+          <img
+            src={logo}
+            alt="Envirocool Logo"
+            className="logo img-fluid"
+            width="200px"
+          />
           <button
             className="btn collapse-toggle d-none d-lg-flex p-3"
             onClick={toggleCollapse}
