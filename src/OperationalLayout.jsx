@@ -58,6 +58,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
     setTimeout(() => {
       setLoading(false);
       localStorage.removeItem("user");
+      localStorage.removeItem("sidebarCollapsed");
       navigate("/");
     }, 500);
   };
