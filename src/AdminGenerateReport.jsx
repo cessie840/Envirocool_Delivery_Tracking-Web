@@ -3413,6 +3413,26 @@ const normalizeSales = (raw = []) =>
             )}
           </tbody>
         </Table>
+
+         <div className="custom-pagination">
+          <button
+            className="page-btn"
+            disabled={currentPage === 1}
+            onClick={() => setServicePage(currentPage - 1)}
+          >
+            ‹
+          </button>
+          <span className="page-info">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setServicePage(currentPage + 1)}
+          >
+            ›
+          </button>
+        </div>
       </>
     );
   };
