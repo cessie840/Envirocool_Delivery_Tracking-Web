@@ -92,14 +92,12 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
 
         {/* Logo + Collapse toggle */}
         <div className="sidebar-header d-flex justify-content-between align-items-center w-100 mb-4">
-          {!isSidebarCollapsed && (
-            <img
-              src={logo}
-              alt="Envirocool Logo"
-              className="logo img-fluid"
-              width="200px"
-            />
-          )}
+          <img
+            src={logo}
+            alt="Envirocool Logo"
+            className="logo img-fluid"
+            width="200px"
+          />
           <button
             className="btn collapse-toggle d-none d-lg-flex p-3"
             onClick={toggleCollapse}
@@ -121,6 +119,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
             {!isSidebarCollapsed && (
               <span className="nav-text">DELIVERY PERSONNEL ACCOUNTS</span>
             )}
+            <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
           <button
             className={`nav-btn ${
@@ -132,6 +131,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
             {!isSidebarCollapsed && (
               <span className="nav-text">DELIVERY DETAILS</span>
             )}
+            <span className="tooltip-text">Delivery Details</span>
           </button>
           <button
             className={`nav-btn ${
@@ -141,6 +141,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
           >
             <FaCog className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
+            <span className="tooltip-text">Settings</span>
           </button>
           <button
             className="nav-btn logout"
@@ -148,6 +149,7 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
           >
             <FaSignOutAlt className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">LOGOUT</span>}
+            <span className="tooltip-text">Logout</span>
           </button>
         </nav>
       </aside>

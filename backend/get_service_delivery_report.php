@@ -1,6 +1,7 @@
 <?php
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Credentials: true");    
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 require 'Database.php';
@@ -9,57 +10,24 @@ $period = $_GET['period'] ?? 'monthly';
 $start = $_GET['start'] ?? null;
 $end = $_GET['end'] ?? null;
 
-if (!$start || !$end) {
-    $today = new DateTime();
-    switch ($period) {
-        case 'daily':
-            $startDate = $today->format('Y-m-d');
-            $endDate = $startDate;
-            break;
-        case 'weekly':
-            $weekStart = clone $today;
-            $weekStart->modify('monday this week');
-            $weekEnd = clone $weekStart;
-            $weekEnd->modify('sunday this week');
-            $startDate = $weekStart->format('Y-m-d');
-            $endDate = $weekEnd->format('Y-m-d');
-            break;
-        case 'monthly':
-            $startDate = $today->format('Y-m-01');
-            $endDate = $today->format('Y-m-t');
-            break;
-        case 'quarterly':
-            $month = (int) $today->format('m');
-            $quarter = floor(($month - 1) / 3) + 1;
-            $startMonth = ($quarter - 1) * 3 + 1;
-            $startDateObj = new DateTime($today->format('Y') . "-$startMonth-01");
-            $endDateObj = clone $startDateObj;
-            $endDateObj->modify('+2 months');
-            $endDateObj->modify('last day of this month');
-            $startDate = $startDateObj->format('Y-m-d');
-            $endDate = $endDateObj->format('Y-m-d');
-            break;
-        case 'annually':
-            $startDate = $today->format('Y-01-01');
-            $endDate = $today->format('Y-12-31');
-            break;
-        default:
-            $startDate = $today->format('Y-m-01');
-            $endDate = $today->format('Y-m-t');
-    }
-} else {
-    $startDate = $start;
-    $endDate = $end;
+$whereClause = "";
+$params = [];
+$types = "";
+
+if ($start && $end) {
+    $whereClause = "WHERE t.date_of_order BETWEEN ? AND ?";
+    $params = [$startDate, $endDate];
+    $types = "ss";
 }
 
 // Fetch base transactions
 $sql = "
-SELECT 
+SELECT
     t.transaction_id,
     t.date_of_order AS date_of_order,
     t.customer_name,
     po.description AS item_name,
-    po.quantity, 
+    po.quantity,
     COALESCE(dd.delivery_status, t.status) AS delivery_status,
     t.target_date_delivery,
     t.rescheduled_date,
@@ -67,12 +35,14 @@ SELECT
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 LEFT JOIN DeliveryDetails dd ON t.transaction_id = dd.transaction_id
-WHERE t.date_of_order BETWEEN ? AND ?
+$whereClause
 ORDER BY t.date_of_order ASC";
 
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $serviceDeliveries = $result->fetch_all(MYSQLI_ASSOC);
@@ -114,25 +84,27 @@ foreach ($serviceDeliveries as &$delivery) {
 
 // Summary (totals)
 $sqlSummary = "
-SELECT 
+SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
     SUM(po.quantity) AS total_items_sold,
     SUM(po.total_cost) AS total_sales,
-    SUM(CASE WHEN COALESCE(dd.delivery_status, t.status) = 'Delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
+    SUM(CASE WHEN LOWER(COALESCE(dd.delivery_status, t.status)) = 'delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
     (
-        SELECT COUNT(*) 
+        SELECT COUNT(*)
         FROM DeliveryHistory dh
         WHERE dh.event_type = 'Cancelled'
-        AND dh.event_timestamp BETWEEN ? AND ?
+        $whereClause
     ) AS failed_deliveries
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 LEFT JOIN DeliveryDetails dd ON t.transaction_id = dd.transaction_id
-WHERE DATE(t.date_of_order) BETWEEN ? AND ?
+$whereClause
 ";
 $stmtSum = $conn->prepare($sqlSummary);
-$stmtSum->bind_param('ssss', $startDate, $endDate, $startDate, $endDate);
+if ($types) {
+    $stmtSum->bind_param($types . $types, ...$params, ...$params);
+}
 $stmtSum->execute();
 $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();
@@ -140,15 +112,17 @@ $stmtSum->close();
 
 // 🔹 Aggregate cancellation reasons history (for charts)
 $sqlReasons = "
-    SELECT 
+    SELECT
         SUM(CASE WHEN LOWER(reason) LIKE '%vehicle%' THEN 1 ELSE 0 END) AS vehicle_related,
         SUM(CASE WHEN LOWER(reason) LIKE '%location%' THEN 1 ELSE 0 END) AS location_inaccessible
     FROM DeliveryHistory
     WHERE event_type = 'Cancelled'
-    AND event_timestamp BETWEEN ? AND ?
+    $whereClause
 ";
 $stmtReasons = $conn->prepare($sqlReasons);
-$stmtReasons->bind_param('ss', $startDate, $endDate);
+if ($types) {
+    $stmtReasons->bind_param($types, ...$params);
+}
 $stmtReasons->execute();
 $resultReasons = $stmtReasons->get_result();
 $row = $resultReasons->fetch_assoc();
