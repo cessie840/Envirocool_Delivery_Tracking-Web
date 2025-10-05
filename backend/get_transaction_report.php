@@ -109,7 +109,9 @@ SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
     COUNT(DISTINCT t.customer_name) AS total_customers,
     SUM(po.quantity) AS total_items_sold,
-    SUM(po.quantity * po.unit_cost) AS total_sales
+    SUM(po.quantity * po.unit_cost) AS total_sales,
+    SUM(CASE WHEN LOWER(t.status) = 'delivered' THEN 1 ELSE 0 END) AS successful_deliveries,
+    SUM(CASE WHEN LOWER(t.status) = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_deliveries
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 $whereClause
