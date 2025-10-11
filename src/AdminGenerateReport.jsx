@@ -1747,9 +1747,14 @@ const GenerateReport = () => {
 
       // Name (normal)
       doc.setFontSize(10);
-      doc.text("Ms. Janine Sarah Marie De Guzman Bacuyag  ", pageWidth / 2, nameY, {
-        align: "center",
-      });
+      doc.text(
+        "Ms. Janine Sarah Marie De Guzman Bacuyag",
+        pageWidth / 2,
+        nameY,
+        {
+          align: "center",
+        }
+      );
 
       // Title (bold)
       doc.setFont("helvetica", "bold");
