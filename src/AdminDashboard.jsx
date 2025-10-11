@@ -408,6 +408,8 @@ const AdminDashboard = () => {
               <h5 className="fw-bold mb-3 text-center text-lg-start">
                 Successful vs Cancelled (Year {yearlyData.year})
               </h5>
+
+              {/* Pie Chart */}
               <div style={{ width: "100%", height: "300px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -417,13 +419,7 @@ const AdminDashboard = () => {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
-                      label={({ name, value }) =>
-                        `${name}: ${value} (${(
-                          (value / yearlyData.total) *
-                          100
-                        ).toFixed(1)}%)`
-                      }
+                      outerRadius="70%"
                       labelLine={false}
                     >
                       {yearlyData.distribution.map((entry, index) => (
@@ -433,12 +429,68 @@ const AdminDashboard = () => {
                         />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `${value} transactions`} />
-                    <Legend />
+                    <Tooltip
+                      formatter={(value) => `${value} transactions`}
+                      contentStyle={{
+                        fontSize: "clamp(11px, 1.3vw, 15px)",
+                        borderRadius: "8px",
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="text-muted small mt-2 fw-bold text-center">
+
+              {/* Responsive stacked labels below the chart */}
+              <div
+                style={{
+                  textAlign: "center",
+                  marginTop: "5px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "clamp(13px, 1.4vw, 16px)", // increased font size here
+                  fontWeight: "600", // slightly bolder for better visibility
+                }}
+              >
+                {yearlyData.distribution
+                  .sort((a, b) => (a.name === "Successful" ? -1 : 1)) // ensures Successful appears first
+                  .map((entry, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {/* Color indicator */}
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "15px",
+                          height: "15px",
+                          borderRadius: "3px",
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}
+                      ></span>
+
+                      {/* Text label */}
+                      <span>
+                        {entry.name}: {entry.value} (
+                        {((entry.value / yearlyData.total) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Total */}
+              <div
+                className="text-muted small mt-2 fw-bold text-center"
+                style={{ fontSize: "clamp(11px, 1.1vw, 15px)" }}
+              >
                 Total: {yearlyData.total} transactions
               </div>
             </div>
