@@ -188,7 +188,7 @@ const GenerateReport = () => {
   };
 
   // Normalizers (defensive)
-const normalizeSales = (raw = []) =>
+  const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
@@ -358,7 +358,12 @@ const normalizeSales = (raw = []) =>
         setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
       }
 
-      if (reportType === "service" || reportType === "transaction" || reportType === "sales" || reportType === "all") {
+      if (
+        reportType === "service" ||
+        reportType === "transaction" ||
+        reportType === "sales" ||
+        reportType === "all"
+      ) {
         const res = await fetch(
           buildUrl(
             "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
@@ -742,14 +747,14 @@ const normalizeSales = (raw = []) =>
 
   const failedDeliveries =
     reportType === "all"
-      ? (summary.serviceSummary?.failed_deliveries ?? 0)
+      ? summary.serviceSummary?.failed_deliveries ?? 0
       : summary.failed_deliveries ?? summary.cancelled_deliveries ?? 0;
 
   const totalItemsOrdered = filteredTransactionData.reduce(
     (sum, row) => sum + (Number(row.qty) || 0),
     0
   );
- const totalItemsDelivered = filteredServiceData
+  const totalItemsDelivered = filteredServiceData
     .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
     .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
 
@@ -1726,19 +1731,64 @@ const normalizeSales = (raw = []) =>
       }
     };
 
-    const addFooter = (pageNum, totalPages) => {
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setDrawColor(150, 150, 150);
-      doc.setLineWidth(0.1);
-      doc.line(15, pageHeight - 8, pageWidth - 15, pageHeight - 8);
+    // Signature section – shown only at the end of each report
+    const addSignatureSection = (doc, pageWidth, pageHeight) => {
+      const lineY = pageHeight - 25; // position above footer
+      const nameY = lineY + 6;
+      const titleY = lineY + 10;
 
+      doc.setFont("helvetica", "normal");
+      doc.setLineWidth(0.2);
+
+      // Draw signature line (centered)
+      const lineWidth = 60;
+      const lineX = (pageWidth - lineWidth) / 2;
+      doc.line(lineX, lineY, lineX + lineWidth, lineY);
+
+      // Name (normal)
+      doc.setFontSize(10);
+      doc.text("Ms. Janine Sarah Marie De Guzman Bacuyag  ", pageWidth / 2, nameY, {
+        align: "center",
+      });
+
+      // Title (bold)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text("Sales Manager", pageWidth / 2, titleY, { align: "center" });
+
+      // Reset to normal font afterward (for safety)
+      doc.setFont("helvetica", "normal");
+    };
+
+    const addFooter = (pageNum, totalPages) => {
+      // Draw a clear separator line above the footer
+      doc.setDrawColor(50, 50, 50); // darker gray for visibility
+      doc.setLineWidth(0.3);
+      doc.line(15, pageHeight - 12, pageWidth - 15, pageHeight - 12);
+
+      // Add company name (italic)
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Envirocool Corporation", pageWidth / 2, pageHeight - 8, {
+        align: "center",
+      });
+
+      // Add page numbering (bold for clarity)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
       doc.text(
         `Page ${pageNum} of ${totalPages}`,
         pageWidth / 2,
-        pageHeight - 5,
-        { align: "center" }
+        pageHeight - 4,
+        {
+          align: "center",
+        }
       );
+
+      // Reset styles (to avoid affecting next elements)
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
     };
 
     const fetchSalesData = async () => {
@@ -1928,7 +1978,7 @@ const normalizeSales = (raw = []) =>
               { align: "center" }
             );
           }
-
+          addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(idx + 1, reports.length);
         }
 
@@ -2033,7 +2083,7 @@ const normalizeSales = (raw = []) =>
           } else {
             renderHeader(false); // overflow → no title
           }
-
+          addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(i, totalPages);
         }
 
@@ -2738,7 +2788,7 @@ const normalizeSales = (raw = []) =>
     },
   };
 
- const cardsByReportType = {
+  const cardsByReportType = {
     sales: ["totalSales", "totalClients", "totalItemsDelivered"],
     transaction: [
       "totalClients",
@@ -2776,7 +2826,7 @@ const normalizeSales = (raw = []) =>
       }
       if (key === "totalItemsSold") {
         return {
-          icon: <FaShoppingCart />, 
+          icon: <FaShoppingCart />,
           color: "#FF9800",
           title: "Total Items Ordered",
           value: totalItemsOrdered,
@@ -2784,7 +2834,7 @@ const normalizeSales = (raw = []) =>
       }
       if (key === "totalItemsDelivered") {
         return {
-          icon: <FaTruck />, 
+          icon: <FaTruck />,
           color: "#009688",
           title: "Total Items Delivered",
           value: totalItemsDelivered,
@@ -3413,7 +3463,7 @@ const normalizeSales = (raw = []) =>
           </tbody>
         </Table>
 
-         <div className="custom-pagination">
+        <div className="custom-pagination">
           <button
             className="page-btn"
             disabled={currentPage === 1}
