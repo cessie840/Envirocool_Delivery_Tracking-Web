@@ -1009,538 +1009,529 @@ const GenerateReport = () => {
   };
 
   const generateTransactionPeriodRows = (
-    transactionData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
+  transactionData,
+  period,
+  startDate,
+  endDate
+) => {
+  const rows = [];
+  const getMonthName = (monthIndex) =>
+    new Date(2000, monthIndex, 1).toLocaleString("default", {
+      month: "long",
+    });
 
-    // ✅ Format numbers with commas
-    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-      if (num == null || isNaN(num)) return " "; // blank instead of 0/-
-      let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00")) {
-        fixed = fixed.replace(".00", "");
-      }
-      return Number(fixed).toLocaleString();
-    };
+  const formatNumber = (num, decimals = 2, stripDecimals = true) => {
+    if (num == null || isNaN(num)) return " ";
+    let fixed = Number(num).toFixed(decimals);
+    if (stripDecimals && fixed.endsWith(".00")) fixed = fixed.replace(".00", "");
+    return Number(fixed).toLocaleString();
+  };
 
-    const formatDate = (date) =>
-      date ? new Date(date).toISOString().split("T")[0] : "";
+  const formatDate = (date) =>
+    date ? new Date(date).toISOString().split("T")[0] : "";
 
-    const pushTxRow = (label, tx) => {
-      rows.push([
-        label || "",
-        tx.transaction_id ?? "-",
-        tx.tracking_number ?? "-",
-        tx.date_of_order ?? "-",
-        tx.customer_name ?? "-",
-        tx.customer_address ?? "-",
-        tx.item_name ?? "-",
-        formatNumber(tx.qty, 0), // ✅ Quantity as whole number
-        formatNumber(tx.unit_cost, 2), // ✅ Unit Cost (no ₱ sign)
-        formatNumber(tx.subtotal, 2), // ✅ Subtotal (no ₱ sign)
-        tx.delivery_status ?? "-",
-        tx.shipout_at ?? "-",
-        tx.completed_at ?? "-",
-      ]);
-    };
+  const pushTxRow = (label, tx) => {
+    rows.push([
+      label || "",
+      tx.transaction_id ?? "-",
+      tx.tracking_number ?? "-",
+      tx.date_of_order ?? "-",
+      tx.customer_name ?? "-",
+      tx.customer_address ?? "-",
+      tx.item_name ?? "-",
+      formatNumber(tx.qty, 0),
+      formatNumber(tx.unit_cost, 2),
+      formatNumber(tx.subtotal, 2),
+      tx.delivery_status ?? "-",
+      tx.shipout_at ?? "-",
+      tx.completed_at ?? "-",
+    ]);
+  };
 
-    const pushZeroRow = (label) => {
-      rows.push([
-        label,
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "0", // qty
-        "0.00", // unit cost
-        "0.00", // subtotal
-        "-",
-        "-",
-        "-",
-      ]);
-    };
+  const pushZeroRow = (label) => {
+    rows.push([
+      label,
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      "0",
+      "0.00",
+      "0.00",
+      "-",
+      "-",
+      "-",
+    ]);
+  };
 
-    // === PERIOD LOGIC (Annually, Quarterly, Monthly, Weekly, Daily) ===
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = transactionData.filter(
-          (t) => new Date(t.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([
-            getMonthName(m),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-          ]);
-          monthTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = transactionData.filter(
-          (t) => new Date(t.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([
-            getMonthName(m),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-          ]);
-          monthTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const dayTxs = transactionData.filter(
-          (t) => t.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-        const dayTxs = transactionData.filter(
-          (t) => formatDate(new Date(t.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
-      const dayTxs = transactionData.filter(
-        (t) => formatDate(new Date(t.date_of_order)) === todayStr
+  // === PERIOD LOGIC ===
+  if (period === "annually") {
+    for (let m = 0; m < 12; m++) {
+      const monthTxs = transactionData.filter(
+        (t) => new Date(t.date_of_order).getMonth() === m
       );
+      if (monthTxs.length > 0) {
+        rows.push([
+          getMonthName(m),
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ]);
+        monthTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    }
+  } else if (period === "quarterly") {
+    const start = startDate ? new Date(startDate) : new Date();
+    const month = start.getMonth();
+    let quarterMonths = [];
+    if (month <= 2) quarterMonths = [0, 1, 2];
+    else if (month <= 5) quarterMonths = [3, 4, 5];
+    else if (month <= 8) quarterMonths = [6, 7, 8];
+    else quarterMonths = [9, 10, 11];
 
+    quarterMonths.forEach((m) => {
+      const monthTxs = transactionData.filter(
+        (t) => new Date(t.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([
+          getMonthName(m),
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ]);
+        monthTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    });
+  } else if (period === "monthly") {
+    const start = new Date(startDate || new Date());
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${start.getFullYear()}-${String(
+        start.getMonth() + 1
+      ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dayTxs = transactionData.filter((t) => t.date_of_order === dateStr);
       if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+        rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
         dayTxs.forEach((tx) => pushTxRow("", tx));
       } else {
-        pushZeroRow(todayStr);
+        pushZeroRow(dateStr);
       }
-
-      // === DAILY TOTAL ===
-      const totals = dayTxs.reduce(
-        (acc, s) => {
-          acc.total++;
-          if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-          if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-          return acc;
-        },
-        { total: 0, cancelled: 0, completed: 0 }
-      );
-
-      rows.push([
-        "TOTAL",
-        "-",
-        "-",
-        "-",
-        `Completed: ${totals.completed}`,
-        "-",
-        "-",
-        `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-      ]);
-      return rows;
     }
-
-    // === GRAND TOTAL ===
-    const totals = transactionData.reduce(
-      (acc, t) => ({
-        qty: acc.qty + (t.qty ?? 0),
-        subtotal: acc.subtotal + (t.subtotal ?? 0),
-      }),
-      { qty: 0, subtotal: 0 }
+  } else if (period === "weekly") {
+    const start = new Date(startDate || new Date());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = formatDate(d);
+      const dayTxs = transactionData.filter(
+        (t) => formatDate(new Date(t.date_of_order)) === dateStr
+      );
+      if (dayTxs.length > 0) {
+        rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+        dayTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(dateStr);
+      }
+    }
+  } else if (period === "daily") {
+    const todayStr = formatDate(new Date());
+    const dayTxs = transactionData.filter(
+      (t) => formatDate(new Date(t.date_of_order)) === todayStr
     );
-    rows.push([
-      "TOTAL",
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      formatNumber(totals.qty, 0), // qty total
-      "-", // unit cost not summed
-      formatNumber(totals.subtotal, 2), // subtotal total
-      "-",
-      "-",
-      "-",
-    ]);
+    if (dayTxs.length > 0) {
+      rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+      dayTxs.forEach((tx) => pushTxRow("", tx));
+    } else {
+      pushZeroRow(todayStr);
+    }
+  }
 
-    return rows;
+  // === TOTAL ROW (MODIFIED to depend on selected period) ===
+  // ✅ Added: compute totals based on period
+  const relevantTxs =
+    period === "daily"
+      ? transactionData.filter(
+          (t) => formatDate(new Date(t.date_of_order)) === formatDate(new Date())
+        )
+      : transactionData;
+
+  const totals = relevantTxs.reduce(
+    (acc, t) => ({
+      qty: acc.qty + (t.qty ?? 0),
+      subtotal: acc.subtotal + (t.subtotal ?? 0),
+    }),
+    { qty: 0, subtotal: 0 }
+  );
+
+  // ✅ Added: dynamic TOTAL row per period
+  rows.push([
+    `TOTAL (${period.toUpperCase()})`, // ✅ Added: dynamic label
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    formatNumber(totals.qty, 0),
+    "-",
+    formatNumber(totals.subtotal, 2),
+    "-",
+    "-",
+    "-",
+  ]);
+
+  return rows;
+};
+
+// ============================================
+
+const generateServicePeriodRows = (serviceData, period, startDate, endDate) => {
+  const rows = [];
+
+  const getMonthName = (monthIndex) =>
+    new Date(2000, monthIndex, 1).toLocaleString("default", { month: "long" });
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    if (isNaN(d)) return "-";
+    return d.toISOString().split("T")[0];
   };
 
-  const generateServicePeriodRows = (
-    serviceData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
+  const pushServiceRow = (label, svc) => {
+    rows.push([
+      label || "",
+      svc.transaction_id ?? "-",
+      formatDate(svc.date_of_order),
+      svc.customer_name ?? "-",
+      svc.delivery_status ?? "-",
+      formatDate(svc.original_target_date ?? svc.target_date_delivery),
+      formatDate(svc.latest_rescheduled_date ?? svc.rescheduled_date),
+      svc.cancelled_reason ?? "-",
+    ]);
+  };
 
-    // --- Helpers ---
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
+  const pushZeroRow = (label) => {
+    rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
+  };
 
-    const formatDate = (date) => {
-      if (!date) return "-";
-      const d = new Date(date);
-      if (isNaN(d)) return "-"; // invalid date
-      return d.toISOString().split("T")[0]; // always YYYY-MM-DD
-    };
+  const normalizedData = serviceData.map((s) => ({
+    ...s,
+    date_of_order: formatDate(s.date_of_order),
+  }));
 
-    const pushServiceRow = (label, svc) => {
-      rows.push([
-        label || "",
-        svc.transaction_id ?? "-",
-        formatDate(svc.date_of_order),
-        svc.customer_name ?? "-",
-        svc.delivery_status ?? "-",
-        formatDate(svc.original_target_date ?? svc.target_date_delivery),
-        formatDate(svc.latest_rescheduled_date ?? svc.rescheduled_date),
-        svc.cancelled_reason ?? "-",
-      ]);
-    };
+  // --- (Period logic unchanged) ---
 
-    const pushZeroRow = (label) => {
-      rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
-    };
-
-    // --- Normalize all data dates once ---
-    const normalizedData = serviceData.map((s) => ({
-      ...s,
-      date_of_order: formatDate(s.date_of_order),
-    }));
-
-    // --- Period Logic ---
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = normalizedData.filter(
-          (s) => new Date(s.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
-          monthTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = normalizedData.filter(
-          (s) => new Date(s.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
-          monthTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-        const dayTxs = normalizedData.filter(
-          (s) => s.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", ""]);
-          dayTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-
-        const dayTxs = normalizedData.filter(
-          (s) => formatDate(new Date(s.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", ""]);
-          dayTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
-      const dayTxs = normalizedData.filter(
-        (s) => formatDate(new Date(s.date_of_order)) === todayStr
+  if (period === "annually") {
+    for (let m = 0; m < 12; m++) {
+      const monthTxs = normalizedData.filter(
+        (s) => new Date(s.date_of_order).getMonth() === m
       );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
+        monthTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    }
+  } else if (period === "quarterly") {
+    const start = startDate ? new Date(startDate) : new Date();
+    const month = start.getMonth();
+    let quarterMonths = [];
+    if (month <= 2) quarterMonths = [0, 1, 2];
+    else if (month <= 5) quarterMonths = [3, 4, 5];
+    else if (month <= 8) quarterMonths = [6, 7, 8];
+    else quarterMonths = [9, 10, 11];
 
+    quarterMonths.forEach((m) => {
+      const monthTxs = normalizedData.filter(
+        (s) => new Date(s.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
+        monthTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    });
+  } else if (period === "monthly") {
+    const start = new Date(startDate || new Date());
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${start.getFullYear()}-${String(
+        start.getMonth() + 1
+      ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+      const dayTxs = normalizedData.filter((s) => s.date_of_order === dateStr);
       if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", ""]);
+        rows.push([dateStr, "", "", "", "", "", "", ""]);
         dayTxs.forEach((svc) => pushServiceRow("", svc));
       } else {
-        pushZeroRow(todayStr);
+        pushZeroRow(dateStr);
       }
     }
+  } else if (period === "weekly") {
+    const start = new Date(startDate || new Date());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
-    // --- Summary Row ---
-    const totals = normalizedData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = formatDate(d);
+      const dayTxs = normalizedData.filter(
+        (s) => formatDate(new Date(s.date_of_order)) === dateStr
+      );
+      if (dayTxs.length > 0) {
+        rows.push([dateStr, "", "", "", "", "", "", ""]);
+        dayTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(dateStr);
+      }
+    }
+  } else if (period === "daily") {
+    const todayStr = formatDate(new Date());
+    const dayTxs = normalizedData.filter(
+      (s) => formatDate(new Date(s.date_of_order)) === todayStr
     );
+    if (dayTxs.length > 0) {
+      rows.push([todayStr, "", "", "", "", "", "", ""]);
+      dayTxs.forEach((svc) => pushServiceRow("", svc));
+    } else {
+      pushZeroRow(todayStr);
+    }
+  }
 
-    rows.push([
-      "TOTAL",
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
+  // ✅ Added: compute total dynamically
+  const relevantData =
+    period === "daily"
+      ? normalizedData.filter(
+          (s) => s.date_of_order === formatDate(new Date())
+        )
+      : normalizedData;
 
-    return rows;
+  const totals = relevantData.reduce(
+    (acc, s) => {
+      acc.total++;
+      if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+      if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+      return acc;
+    },
+    { total: 0, cancelled: 0, completed: 0 }
+  );
+
+  // ✅ Added: label and totals
+  rows.push([
+    `TOTAL (${period.toUpperCase()})`,
+    "-",
+    "-",
+    "-",
+    `Completed: ${totals.completed}`,
+    "-",
+    "-",
+    `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+  ]);
+
+  return rows;
+};
+
+// ✅ Generate rows (WITH Item column, no double formatting)
+const generateCustomerSatisfactionRows = (
+  satisfactionData,
+  period,
+  startDate,
+  endDate
+) => {
+  const rows = [];
+
+  // Helper to get month name
+  const getMonthName = (monthIndex) =>
+    new Date(2000, monthIndex, 1).toLocaleString("default", {
+      month: "long",
+    });
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    if (isNaN(d)) return "-";
+    return d.toISOString().split("T")[0];
   };
 
-  // ✅ Generate rows (WITH Item column, no double formatting)
-  const generateCustomerSatisfactionRows = (
-    satisfactionData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
+  // --- Row builders ---
+  const pushCustomerRow = (label, c) => {
+    rows.push([
+      label || "",
+      c.transaction_id ?? "-",
+      formatDate(c.date_of_order),
+      c.customer_name ?? "-",
+      c.item_name ?? "-",
+      c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
+      c.delivery_status ?? "-",
+    ]);
+  };
 
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
+  const pushZeroRow = (label) => {
+    rows.push([label, "-", "-", "-", "-", "-", "-"]);
+  };
 
-    // Row builders
-    const pushCustomerRow = (label, c) => {
-      rows.push([
-        label || "",
-        c.transaction_id ?? "-",
-        c.date_of_order ?? "-",
-        c.customer_name ?? "-",
-        c.item_name ?? "-",
-        c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
-        c.delivery_status ?? "-",
-      ]);
-    };
+  // --- Normalize Data ---
+  const normalizedData = satisfactionData.map((c) => ({
+    ...c,
+    date_of_order: formatDate(c.date_of_order),
+  }));
 
-    const pushZeroRow = (label) => {
-      rows.push([label, "-", "-", "-", "-", "-", "-"]);
-    };
-
-    // ✅ Already normalized → just use it
-    const normalizedData = satisfactionData;
-
-    // --- Period Logic ---
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = normalizedData.filter(
-          (c) => new Date(c.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", ""]);
-          monthTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
+  // --- Period Logic ---
+  if (period === "annually") {
+    for (let m = 0; m < 12; m++) {
+      const monthTxs = normalizedData.filter(
+        (c) => new Date(c.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", ""]);
+        monthTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(getMonthName(m));
       }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
+    }
+  } else if (period === "quarterly") {
+    const start = startDate ? new Date(startDate) : new Date();
+    const month = start.getMonth();
+    let quarterMonths = [];
+    if (month <= 2) quarterMonths = [0, 1, 2];
+    else if (month <= 5) quarterMonths = [3, 4, 5];
+    else if (month <= 8) quarterMonths = [6, 7, 8];
+    else quarterMonths = [9, 10, 11];
 
-      quarterMonths.forEach((m) => {
-        const monthTxs = normalizedData.filter(
-          (c) => new Date(c.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", ""]);
-          monthTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-        const dayTxs = normalizedData.filter(
-          (c) => c.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", ""]);
-          dayTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(dateStr);
-        }
+    quarterMonths.forEach((m) => {
+      const monthTxs = normalizedData.filter(
+        (c) => new Date(c.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", ""]);
+        monthTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(getMonthName(m));
       }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+    });
+  } else if (period === "monthly") {
+    const start = new Date(startDate || new Date());
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
 
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = d.toISOString().split("T")[0];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${start.getFullYear()}-${String(
+        start.getMonth() + 1
+      ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-        const dayTxs = normalizedData.filter(
-          (c) => c.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", ""]);
-          dayTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = new Date().toISOString().split("T")[0]; // Always today's date
-      const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
-
+      const dayTxs = normalizedData.filter((c) => c.date_of_order === dateStr);
       if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", ""]);
+        rows.push([dateStr, "", "", "", "", "", ""]);
         dayTxs.forEach((c) => pushCustomerRow("", c));
       } else {
-        pushZeroRow(todayStr);
+        pushZeroRow(dateStr);
       }
     }
+  } else if (period === "weekly") {
+    const start = new Date(startDate || new Date());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
 
-    // --- Summary Row ---
-    const totals = normalizedData.reduce(
-      (acc, c) => {
-        acc.total++;
-        if (c.customer_rating != null) {
-          acc.rated++;
-          acc.ratingSum += c.customer_rating;
-        }
-        if (c.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (c.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, rated: 0, ratingSum: 0, cancelled: 0, completed: 0 }
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = formatDate(d);
+
+      const dayTxs = normalizedData.filter(
+        (c) => c.date_of_order === dateStr
+      );
+      if (dayTxs.length > 0) {
+        rows.push([dateStr, "", "", "", "", "", ""]);
+        dayTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(dateStr);
+      }
+    }
+  } else if (period === "daily") {
+    const todayStr = formatDate(new Date()); // Always today's date
+    const dayTxs = normalizedData.filter(
+      (c) => c.date_of_order === todayStr
     );
 
-    const avgRating =
-      totals.rated > 0 ? (totals.ratingSum / totals.rated).toFixed(2) : "N/A";
+    if (dayTxs.length > 0) {
+      rows.push([todayStr, "", "", "", "", "", ""]);
+      dayTxs.forEach((c) => pushCustomerRow("", c));
+    } else {
+      pushZeroRow(todayStr);
+    }
+  }
 
-    rows.push([
-      "TOTAL",
-      "-",
-      "-",
-      "-",
-      "-",
-      `Avg Rating: ${avgRating}`,
-      `Completed: ${totals.completed} / Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
+  // === ✅ Fixed: compute total dynamically based on period ===
+  const relevantData =
+    period === "daily"
+      ? normalizedData.filter(
+          (s) => s.date_of_order === formatDate(new Date())
+        )
+      : normalizedData;
 
-    return rows;
-  };
+  const totals = relevantData.reduce(
+    (acc, s) => {
+      acc.total++;
+      if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+      if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+      return acc;
+    },
+    { total: 0, cancelled: 0, completed: 0 }
+  );
+
+  // ✅ Fixed TOTAL label and count display
+  rows.push([
+    `TOTAL (${period.toUpperCase()})`,
+    "-",
+    "-",
+    "-",
+    `Completed: ${totals.completed}`,
+    "-",
+    `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+  ]);
+
+  return rows;
+};
 
   const generateReport = async (reportType) => {
     const doc = new jsPDF({
@@ -2265,6 +2256,20 @@ const GenerateReport = () => {
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(tableConfig.cellFontSize);
+    // ✅ Added: Helper function to format numbers with commas
+    const formatNumber = (num) => {
+      if (num == null || isNaN(num)) return "0.00";
+      return Number(num).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    // ✅ Added: Variables to store totals for each numeric column
+    let totalQuote = 0;
+    let totalAwarded = 0;
+    let totalActual = 0;
+    let totalBalance = 0;
 
     if (Array.isArray(aggregatedData)) {
       aggregatedData.forEach((row, rowIndex) => {
@@ -2279,6 +2284,12 @@ const GenerateReport = () => {
         }
 
         let x = tableConfig.marginLeft;
+
+        // ✅ Added: Accumulate totals (skip first column which is label)
+        totalQuote += parseFloat(row[1]?.replace(/,/g, "")) || 0;
+        totalAwarded += parseFloat(row[2]?.replace(/,/g, "")) || 0;
+        totalActual += parseFloat(row[3]?.replace(/,/g, "")) || 0;
+        totalBalance += parseFloat(row[4]?.replace(/,/g, "")) || 0;
 
         row.forEach((cell, i) => {
           doc.setFillColor(rowIndex % 2 === 1 ? 248 : 255, 248, 248);
@@ -2310,6 +2321,53 @@ const GenerateReport = () => {
         yPosition += rowHeight;
       });
     }
+
+    // ✅ Added: Add TOTAL ROW (after looping all rows)
+  if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
+    doc.addPage();
+    yPosition = headerTopMargin;
+    drawHeaders();
+  }
+
+  // ✅ Added: Total row styling
+  doc.setFont("helvetica", "bolditalic"); // italicized + bold
+  doc.setTextColor(0, 0, 0);
+  
+  const totalsRow = [
+    "TOTAL", // italicized label
+    formatNumber(totalQuote),
+    formatNumber(totalAwarded),
+    formatNumber(totalActual),
+    formatNumber(totalBalance),
+  ];
+
+  let x = tableConfig.marginLeft;
+  totalsRow.forEach((cell, i) => {
+    doc.setFillColor(255, 255, 204); // ✅ light yellow for total row
+    doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
+
+    if (i === 0) {
+      // ✅ Align TOTAL text to the right for better visual balance
+      doc.text(cell, x + colWidths[i] - 4, yPosition + 6, {
+        align: "right",
+      });
+    } else {
+      drawCenteredText(
+        cell,
+        x,
+        yPosition + 6,
+        colWidths[i],
+        tableConfig.cellFontSize
+      );
+    }
+
+    x += colWidths[i];
+  });
+
+  yPosition += tableConfig.rowHeight;
+  
 
     return {
       finalYPosition: yPosition,
