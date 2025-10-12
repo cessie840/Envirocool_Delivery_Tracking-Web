@@ -31,7 +31,7 @@ if (!$start || !$end) {
             $endDate = $today->format('Y-m-t');
             break;
         case 'quarterly':
-            $month = (int)$today->format('m');
+            $month = (int) $today->format('m');
             $quarter = floor(($month - 1) / 3) + 1;
             $startMonth = ($quarter - 1) * 3 + 1;
             $startDateObj = new DateTime($today->format('Y') . "-$startMonth-01");
@@ -74,9 +74,10 @@ SELECT
     t.date_of_order,
     -- 👇 Choose rescheduled_date if exists, else target_date_delivery
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
-    po.description AS item_name,
-    po.quantity AS qty,
-    po.unit_cost,
+    po.type_of_product AS product_name,
+po.description AS item_name,
+po.quantity AS qty,
+po.unit_cost,
     (po.quantity * po.unit_cost) AS subtotal,
     t.mode_of_payment,
     t.payment_option,

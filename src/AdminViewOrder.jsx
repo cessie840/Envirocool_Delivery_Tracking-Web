@@ -60,7 +60,7 @@ const ViewOrder = () => {
           balance: data.balance,
           total: data.total,
           target_date_delivery: formatDate(data.target_date_delivery),
-          proof_of_delivery: data.proof_of_delivery
+          proof_of_delivery: data.proof_of_delivery,
         });
       })
       .catch((err) => {
@@ -154,7 +154,6 @@ const ViewOrder = () => {
     0
   );
 
-
   const renderStatusBadge = (status) => {
     switch (status) {
       case "Delivered":
@@ -207,7 +206,7 @@ const ViewOrder = () => {
                     <span>Contact:</span> {orderDetails.customer_contact}
                   </p>
                   <p>
-                    <span>Date of Order:</span>{" "}
+                    <span>Date of Order:</span>
                     {formatDate(orderDetails.date_of_order)}
                   </p>
                   <p>
@@ -289,7 +288,8 @@ const ViewOrder = () => {
                     className="list-group-item d-flex justify-content-between align-items-center fw-semibold"
                   >
                     <div>
-                      {item.description} x{item.quantity} <br />
+                      {item.type_of_product} {item.description} x{item.quantity}
+                      <br />
                       <small className="text-muted fw-bold">
                         Unit Cost: ₱{Number(item.unit_cost).toLocaleString()}
                       </small>
@@ -367,10 +367,10 @@ const ViewOrder = () => {
             <img
               src={proofUrl}
               alt="Proof of Delivery"
-              className="w-100 h-auto" 
+              className="w-100 h-auto"
               style={{
-                maxHeight: "85vh", 
-                objectFit: "contain", 
+                maxHeight: "85vh",
+                objectFit: "contain",
                 borderRadius: "10px",
                 boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
               }}
@@ -387,7 +387,6 @@ const ViewOrder = () => {
           >
             Close
           </Button>
-         
         </Modal.Footer>
       </Modal>
     </AdminLayout>

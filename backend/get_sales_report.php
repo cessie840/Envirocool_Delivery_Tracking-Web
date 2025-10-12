@@ -67,9 +67,10 @@ if ($start && $end) {
 // Sales data query with payment fields
 $sql = "
 SELECT
-t.transaction_id,
+    t.transaction_id,
     DATE(t.date_of_order) AS date_of_order,
     t.customer_name,
+    po.type_of_product AS product_name,
     po.description AS item_name,
     po.quantity AS qty,
     po.unit_cost,

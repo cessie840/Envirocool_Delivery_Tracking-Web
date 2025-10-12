@@ -14,27 +14,23 @@ import L from "leaflet";
 import axios from "axios";
 import { FaTruckFront } from "react-icons/fa6";
 
-import ReactDOMServer from "react-dom/server"; 
+import ReactDOMServer from "react-dom/server";
 
-
-
-  import { useMap } from "react-leaflet";
-
+import { useMap } from "react-leaflet";
 
 const truckIcon = L.divIcon({
-  html: ReactDOMServer.renderToString(<FaTruckFront size={25} color="#420000ff" />),
+  html: ReactDOMServer.renderToString(
+    <FaTruckFront size={25} color="#420000ff" />
+  ),
   className: "custom-truck-icon",
   iconSize: [25, 25],
   iconAnchor: [12, 22],
 });
 
-
 const MonitorDelivery = () => {
   const navigate = useNavigate();
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
-
-
 
   const [transactions, setTransactions] = useState({
     inTransit: [],
@@ -42,22 +38,17 @@ const MonitorDelivery = () => {
     cancelled: [],
   });
 
-
   const RecenterMap = ({ lat, lng }) => {
     const map = useMap();
 
     useEffect(() => {
       if (lat && lng) {
-        map.setView([lat, lng], 15); 
+        map.setView([lat, lng], 15);
       }
     }, [lat, lng, map]);
 
     return null;
   };
-
-  
-
-
 
   const handleAddDelivery = () => navigate("/add-delivery");
 
@@ -89,11 +80,9 @@ const MonitorDelivery = () => {
     };
 
     fetchGps();
-    const interval = setInterval(fetchGps, 10000); 
+    const interval = setInterval(fetchGps, 10000);
     return () => clearInterval(interval);
   }, []);
-
-
 
   useEffect(() => {
     const fetchDeliveries = async () => {
@@ -203,7 +192,10 @@ const MonitorDelivery = () => {
                   ["Client Name:", t.customer_name],
                   ["Contact No.:", t.contact],
                   ["Shipping Address:", t.customer_address],
-                  ["Item Name:", t.description],
+                  [
+                    "Item Name:",
+                    `${t.type_of_product || ""} ${t.description || ""}`.trim(),
+                  ],
                   ["Date of Order:", formatDateTime(t.time)],
                   ...(activeTab === "completed"
                     ? [
@@ -315,8 +307,6 @@ const MonitorDelivery = () => {
                   />
                   {gpsLocations.length > 0 && (
                     <>
-                    
-
                       <Marker
                         position={[
                           parseFloat(gpsLocations[gpsLocations.length - 1].lat),
@@ -361,7 +351,6 @@ const MonitorDelivery = () => {
                         opacity={0.7}
                       />
 
-      
                       <RecenterMap
                         lat={parseFloat(
                           gpsLocations[gpsLocations.length - 1].lat

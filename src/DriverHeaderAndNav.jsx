@@ -162,7 +162,7 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [], onSearch }) => {
 
       {/* Notifications Modal */}
       <Modal show={showNotif} onHide={() => setShowNotif(false)} centered>
-        <Modal.Header closeButton>
+        <Modal.Header closeButton className="bg-light">
           <Modal.Title>Notifications</Modal.Title>
         </Modal.Header>
         <Modal.Body
@@ -242,7 +242,7 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [], onSearch }) => {
             <p className="text-muted">No notifications.</p>
           )}
         </Modal.Body>
-        <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}>
+        <Modal.Footer className="bg-light">
           <Button variant="success" onClick={() => setShowNotif(false)}>
             Close
           </Button>

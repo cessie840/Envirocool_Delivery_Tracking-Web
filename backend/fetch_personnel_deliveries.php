@@ -22,6 +22,7 @@ if (empty($username)) {
     echo json_encode(["error" => "Username required"]);
     exit;
 }
+
 $sql = "
 SELECT 
     t.transaction_id, 
@@ -31,6 +32,7 @@ SELECT
     t.mode_of_payment,
     t.status AS delivery_status,
     po.quantity, 
+    po.type_of_product AS product_name,
     po.description, 
     po.unit_cost,
     (po.quantity * po.unit_cost) AS item_total
@@ -40,7 +42,6 @@ JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
 WHERE da.personnel_username = '$username'
 ORDER BY t.created_at ASC
 ";
-
 
 $result = $conn->query($sql);
 $deliveries = [];
@@ -64,27 +65,27 @@ if ($result && $result->num_rows > 0) {
             ];
         }
 
-        $itemTotal = (float)$row['item_total'];
+        $itemTotal = (float) $row['item_total'];
 
+        // ✅ Use $row here, not $item
         $grouped[$tid]['items'][] = [
-            'name' => $row['description'],
-            'qty'  => (int)$row['quantity'],
-            'unitCost' => (float)$row['unit_cost'],
+            'name' => trim(($row['product_name'] ?? '') . ' ' . ($row['description'] ?? '')),
+            'qty' => (int) $row['quantity'],
+            'unitCost' => (float) $row['unit_cost'],
             'price' => number_format($itemTotal, 2)
         ];
 
         $grouped[$tid]['totalCost'] += $itemTotal;
     }
 
-   foreach ($grouped as &$order) {
-    $order['unitCost'] = count($order['items']) > 0 
-        ? (float)$order['items'][0]['unitCost']
-        : 0;
+    foreach ($grouped as &$order) {
+        $order['unitCost'] = count($order['items']) > 0
+            ? (float) $order['items'][0]['unitCost']
+            : 0;
 
-    $order['totalCost'] = round($order['totalCost'], 2); 
-    $deliveries[] = $order;
-}
-
+        $order['totalCost'] = round($order['totalCost'], 2);
+        $deliveries[] = $order;
+    }
 }
 
 echo json_encode($deliveries);

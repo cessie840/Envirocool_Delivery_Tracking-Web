@@ -1,5 +1,4 @@
 <?php
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -42,7 +41,8 @@ SELECT
     t.customer_address AS address,
     t.customer_contact AS contact,
     t.mode_of_payment AS paymentMode,
-    po.description AS name,
+    po.type_of_product AS product_name,
+    po.description AS description,
     po.quantity AS qty,
     po.unit_cost AS unitCost,
     (po.quantity * po.unit_cost) AS totalCost
@@ -52,7 +52,6 @@ JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
 WHERE da.personnel_username = ?
   AND t.status = 'Out for Delivery'
 ";
-
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -96,7 +95,7 @@ while ($row = $result->fetch_assoc()) {
     $subtotal = $row['qty'] * $row['unitCost'];
 
     $deliveries[$transactionNo]['items'][] = [
-        "name" => $row['name'],
+        "name" => trim(($row['product_name'] ?? '') . ' ' . ($row['description'] ?? '')),
         "qty" => (int)$row['qty'],
         "unitCost" => (float)$row['unitCost'],
         "subtotal" => (float)$subtotal
@@ -104,7 +103,6 @@ while ($row = $result->fetch_assoc()) {
 
     $deliveries[$transactionNo]['totalCost'] += $subtotal;
 }
-
 
 $stmt->close();
 $conn->close();
@@ -121,5 +119,4 @@ if (empty($deliveries)) {
         "data" => array_values($deliveries)
     ]);
 }
-
 ?>
