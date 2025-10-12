@@ -60,6 +60,11 @@ function DriverProfileSettings() {
         .then((res) => {
           if (res.data.success) {
             const u = res.data.user;
+
+            const profilePicUrl = u.pers_profile_pic
+              ? `http://localhost/DeliveryTrackingSystem/uploads/${u.pers_profile_pic}`
+              : `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
+
             setProfile({
               Name: `${u.pers_fname} ${u.pers_lname}`,
               username: u.pers_username,
@@ -68,10 +73,15 @@ function DriverProfileSettings() {
               Age: u.pers_age,
               Gender: u.pers_gender,
               Birthday: u.pers_birth,
-              profilePic: `http://localhost/DeliveryTrackingSystem/${u.pers_profile_pic}`,
+              profilePic: profilePicUrl,
             });
 
-         
+            const updatedUser = {
+              ...parsed,
+              pers_profile_pic: u.pers_profile_pic,
+            };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+
             if (storedPassword) {
               setPasswordForm((prev) => ({ ...prev, old: storedPassword }));
             }
@@ -98,7 +108,7 @@ function DriverProfileSettings() {
     };
 
     const formData = new FormData();
-    formData.append("pers_username", profile.username); 
+    formData.append("pers_username", profile.username);
 
     if (modalField === "Name") {
       const [fname, ...lnameParts] = fieldValue.split(" ");
@@ -164,7 +174,6 @@ function DriverProfileSettings() {
       })
       .catch((err) => console.error(err));
   };
-
 
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
@@ -398,7 +407,6 @@ function DriverProfileSettings() {
           <Modal.Title>Change Password</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
- 
           <Form.Group className="mb-3">
             <Form.Label>New Password</Form.Label>
             <InputGroup>

@@ -1,42 +1,89 @@
 <?php
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Content-Type: application/json; charset=UTF-8");
 
-include 'db_connection.php'; // <-- your connection file
-
-if (!isset($_FILES['profilePic']) || !isset($_POST['username'])) {
-    echo json_encode(["success" => false, "message" => "Invalid request"]);
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
-$username = $_POST['username'];
-$file = $_FILES['profilePic'];
+include_once "database.php";
 
-$targetDir = "uploads/";
-$ext = pathinfo($file["name"], PATHINFO_EXTENSION);
-$fileName = "profile_" . $username . "_" . time() . "." . $ext;
-$targetFilePath = $targetDir . $fileName;
 
-if (move_uploaded_file($file["tmp_name"], $targetFilePath)) {
-    // Save the file path to the database
-    $query = "UPDATE delivery_personnel SET pers_profile_pic = ? WHERE pers_username = ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("ss", $targetFilePath, $username);
+$response = ["success" => false, "message" => "Unknown error"];
 
-    if ($stmt->execute()) {
-        echo json_encode([
-            "success" => true,
-            "filePath" => "http://localhost/DeliveryTrackingSystem/" . $targetFilePath
-        ]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Failed to update database"]);
-    }
-    $stmt->close();
-} else {
-    echo json_encode(["success" => false, "message" => "Failed to upload file"]);
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    $response["message"] = "Invalid request method.";
+    echo json_encode($response);
+    exit;
 }
 
+if (empty($_POST["pers_username"])) {
+    $response["message"] = "Missing user identifier (pers_username).";
+    echo json_encode($response);
+    exit;
+}
+
+$username = $_POST["pers_username"];
+
+if (!isset($_FILES["profile_pic"])) {
+    $response["message"] = "No file received.";
+    echo json_encode($response);
+    exit;
+}
+
+$fileError = $_FILES["profile_pic"]["error"];
+if ($fileError !== UPLOAD_ERR_OK) {
+    $response["message"] = "File upload error code: " . $fileError;
+    echo json_encode($response);
+    exit;
+}
+
+$targetDir = __DIR__ . "/uploads/";
+if (!file_exists($targetDir)) {
+    mkdir($targetDir, 0777, true);
+}
+
+$fileName = basename($_FILES["profile_pic"]["name"]);
+$fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+$allowedExts = ["jpg", "jpeg", "png", "gif"];
+
+if (!in_array($fileExt, $allowedExts)) {
+    $response["message"] = "Invalid file type. Only JPG, JPEG, PNG, GIF allowed.";
+    echo json_encode($response);
+    exit;
+}
+
+$newFileName = uniqid("profile_", true) . "." . $fileExt;
+$targetFile = $targetDir . $newFileName;
+
+if (!move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $targetFile)) {
+    $response["message"] = "Failed to move uploaded file.";
+    echo json_encode($response);
+    exit;
+}
+
+$stmt = $conn->prepare("UPDATE DeliveryPersonnel SET pers_profile_pic = ? WHERE pers_username = ?");
+if (!$stmt) {
+    $response["message"] = "SQL prepare failed: " . $conn->error;
+    echo json_encode($response);
+    exit;
+}
+
+$stmt->bind_param("ss", $newFileName, $username);
+if ($stmt->execute()) {
+    $response["success"] = true;
+    $response["message"] = "Profile picture uploaded successfully.";
+    $response["image_url"] = "http://localhost/DeliveryTrackingSystem/uploads/" . $newFileName;
+} else {
+    $response["message"] = "Database update failed: " . $stmt->error;
+}
+
+$stmt->close();
 $conn->close();
+
+echo json_encode($response);
+exit;
 ?>
