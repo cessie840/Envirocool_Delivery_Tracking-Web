@@ -17,14 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $data = json_decode(file_get_contents("php://input"), true);
 if (!isset($data['currentPassword']) || !isset($data['newPassword'])) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing fields"]);
+    echo json_encode(["success" => false, "error" => "Missing required fields."]);
     exit();
 }
 
-$currentPassword = $data['currentPassword'];
-$newPassword = $data['newPassword'];
+$currentPassword = trim($data['currentPassword']);
+$newPassword = trim($data['newPassword']);
 
-// Determine role from session
+// Determine user role and table based on session
 if (isset($_SESSION['ad_username'])) {
     $table = "Admin";
     $userCol = "ad_username";
@@ -37,11 +37,11 @@ if (isset($_SESSION['ad_username'])) {
     $username = $_SESSION['manager_username'];
 } else {
     http_response_code(401);
-    echo json_encode(["error" => "Unauthorized"]);
+    echo json_encode(["success" => false, "error" => "Unauthorized access."]);
     exit();
 }
 
-// Fetch current password hash
+// Fetch current password hash from database
 $sql = "SELECT $passCol FROM $table WHERE $userCol = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
@@ -51,26 +51,44 @@ $result = $stmt->get_result();
 if ($row = $result->fetch_assoc()) {
     if (!password_verify($currentPassword, $row[$passCol])) {
         http_response_code(401);
-        echo json_encode(["error" => "Current password is incorrect"]);
+        echo json_encode(["success" => false, "error" => "Current password is incorrect."]);
         exit();
     }
 } else {
     http_response_code(404);
-    echo json_encode(["error" => "User not found"]);
+    echo json_encode(["success" => false, "error" => "User not found."]);
     exit();
 }
 
-// Update with new password
+// ✅ Validate new password strength (same rules as React)
+$pattern = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/';
+if (!preg_match($pattern, $newPassword)) {
+    http_response_code(400);
+    echo json_encode([
+        "success" => false,
+        "error" => "Password must be at least 6 characters long, contain at least one uppercase letter, one number, and one special character."
+    ]);
+    exit();
+}
+
+// Hash new password and update in database
 $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
 $updateSql = "UPDATE $table SET $passCol = ? WHERE $userCol = ?";
 $updateStmt = $conn->prepare($updateSql);
 $updateStmt->bind_param("ss", $newHash, $username);
 
 if ($updateStmt->execute()) {
-    echo json_encode(["success" => true, "message" => "Password updated successfully"]);
+    echo json_encode([
+        "success" => true,
+        "message" => "Password updated successfully."
+    ]);
 } else {
     http_response_code(500);
-    echo json_encode(["error" => "Failed to update password"]);
+    echo json_encode([
+        "success" => false,
+        "error" => "Failed to update password. Please try again."
+    ]);
 }
 
 $conn->close();
+?>
