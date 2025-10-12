@@ -76,11 +76,14 @@ try {
     // SkyIO SMS API
     $apiUrl = "https://sms.skyio.site/api/sms/send";
     $apiKey = "Qyi5vgSUjNiXnezqcfElQ8rafEx31TPJH1kxVdJJVEt4GT6sgqXb7Hyzby1Jx2RH";
-    $message = "Hi $customerName! Your order is now Out for Delivery. Tracking No: $trackingNumber. Track here: https://example.com/track/$trackingNumber";
-    $smsData = [
-        "to" => $phone,
-        "message" => $message
-    ];
+    $message = "Hi $customerName!\n\nYour order is now Out for Delivery.\nTracking No: $trackingNumber.\nTrack here: cessie840 . github . io / Envirocool-Tracking-Page/\n\nUse your tracking number to check your delivery status on the website.\n\nThis is a system notification from Envirocool Corp. Please do not reply.\n\nNote:\nWe added a space in every dot to avoid detection by telecom filters. Please remove the spaces when typing in your browser.\n\n-Envirocool Corp.";
+
+
+
+$smsData = [
+  "to" => $phone,
+  "message" => $message
+];
 
     // cURL setup
     $ch = curl_init($apiUrl);
