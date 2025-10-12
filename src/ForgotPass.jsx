@@ -9,6 +9,15 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [validation, setValidation] = useState({
+    length: false,
+    uppercase: false,
+    number: false,
+    special: false,
+  });
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,6 +27,7 @@ const ForgotPassword = () => {
     }
   }, [errorMessage]);
 
+  // Step 1: Send reset code
   const handleEmail = async (e) => {
     e.preventDefault();
 
@@ -44,12 +54,10 @@ const ForgotPassword = () => {
         case "email_failed":
           setErrorMessage("Failed to send reset email. Try again.");
           break;
-   case "locked":
-        setErrorMessage(data.message); 
-        setTimeout(() => {
-          navigate("/"); 
-        }, 3000); 
-        break;
+        case "locked":
+          setErrorMessage(data.message);
+          setTimeout(() => navigate("/"), 3000);
+          break;
         case "db_error":
           alert("Something went wrong. Try again later.");
           break;
@@ -64,6 +72,7 @@ const ForgotPassword = () => {
     }
   };
 
+  // Step 2: Verify code
   const handleVerifyCode = async (e) => {
     e.preventDefault();
 
@@ -72,60 +81,57 @@ const ForgotPassword = () => {
         "http://localhost/DeliveryTrackingSystem/verify_reset_code.php",
         { email, code }
       );
-      
 
       const data = response.data;
       console.log("Verify response:", data);
 
-     switch (data.status) {
-  case "verified":
-    setStep(3);
-    break;
-  case "expired":
-    setErrorMessage("The code has expired. Please request a new one.");
-    setStep(1);
-    break;
-  case "invalid_code":
-    setErrorMessage(data.message); 
-    break;
-   case "locked":
-        setErrorMessage(data.message); 
-        setTimeout(() => {
-          navigate("/"); 
-        }, 3000); 
-        break;
-  case "not_found":
-    setErrorMessage("Email not found. Try again.");
-    setStep(1);
-    break;
-  default:
-    setErrorMessage("An unexpected error occurred.");
-    break;
-}
-
+      switch (data.status) {
+        case "verified":
+          setStep(3);
+          break;
+        case "expired":
+          setErrorMessage("The code has expired. Please request a new one.");
+          setStep(1);
+          break;
+        case "invalid_code":
+          setErrorMessage(data.message);
+          break;
+        case "locked":
+          setErrorMessage(data.message);
+          setTimeout(() => navigate("/"), 3000);
+          break;
+        case "not_found":
+          setErrorMessage("Email not found. Try again.");
+          setStep(1);
+          break;
+        default:
+          setErrorMessage("An unexpected error occurred.");
+          break;
+      }
     } catch (error) {
       console.error("Verification error:", error);
       alert("Failed to verify code. Please try again.");
     }
   };
 
+  // Step 3: Change password
   const handleChangePassword = async (e) => {
     e.preventDefault();
-
-    const newPassword = e.target.newPassword.value;
-    const confirmPassword = e.target.confirmPassword.value;
-
-    const complexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    setErrorMessage("");
 
     if (newPassword !== confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;
     }
 
-    if (!complexityRegex.test(newPassword)) {
-      setErrorMessage(
-        "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
-      );
+    const valid =
+      newPassword.length >= 6 &&
+      /[A-Z]/.test(newPassword) &&
+      /\d/.test(newPassword) &&
+      /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+
+    if (!valid) {
+      setErrorMessage("Password does not meet strength requirements.");
       return;
     }
 
@@ -162,15 +168,9 @@ const ForgotPassword = () => {
 
         <h4 className="mb-4">Reset Password</h4>
 
+        {/* Step 1: Enter Email */}
         {step === 1 && (
-          <form
-            className="login-form text-start"
-            onSubmit={handleEmail}
-            // onSubmit={ (e) => {
-            //   e.preventDefault();
-            //   setStep(2);
-            // }}
-          >
+          <form className="login-form text-start" onSubmit={handleEmail}>
             <div className="mb-3">
               <label htmlFor="email" className="form-label">
                 Enter your email address:
@@ -200,6 +200,7 @@ const ForgotPassword = () => {
           </form>
         )}
 
+        {/* Step 2: Verify Code */}
         {step === 2 && (
           <form className="login-form text-start" onSubmit={handleVerifyCode}>
             <div className="mb-3">
@@ -211,7 +212,6 @@ const ForgotPassword = () => {
                 id="code"
                 className="form-control"
                 maxLength={6}
-                // required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
               />
@@ -232,6 +232,7 @@ const ForgotPassword = () => {
           </form>
         )}
 
+        {/* Step 3: Reset Password */}
         {step === 3 && (
           <form
             className="login-form text-start"
@@ -246,9 +247,21 @@ const ForgotPassword = () => {
                 id="newPassword"
                 className="form-control"
                 name="newPassword"
+                value={newPassword}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setNewPassword(value);
+                  setValidation({
+                    length: value.length >= 6,
+                    uppercase: /[A-Z]/.test(value),
+                    number: /\d/.test(value),
+                    special: /[!@#$%^&*(),.?":{}|<>]/.test(value),
+                  });
+                }}
                 required
               />
             </div>
+
             <div className="mb-3">
               <label htmlFor="confirmPassword" className="form-label">
                 Confirm New Password:
@@ -258,8 +271,47 @@ const ForgotPassword = () => {
                 id="confirmPassword"
                 className="form-control"
                 name="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
+            </div>
+
+            {/* ✅ Password requirements moved below confirm password */}
+        <div className="mt-2" style={{ fontSize: "0.45rem", marginBottom: "8px" }}>
+              <p
+                style={{
+                  color: validation.length ? "green" : "#8B0000",
+                  margin: 0,
+                }}
+              >
+                • At least 6 characters
+              </p>
+              <p
+                style={{
+                  color: validation.uppercase ? "green" : "#8B0000",
+                  margin: 0,
+                }}
+              >
+                • Contains at least one uppercase letter
+              </p>
+              <p
+                style={{
+                  color: validation.number ? "green" : "#8B0000",
+                  margin: 0,
+                }}
+              >
+                • Contains at least one number
+              </p>
+              <p
+                style={{
+                  color: validation.special ? "green" : "#8B0000",
+                  margin: 0,
+                }}
+              >
+                • Contains at least one special character (! @ # $ % ^ & * ( ) ,
+                . ? " : {"{"} {"}"} | &lt; &gt;)
+              </p>
             </div>
 
             {errorMessage && (

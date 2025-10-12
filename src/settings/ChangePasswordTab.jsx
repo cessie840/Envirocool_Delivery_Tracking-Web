@@ -167,7 +167,7 @@ const ChangePasswordTab = ({ role }) => {
               margin: 0,
             }}
           >
-            • Contains at least one special character
+              • Contains at least one special character (! @ # $ % ^ & * ( ) , . ? " : {'{'} {'}'} | &lt; &gt;)
           </p>
         </div>
       </div>
@@ -188,7 +188,10 @@ const ChangePasswordTab = ({ role }) => {
       <hr />
 
       {/* Submit button */}
-      <button className="btn add-btn mt-2 w-100" onClick={handleSubmit}>
+      <button
+        className="btn add-btn mt-2 px-4 py-1 fs-6"
+        onClick={handleSubmit}
+      >
         Change Password
       </button>
 
