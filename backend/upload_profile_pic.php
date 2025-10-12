@@ -11,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include_once "database.php";
 
-
 $response = ["success" => false, "message" => "Unknown error"];
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -28,39 +27,62 @@ if (empty($_POST["pers_username"])) {
 
 $username = $_POST["pers_username"];
 
-if (!isset($_FILES["profile_pic"])) {
-    $response["message"] = "No file received.";
-    echo json_encode($response);
-    exit;
-}
-
-$fileError = $_FILES["profile_pic"]["error"];
-if ($fileError !== UPLOAD_ERR_OK) {
-    $response["message"] = "File upload error code: " . $fileError;
-    echo json_encode($response);
-    exit;
-}
+$imageData = $_POST["profile_pic"] ?? null;
+$fileUpload = $_FILES["profile_pic"] ?? null;
 
 $targetDir = __DIR__ . "/uploads/";
 if (!file_exists($targetDir)) {
     mkdir($targetDir, 0777, true);
 }
 
-$fileName = basename($_FILES["profile_pic"]["name"]);
-$fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 $allowedExts = ["jpg", "jpeg", "png", "gif"];
+$newFileName = null;
 
-if (!in_array($fileExt, $allowedExts)) {
-    $response["message"] = "Invalid file type. Only JPG, JPEG, PNG, GIF allowed.";
-    echo json_encode($response);
-    exit;
-}
+if ($imageData && preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
+    $fileExt = strtolower($type[1]);
+    if (!in_array($fileExt, $allowedExts)) {
+        $response["message"] = "Invalid file type (base64).";
+        echo json_encode($response);
+        exit;
+    }
 
-$newFileName = uniqid("profile_", true) . "." . $fileExt;
-$targetFile = $targetDir . $newFileName;
+    $imageData = substr($imageData, strpos($imageData, ',') + 1);
+    $imageData = base64_decode($imageData);
+    if ($imageData === false) {
+        $response["message"] = "Base64 decode failed.";
+        echo json_encode($response);
+        exit;
+    }
 
-if (!move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $targetFile)) {
-    $response["message"] = "Failed to move uploaded file.";
+    $newFileName = uniqid("profile_", true) . "." . $fileExt;
+    $targetFile = $targetDir . $newFileName;
+    if (!file_put_contents($targetFile, $imageData)) {
+        $response["message"] = "Failed to save base64 image.";
+        echo json_encode($response);
+        exit;
+    }
+
+} elseif ($fileUpload && isset($fileUpload["tmp_name"]) && $fileUpload["tmp_name"] !== "") {
+    $fileName = basename($fileUpload["name"]);
+    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    if (!in_array($fileExt, $allowedExts)) {
+        $response["message"] = "Invalid file type (file).";
+        echo json_encode($response);
+        exit;
+    }
+
+    $newFileName = uniqid("profile_", true) . "." . $fileExt;
+    $targetFile = $targetDir . $newFileName;
+
+    if (!move_uploaded_file($fileUpload["tmp_name"], $targetFile)) {
+        $response["message"] = "Failed to move uploaded file.";
+        echo json_encode($response);
+        exit;
+    }
+
+} else {
+    $response["message"] = "No file or image data received.";
     echo json_encode($response);
     exit;
 }
@@ -76,6 +98,7 @@ $stmt->bind_param("ss", $newFileName, $username);
 if ($stmt->execute()) {
     $response["success"] = true;
     $response["message"] = "Profile picture uploaded successfully.";
+    $response["filename"] = $newFileName;
     $response["image_url"] = "http://localhost/DeliveryTrackingSystem/uploads/" . $newFileName;
 } else {
     $response["message"] = "Database update failed: " . $stmt->error;
