@@ -188,27 +188,28 @@ const GenerateReport = () => {
   };
 
   // Normalizers (defensive)
- const normalizeSales = (raw = []) =>
-  (Array.isArray(raw) ? raw : [])
-    .map((r) => ({
-      transaction_id: r.transaction_id ?? r.id ?? null,
-      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
-      customer_name: r.customer_name ?? r.customer ?? "Unknown",
-      item_name: `${r.product_name || ""} ${r.item_name || r.description || "-"}`.trim(),
-      qty: Number(r.qty ?? r.quantity ?? 0),
-      unit_cost: Number(r.unit_cost ?? r.unit_price ?? 0),
-      total_cost: Number(r.total_cost ?? r.total ?? 0),
-      delivery_status: (
-        r.delivery_status ??
-        r.status ??
-        "delivered"
-      ).toLowerCase(),
-      payment_option: r.payment_option ?? r.mode_of_payment ?? "Full Payment",
-      down_payment: Number(r.down_payment ?? 0),
-      balance: Number(r.balance ?? 0),
-    }))
-    .filter((sale) => sale.delivery_status === "delivered");
-
+  const normalizeSales = (raw = []) =>
+    (Array.isArray(raw) ? raw : [])
+      .map((r) => ({
+        transaction_id: r.transaction_id ?? r.id ?? null,
+        date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
+        customer_name: r.customer_name ?? r.customer ?? "Unknown",
+        item_name: `${r.product_name || ""} ${
+          r.item_name || r.description || "-"
+        }`.trim(),
+        qty: Number(r.qty ?? r.quantity ?? 0),
+        unit_cost: Number(r.unit_cost ?? r.unit_price ?? 0),
+        total_cost: Number(r.total_cost ?? r.total ?? 0),
+        delivery_status: (
+          r.delivery_status ??
+          r.status ??
+          "delivered"
+        ).toLowerCase(),
+        payment_option: r.payment_option ?? r.mode_of_payment ?? "Full Payment",
+        down_payment: Number(r.down_payment ?? 0),
+        balance: Number(r.balance ?? 0),
+      }))
+      .filter((sale) => sale.delivery_status === "delivered");
 
   const normalizeTopSelling = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
@@ -216,42 +217,43 @@ const GenerateReport = () => {
       quantity_sold: Number(r.quantity_sold ?? r.qty ?? r.count ?? 0),
     }));
 
-const normalizeTransactions = (raw = []) =>
-  (Array.isArray(raw) ? raw : []).map((r) => ({
-    transaction_id: r.transaction_id ?? r.id ?? null,
-    tracking_number: r.tracking_number ?? "-",
-    customer_name: r.customer_name ?? r.customer ?? "Unknown",
-    customer_address: r.customer_address ?? r.address ?? "-",
-    customer_contact: r.customer_contact ?? r.contact ?? "-",
-    date_of_order: r.date_of_order
-      ? new Date(r.date_of_order).toISOString().slice(0, 10)
-      : null,
+  const normalizeTransactions = (raw = []) =>
+    (Array.isArray(raw) ? raw : []).map((r) => ({
+      transaction_id: r.transaction_id ?? r.id ?? null,
+      tracking_number: r.tracking_number ?? "-",
+      customer_name: r.customer_name ?? r.customer ?? "Unknown",
+      customer_address: r.customer_address ?? r.address ?? "-",
+      customer_contact: r.customer_contact ?? r.contact ?? "-",
+      date_of_order: r.date_of_order
+        ? new Date(r.date_of_order).toISOString().slice(0, 10)
+        : null,
 
-    item_name: `${r.product_name || ""} ${r.item_name || r.description || "-"}`.trim(),
+      item_name: `${r.product_name || ""} ${
+        r.item_name || r.description || "-"
+      }`.trim(),
 
-    qty: Number(r.qty ?? r.quantity ?? 0),
-    unit_cost: Number(r.unit_cost ?? 0),
-    subtotal: Number(r.subtotal ?? (r.qty ?? 0) * (r.unit_cost ?? 0)),
-    total_cost: Number(r.total_cost ?? r.total ?? 0),
+      qty: Number(r.qty ?? r.quantity ?? 0),
+      unit_cost: Number(r.unit_cost ?? 0),
+      subtotal: Number(r.subtotal ?? (r.qty ?? 0) * (r.unit_cost ?? 0)),
+      total_cost: Number(r.total_cost ?? r.total ?? 0),
 
-    mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
-    delivery_status: r.delivery_status ?? r.status ?? "Pending",
+      mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
+      delivery_status: r.delivery_status ?? r.status ?? "Pending",
 
-    shipout_at: r.shipout_at
-      ? new Date(r.shipout_at).toISOString().slice(0, 10)
-      : null,
+      shipout_at: r.shipout_at
+        ? new Date(r.shipout_at).toISOString().slice(0, 10)
+        : null,
 
-    completed_at: r.completed_at
-      ? new Date(r.completed_at).toISOString().slice(0, 10)
-      : null,
+      completed_at: r.completed_at
+        ? new Date(r.completed_at).toISOString().slice(0, 10)
+        : null,
 
-    cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-    delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-",
-    payment_option: r.payment_option ?? "Full Payment",
-    down_payment: Number(r.down_payment ?? 0),
-    balance: Number(r.balance ?? 0),
-  }));
-
+      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
+      delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-",
+      payment_option: r.payment_option ?? "Full Payment",
+      down_payment: Number(r.down_payment ?? 0),
+      balance: Number(r.balance ?? 0),
+    }));
 
   const normalizeService = (raw = []) =>
     (Array.isArray(raw) ? raw : []).map((r) => {
@@ -3373,13 +3375,14 @@ const normalizeTransactions = (raw = []) =>
                     <td>{row.customer_contact}</td>
 
                     <td>
-  {row.items.map((item, j) => (
-    <div key={j}>
-      {`${item.product_name || ""} ${item.name || ""}`.trim()}
-    </div>
-  ))}
-</td>
-
+                      {row.items.map((item, j) => (
+                        <div key={j}>
+                          {`${item.product_name || ""} ${
+                            item.name || ""
+                          }`.trim()}
+                        </div>
+                      ))}
+                    </td>
 
                     <td>
                       {row.items.map((item, j) => (
