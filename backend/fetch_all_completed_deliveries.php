@@ -18,8 +18,12 @@ $sql = "
         t.shipout_at AS shipout_time,
         t.completed_at AS completed_time,
         t.tracking_number AS tracking_number,
+                 t.latitude,            
+    t.longitude,    
+     t.assigned_device_id,
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
         t.status AS status
+        
     FROM DeliveryAssignments da
     JOIN Transactions t ON da.transaction_id = t.transaction_id
     JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
@@ -42,7 +46,10 @@ while ($row = $result->fetch_assoc()) {
     "time"           => $row['time'],
     "shipout_time"           => $row['shipout_time'],
     "completed_time" => $row['completed_time'],
-         "tracking_number"           => $row['tracking_number'],
+         "tracking_number"           => $row['tracking_number'], 
+          "latitude"         => $row['latitude'],  
+        "longitude"        => $row['longitude'],  
+        "assigned_device_id" => $row['assigned_device_id'], 
   
     "driver"         => $row['driver'],
     "status"         => $row['status'],

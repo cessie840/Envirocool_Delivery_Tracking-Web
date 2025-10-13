@@ -6,14 +6,14 @@ import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
 import { Button, Modal } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
+import "./loading-overlay.css";
+
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
   { label: "BANK TRANSFER" ,value: "Bank Transfer"}
     
 ];
-
-
 
 import { components } from "react-select";
 
@@ -88,11 +88,14 @@ const AddDelivery = () => {
   const [contactError, setContactError] = useState("");
 
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
 
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
   const [showCancelModal, setShowCancelModal] = useState(false);
 
+  
   const [editModal, setEditModal] = useState({
     show: false,
     type: "", 
@@ -102,21 +105,65 @@ const AddDelivery = () => {
   });
   const [newValue, setNewValue] = useState("");
 
-  const [form, setForm] = useState({
-    customer_name: "",
-    customer_address: "",
-    customer_contact: "",
-    date_of_order: "",
-    target_date_delivery: "",
-    payment_method: "",
-    payment_option: "",
-    full_payment: "",
-    fp_collection_date: "",
-    down_payment: "",
-    dp_collection_date: "",
-    balance: "",
-    total: "",
-  });
+const [form, setForm] = useState({
+  customer_name: "",
+  house_no: "",
+  street_name: "",
+  barangay: "",
+  city: "",
+  customer_contact: "",
+  date_of_order: "",
+  target_date_delivery: "",
+  payment_method: "",
+  payment_option: "",
+  full_payment: "",
+  fp_collection_date: "",
+  down_payment: "",
+  dp_collection_date: "",
+  balance: "",
+  total: "",
+});
+
+ 
+const [lagunaData, setLagunaData] = useState({});
+const [cityOptions, setCityOptions] = useState([]);
+const [barangayOptions, setBarangayOptions] = useState([]);
+
+
+
+useEffect(() => {
+  const fetchLagunaData = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/get_barangay.php"
+      );
+      setLagunaData(res.data);
+
+      // Convert keys of fetched object to city dropdown options
+      const cities = Object.keys(res.data).map((city) => ({
+        label: city,
+        value: city,
+      }));
+      setCityOptions(cities);
+    } catch (err) {
+      console.error("Error fetching Laguna data", err);
+    }
+  };
+
+  fetchLagunaData();
+}, []);
+
+const handleCityChange = (selected) => {
+  const city = selected.value;
+  setForm((prev) => ({ ...prev, city, barangay: "" }));
+
+  const barangays = lagunaData[city] || [];
+  setBarangayOptions(barangays.map((b) => ({ label: b, value: b })));
+};
+
+const handleBarangayChange = (selected) => {
+  setForm((prev) => ({ ...prev, barangay: selected.value }));
+};
 
   const handleEditClick = (type, currentValue, index, typeOfProduct = "") => {
     setEditModal({ show: true, type, currentValue, index, typeOfProduct });
@@ -290,6 +337,7 @@ const AddDelivery = () => {
       fp_collection_date: "",
       down_payment: "",
       dp_collection_date: "",
+    
       balance: "",
       total: "",
     });
@@ -462,6 +510,8 @@ const AddDelivery = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+      setLoading(true);
+
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
       alert("Contact number must start with '09' and be exactly 11 digits.");
@@ -508,13 +558,14 @@ const AddDelivery = () => {
       total_cost: parseFloat(item.total_cost) || 0,
     }));
 
-    const dataToSend = {
-      ...form,
-      down_payment: parseFloat(parsePeso(form.down_payment)) || 0,
-      full_payment: parseFloat(parsePeso(form.full_payment)) || 0,
-      total: parseFloat(parsePeso(form.total)) || 0,
-      order_items: normalizedOrderItems,
-    };
+   const dataToSend = {
+     ...form,
+     customer_address: `${form.house_no}, ${form.street_name},${form.barangay},${form.city}, Laguna,Philippines  `,
+     down_payment: parseFloat(parsePeso(form.down_payment)) || 0,
+     full_payment: parseFloat(parsePeso(form.full_payment)) || 0,
+     total: parseFloat(parsePeso(form.total)) || 0,
+     order_items: normalizedOrderItems,
+   };
 
     try {
   const res = await axios.post(
@@ -522,11 +573,11 @@ const AddDelivery = () => {
     dataToSend,
     { headers: { "Content-Type": "application/json" } }
   );
-
+    setLoading(true);
   alert("Delivery added successfully!");
 
  
-  window.location.reload();
+  
 
       setForm({
         customer_name: "",
@@ -559,7 +610,12 @@ const AddDelivery = () => {
       console.error("Error submitting form", error);
       alert("Error saving delivery.");
     }
+    finally {
+    setLoading(false); 
+  }
   };
+  
+
 
   return (
     <AdminLayout title="Add Delivery" showSearch={false}>
@@ -626,21 +682,92 @@ const AddDelivery = () => {
               />
             </div>
           </div>
-
           <div className="mb-3">
-            <label htmlFor="customerAddress" className="form-label">
-              Enter Client's Address:
-            </label>
-            <input
-              type="text"
-              className="form-control"
-              id="customerAddress"
-              name="customer_address"
-              value={form.customer_address}
-              placeholder="Client's Address"
-              onChange={handleChange}
-              required
-            />
+            <label className="form-label">Customer Address:</label>
+            <div className="row g-2">
+              <div className="col-md-3">
+                <Select
+                  options={cityOptions}
+                  value={
+                    form.city ? { label: form.city, value: form.city } : null
+                  }
+                  onChange={handleCityChange}
+                  placeholder="Select City"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-3">
+                <Select
+                  options={barangayOptions}
+                  value={
+                    form.barangay
+                      ? { label: form.barangay, value: form.barangay }
+                      : null
+                  }
+                  onChange={handleBarangayChange}
+                  placeholder="Select Barangay"
+                  isDisabled={!form.city}
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-3">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="House No."
+                  name="house_no"
+                  value={form.house_no ?? ""}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="col-md-3">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Street Name"
+                  name="street_name"
+                  value={form.street_name ?? ""}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="row mb-4">
@@ -848,7 +975,7 @@ const AddDelivery = () => {
                           });
                         }}
                         onCreateOption={async (newValue) => {
-                          if (!newValue.trim()) return; 
+                          if (!newValue.trim()) return;
                           const newOption = {
                             label: newValue,
                             value: newValue,
@@ -1002,7 +1129,6 @@ const AddDelivery = () => {
                                   )
                                 );
 
-                          
                                 setOrderItems((prev) =>
                                   prev.map((item) =>
                                     item.type_of_product ===
@@ -1012,7 +1138,6 @@ const AddDelivery = () => {
                                   )
                                 );
 
-                                
                                 setItemOptions((prev) => {
                                   const updated = { ...prev };
                                   if (updated[editModal.currentValue]) {
@@ -1337,9 +1462,17 @@ const AddDelivery = () => {
               </Button>
             </Modal.Footer>
           </Modal>
-          <button type="submit" form="deliveryForm" className="add-btn">
-            Add
-          </button>
+          {loading ? (
+            <div className="loading-overlay">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          ) : (
+            <button type="submit" form="deliveryForm" className="add-btn">
+              Add
+            </button>
+          )}
         </div>
       </div>
     </AdminLayout>

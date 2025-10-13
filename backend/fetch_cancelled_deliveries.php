@@ -36,7 +36,9 @@ $query = "
         t.total AS totalCost,
         t.cancelled_reason,
         t.cancelled_at
-        
+          t.latitude,            
+    t.longitude,     
+     t.assigned_device_id,
     FROM Transactions t
     JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
     JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
@@ -77,7 +79,10 @@ while ($row = $result->fetch_assoc()) {
         "items"           => $items,
         "totalCost"       => $row['totalCost'],
         "cancelledReason" => $row['cancelled_reason'],
-        "cancelledAt"     => $row['cancelled_at']
+        "cancelledAt"     => $row['cancelled_at'],
+        "latitude"         => $row['latitude'],  
+        "longitude"        => $row['longitude'],
+        "assigned_device_id" => $row['assigned_device_id'], 
     ];
 }
 

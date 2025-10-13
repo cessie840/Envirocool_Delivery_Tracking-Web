@@ -24,6 +24,9 @@ $query = "
         t.cancelled_reason,
         t.cancelled_at AS cancelled_time,
            t.tracking_number AS tracking_number,
+            t.assigned_device_id,
+       t.latitude,              -- ✅ add this
+    t.longitude,    
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
         t.status
     FROM Transactions t
@@ -52,7 +55,9 @@ if ($result && $result->num_rows > 0) {
             "cancelled_time"   => $row['cancelled_time'],
             "driver"           => $row['driver'] ?: "N/A",
               "tracking_number"           => $row['tracking_number'],
-  
+   "latitude"         => $row['latitude'],  
+        "longitude"        => $row['longitude'],  
+    "assigned_device_id" => $row['assigned_device_id'], 
             "status"           => $row['status'],
             "distance"         => "N/A",
             "eta"              => "N/A"

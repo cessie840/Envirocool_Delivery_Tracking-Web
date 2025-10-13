@@ -14,6 +14,10 @@ const OperationalDelivery = () => {
   const [activeTab, setActiveTab] = useState("unassigned");
   const [filterDate, setFilterDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [deviceId, setDeviceId] = useState("");
+  const [deviceList, setDeviceList] = useState([]);
+
+
 
   useEffect(() => {
     document.title = "Operational Delivery";
@@ -29,9 +33,15 @@ const OperationalDelivery = () => {
     }).format(value);
   };
 
-  useEffect(() => {
-    if (showModal) fetchPersonnel();
-  }, [showModal]);
+ useEffect(() => {
+   if (showModal) {
+     fetchPersonnel();
+     fetchDevices();
+   }
+ }, [showModal]);
+
+
+
 
   const fetchOrders = async () => {
     try {
@@ -61,47 +71,70 @@ const OperationalDelivery = () => {
     }
   };
 
+  const fetchDevices = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/fetch_device_ids.php"
+      );
+      if (Array.isArray(res.data)) {
+        // remove duplicates
+        const uniqueDevices = res.data.filter(
+          (v, i, a) => a.findIndex((t) => t.device_id === v.device_id) === i
+        );
+        setDeviceList(uniqueDevices);
+      } else {
+        setDeviceList([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch devices:", error);
+      setDeviceList([]);
+    }
+  };
+
+
   const handleOpenAssignModal = () => {
     setSelectedPersonnel("");
     setShowModal(true);
   };
 
-  const handleAssignPersonnel = async () => {
-    if (!selectedPersonnel) {
-      alert("Please select a delivery personnel.");
-      return;
-    }
+const handleAssignPersonnel = async () => {
+  if (!selectedPersonnel) {
+    alert("Please select a delivery personnel.");
+    return;
+  }
 
-    if (selectedOrder?.assigned_personnel) {
-      const confirmReassign = window.confirm(
-        `This order is already assigned to ${selectedOrder.assigned_personnel}. Do you want to reassign it?`
-      );
-      if (!confirmReassign) return;
-    }
+if (!deviceId) {
+  alert("Please select a device ID.");
+  return;
+}
 
-    try {
-      const res = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
-        {
-          transaction_id: selectedOrder.transaction_id,
-          personnelUsername: selectedPersonnel,
-        }
-      );
 
-      if (res.data.success) {
-        alert("Personnel assigned successfully!");
-        setShowModal(false);
-        setShowDetailModal(false);
-        setSelectedOrder(null);
-        fetchOrders();
-      } else {
-        alert("Assignment failed: " + (res.data.message || "Unknown error"));
+  try {
+    const res = await axios.post(
+      "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
+      {
+        transaction_id: selectedOrder.transaction_id,
+        personnelUsername: selectedPersonnel,
+        device_id: deviceId.trim(),
       }
-    } catch (error) {
-      console.error("Assignment failed:", error);
-      alert("Assignment failed. Please try again later.");
+    );
+
+    if (res.data.success) {
+      alert("Personnel and device assigned successfully!");
+      setShowModal(false);
+      setShowDetailModal(false);
+      setSelectedOrder(null);
+      setDeviceId(""); // reset field
+      fetchOrders();
+    } else {
+      alert("Assignment failed: " + (res.data.message || "Unknown error"));
     }
-  };
+  } catch (error) {
+    console.error("Assignment failed:", error);
+    alert("Assignment failed. Please try again later.");
+  }
+};
+
 
   const openDetailModal = (order) => {
     setSelectedOrder(order);
@@ -329,10 +362,17 @@ const OperationalDelivery = () => {
                       <p className="mb-2">
                         <strong>Status:</strong> {order.status}
                       </p>
+                      <p className="mb-2 text-success">
+                        <strong>Truck Device:</strong>{" "}
+                        {order.device_id
+                          ? order.device_id.replace(/device[-_]?/i, "Truck ")
+                          : "Not Assigned"}
+                      </p>
                       <div className="action-btn d-flex justify-content-between align-items-center">
                         <p className="mb-2">
                           <strong>Tracking No.</strong> {order.tracking_number}
                         </p>
+
                         <Button
                           className="btn btn-view px-3 py-1"
                           size="sm"
@@ -505,7 +545,7 @@ const OperationalDelivery = () => {
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Form.Group>
+            <Form.Group className="mb-3">
               <Form.Label>
                 <strong>Available Personnel:</strong>
               </Form.Label>
@@ -522,6 +562,28 @@ const OperationalDelivery = () => {
                 {personnelList.map((p, i) => (
                   <option key={i} value={p.pers_username}>
                     {p.pers_fname} {p.pers_lname}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label>
+                <strong>Available Devices:</strong>
+              </Form.Label>
+              <Form.Select
+                value={deviceId}
+                onChange={(e) => setDeviceId(e.target.value)}
+                disabled={deviceList.length === 0}
+              >
+                <option value="">
+                  {deviceList.length === 0
+                    ? "No available devices"
+                    : "Select device..."}
+                </option>
+                {deviceList.map((d, i) => (
+                  <option key={i} value={d.device_id}>
+                    {d.device_id.replace(/device[-_]?/i, "Truck ")}
                   </option>
                 ))}
               </Form.Select>
