@@ -16,53 +16,89 @@ const Sidebar = ({ show, onHide }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loading, setLoading] = useState(false); // ✅ new state
 
-  useEffect(() => {
-    const storedProfile = localStorage.getItem("user");
+useEffect(() => {
+  const storedProfile = localStorage.getItem("user");
 
-    if (storedProfile) {
-      const parsed = JSON.parse(storedProfile);
+  if (storedProfile) {
+    const parsed = JSON.parse(storedProfile);
 
-      axios
-        .post(
-          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
-          {
-            pers_username: parsed.pers_username,
-          }
-        )
-        .then((response) => {
-          const data = response.data;
+    axios
+      .post("http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php", {
+        pers_username: parsed.pers_username,
+      })
+      .then((response) => {
+        const data = response.data;
 
-          if (data.success) {
-            const user = data.user;
-            setProfile({
-              name: `${user.pers_fname} ${user.pers_lname}`,
-              email: user.pers_email,
-              contact: user.pers_phone,
-              profilePic: `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`,
-              userId: user.pers_username,
-            });
-          } else {
-            console.warn("User not a delivery personnel:", data.message);
-          }
-        })
-        .catch((error) => {
-          console.error("Axios error:", error);
-        });
+        if (data.success) {
+          const user = data.user;
+
+          // ✅ Use uploaded image if available, else default
+          const profilePicUrl = user.pers_profile_pic
+            ? `http://localhost/DeliveryTrackingSystem/uploads/${user.pers_profile_pic}`
+            : `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
+
+          setProfile({
+            name: `${user.pers_fname} ${user.pers_lname}`,
+            email: user.pers_email,
+            contact: user.pers_phone,
+            profilePic: profilePicUrl,
+            userId: user.pers_username,
+          });
+
+          // ✅ Also update localStorage to persist the image
+          const updatedUser = { ...parsed, pers_profile_pic: user.pers_profile_pic };
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+        } else {
+          console.warn("User not a delivery personnel:", data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Axios error:", error);
+      });
+  }
+}, []);
+
+
+const handleProfileChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const formData = new FormData();
+  formData.append("profile_pic", file);
+  formData.append("pers_username", storedUser.pers_username);
+
+  try {
+    const response = await axios.post(
+      "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    if (response.data.success) {
+      const newPicUrl = response.data.image_url;
+
+      // ✅ Update local UI
+      setProfile((prev) => ({ ...prev, profilePic: newPicUrl }));
+
+      // ✅ Persist to localStorage
+      const updatedUser = { ...storedUser, pers_profile_pic: newPicUrl };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      alert("Profile picture updated successfully!");
+    } else {
+      alert("Upload failed: " + response.data.message);
     }
-  }, []);
+  } catch (err) {
+    console.error("Upload error:", err);
+    alert("An error occurred while uploading the picture.");
+  }
+};
 
-  const handleProfileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const updatedProfile = { ...profile, profilePic: reader.result };
-        localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
-        setProfile(updatedProfile);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const confirmLogout = () => {
     setShowLogoutModal(false);

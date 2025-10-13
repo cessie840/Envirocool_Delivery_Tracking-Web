@@ -188,13 +188,15 @@ const GenerateReport = () => {
   };
 
   // Normalizers (defensive)
-const normalizeSales = (raw = []) =>
+  const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
         transaction_id: r.transaction_id ?? r.id ?? null,
         date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
         customer_name: r.customer_name ?? r.customer ?? "Unknown",
-        item_name: r.item_name ?? r.description ?? "-",
+        item_name: `${r.product_name || ""} ${
+          r.item_name || r.description || "-"
+        }`.trim(),
         qty: Number(r.qty ?? r.quantity ?? 0),
         unit_cost: Number(r.unit_cost ?? r.unit_price ?? 0),
         total_cost: Number(r.total_cost ?? r.total ?? 0),
@@ -225,13 +227,16 @@ const normalizeSales = (raw = []) =>
       date_of_order: r.date_of_order
         ? new Date(r.date_of_order).toISOString().slice(0, 10)
         : null,
-      item_name: r.item_name ?? r.description ?? "-",
-      qty: Number(r.qty ?? r.quantity ?? 0),
 
+      item_name: `${r.product_name || ""} ${
+        r.item_name || r.description || "-"
+      }`.trim(),
+
+      qty: Number(r.qty ?? r.quantity ?? 0),
       unit_cost: Number(r.unit_cost ?? 0),
       subtotal: Number(r.subtotal ?? (r.qty ?? 0) * (r.unit_cost ?? 0)),
-
       total_cost: Number(r.total_cost ?? r.total ?? 0),
+
       mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
       delivery_status: r.delivery_status ?? r.status ?? "Pending",
 
@@ -242,6 +247,7 @@ const normalizeSales = (raw = []) =>
       completed_at: r.completed_at
         ? new Date(r.completed_at).toISOString().slice(0, 10)
         : null,
+
       cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
       delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-",
       payment_option: r.payment_option ?? "Full Payment",
@@ -358,7 +364,12 @@ const normalizeSales = (raw = []) =>
         setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
       }
 
-      if (reportType === "service" || reportType === "transaction" || reportType === "sales" || reportType === "all") {
+      if (
+        reportType === "service" ||
+        reportType === "transaction" ||
+        reportType === "sales" ||
+        reportType === "all"
+      ) {
         const res = await fetch(
           buildUrl(
             "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
@@ -504,10 +515,16 @@ const normalizeSales = (raw = []) =>
             total_cost: [],
           };
         }
-        acc[id].item_name.push(row.item_name);
+
+        // combine product_name + item_name
+        const fullItemName = `${row.product_name || ""} ${
+          row.item_name || ""
+        }`.trim();
+        acc[id].item_name.push(fullItemName);
         acc[id].qty.push(row.qty);
         if (row.unit_cost) acc[id].unit_cost.push(row.unit_cost);
         if (row.total_cost) acc[id].total_cost.push(row.total_cost);
+
         return acc;
       }, {})
     ).map((row) => ({
@@ -742,14 +759,14 @@ const normalizeSales = (raw = []) =>
 
   const failedDeliveries =
     reportType === "all"
-      ? (summary.serviceSummary?.failed_deliveries ?? 0)
+      ? summary.serviceSummary?.failed_deliveries ?? 0
       : summary.failed_deliveries ?? summary.cancelled_deliveries ?? 0;
 
   const totalItemsOrdered = filteredTransactionData.reduce(
     (sum, row) => sum + (Number(row.qty) || 0),
     0
   );
- const totalItemsDelivered = filteredServiceData
+  const totalItemsDelivered = filteredServiceData
     .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
     .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
 
@@ -1015,13 +1032,11 @@ const normalizeSales = (raw = []) =>
         month: "long",
       });
 
-    // ✅ Format numbers with commas
     const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-      if (num == null || isNaN(num)) return " "; // blank instead of 0/-
+      if (num == null || isNaN(num)) return " ";
       let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00")) {
+      if (stripDecimals && fixed.endsWith(".00"))
         fixed = fixed.replace(".00", "");
-      }
       return Number(fixed).toLocaleString();
     };
 
@@ -1037,9 +1052,9 @@ const normalizeSales = (raw = []) =>
         tx.customer_name ?? "-",
         tx.customer_address ?? "-",
         tx.item_name ?? "-",
-        formatNumber(tx.qty, 0), // ✅ Quantity as whole number
-        formatNumber(tx.unit_cost, 2), // ✅ Unit Cost (no ₱ sign)
-        formatNumber(tx.subtotal, 2), // ✅ Subtotal (no ₱ sign)
+        formatNumber(tx.qty, 0),
+        formatNumber(tx.unit_cost, 2),
+        formatNumber(tx.subtotal, 2),
         tx.delivery_status ?? "-",
         tx.shipout_at ?? "-",
         tx.completed_at ?? "-",
@@ -1055,16 +1070,16 @@ const normalizeSales = (raw = []) =>
         "-",
         "-",
         "-",
-        "0", // qty
-        "0.00", // unit cost
-        "0.00", // subtotal
+        "0",
+        "0.00",
+        "0.00",
         "-",
         "-",
         "-",
       ]);
     };
 
-    // === PERIOD LOGIC (Annually, Quarterly, Monthly, Weekly, Daily) ===
+    // === PERIOD LOGIC ===
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = transactionData.filter(
@@ -1164,61 +1179,48 @@ const normalizeSales = (raw = []) =>
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
+      const todayStr = formatDate(new Date());
       const dayTxs = transactionData.filter(
         (t) => formatDate(new Date(t.date_of_order)) === todayStr
       );
-
       if (dayTxs.length > 0) {
         rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
         dayTxs.forEach((tx) => pushTxRow("", tx));
       } else {
         pushZeroRow(todayStr);
       }
-
-      // === DAILY TOTAL ===
-      const totals = dayTxs.reduce(
-        (acc, s) => {
-          acc.total++;
-          if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-          if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-          return acc;
-        },
-        { total: 0, cancelled: 0, completed: 0 }
-      );
-
-      rows.push([
-        "TOTAL",
-        "-",
-        "-",
-        "-",
-        `Completed: ${totals.completed}`,
-        "-",
-        "-",
-        `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-      ]);
-      return rows;
     }
 
-    // === GRAND TOTAL ===
-    const totals = transactionData.reduce(
+    // === TOTAL ROW (MODIFIED to depend on selected period) ===
+    // ✅ Added: compute totals based on period
+    const relevantTxs =
+      period === "daily"
+        ? transactionData.filter(
+            (t) =>
+              formatDate(new Date(t.date_of_order)) === formatDate(new Date())
+          )
+        : transactionData;
+
+    const totals = relevantTxs.reduce(
       (acc, t) => ({
         qty: acc.qty + (t.qty ?? 0),
         subtotal: acc.subtotal + (t.subtotal ?? 0),
       }),
       { qty: 0, subtotal: 0 }
     );
+
+    // ✅ Added: dynamic TOTAL row per period
     rows.push([
-      "TOTAL",
+      `TOTAL (${period.toUpperCase()})`, // ✅ Added: dynamic label
       "-",
       "-",
       "-",
       "-",
       "-",
       "-",
-      formatNumber(totals.qty, 0), // qty total
-      "-", // unit cost not summed
-      formatNumber(totals.subtotal, 2), // subtotal total
+      formatNumber(totals.qty, 0),
+      "-",
+      formatNumber(totals.subtotal, 2),
       "-",
       "-",
       "-",
@@ -1226,6 +1228,8 @@ const normalizeSales = (raw = []) =>
 
     return rows;
   };
+
+  // ============================================
 
   const generateServicePeriodRows = (
     serviceData,
@@ -1235,7 +1239,6 @@ const normalizeSales = (raw = []) =>
   ) => {
     const rows = [];
 
-    // --- Helpers ---
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
@@ -1244,8 +1247,8 @@ const normalizeSales = (raw = []) =>
     const formatDate = (date) => {
       if (!date) return "-";
       const d = new Date(date);
-      if (isNaN(d)) return "-"; // invalid date
-      return d.toISOString().split("T")[0]; // always YYYY-MM-DD
+      if (isNaN(d)) return "-";
+      return d.toISOString().split("T")[0];
     };
 
     const pushServiceRow = (label, svc) => {
@@ -1265,13 +1268,13 @@ const normalizeSales = (raw = []) =>
       rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
     };
 
-    // --- Normalize all data dates once ---
     const normalizedData = serviceData.map((s) => ({
       ...s,
       date_of_order: formatDate(s.date_of_order),
     }));
 
-    // --- Period Logic ---
+    // --- (Period logic unchanged) ---
+
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = normalizedData.filter(
@@ -1329,13 +1332,12 @@ const normalizeSales = (raw = []) =>
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
         const dateStr = formatDate(d);
-
         const dayTxs = normalizedData.filter(
           (s) => formatDate(new Date(s.date_of_order)) === dateStr
         );
@@ -1347,11 +1349,10 @@ const normalizeSales = (raw = []) =>
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
+      const todayStr = formatDate(new Date());
       const dayTxs = normalizedData.filter(
         (s) => formatDate(new Date(s.date_of_order)) === todayStr
       );
-
       if (dayTxs.length > 0) {
         rows.push([todayStr, "", "", "", "", "", "", ""]);
         dayTxs.forEach((svc) => pushServiceRow("", svc));
@@ -1360,8 +1361,15 @@ const normalizeSales = (raw = []) =>
       }
     }
 
-    // --- Summary Row ---
-    const totals = normalizedData.reduce(
+    // ✅ Added: compute total dynamically
+    const relevantData =
+      period === "daily"
+        ? normalizedData.filter(
+            (s) => s.date_of_order === formatDate(new Date())
+          )
+        : normalizedData;
+
+    const totals = relevantData.reduce(
       (acc, s) => {
         acc.total++;
         if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
@@ -1371,8 +1379,9 @@ const normalizeSales = (raw = []) =>
       { total: 0, cancelled: 0, completed: 0 }
     );
 
+    // ✅ Added: label and totals
     rows.push([
-      "TOTAL",
+      `TOTAL (${period.toUpperCase()})`,
       "-",
       "-",
       "-",
@@ -1394,17 +1403,25 @@ const normalizeSales = (raw = []) =>
   ) => {
     const rows = [];
 
+    // Helper to get month name
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
       });
 
-    // Row builders
+    const formatDate = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d)) return "-";
+      return d.toISOString().split("T")[0];
+    };
+
+    // --- Row builders ---
     const pushCustomerRow = (label, c) => {
       rows.push([
         label || "",
         c.transaction_id ?? "-",
-        c.date_of_order ?? "-",
+        formatDate(c.date_of_order),
         c.customer_name ?? "-",
         c.item_name ?? "-",
         c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
@@ -1416,8 +1433,11 @@ const normalizeSales = (raw = []) =>
       rows.push([label, "-", "-", "-", "-", "-", "-"]);
     };
 
-    // ✅ Already normalized → just use it
-    const normalizedData = satisfactionData;
+    // --- Normalize Data ---
+    const normalizedData = satisfactionData.map((c) => ({
+      ...c,
+      date_of_order: formatDate(c.date_of_order),
+    }));
 
     // --- Period Logic ---
     if (period === "annually") {
@@ -1482,7 +1502,7 @@ const normalizeSales = (raw = []) =>
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = formatDate(d);
 
         const dayTxs = normalizedData.filter(
           (c) => c.date_of_order === dateStr
@@ -1495,7 +1515,7 @@ const normalizeSales = (raw = []) =>
         }
       }
     } else if (period === "daily") {
-      const todayStr = new Date().toISOString().split("T")[0]; // Always today's date
+      const todayStr = formatDate(new Date()); // Always today's date
       const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
 
       if (dayTxs.length > 0) {
@@ -1506,32 +1526,33 @@ const normalizeSales = (raw = []) =>
       }
     }
 
-    // --- Summary Row ---
-    const totals = normalizedData.reduce(
-      (acc, c) => {
+    // === ✅ Fixed: compute total dynamically based on period ===
+    const relevantData =
+      period === "daily"
+        ? normalizedData.filter(
+            (s) => s.date_of_order === formatDate(new Date())
+          )
+        : normalizedData;
+
+    const totals = relevantData.reduce(
+      (acc, s) => {
         acc.total++;
-        if (c.customer_rating != null) {
-          acc.rated++;
-          acc.ratingSum += c.customer_rating;
-        }
-        if (c.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (c.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
         return acc;
       },
-      { total: 0, rated: 0, ratingSum: 0, cancelled: 0, completed: 0 }
+      { total: 0, cancelled: 0, completed: 0 }
     );
 
-    const avgRating =
-      totals.rated > 0 ? (totals.ratingSum / totals.rated).toFixed(2) : "N/A";
-
+    // ✅ Fixed TOTAL label and count display
     rows.push([
-      "TOTAL",
+      `TOTAL (${period.toUpperCase()})`,
       "-",
       "-",
       "-",
+      `Completed: ${totals.completed}`,
       "-",
-      `Avg Rating: ${avgRating}`,
-      `Completed: ${totals.completed} / Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
     ]);
 
     return rows;
@@ -1726,19 +1747,69 @@ const normalizeSales = (raw = []) =>
       }
     };
 
-    const addFooter = (pageNum, totalPages) => {
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setDrawColor(150, 150, 150);
-      doc.setLineWidth(0.1);
-      doc.line(15, pageHeight - 8, pageWidth - 15, pageHeight - 8);
+    // Signature section – shown only at the end of each report
+    const addSignatureSection = (doc, pageWidth, pageHeight) => {
+      const lineY = pageHeight - 25; // position above footer
+      const nameY = lineY + 6;
+      const titleY = lineY + 10;
 
+      doc.setFont("helvetica", "normal");
+      doc.setLineWidth(0.2);
+
+      // Draw signature line (centered)
+      const lineWidth = 60;
+      const lineX = (pageWidth - lineWidth) / 2;
+      doc.line(lineX, lineY, lineX + lineWidth, lineY);
+
+      // Name (normal)
+      doc.setFontSize(10);
+      doc.text(
+        "Ms. Janine Sarah Marie De Guzman Bacuyag",
+        pageWidth / 2,
+        nameY,
+        {
+          align: "center",
+        }
+      );
+
+      // Title (bold)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text("Sales Manager", pageWidth / 2, titleY, { align: "center" });
+
+      // Reset to normal font afterward (for safety)
+      doc.setFont("helvetica", "normal");
+    };
+
+    const addFooter = (pageNum, totalPages) => {
+      // Draw a clear separator line above the footer
+      doc.setDrawColor(50, 50, 50); // darker gray for visibility
+      doc.setLineWidth(0.3);
+      doc.line(15, pageHeight - 12, pageWidth - 15, pageHeight - 12);
+
+      // Add company name (italic)
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Envirocool Corporation", pageWidth / 2, pageHeight - 8, {
+        align: "center",
+      });
+
+      // Add page numbering (bold for clarity)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
       doc.text(
         `Page ${pageNum} of ${totalPages}`,
         pageWidth / 2,
-        pageHeight - 5,
-        { align: "center" }
+        pageHeight - 4,
+        {
+          align: "center",
+        }
       );
+
+      // Reset styles (to avoid affecting next elements)
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
     };
 
     const fetchSalesData = async () => {
@@ -1928,7 +1999,7 @@ const normalizeSales = (raw = []) =>
               { align: "center" }
             );
           }
-
+          addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(idx + 1, reports.length);
         }
 
@@ -2033,7 +2104,7 @@ const normalizeSales = (raw = []) =>
           } else {
             renderHeader(false); // overflow → no title
           }
-
+          addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(i, totalPages);
         }
 
@@ -2210,6 +2281,20 @@ const normalizeSales = (raw = []) =>
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(tableConfig.cellFontSize);
+    // ✅ Added: Helper function to format numbers with commas
+    const formatNumber = (num) => {
+      if (num == null || isNaN(num)) return "0.00";
+      return Number(num).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    // ✅ Added: Variables to store totals for each numeric column
+    let totalQuote = 0;
+    let totalAwarded = 0;
+    let totalActual = 0;
+    let totalBalance = 0;
 
     if (Array.isArray(aggregatedData)) {
       aggregatedData.forEach((row, rowIndex) => {
@@ -2224,6 +2309,12 @@ const normalizeSales = (raw = []) =>
         }
 
         let x = tableConfig.marginLeft;
+
+        // ✅ Added: Accumulate totals (skip first column which is label)
+        totalQuote += parseFloat(row[1]?.replace(/,/g, "")) || 0;
+        totalAwarded += parseFloat(row[2]?.replace(/,/g, "")) || 0;
+        totalActual += parseFloat(row[3]?.replace(/,/g, "")) || 0;
+        totalBalance += parseFloat(row[4]?.replace(/,/g, "")) || 0;
 
         row.forEach((cell, i) => {
           doc.setFillColor(rowIndex % 2 === 1 ? 248 : 255, 248, 248);
@@ -2255,6 +2346,52 @@ const normalizeSales = (raw = []) =>
         yPosition += rowHeight;
       });
     }
+
+    // ✅ Added: Add TOTAL ROW (after looping all rows)
+    if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
+      doc.addPage();
+      yPosition = headerTopMargin;
+      drawHeaders();
+    }
+
+    // ✅ Added: Total row styling
+    doc.setFont("helvetica", "bolditalic"); // italicized + bold
+    doc.setTextColor(0, 0, 0);
+
+    const totalsRow = [
+      "TOTAL", // italicized label
+      formatNumber(totalQuote),
+      formatNumber(totalAwarded),
+      formatNumber(totalActual),
+      formatNumber(totalBalance),
+    ];
+
+    let x = tableConfig.marginLeft;
+    totalsRow.forEach((cell, i) => {
+      doc.setFillColor(255, 255, 204); // ✅ light yellow for total row
+      doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
+      doc.setDrawColor(0, 0, 0);
+      doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
+
+      if (i === 0) {
+        // ✅ Align TOTAL text to the right for better visual balance
+        doc.text(cell, x + colWidths[i] - 4, yPosition + 6, {
+          align: "right",
+        });
+      } else {
+        drawCenteredText(
+          cell,
+          x,
+          yPosition + 6,
+          colWidths[i],
+          tableConfig.cellFontSize
+        );
+      }
+
+      x += colWidths[i];
+    });
+
+    yPosition += tableConfig.rowHeight;
 
     return {
       finalYPosition: yPosition,
@@ -2738,7 +2875,7 @@ const normalizeSales = (raw = []) =>
     },
   };
 
- const cardsByReportType = {
+  const cardsByReportType = {
     sales: ["totalSales", "totalClients", "totalItemsDelivered"],
     transaction: [
       "totalClients",
@@ -2776,7 +2913,7 @@ const normalizeSales = (raw = []) =>
       }
       if (key === "totalItemsSold") {
         return {
-          icon: <FaShoppingCart />, 
+          icon: <FaShoppingCart />,
           color: "#FF9800",
           title: "Total Items Ordered",
           value: totalItemsOrdered,
@@ -2784,7 +2921,7 @@ const normalizeSales = (raw = []) =>
       }
       if (key === "totalItemsDelivered") {
         return {
-          icon: <FaTruck />, 
+          icon: <FaTruck />,
           color: "#009688",
           title: "Total Items Delivered",
           value: totalItemsDelivered,
@@ -3001,11 +3138,13 @@ const normalizeSales = (raw = []) =>
         if (!acc[id]) {
           acc[id] = { ...row, items: [] };
         }
+
         acc[id].items.push({
-          name: row.item_name,
+          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
           qty: row.qty,
           unit_cost: Number(row.unit_cost),
         });
+
         return acc;
       }, {})
     );
@@ -3066,9 +3205,14 @@ const normalizeSales = (raw = []) =>
                     <td>{row.customer_name}</td>
                     <td>
                       {row.items.map((item, j) => (
-                        <div key={j}>{item.name}</div>
+                        <div key={j}>
+                          {`${item.product_name || ""} ${
+                            item.name || ""
+                          }`.trim()}
+                        </div>
                       ))}
                     </td>
+
                     <td>
                       {row.items.map((item, j) => (
                         <div key={j}>{item.qty}</div>
@@ -3158,8 +3302,9 @@ const normalizeSales = (raw = []) =>
         if (!acc[id]) {
           acc[id] = { ...row, items: [] };
         }
+
         acc[id].items.push({
-          name: row.item_name,
+          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
           qty: Number(row.qty),
           unit_cost: Number(row.unit_cost),
         });
@@ -3231,7 +3376,11 @@ const normalizeSales = (raw = []) =>
 
                     <td>
                       {row.items.map((item, j) => (
-                        <div key={j}>{item.name}</div>
+                        <div key={j}>
+                          {`${item.product_name || ""} ${
+                            item.name || ""
+                          }`.trim()}
+                        </div>
                       ))}
                     </td>
 
@@ -3347,7 +3496,13 @@ const normalizeSales = (raw = []) =>
       filteredServiceData.reduce((acc, row) => {
         const id = row.transaction_id;
         if (!acc[id]) acc[id] = { ...row, items: [] };
-        acc[id].items.push({ name: row.item_name });
+
+        acc[id].items.push({
+          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
+          qty: row.qty,
+          unit_cost: Number(row.unit_cost),
+        });
+
         return acc;
       }, {})
     );
@@ -3413,7 +3568,7 @@ const normalizeSales = (raw = []) =>
           </tbody>
         </Table>
 
-         <div className="custom-pagination">
+        <div className="custom-pagination">
           <button
             className="page-btn"
             disabled={currentPage === 1}

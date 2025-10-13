@@ -509,7 +509,7 @@ if (!deviceId) {
                     <div className="text-center mt-3">
                       <Button
                         variant="warning"
-                        className="btn btn-view px-3 py-1"
+                        className="btn btn-view px-3 py-1 rounded-2"
                         onClick={handleOpenAssignModal}
                       >
                         Change Personnel
@@ -537,7 +537,7 @@ if (!deviceId) {
 
         {/* Assign Modal */}
         <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-          <Modal.Header className="bg-white" closeButton>
+          <Modal.Header className="bg-light" closeButton>
             <Modal.Title className="fw-bold text-success">
               {selectedOrder?.assigned_personnel
                 ? "Reassign Personnel"
@@ -589,9 +589,9 @@ if (!deviceId) {
               </Form.Select>
             </Form.Group>
           </Modal.Body>
-          <Modal.Footer className="bg-white">
+          <Modal.Footer className="bg-light">
             <Button
-              className={`add-btn p-1 px-3 fw-normal border-0 rounded-1 ${
+              className={`add-btn py-1 px-3 fw-normal border border-success rounded-2 ${
                 selectedOrder?.assigned_personnel ? "btn-warning" : "bg-success"
               }`}
               onClick={handleAssignPersonnel}

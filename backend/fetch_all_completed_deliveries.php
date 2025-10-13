@@ -7,12 +7,12 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
 $sql = "
- 
- SELECT 
+    SELECT 
         t.transaction_id AS id,
         t.customer_name AS name,
         t.customer_contact AS contact,
         t.customer_address AS address,
+        po.type_of_product AS type_of_product,
         po.description AS description,
         t.date_of_order AS time,
         t.shipout_at AS shipout_time,
@@ -29,32 +29,31 @@ $sql = "
     JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
     JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
     WHERE t.status = 'Delivered'
-    ORDER BY t.transaction_id DESC";
-
+    ORDER BY t.transaction_id DESC
+";
 
 $result = $conn->query($sql);
 
 $deliveries = [];
 while ($row = $result->fetch_assoc()) {
-   
     $deliveries[] = [
-    "transaction_id" => $row['id'],
-    "customer_name"  => $row['name'],
-    "contact"        => $row['contact'],
-    "customer_address" => $row['address'],
-    "description"    => $row['description'],
-    "time"           => $row['time'],
-    "shipout_time"           => $row['shipout_time'],
-    "completed_time" => $row['completed_time'],
-         "tracking_number"           => $row['tracking_number'], 
+        "transaction_id"    => $row['id'],
+        "customer_name"     => $row['name'],
+        "contact"           => $row['contact'],
+        "customer_address"  => $row['address'],
+        "type_of_product"   => $row['type_of_product'],
+        "description"       => $row['description'],
+        "time"              => $row['time'],
+        "shipout_time"      => $row['shipout_time'],
+        "completed_time"    => $row['completed_time'],
+        "tracking_number"   => $row['tracking_number'], 
           "latitude"         => $row['latitude'],  
         "longitude"        => $row['longitude'],  
         "assigned_device_id" => $row['assigned_device_id'], 
-  
-    "driver"         => $row['driver'],
-    "status"         => $row['status'],
-    "distance"       => "N/A",
-    "eta"            => "N/A"
+        "driver"            => $row['driver'],
+        "status"            => $row['status'],
+        "distance"          => "N/A",
+        "eta"               => "N/A"
     ];
 }
 

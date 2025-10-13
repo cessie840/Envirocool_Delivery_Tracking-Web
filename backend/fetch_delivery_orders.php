@@ -49,10 +49,17 @@ if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $transactionId = (int) $row['transaction_id'];
 
-        // Fetch purchase orders
-        $itemsSql = "SELECT quantity, description, unit_cost, total_cost
-                     FROM PurchaseOrder 
-                     WHERE transaction_id = $transactionId";
+        // 🟢 Updated query: include product/type name
+        $itemsSql = "
+            SELECT 
+                type_of_product AS product_name,
+                description,
+                quantity,
+                unit_cost,
+                total_cost
+            FROM PurchaseOrder
+            WHERE transaction_id = $transactionId
+        ";
         $itemsResult = $conn->query($itemsSql);
 
         $items = [];
@@ -62,11 +69,13 @@ if ($result && $result->num_rows > 0) {
             while ($item = $itemsResult->fetch_assoc()) {
                 $itemTotal = floatval($item['total_cost']);
                 $calculatedTotal += $itemTotal;
+
+                // 🟢 Combine product name + description
                 $items[] = [
-                    'name' => $item['description'],
+                    'name' => trim(($item['product_name'] ?? '') . ' ' . ($item['description'] ?? '')),
                     'quantity' => intval($item['quantity']),
                     'unit_cost' => floatval($item['unit_cost']),
-                    'total_cost' => $itemTotal
+                    'total_cost' => floatval($itemTotal)
                 ];
             }
         }
@@ -100,7 +109,8 @@ if ($result && $result->num_rows > 0) {
             'status' => $row['status'],
             'items' => $items,
             'tracking_number' => $row['tracking_number'],
-            'target_date_delivery' => $row['target_date_delivery']
+            'target_date_delivery' => $row['target_date_delivery'],
+            'rescheduled_date' => $row['rescheduled_date'],
         ];
     }
 }

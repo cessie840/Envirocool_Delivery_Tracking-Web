@@ -22,7 +22,10 @@ $data = json_decode(file_get_contents("php://input"), true);
 $pers_username = $data['pers_username'] ?? '';
 
 if (empty($pers_username)) {
-    echo json_encode(["success" => false, "message" => "Missing delivery personnel username."]);
+    echo json_encode([
+        "success" => false,
+        "message" => "Missing delivery personnel username."
+    ]);
     exit;
 }
 
@@ -42,20 +45,33 @@ $query = "
     FROM Transactions t
     JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
     JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
-    WHERE da.personnel_username = ? 
+    WHERE da.personnel_username = ?
       AND t.status = 'Cancelled'
     ORDER BY t.cancelled_at DESC
 ";
 
 $stmt = $conn->prepare($query);
+if (!$stmt) {
+    echo json_encode(["success" => false, "message" => "SQL preparation failed: " . $conn->error]);
+    exit;
+}
 $stmt->bind_param("s", $pers_username);
 $stmt->execute();
 $result = $stmt->get_result();
 
 $deliveries = [];
-while ($row = $result->fetch_assoc()) {
 
-    $itemsQuery = "SELECT description, quantity, unit_cost FROM PurchaseOrder WHERE transaction_id = ?";
+while ($row = $result->fetch_assoc()) {
+    $itemsQuery = "
+        SELECT 
+            type_of_product AS product_name, 
+            description, 
+            quantity, 
+            unit_cost 
+        FROM PurchaseOrder 
+        WHERE transaction_id = ?
+    ";
+
     $stmtItems = $conn->prepare($itemsQuery);
     $stmtItems->bind_param("i", $row['transaction_id']);
     $stmtItems->execute();
@@ -64,21 +80,22 @@ while ($row = $result->fetch_assoc()) {
     $items = [];
     while ($itemRow = $itemsResult->fetch_assoc()) {
         $items[] = [
-            "name"      => $itemRow['description'],
-            "qty"       => $itemRow['quantity'],
-            "unitCost"  => $itemRow['unit_cost']
+            "name"      => trim(($itemRow['product_name'] ?? '') . ' ' . ($itemRow['description'] ?? '')),
+            "qty"       => (int) $itemRow['quantity'],
+            "unitCost"  => (float) $itemRow['unit_cost']
         ];
     }
+    $stmtItems->close();
 
     $deliveries[] = [
-        "transactionNo"   => $row['transaction_id'],
+        "transactionNo"   => (int) $row['transaction_id'],
         "customerName"    => $row['customer_name'],
         "address"         => $row['customer_address'],
         "contact"         => $row['customer_contact'],
         "paymentMode"     => $row['mode_of_payment'],
         "items"           => $items,
-        "totalCost"       => $row['totalCost'],
-        "cancelledReason" => $row['cancelled_reason'],
+        "totalCost"       => (float) $row['totalCost'],
+        "cancelledReason" => $row['cancelled_reason'] ?: "No reason provided",
         "cancelledAt"     => $row['cancelled_at'],
         "latitude"         => $row['latitude'],  
         "longitude"        => $row['longitude'],
@@ -86,7 +103,11 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
+$stmt->close();
+$conn->close();
+
 echo json_encode([
     "success" => true,
     "data" => $deliveries
 ]);
+?>

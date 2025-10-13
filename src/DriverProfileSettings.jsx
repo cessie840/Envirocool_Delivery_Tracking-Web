@@ -60,6 +60,11 @@ function DriverProfileSettings() {
         .then((res) => {
           if (res.data.success) {
             const u = res.data.user;
+
+            const profilePicUrl = u.pers_profile_pic
+              ? `http://localhost/DeliveryTrackingSystem/uploads/${u.pers_profile_pic}`
+              : `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
+
             setProfile({
               Name: `${u.pers_fname} ${u.pers_lname}`,
               username: u.pers_username,
@@ -68,10 +73,15 @@ function DriverProfileSettings() {
               Age: u.pers_age,
               Gender: u.pers_gender,
               Birthday: u.pers_birth,
-              profilePic: `http://localhost/DeliveryTrackingSystem/${u.pers_profile_pic}`,
+              profilePic: profilePicUrl,
             });
 
-         
+            const updatedUser = {
+              ...parsed,
+              pers_profile_pic: u.pers_profile_pic,
+            };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+
             if (storedPassword) {
               setPasswordForm((prev) => ({ ...prev, old: storedPassword }));
             }
@@ -98,7 +108,7 @@ function DriverProfileSettings() {
     };
 
     const formData = new FormData();
-    formData.append("pers_username", profile.username); 
+    formData.append("pers_username", profile.username);
 
     if (modalField === "Name") {
       const [fname, ...lnameParts] = fieldValue.split(" ");
@@ -165,7 +175,6 @@ function DriverProfileSettings() {
       .catch((err) => console.error(err));
   };
 
-
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -177,6 +186,45 @@ function DriverProfileSettings() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleProfilePicSave = () => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (!profile.profilePic || !profile.profilePic.startsWith("data:image")) {
+      alert("Please select a new image first.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("pers_username", storedUser.pers_username);
+    formData.append("profile_pic", profile.profilePic);
+
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          alert("Profile picture updated successfully!");
+
+          const filename = res.data.filename;
+          const updatedUser = { ...storedUser, pers_profile_pic: filename };
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+
+          setProfile((prev) => ({
+            ...prev,
+            profilePic: `http://localhost/DeliveryTrackingSystem/uploads/${filename}`,
+          }));
+        } else {
+          alert("Upload failed: " + res.data.message);
+        }
+      })
+      .catch((err) => {
+        console.error("Upload error:", err);
+        alert("An error occurred while uploading the picture.");
+      });
   };
 
   return (
@@ -201,32 +249,24 @@ function DriverProfileSettings() {
               backgroundColor: "#E8F8F5",
             }}
           >
-            {/* PROFILE PICTURE */}
-            <label htmlFor="profilePicInput" style={{ cursor: "pointer" }}>
-              <div
-                className="mx-auto rounded-circle overflow-hidden border border-3 d-flex justify-content-center align-items-center"
-                style={{
-                  width: "120px",
-                  height: "120px",
-                  backgroundColor: "#dee2e6",
-                  border: "2px solid #116B8A",
-                }}
-              >
-                {profile.profilePic?.startsWith("data:image") ? (
-                  <Image
-                    src={profile.profilePic}
-                    alt="Profile"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
+            {/* PROFILE PICTURE WITH MOBILE PREVIEW AND SAVE */}
+            <div className="text-center">
+              <label htmlFor="profilePicInput" style={{ cursor: "pointer" }}>
+                <div
+                  className="mx-auto rounded-circle overflow-hidden border border-3 d-flex justify-content-center align-items-center"
+                  style={{
+                    width: "120px",
+                    height: "120px",
+                    backgroundColor: "#dee2e6",
+                    border: "2px solid #116B8A",
+                  }}
+                >
                   <Image
                     src={
-                      profile.profilePic ||
-                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                      profile.profilePic?.startsWith("data:image")
+                        ? profile.profilePic
+                        : profile.profilePic ||
+                          "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                     }
                     onError={(e) =>
                       (e.target.src =
@@ -239,16 +279,35 @@ function DriverProfileSettings() {
                       objectFit: "cover",
                     }}
                   />
-                )}
-              </div>
-              <input
-                id="profilePicInput"
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleProfilePicChange}
-              />
-            </label>
+                </div>
+                <input
+                  id="profilePicInput"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: "none" }}
+                  onChange={handleProfilePicChange}
+                />
+              </label>
+
+              {/* Show preview & save after selecting image */}
+              {profile.profilePic?.startsWith("data:image") && (
+                <div className="mt-3">
+                  <Button
+                    variant="success"
+                    size="sm"
+                    style={{
+                      borderRadius: "20px",
+                      padding: "6px 16px",
+                      fontSize: "0.9rem",
+                    }}
+                    onClick={handleProfilePicSave}
+                  >
+                    Save Picture
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <h5 className="fw-bold mt-3 mb-1" style={{ color: "#116B8A" }}>
               {profile.Name || "Full Name"}
@@ -398,7 +457,6 @@ function DriverProfileSettings() {
           <Modal.Title>Change Password</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
- 
           <Form.Group className="mb-3">
             <Form.Label>New Password</Form.Label>
             <InputGroup>

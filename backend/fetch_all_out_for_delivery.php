@@ -56,6 +56,7 @@ $deliveries[] = [
     "customer_name"    => $row['customer_name'],
     "contact"          => $row['customer_contact'],
     "customer_address" => $row['customer_address'],
+    "type_of_product" => $row['type_of_product'],
     "description"      => $row['description'],
     "time"             => $row['date_of_order'],
     "shipout_time"     => $row['shipout_at'],
