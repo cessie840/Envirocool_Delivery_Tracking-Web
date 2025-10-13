@@ -26,7 +26,7 @@ $query = "
         t.cancelled_at AS cancelled_time,
            t.tracking_number AS tracking_number,
             t.assigned_device_id,
-       t.latitude,              -- ✅ add this
+       t.latitude,             
     t.longitude,    
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
         t.status

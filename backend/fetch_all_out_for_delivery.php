@@ -30,22 +30,24 @@ SELECT
     t.customer_name,
     t.customer_address,
     t.customer_contact,
+     po.type_of_product AS type_of_product,
+        po.description AS description,
     t.date_of_order,
     t.shipout_at,
     t.tracking_number,
     t.status,
     t.assigned_device_id,
-       t.latitude,              -- ✅ add this
+       t.latitude,              
     t.longitude,     
     dp.pers_username AS driver,
-    po.description
-FROM Transactions t
-LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
-LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
-LEFT JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
-WHERE t.status IN ('Pending', 'Out for Delivery')
-ORDER BY t.transaction_id DESC;
-";
+   
+    FROM DeliveryAssignments da
+    JOIN Transactions t ON da.transaction_id = t.transaction_id
+    JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
+    JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
+    WHERE t.status = 'Out for Delivery'
+    ORDER BY t.transaction_id DESC";
+
 
 $result = $conn->query($sql);
 
@@ -57,7 +59,7 @@ $deliveries[] = [
     "contact"          => $row['customer_contact'],
     "customer_address" => $row['customer_address'],
     "type_of_product" => $row['type_of_product'],
-    "description"      => $row['description'],
+    "description"    => $row['description'],
     "time"             => $row['date_of_order'],
     "shipout_time"     => $row['shipout_at'],
     "driver"           => $row['driver'],

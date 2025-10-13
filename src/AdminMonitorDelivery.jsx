@@ -526,7 +526,10 @@ const MonitorDelivery = () => {
               ["Client Name:", t.customer_name],
               ["Contact No.:", t.contact],
               ["Shipping Address:", t.customer_address],
-              ["Item Name:", t.description],
+              [
+                "Item Name:",
+                `${t.type_of_product || ""} ${t.description || ""}`.trim(),
+              ],
               ["Date of Order:", formatDateTime(t.time)],
               ...(activeTab === "completed"
                 ? [

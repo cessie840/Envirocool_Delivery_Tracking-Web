@@ -40,8 +40,10 @@ $query = "
         t.cancelled_reason,
         t.cancelled_at
           t.latitude,            
-    t.longitude,     
-     t.assigned_device_id,
+     t.longitude,     
+       t.assigned_device_id,
+       po.type_of_product AS type_of_product,
+        po.description AS description,
     FROM Transactions t
     JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
     JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
