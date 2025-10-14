@@ -1,3 +1,12 @@
+The purpose of this repository is to manage the version history for the development of our capstone project named "Web-Based Delivery Tracking with Data Analytics"
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+**DATABASE SQL**
+
 CREATE DATABASE DeliveryTrackingSystem;
 USE DeliveryTrackingSystem;
 
@@ -227,38 +236,9 @@ VALUES
 ("AIRCON", "UNDERCEILING TYPE 5TR", NULL),
 ("AIRCON", "FLOOR MOUNTED TYPE 3TR", NULL),
 ("AIRCON", "FLOOR MOUNTED TYPE 5TR", NULL);
+
 ALTER TABLE DeliveryAssignments
 ADD COLUMN device_id VARCHAR(50) NULL AFTER personnel_username;
-
-select*from transactions;
-select*from deliveryassignments;
-
--- Assuming table already exists:
--- CREATE TABLE gps_coordinates (
---     id INT AUTO_INCREMENT PRIMARY KEY,
---     device_id VARCHAR(50) NOT NULL,
---     lat DOUBLE NOT NULL,
---     lng DOUBLE NOT NULL,
---     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
-
--- INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
--- -- ('DEVICE_01', 14.2091835, 121.1368418, NOW() ),                    
--- ('DEVICE_01', 14.2092500, 121.1369000, NOW() + INTERVAL 1 MINUTE), 
--- ('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE), 
--- ('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE), 
--- ('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE), 
--- ('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE),
--- ('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
--- ('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
--- ('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
--- ('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE),
--- ('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE),
--- ('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
--- ('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
--- ('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
--- ('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
--- ('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
 
 ALTER TABLE Transactions
 ADD COLUMN assigned_device_id VARCHAR(50) DEFAULT NULL;
@@ -267,6 +247,9 @@ ADD COLUMN assigned_device_id VARCHAR(50) DEFAULT NULL;
 ALTER TABLE Transactions
 ADD COLUMN latitude DOUBLE DEFAULT 0,
 ADD COLUMN longitude DOUBLE DEFAULT 0;
+
+ALTER TABLE Transactions
+ADD COLUMN customer_feedback VARCHAR(500) NULL;
 
 
 CREATE TABLE laguna (
@@ -432,3 +415,61 @@ INSERT INTO laguna (city_name, barangay_name) VALUES
 ('Calauan', 'Santo Niño'),
 ('Calauan', 'Mayamot');
 
+
+select*from transactions;
+select*from deliveryassignments;
+
+-- Assuming table already exists:
+-- CREATE TABLE gps_coordinates (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     device_id VARCHAR(50) NOT NULL,
+--     lat DOUBLE NOT NULL,
+--     lng DOUBLE NOT NULL,
+--     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
+-- -- ('DEVICE_01', 14.2091835, 121.1368418, NOW() ),                    
+-- ('DEVICE_01', 14.2092500, 121.1369000, NOW() + INTERVAL 1 MINUTE), 
+-- ('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE), 
+-- ('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE), 
+-- ('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE), 
+-- ('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE),
+-- ('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
+-- ('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
+-- ('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
+-- ('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE),
+-- ('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE),
+-- ('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
+-- ('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
+-- ('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
+-- ('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
+-- ('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
+
+
+-- CREDENTIALS
+
+-- Admin Credentials:
+    -- Username: admin101
+    -- Password: admin111219#       
+
+-- Operational Manager Credentials:
+
+    -- Username: opsmanager101
+    -- Password: Manager1111219#
+
+
+-- HASH PASSWORDS:
+
+-- ADMIN: $2y$10$ojUcCIAGOsz.aSZV7oh9.uuFAfGX1PWYFfjPeWpYDCo2o4l4yDW6W 
+-- OPS: $2y$10$GP4KbAkZKmnppOx5Z9Fuq.bRyZ84iB1YHrCAXnwnfosam1TaM9ffO
+-- Delivery Personnel: Based on their birthdays like (2002-04-29)
+
+
+SELECT * FROM Admin;
+SELECT * FROM OperationalManager;
+SELECT * FROM DeliveryPersonnel;
+SELECT * FROM Transactions;
+SELECT * FROM PurchaseOrder;
+SELECT * FROM DeliveryAssignments;
+SELECT * FROM DeliverySummary;

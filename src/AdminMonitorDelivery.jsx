@@ -208,13 +208,13 @@ const MonitorDelivery = () => {
       try {
         const [outRes, completedRes, cancelledRes] = await Promise.all([
           axios.get(
-            "http://localhost/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
+            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
           ),
           axios.get(
-            "http://localhost/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
+            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
           ),
           axios.get(
-            "http://localhost/DeliveryTrackingSystem/get_cancelled_deliveries.php"
+            "https://13.239.143.31/DeliveryTrackingSystem/get_cancelled_deliveries.php"
           ),
         ]);
 
@@ -278,7 +278,7 @@ const MonitorDelivery = () => {
   const fetchETA = async (deviceId, distanceKm) => {
     try {
       const res = await axios.get(
-        `http://localhost/DeliveryTrackingSystem/get_eta.php`,
+        `https://13.239.143.31/DeliveryTrackingSystem/get_eta.php`,
         { params: { device_id: deviceId, distance_km: distanceKm } }
       );
       return res.data?.eta || "N/A";
@@ -318,7 +318,7 @@ const MonitorDelivery = () => {
     const interval = setInterval(async () => {
       try {
         const res = await axios.get(
-          `http://localhost/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
+          `https://13.239.143.31/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
         );
 
         const gpsData = res.data.data;
@@ -419,7 +419,7 @@ const MonitorDelivery = () => {
 
     try {
       const res = await axios.get(
-        `http://localhost/DeliveryTrackingSystem/get_device_route.php?device_id=${transaction.assigned_device_id}`
+        `https://13.239.143.31/DeliveryTrackingSystem/get_device_route.php?device_id=${transaction.assigned_device_id}`
       );
 
       const route = (res.data || []).map((p) => [
