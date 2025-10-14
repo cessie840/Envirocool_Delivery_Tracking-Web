@@ -14,11 +14,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=utf-8");
 
 include 'database.php';
 
-$data = json_decode(file_get_contents("php://input"), true);
+$raw = file_get_contents("php://input");
+$data = json_decode($raw, true);
+
 $transactionId = isset($data['transaction_id']) ? intval($data['transaction_id']) : 0;
 
 if ($transactionId <= 0) {
@@ -27,32 +29,30 @@ if ($transactionId <= 0) {
     exit;
 }
 
-$conn->begin_transaction();
-
 try {
-    // Update transaction status
-    $sql1 = "UPDATE Transactions 
-             SET status = 'Out for Delivery', shipout_at = NOW() 
-             WHERE transaction_id = ?";
+    $conn->begin_transaction();
+
+    $sql1 = "UPDATE Transactions SET status = 'Out for Delivery', shipout_at = NOW() WHERE transaction_id = ?";
     $stmt1 = $conn->prepare($sql1);
     $stmt1->bind_param("i", $transactionId);
     $stmt1->execute();
 
     if ($stmt1->affected_rows <= 0) {
-        throw new Exception("Failed to update transaction status.");
+        $check = $conn->prepare("SELECT transaction_id FROM Transactions WHERE transaction_id = ?");
+        $check->bind_param("i", $transactionId);
+        $check->execute();
+        $resCheck = $check->get_result();
+        if ($resCheck->num_rows === 0) {
+            throw new Exception("Transaction not found or not updated.");
+        }
     }
 
-    // Update delivery details
-    $sql2 = "UPDATE DeliveryDetails 
-             SET delivery_status = 'Out for Delivery' 
-             WHERE transaction_id = ?";
+    $sql2 = "UPDATE DeliveryDetails SET delivery_status = 'Out for Delivery', updated_at = NOW() WHERE transaction_id = ?";
     $stmt2 = $conn->prepare($sql2);
     $stmt2->bind_param("i", $transactionId);
     $stmt2->execute();
 
-    // Fetch customer info
-    $sql3 = "SELECT customer_name, customer_contact, tracking_number 
-             FROM Transactions WHERE transaction_id = ?";
+    $sql3 = "SELECT customer_name, customer_contact, tracking_number FROM Transactions WHERE transaction_id = ?";
     $stmt3 = $conn->prepare($sql3);
     $stmt3->bind_param("i", $transactionId);
     $stmt3->execute();
@@ -67,92 +67,95 @@ try {
     $customerContact = $row['customer_contact'];
     $trackingNumber = $row['tracking_number'];
 
-    // Validate phone number
-    if (!preg_match('/^0[9][0-9]{9}$/', $customerContact)) {
-        throw new Exception("Invalid phone number format: $customerContact");
+    // --- Normalize Phone Number ---
+    $c = preg_replace('/[^0-9\+]/', '', $customerContact);
+    if (preg_match('/^\+63[0-9]{10}$/', $c)) {
+        $phoneNormalized = $c;
+    } elseif (preg_match('/^63[0-9]{10}$/', $c)) {
+        $phoneNormalized = '+' . $c;
+    } elseif (preg_match('/^09[0-9]{9}$/', $c)) {
+        $phoneNormalized = '+63' . substr($c, 1);
+    } elseif (preg_match('/^[0-9]{10}$/', $c)) {
+        $phoneNormalized = '+63' . $c;
+    } else {
+        throw new Exception("Invalid phone number format: " . $customerContact);
     }
-    $phone = "+63" . ltrim($customerContact, '0');
 
-    // SkyIO SMS API
+    $conn->commit();
+
+    $trackingUrlSafe = "cessie840 . github . io / Envirocool-Tracking-Page /";
+    $message = "Hi {$customerName}!" . PHP_EOL . PHP_EOL .
+        "Your order is now Out for Delivery." . PHP_EOL .
+        "Tracking No: {$trackingNumber}." . PHP_EOL .
+        "Track here: {$trackingUrlSafe}" . PHP_EOL . PHP_EOL .
+        "Use your tracking number to check your delivery status on the website." . PHP_EOL . PHP_EOL .
+        "This is a system notification from Envirocool Corp. Please do not reply." . PHP_EOL . PHP_EOL .
+        "Note: We added spaces in the link to avoid detection by telecom filters." . PHP_EOL . PHP_EOL .
+        "-Envirocool Corp.";
+
+    // --- SkyIO SMS API ---
     $apiUrl = "https://sms.skyio.site/api/sms/send";
     $apiKey = "Qyi5vgSUjNiXnezqcfElQ8rafEx31TPJH1kxVdJJVEt4GT6sgqXb7Hyzby1Jx2RH";
-    $message = "Hi $customerName!\n\nYour order is now Out for Delivery.\nTracking No: $trackingNumber.\nTrack here: cessie840 . github . io / Envirocool-Tracking-Page/\n\nUse your tracking number to check your delivery status on the website.\n\nThis is a system notification from Envirocool Corp. Please do not reply.\n\nNote:\nWe added a space in every dot to avoid detection by telecom filters. Please remove the spaces when typing in your browser.\n\n-Envirocool Corp.";
 
+    $smsPayload = [
+        "to" => $phoneNormalized,
+        "message" => $message
+    ];
 
-
-$smsData = [
-  "to" => $phone,
-  "message" => $message
-];
-
-    // cURL setup
     $ch = curl_init($apiUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => [
-            "Authorization: Bearer $apiKey",
-            "Content-Type: application/json"
+            "Authorization: Bearer {$apiKey}",
+            "Content-Type: application/json",
+            "Accept: application/json"
         ],
-        CURLOPT_POSTFIELDS => json_encode($smsData),
-        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_POSTFIELDS => json_encode($smsPayload, JSON_UNESCAPED_UNICODE),
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_VERBOSE => true
     ]);
-
-    ob_start();
     $response = curl_exec($ch);
-    $curlDebug = ob_get_clean();
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
 
-    $debugInfo = [
-        "curl_error" => $curlError,
-        "http_code" => $httpCode,
-        "curl_debug" => $curlDebug,
-        "sent_payload" => $smsData,
-        "api_response_raw" => $response
-    ];
+    // Log to see exactly what SkyIO returned
+    file_put_contents(
+        'sms_debug_log.txt',
+        "HTTP {$httpCode}\n{$response}\nError: {$curlError}\n\n",
+        FILE_APPEND
+    );
 
-    // Log debug info
-    file_put_contents('sms_debug.log', print_r($debugInfo, true) . "\n", FILE_APPEND);
+    $historyReason = $curlError ? "cURL error: {$curlError}" : "HTTP {$httpCode} | Response: {$response}";
+
+    $sqlHistory = "INSERT INTO DeliveryHistory (transaction_id, event_type, reason, event_timestamp)
+                   VALUES (?, 'SMS Sent', ?, NOW())";
+    $stmtHist = $conn->prepare($sqlHistory);
+    $stmtHist->bind_param("is", $transactionId, $historyReason);
+    $stmtHist->execute();
 
     if ($curlError) {
-        throw new Exception("SMS Error: " . $curlError);
+        echo json_encode(["success" => true, "message" => "Transaction updated, but SMS failed.", "sms_error" => $curlError]);
+    } elseif ($httpCode !== 200 && $httpCode !== 201) {
+        echo json_encode(["success" => true, "message" => "Transaction updated, but SMS API returned HTTP {$httpCode}.", "sms_response" => json_decode($response, true)]);
+    } else {
+        echo json_encode(["success" => true, "message" => "Transaction updated and SMS sent successfully!", "sms_response" => json_decode($response, true)]);
     }
-
-    if ($httpCode !== 200 && $httpCode !== 201) {
-        throw new Exception("SMS API Error (HTTP $httpCode): " . $response);
-    }
-
-    $decodedResponse = json_decode($response, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception("Failed to parse SMS API response: " . json_last_error_msg());
-    }
-    if (isset($decodedResponse['status']) && $decodedResponse['status'] === 'error') {
-        throw new Exception("SMS API Error: " . ($decodedResponse['message'] ?? 'Unknown error'));
-    }
-
-    $conn->commit();
-
-    echo json_encode([
-        "success" => true,
-        "message" => "Transaction updated and SMS sent successfully!",
-        "sms_response" => $decodedResponse,
-        "debug_info" => $debugInfo
-    ], JSON_PRETTY_PRINT);
 
 } catch (Exception $e) {
-    $conn->rollback();
+    if (method_exists($conn, 'rollback'))
+        @$conn->rollback();
     http_response_code(500);
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage(),
-        "debug_info" => isset($debugInfo) ? $debugInfo : null
-    ], JSON_PRETTY_PRINT);
+    echo json_encode(["success" => false, "message" => $e->getMessage()]);
+} finally {
+    if (isset($stmt1))
+        $stmt1->close();
+    if (isset($stmt2))
+        $stmt2->close();
+    if (isset($stmt3))
+        $stmt3->close();
+    if (isset($stmtHist))
+        $stmtHist->close();
+    $conn->close();
 }
-
-$conn->close();
 ?>
