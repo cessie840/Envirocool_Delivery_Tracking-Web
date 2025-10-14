@@ -47,7 +47,7 @@ $sql = "
     FROM Transactions
     WHERE status IN ('To Ship', 'Out for Delivery', 'Delivered', 'Cancelled')
     ORDER BY created_at DESC
-    LIMIT 20
+    LIMIT 10
 ";
 
 $result = $conn->query($sql);
