@@ -3,10 +3,11 @@ include 'database.php';
 
 date_default_timezone_set("Asia/Manila"); 
 
-header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
+header("Access-Control-Allow-Credentials: true");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -30,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($fileExt == "") $fileExt = "jpg";
 
     $dateTime = date("Ymd_Hi");
-    $fileName = "TN#" . $transaction_id . "_" . $dateTime . "." . $fileExt;
+    $fileName = "TN_" . $transaction_id . "_" . $dateTime . "." . $fileExt;
 
     $targetFile = $targetDir . $fileName;
 
@@ -48,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode([
                 "success" => true,
                 "message" => "Proof uploaded successfully.",
-                "file" => $relativePath
+                "file" => "proofs/" . $fileName
             ]);
         } else {
             echo json_encode(["success" => false, "message" => "Database update failed."]);

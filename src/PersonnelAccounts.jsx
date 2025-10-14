@@ -21,7 +21,7 @@ const PersonnelAccounts = () => {
   const fetchPersonnel = () => {
     axios
       .get(
-        "http://localhost/DeliveryTrackingSystem/display_delivery_personnel.php"
+        "https://13.239.143.31/DeliveryTrackingSystem/display_delivery_personnel.php"
       )
       .then((response) => {
         const dataWithStatus = response.data.map((p) => ({
@@ -81,7 +81,7 @@ const PersonnelAccounts = () => {
     // Send request to backend
     axios
       .post(
-        "http://localhost/DeliveryTrackingSystem/update_personnel_status.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/update_personnel_status.php",
         {
           username,
           status: newStatus,

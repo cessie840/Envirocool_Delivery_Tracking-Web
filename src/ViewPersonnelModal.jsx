@@ -19,7 +19,7 @@ const ViewPersonnelModal = ({ show, onHide, username }) => {
     if (show && username) {
       axios
         .post(
-          "http://localhost/DeliveryTrackingSystem/get_personnel_details.php",
+          "https://13.239.143.31/DeliveryTrackingSystem/get_personnel_details.php",
           { pers_username: username }
         )
         .then((res) => {
@@ -61,11 +61,11 @@ const ViewPersonnelModal = ({ show, onHide, username }) => {
             <Image
               src={
                 profile.profilePic ||
-                "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png"
               }
               onError={(e) =>
                 (e.target.src =
-                  "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
+                  "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png")
               }
               alt="Profile"
               style={{
