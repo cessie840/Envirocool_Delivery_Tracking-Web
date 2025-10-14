@@ -39,8 +39,7 @@ SELECT
     t.assigned_device_id,
        t.latitude,              
     t.longitude,     
-    dp.pers_username AS driver,
-   
+    dp.pers_username AS driver
     FROM DeliveryAssignments da
     JOIN Transactions t ON da.transaction_id = t.transaction_id
     JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
@@ -59,14 +58,14 @@ $deliveries[] = [
     "contact"          => $row['customer_contact'],
     "customer_address" => $row['customer_address'],
     "type_of_product" => $row['type_of_product'],
-    "description"    => $row['description'],
+     "description"    => $row['description'],
     "time"             => $row['date_of_order'],
     "shipout_time"     => $row['shipout_at'],
     "driver"           => $row['driver'],
     "status"           => $row['status'],
     "tracking_number"  => $row['tracking_number'],
-     "latitude"         => $row['latitude'],  
-        "longitude"        => $row['longitude'],  
+    "latitude"         => $row['latitude'],  
+    "longitude"        => $row['longitude'],  
     "assigned_device_id" => $row['assigned_device_id'], 
     "distance"         => "N/A",
     "eta"              => "N/A"

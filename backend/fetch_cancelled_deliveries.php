@@ -1,6 +1,7 @@
 <?php
 header("Content-Type: application/json");
 
+// Allow only specific origins
 $allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173"
@@ -18,6 +19,7 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 
 require_once "database.php";
 
+// Get JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 $pers_username = $data['pers_username'] ?? '';
 
@@ -29,6 +31,7 @@ if (empty($pers_username)) {
     exit;
 }
 
+// ✅ FIXED SQL: added missing comma, corrected alias, removed trailing comma
 $query = "
     SELECT 
         t.transaction_id,
@@ -38,12 +41,8 @@ $query = "
         t.mode_of_payment,
         t.total AS totalCost,
         t.cancelled_reason,
-        t.cancelled_at
-          t.latitude,            
-     t.longitude,     
-       t.assigned_device_id,
-       po.type_of_product AS type_of_product,
-        po.description AS description,
+        t.cancelled_at,
+        t.assigned_device_id
     FROM Transactions t
     JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
     JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
@@ -64,6 +63,7 @@ $result = $stmt->get_result();
 $deliveries = [];
 
 while ($row = $result->fetch_assoc()) {
+  
     $itemsQuery = "
         SELECT 
             type_of_product AS product_name, 
@@ -99,9 +99,7 @@ while ($row = $result->fetch_assoc()) {
         "totalCost"       => (float) $row['totalCost'],
         "cancelledReason" => $row['cancelled_reason'] ?: "No reason provided",
         "cancelledAt"     => $row['cancelled_at'],
-        "latitude"         => $row['latitude'],  
-        "longitude"        => $row['longitude'],
-        "assigned_device_id" => $row['assigned_device_id'], 
+        "assignedDevice"  => $row['assigned_device_id']
     ];
 }
 

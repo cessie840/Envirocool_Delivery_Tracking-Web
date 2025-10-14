@@ -585,6 +585,7 @@ const handleBarangayChange = (selected) => {
         customer_contact: "",
         target_date_delivery: "",
         date_of_order: "",
+        date_of_deliver:"",
         payment_method: "",
         payment_option: "",
         full_payment: "",
