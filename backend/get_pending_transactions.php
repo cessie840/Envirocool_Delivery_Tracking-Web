@@ -47,7 +47,7 @@ $sql = "
     FROM Transactions
     WHERE status = 'Pending'
     ORDER BY created_at DESC
-    LIMIT 20
+    LIMIT 10
 ";
 
 $result = $conn->query($sql);
