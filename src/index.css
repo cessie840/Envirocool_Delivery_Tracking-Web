@@ -1339,9 +1339,15 @@ h5{
   color: #28a745 !important; 
   border-color: #28a745 !important;
 }
-/* Force select dropdowns in modals to open downward */
+
 .modal .dropdown-menu {
   top: 100% !important;
   bottom: auto !important;
   transform: none !important;
+}
+
+
+.map-wrapper {
+  height: 70vh;
+  width: 100%;
 }
