@@ -1,0 +1,137 @@
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 415
+<html>
+<head><title>415 Unsupported Media Type</title></head>
+<body>
+<center><h1>415 Unsupported Media Type</h1></center>
+<hr><center>openresty/1.27.1.1</center>
+</body>
+</html>
+
+Error: 
+
+HTTP 200
+{
+	"message": "Access denied by Imunify360 bot-protection. IPs used for automation should be whitelisted"
+}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{
+	"message": "Access denied by Imunify360 bot-protection. IPs used for automation should be whitelisted"
+}
+Error: 
+
