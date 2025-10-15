@@ -16,7 +16,7 @@ const EditProfileTab = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost/DeliveryTrackingSystem/get_profile.php", {
+      .get("https://13.239.143.31/DeliveryTrackingSystem/get_profile.php", {
         withCredentials: true,
       })
       .then((res) => {
