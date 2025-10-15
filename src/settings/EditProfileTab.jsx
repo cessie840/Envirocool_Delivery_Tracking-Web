@@ -57,8 +57,8 @@ const EditProfileTab = () => {
   const handleUpdate = () => {
     const updateUrl =
       role === "admin"
-        ? "http://localhost/DeliveryTrackingSystem/update_admin_profile.php"
-        : "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
+        ? "https://13.239.143.31/DeliveryTrackingSystem/update_admin_profile.php"
+        : "https://13.239.143.31/DeliveryTrackingSystem/update_operational_profile.php";
 
     const payload =
       role === "admin"
