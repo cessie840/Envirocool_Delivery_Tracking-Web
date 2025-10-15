@@ -55,3 +55,15 @@ strong{
 }
 
 
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none;
+}
+input[type="password"]::-webkit-clear-button,
+input[type="password"]::-webkit-inner-spin-button,
+input[type="password"]::-webkit-contacts-auto-fill-button {
+  display: none;
+}

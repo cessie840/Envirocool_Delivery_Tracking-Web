@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 $allowed_origins = [
     'http://localhost:5173',
@@ -14,50 +15,80 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Content-Type: application/json");
 
-// Handle preflight request
+// Handle preflight (CORS)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-session_start();
 include 'database.php';
 
+// Ensure logged in
 if (!isset($_SESSION['manager_username'])) {
     http_response_code(401);
     echo json_encode(["error" => "Unauthorized"]);
     exit;
 }
 
-// Get the old username from session
-$old_username = $_SESSION['manager_username'];
-
+// Decode JSON input safely
 $data = json_decode(file_get_contents("php://input"), true);
 
-// Get new data (including possibly new username)
-$new_username = $data['manager_username'];
-$manager_fname = $data['manager_fname'];
-$manager_lname = $data['manager_lname'];
-$manager_email = $data['manager_email'];
-$manager_phone = $data['manager_phone'];
+if (!$data) {
+    http_response_code(400);
+    echo json_encode(["error" => "Invalid or missing JSON payload"]);
+    exit;
+}
 
-// Update the record
-$sql = "UPDATE OperationalManager 
-        SET manager_username = ?, manager_fname = ?, manager_lname = ?, manager_email = ?, manager_phone = ?
-        WHERE manager_username = ?";
+// Extract fields
+$old_username = $_SESSION['manager_username'];
+$new_username = $data['manager_username'] ?? null;
+$manager_fname = $data['manager_fname'] ?? null;
+$manager_lname = $data['manager_lname'] ?? null;
+$manager_email = $data['manager_email'] ?? null;
+$manager_phone = $data['manager_phone'] ?? null;
 
-$stmt = $conn->prepare($sql);
+// Validate required fields
+if (!$new_username || !$manager_fname || !$manager_lname || !$manager_email || !$manager_phone) {
+    http_response_code(400);
+    echo json_encode(["error" => "Missing required fields"]);
+    exit;
+}
+
+// Prepare update query
+$stmt = $conn->prepare("
+    UPDATE OperationalManager 
+    SET manager_username = ?, manager_fname = ?, manager_lname = ?, manager_email = ?, manager_phone = ?
+    WHERE manager_username = ?
+");
+
+if (!$stmt) {
+    http_response_code(500);
+    echo json_encode(["error" => "Failed to prepare SQL: " . $conn->error]);
+    exit;
+}
+
 $stmt->bind_param("ssssss", $new_username, $manager_fname, $manager_lname, $manager_email, $manager_phone, $old_username);
 
-if ($stmt->execute() && $stmt->affected_rows > 0) {
-    $_SESSION['manager_username'] = $new_username;
-    session_write_close(); 
+if ($stmt->execute()) {
+    if ($stmt->affected_rows > 0) {
+        // Update session if username changed
+        $_SESSION['manager_username'] = $new_username;
+        session_write_close();
 
-    echo json_encode([
-        "success" => true,
-        "new_username" => $new_username
-    ]);
+        echo json_encode([
+            "success" => true,
+            "message" => "Profile updated successfully",
+            "new_username" => $new_username
+        ]);
+    } else {
+        http_response_code(404);
+        echo json_encode(["error" => "No changes detected or record not found"]);
+    }
 } else {
     http_response_code(500);
-    echo json_encode(["error" => "Update failed"]);
+    echo json_encode(["error" => "SQL execution failed: " . $stmt->error]);
 }
+
+$stmt->close();
+$conn->close();
+?>

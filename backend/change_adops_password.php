@@ -1,20 +1,34 @@
 <?php
-session_start();
-include 'database.php';
+// ✅ Handle CORS immediately
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174'
+];
 
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Origin: http://localhost:5173");
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:5173");
+}
+
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Content-Type: application/json; charset=UTF-8");
 
-// Handle preflight request
+// ✅ Handle preflight request before starting session or DB
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
+session_start();
+include 'database.php';
+
+// ✅ Parse JSON input
 $data = json_decode(file_get_contents("php://input"), true);
+
 if (!isset($data['currentPassword']) || !isset($data['newPassword'])) {
     http_response_code(400);
     echo json_encode(["success" => false, "error" => "Missing required fields."]);
@@ -24,7 +38,7 @@ if (!isset($data['currentPassword']) || !isset($data['newPassword'])) {
 $currentPassword = trim($data['currentPassword']);
 $newPassword = trim($data['newPassword']);
 
-// Determine user role and table based on session
+// ✅ Determine user type
 if (isset($_SESSION['ad_username'])) {
     $table = "Admin";
     $userCol = "ad_username";
@@ -37,11 +51,11 @@ if (isset($_SESSION['ad_username'])) {
     $username = $_SESSION['manager_username'];
 } else {
     http_response_code(401);
-    echo json_encode(["success" => false, "error" => "Unauthorized access."]);
+    echo json_encode(["success" => false, "error" => "Unauthorized. No session."]);
     exit();
 }
 
-// Fetch current password hash from database
+// ✅ Verify old password
 $sql = "SELECT $passCol FROM $table WHERE $userCol = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
@@ -60,34 +74,25 @@ if ($row = $result->fetch_assoc()) {
     exit();
 }
 
-// ✅ Validate new password strength (same rules as React)
+// ✅ Validate new password
 $pattern = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/';
 if (!preg_match($pattern, $newPassword)) {
     http_response_code(400);
-    echo json_encode([
-        "success" => false,
-        "error" => "Password must be at least 6 characters long, contain at least one uppercase letter, one number, and one special character."
-    ]);
+    echo json_encode(["success" => false, "error" => "Weak password format."]);
     exit();
 }
 
-// Hash new password and update in database
+// ✅ Update password
 $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
 $updateSql = "UPDATE $table SET $passCol = ? WHERE $userCol = ?";
 $updateStmt = $conn->prepare($updateSql);
 $updateStmt->bind_param("ss", $newHash, $username);
 
 if ($updateStmt->execute()) {
-    echo json_encode([
-        "success" => true,
-        "message" => "Password updated successfully."
-    ]);
+    echo json_encode(["success" => true, "message" => "Password updated successfully."]);
 } else {
     http_response_code(500);
-    echo json_encode([
-        "success" => false,
-        "error" => "Failed to update password. Please try again."
-    ]);
+    echo json_encode(["success" => false, "error" => "Failed to update password."]);
 }
 
 $conn->close();
