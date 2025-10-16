@@ -135,7 +135,7 @@ useEffect(() => {
   const fetchLagunaData = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_barangay.php"
+        "http:/localhost/DeliveryTrackingSystem/get_barangay.php"
       );
       setLagunaData(res.data);
 
@@ -175,7 +175,7 @@ const handleBarangayChange = (selected) => {
 
     try {
       await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/delete_product.php",
+        "http:/localhost//DeliveryTrackingSystem/delete_product.php",
         {
           type_of_product: typeOfProduct || value,
           description: type === "item" ? value : "",
@@ -372,12 +372,12 @@ const handleBarangayChange = (selected) => {
     const fetchProducts = async () => {
       try {
         const res = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_products.php"
+          "http:/localhost//DeliveryTrackingSystem/get_products.php"
         );
         setProductOptions(res.data);
 
         const itemsRes = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_items.php"
+          "http:/localhost//DeliveryTrackingSystem/get_items.php"
         );
         setItemOptions(itemsRes.data);
       } catch (err) {
@@ -391,7 +391,7 @@ const handleBarangayChange = (selected) => {
   const fetchLatestIDs = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_latest_ids.php"
+        "http:/localhost//DeliveryTrackingSystem/get_latest_ids.php"
       );
       setTransactionId(res.data.transaction_id);
       setPoId(res.data.po_id);
@@ -569,7 +569,7 @@ const handleBarangayChange = (selected) => {
 
     try {
   const res = await axios.post(
-    "https://13.239.143.31/DeliveryTrackingSystem/add_delivery.php",
+    "http:/localhost//DeliveryTrackingSystem/add_delivery.php",
     dataToSend,
     { headers: { "Content-Type": "application/json" } }
   );
@@ -751,7 +751,7 @@ const handleBarangayChange = (selected) => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="House No."
+                  placeholder="House No./Street Name"
                   name="house_no"
                   value={form.house_no ?? ""}
                   onChange={handleChange}
@@ -762,7 +762,7 @@ const handleBarangayChange = (selected) => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Street Name"
+                  placeholder="Subdivision/Village"
                   name="street_name"
                   value={form.street_name ?? ""}
                   onChange={handleChange}
@@ -878,7 +878,7 @@ const handleBarangayChange = (selected) => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "http:/localhost//DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: newValue,
                                 description: "",
@@ -994,7 +994,7 @@ const handleBarangayChange = (selected) => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "http:/localhost//DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: item.type_of_product,
                                 description: newValue,
@@ -1102,7 +1102,7 @@ const handleBarangayChange = (selected) => {
                           onClick={async () => {
                             try {
                               await axios.post(
-                                "https://13.239.143.31/DeliveryTrackingSystem/update_product.php",
+                                "http:/localhost//DeliveryTrackingSystem/update_product.php",
                                 {
                                   type_of_product_current:
                                     editModal.type === "product"

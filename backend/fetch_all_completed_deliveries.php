@@ -14,16 +14,16 @@ $sql = "
         t.customer_address AS address,
         po.type_of_product AS type_of_product,
         po.description AS description,
-        t.date_of_order AS time,
+        t.created_at AS time,
         t.shipout_at AS shipout_time,
         t.completed_at AS completed_time,
         t.tracking_number AS tracking_number,
                  t.latitude,            
-    t.longitude,    
-     t.assigned_device_id,
+         t.longitude,    
+        t.assigned_device_id,
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
         t.status AS status
-        
+         
     FROM DeliveryAssignments da
     JOIN Transactions t ON da.transaction_id = t.transaction_id
     JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
@@ -43,7 +43,7 @@ while ($row = $result->fetch_assoc()) {
         "customer_address"  => $row['address'],
         "type_of_product"   => $row['type_of_product'],
         "description"       => $row['description'],
-        "time"              => $row['time'],
+        "time"              => $row['created_at'],
         "shipout_time"      => $row['shipout_time'],
         "completed_time"    => $row['completed_time'],
         "tracking_number"   => $row['tracking_number'], 

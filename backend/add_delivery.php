@@ -14,6 +14,8 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 }
 
 include 'database.php';
+mysqli_query($conn, "SET time_zone = '+08:00'");
+date_default_timezone_set('Asia/Manila');
 
 
 function generateTrackingNumber($length = 10) {

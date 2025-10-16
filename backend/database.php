@@ -1,7 +1,7 @@
 <?php
 $host = 'localhost';
 $user = 'root';
-$password = '';
+$password = '091203';
 $database = 'DeliveryTrackingSystem';
 // $database = 'backuprestore';
 
