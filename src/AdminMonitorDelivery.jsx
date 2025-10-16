@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import AdminLayout from "./AdminLayout";
 import { useNavigate } from "react-router-dom";
 import {
@@ -16,6 +16,8 @@ import { renderToString } from "react-dom/server";
 import { PiBuildingApartmentDuotone } from "react-icons/pi";
 import { IoStorefrontSharp } from "react-icons/io5";
 import { FaTruckFront, FaLocationDot } from "react-icons/fa6";
+
+
 
 import "leaflet/dist/leaflet.css";
 
@@ -149,39 +151,60 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
 
 // ======== MonitorDelivery Component ========
 const MonitorDelivery = () => {
-  const [etas, setEtas] = useState({});
+  const [zoomOnNextClick, setZoomOnNextClick] = useState(false);
+
+ const [etas, setEtas] = useState({});
+ const [lastEtaUpdate, setLastEtaUpdate] = useState({});
+
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
   const [transactions, setTransactions] = useState({
+
     inTransit: [],
     completed: [],
     cancelled: [],
   });
+
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [deviceRoutes, setDeviceRoutes] = useState({});
   const [currentPositions, setCurrentPositions] = useState({});
   const [trackingIntervals, setTrackingIntervals] = useState({});
   const [selectedCustomerPosition, setSelectedCustomerPosition] =
     useState(null);
   const [selectedCustomerInfo, setSelectedCustomerInfo] = useState(null);
-  const [mapBounds, setMapBounds] = useState(null);
+
 
   const navigate = useNavigate();
   const companyLocation = [14.2091835, 121.1368418];
 
-  // ======== Recenter Map Hook ========
-  const RecenterMap = ({ location, zoom, bounds }) => {
+  
+
+const truckMarkerRefs = useRef({});
+
+
+  const handleAddDelivery = () => navigate("/add-delivery");
+const [hasZoomed, setHasZoomed] = useState(false);
+
+  const MapViewUpdater = ({ position, zoom, triggerZoom, onZoomDone }) => {
     const map = useMap();
+
     useEffect(() => {
-      if (bounds?.length > 0) {
-        map.fitBounds(bounds, { padding: [80, 80] });
-      } else if (location) {
-        map.setView(location, zoom);
-      }
-    }, [location, zoom, bounds]);
+      if (!position || !triggerZoom) return;
+
+    
+      map.flyTo(position, zoom || map.getZoom(), {
+        animate: true,
+        duration: 1.2,
+      });
+
+      if (onZoomDone) onZoomDone(); 
+    }, [position, zoom, triggerZoom, map, onZoomDone]);
+
     return null;
   };
 
-  const handleAddDelivery = () => navigate("/add-delivery");
+
+
 
   const formatDateTime = (dateTime) => {
     if (!dateTime) return "N/A";
@@ -204,25 +227,37 @@ const MonitorDelivery = () => {
 
   // ======== Fetch Deliveries ========
   useEffect(() => {
+    
     const fetchDeliveries = async () => {
       try {
         const [outRes, completedRes, cancelledRes] = await Promise.all([
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
+            "http://localhost/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
+            "http://localhost/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_cancelled_deliveries.php"
+            "http://localhost/DeliveryTrackingSystem/get_cancelled_deliveries.php"
           ),
         ]);
 
-        const outData = outRes.data.deliveries || outRes.data || [];
-        const completedData =
-          completedRes.data.deliveries || completedRes.data || [];
-        const cancelledData =
-          cancelledRes.data.deliveries || cancelledRes.data || [];
+        // const outData = outRes.data.deliveries || outRes.data || [];
+        // const completedData =
+        //   completedRes.data.deliveries || completedRes.data || [];
+        // const cancelledData =
+        //   cancelledRes.data.deliveries || cancelledRes.data || [];
+
+        const toArray = (data) => {
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.deliveries)) return data.deliveries;
+          return [];
+        };
+
+        const outData = toArray(outRes.data);
+        const completedData = toArray(completedRes.data);
+        const cancelledData = toArray(cancelledRes.data);
+
 
         const uniqueById = (arr) =>
           Array.from(
@@ -274,211 +309,261 @@ const MonitorDelivery = () => {
     fetchDeliveries();
   }, []);
 
-  // ======== Fetch ETA ========
-  const fetchETA = async (deviceId, distanceKm) => {
-    try {
-      const res = await axios.get(
-        `https://13.239.143.31/DeliveryTrackingSystem/get_eta.php`,
-        { params: { device_id: deviceId, distance_km: distanceKm } }
-      );
-      return res.data?.eta || "N/A";
-    } catch (err) {
-      console.error("Error fetching ETA for device:", deviceId, err);
-      return "N/A";
-    }
-  };
 
-  useEffect(() => {
-    if (!selectedCustomerPosition) return;
 
-    Object.keys(currentPositions).forEach(async (deviceId) => {
-      const currentData = currentPositions[deviceId];
-      if (!currentData?.position) return;
+ useEffect(() => {
+   if (!selectedCustomerPosition) return;
 
-      // Skip ETA for Completed or Failed deliveries
-      if (currentData.status === "Completed" || currentData.status === "Failed")
-        return;
+   Object.keys(currentPositions).forEach(async (deviceId) => {
+     const currentData = currentPositions[deviceId];
+     if (!currentData?.position) return;
+     if (["Completed", "Failed"].includes(currentData.status)) return;
 
-      const distanceKm = getDistanceFromLatLonInKm(
-        currentData.position[0],
-        currentData.position[1],
-        selectedCustomerPosition[0],
-        selectedCustomerPosition[1]
-      );
+     const distanceKm = getDistanceFromLatLonInKm(
+       currentData.position[0],
+       currentData.position[1],
+       selectedCustomerPosition[0],
+       selectedCustomerPosition[1]
+     );
 
-      const eta = await fetchETA(deviceId, distanceKm);
-      setEtas((prev) => ({ ...prev, [deviceId]: eta }));
-    });
-  }, [currentPositions, selectedCustomerPosition]);
+     const now = Date.now();
+     const lastUpdate = lastEtaUpdate[deviceId] || 0;
+     const prevEta = etas[deviceId];
+     const prevDistance = currentData.prevDistance || null;
+
+    
+     if (now - lastUpdate < 30000 && Math.abs(distanceKm - prevDistance) < 0.2)
+       return;
+
+     try {
+       const res = await axios.get(
+         `http://localhost/DeliveryTrackingSystem/get_eta.php`,
+         { params: { device_id: deviceId, distance_km: distanceKm } }
+       );
+
+       const eta = res.data?.eta || prevEta || "N/A";
+       setEtas((prev) => ({ ...prev, [deviceId]: eta }));
+       setLastEtaUpdate((prev) => ({ ...prev, [deviceId]: now }));
+
+       
+       setCurrentPositions((prev) => ({
+         ...prev,
+         [deviceId]: { ...prev[deviceId], prevDistance: distanceKm },
+       }));
+     } catch (err) {
+       console.error("ETA fetch failed for", deviceId, err);
+     }
+   });
+ }, [currentPositions, selectedCustomerPosition]);
 
   // ======== Device Tracking ========
-  const startTrackingDevice = (deviceId) => {
-    if (trackingIntervals[deviceId]) clearInterval(trackingIntervals[deviceId]);
+ const startTrackingDevice = (deviceId) => {
+   if (trackingIntervals[deviceId]) clearInterval(trackingIntervals[deviceId]);
 
-    const interval = setInterval(async () => {
-      try {
-        const res = await axios.get(
-          `https://13.239.143.31/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
-        );
+   const interval = setInterval(async () => {
+     try {
+       const res = await axios.get(
+         `http://localhost/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
+       );
 
-        const gpsData = res.data.data;
-        if (!gpsData) return;
+       const gpsData = res.data.data;
+       if (!gpsData) return;
 
-        const currPoint = {
-          lat: parseFloat(gpsData.lat),
-          lng: parseFloat(gpsData.lng),
-          recorded_at: gpsData.recorded_at,
-        };
+       const currPoint = {
+         lat: parseFloat(gpsData.lat),
+         lng: parseFloat(gpsData.lng),
+         recorded_at: gpsData.recorded_at,
+       };
 
-        setCurrentPositions((prev) => {
-          const prevData = prev[deviceId];
+       setCurrentPositions((prev) => {
+         const prevData = prev[deviceId];
 
-          // Do not update if delivery is Completed or Failed
-          if (
-            prevData?.status === "Completed" ||
-            prevData?.status === "Failed"
-          ) {
-            return prev;
-          }
+         if (
+           prevData?.status === "Completed" ||
+           prevData?.status === "Failed"
+         ) {
+           return prev;
+         }
 
-          let status = "Moving";
-          let stoppedMinutes = 0;
+         let status = "Moving";
+       
 
-          if (prevData) {
-            const distanceKm = getDistanceFromLatLonInKm(
-              prevData.position[0],
-              prevData.position[1],
-              currPoint.lat,
-              currPoint.lng
-            );
+         if (prevData) {
+           const distanceKm = getDistanceFromLatLonInKm(
+             prevData.position[0],
+             prevData.position[1],
+             currPoint.lat,
+             currPoint.lng
+           );
 
-            const diffMin =
-              (new Date(currPoint.recorded_at) -
-                new Date(prevData.lastRecordedAt)) /
-              60000;
+           const lastRecorded = new Date(prevData.lastRecordedAt);
+           const now = new Date();
+           const diffMin = (now - lastRecorded) / 60000;
 
-            if (diffMin >= 20) {
-              status = "Inactive";
-            } else if (distanceKm < 0.01) {
-              status = diffMin >= 5 ? "Stopped" : "Traffic";
-              stoppedMinutes = Math.round(diffMin);
-            } else if (distanceKm < 0.05) {
-              status = "Traffic";
-            } else {
-              status = "Moving";
-            }
-          }
+        
+           if (diffMin >= 20) {
+             status = "Inactive"; 
+           } else if (distanceKm < 0.005) {
+        
+             if (diffMin >= 5) status = "Stopped"; 
+             else status = "Traffic"; 
+           } else if (distanceKm >= 0.005 && distanceKm < 0.05) {
+             status = "Traffic"; 
+           } else {
+             status = "Moving"; 
+           }
+         }
 
-          const newCurrentPositions = {
-            ...prev,
-            [deviceId]: {
-              position: [currPoint.lat, currPoint.lng],
-              status,
-              stoppedMinutes,
-              lastRecordedAt: currPoint.recorded_at,
-            },
-          };
+         const newCurrentPositions = {
+           ...prev,
+           [deviceId]: {
+             position: [currPoint.lat, currPoint.lng],
+             status,
+          
+             lastRecordedAt: currPoint.recorded_at,
+           },
+         };
 
-          setDeviceRoutes((prevRoutes) => ({
-            ...prevRoutes,
-            [deviceId]: [
-              ...(prevRoutes[deviceId] || []),
-              [currPoint.lat, currPoint.lng],
-            ],
-          }));
+         setDeviceRoutes((prevRoutes) => ({
+           ...prevRoutes,
+           [deviceId]: [
+             ...(prevRoutes[deviceId] || []),
+             [currPoint.lat, currPoint.lng],
+           ],
+         }));
 
-          return newCurrentPositions;
+         return newCurrentPositions;
+       });
+     } catch (err) {
+       console.error("Error fetching device location for", deviceId, err);
+     }
+   }, 100);
+
+   setTrackingIntervals((prev) => ({ ...prev, [deviceId]: interval }));
+ };
+
+
+const handleTransactionClick = async (transaction) => {
+  const isExpanded = expandedIndex === transaction.transaction_id;
+  const deviceId = transaction.assigned_device_id;
+
+  if (isExpanded) {
+  
+    setExpandedIndex(null);
+    setSelectedDeviceId(null);
+    setSelectedCustomerPosition(null);
+
+
+    if (deviceId) {
+      setCurrentPositions((prev) => {
+        const updated = { ...prev };
+        delete updated[deviceId];
+        return updated;
+      });
+      setDeviceRoutes((prev) => {
+        const updated = { ...prev };
+        delete updated[deviceId];
+        return updated;
+      });
+
+   
+      if (trackingIntervals[deviceId]) {
+        clearInterval(trackingIntervals[deviceId]);
+        setTrackingIntervals((prev) => {
+          const updated = { ...prev };
+          delete updated[deviceId];
+          return updated;
         });
-      } catch (err) {
-        console.error("Error fetching device location for", deviceId, err);
       }
-    }, 5000);
-
-    setTrackingIntervals((prev) => ({ ...prev, [deviceId]: interval }));
-  };
-
-  // ======== Handle Transaction Click ========
-  const handleTransactionClick = async (transaction) => {
-    const isExpanded = expandedIndex === transaction.transaction_id;
-    setExpandedIndex(isExpanded ? null : transaction.transaction_id);
-
-    const customerPos =
-      transaction.latitude && transaction.longitude
-        ? [transaction.latitude, transaction.longitude]
-        : null;
-
-    setSelectedCustomerPosition(customerPos);
-    setSelectedCustomerInfo(customerPos ? transaction : null);
-
-    if (!transaction.assigned_device_id) {
-      setDeviceRoutes({ [transaction.transaction_id]: [companyLocation] });
-      setCurrentPositions({ [transaction.transaction_id]: null });
-      setMapBounds([companyLocation, customerPos].filter(Boolean));
-      return;
     }
+  if (!expandedIndex) {
+    setCurrentPositions({});
+    setDeviceRoutes({});
+  }
 
-    try {
-      const res = await axios.get(
-        `https://13.239.143.31/DeliveryTrackingSystem/get_device_route.php?device_id=${transaction.assigned_device_id}`
-      );
+  setZoomOnNextClick(true);
+  return;
 
-      const route = (res.data || []).map((p) => [
-        parseFloat(p.lat),
-        parseFloat(p.lng),
-      ]);
+  
+}
+   
 
-      setDeviceRoutes((prev) => ({
-        ...prev,
-        [transaction.assigned_device_id]: route.length
-          ? route
-          : [companyLocation],
-      }));
+  setExpandedIndex(transaction.transaction_id);
 
-      const truckPos = route.length ? route[route.length - 1] : companyLocation;
+  const customerPos =
+    transaction.latitude && transaction.longitude
+      ? [transaction.latitude, transaction.longitude]
+      : null;
+  setSelectedCustomerPosition(customerPos);
+ setSelectedCustomerInfo(transaction);
 
-      const finalStatus =
-        activeTab === "completed"
-          ? "Completed"
-          : activeTab === "cancelled"
-          ? "Failed"
-          : "Moving";
 
-      setCurrentPositions((prev) => ({
-        ...prev,
-        [transaction.assigned_device_id]: {
-          position: truckPos,
-          status: finalStatus,
-          stoppedMinutes: 0,
-          lastRecordedAt: route.length
-            ? route[route.length - 1].recorded_at || new Date().toISOString()
-            : new Date().toISOString(),
-        },
-      }));
 
-      // Stop tracking if completed or cancelled
-      if (activeTab === "inTransit") {
-        startTrackingDevice(transaction.assigned_device_id);
-      } else {
-        if (trackingIntervals[transaction.assigned_device_id]) {
-          clearInterval(trackingIntervals[transaction.assigned_device_id]);
-          setTrackingIntervals((prev) => {
-            const updated = { ...prev };
-            delete updated[transaction.assigned_device_id];
-            return updated;
-          });
+  if (!deviceId) {
+    setDeviceRoutes({ [transaction.transaction_id]: [companyLocation] });
+    setCurrentPositions({ [transaction.transaction_id]: [companyLocation] });
+    setSelectedDeviceId(transaction.transaction_id);
+    setZoomOnNextClick(true);
+    return;
+  }
+
+  try {
+    const res = await axios.get(
+      `http://localhost/DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
+    );
+
+    const route = (res.data || []).map((p) => [
+      parseFloat(p.lat),
+      parseFloat(p.lng),
+    ]);
+
+    const initialTruckPos = route.length
+      ? route[route.length - 1]
+      : companyLocation;
+
+    setCurrentPositions((prev) => ({
+      ...prev,
+      [deviceId]: {
+        position: initialTruckPos,
+        status: "Moving",
+   
+        lastRecordedAt: new Date().toISOString(),
+      },
+    }));
+
+    setDeviceRoutes((prev) => ({
+      ...prev,
+      [deviceId]: route.length ? route : [companyLocation],
+    }));
+
+    setSelectedDeviceId(deviceId);
+    setZoomOnNextClick(true);
+
+   
+    if (activeTab === "inTransit") startTrackingDevice(deviceId);
+    if (deviceId) {
+      setTimeout(() => {
+        if (truckMarkerRefs.current[deviceId]) {
+          truckMarkerRefs.current[deviceId].openPopup();
+
+          setTimeout(() => {
+            truckMarkerRefs.current[deviceId]?.closePopup();
+          }, 6000);
         }
-      }
-
-      const points = [companyLocation, truckPos];
-      if (customerPos) points.push(customerPos);
-      setMapBounds(points);
-    } catch (err) {
-      console.error(err);
-      setDeviceRoutes({ [transaction.assigned_device_id]: [companyLocation] });
-      setCurrentPositions({ [transaction.assigned_device_id]: null });
-      setMapBounds([companyLocation, customerPos].filter(Boolean));
+      }, 1500); // 200ms wait for Marker to mount
     }
-  };
+
+  } catch (err) {
+    console.error(err);
+   
+    setCurrentPositions({ [deviceId]: [companyLocation] });
+    setDeviceRoutes({ [deviceId]: [companyLocation] });
+    setSelectedDeviceId(deviceId);
+    setZoomOnNextClick(true);
+  }
+};
+
+
 
   // ======== Render Transactions ========
   const renderTransactions = (transactions, activeTab) => {
@@ -530,7 +615,7 @@ const MonitorDelivery = () => {
                 "Item Name:",
                 `${t.type_of_product || ""} ${t.description || ""}`.trim(),
               ],
-              ["Date of Order:", formatDateTime(t.time)],
+              ["Date of Order:", (t.time)],
               ...(activeTab === "completed"
                 ? [
                     ["Shipout Date:", formatDateTime(t.shipout_time)],
@@ -570,16 +655,24 @@ const MonitorDelivery = () => {
         clearInterval(trackingIntervals[deviceId])
       );
       setTrackingIntervals({});
-    } else {
-      const currentTabTransactions = transactions[activeTab] || [];
-      currentTabTransactions.forEach((t) => {
-        const deviceId = t.assigned_device_id;
-        if (deviceId && !trackingIntervals[deviceId])
-          startTrackingDevice(deviceId);
-      });
+      setCurrentPositions({}); 
+      setDeviceRoutes({}); 
+      setSelectedDeviceId(null);
+      setSelectedCustomerPosition(null);
     }
-  }, [activeTab, transactions]);
+  }, [activeTab]);
 
+  useEffect(() => {
+ 
+    setExpandedIndex(null);
+    setSelectedDeviceId(null);
+    setSelectedCustomerPosition(null);
+    setSelectedCustomerInfo(null);
+    setCurrentPositions({});
+    setDeviceRoutes({});
+
+    setZoomOnNextClick(true);
+  }, [activeTab]);
   return (
     <AdminLayout
       title="Monitor Deliveries"
@@ -621,79 +714,111 @@ const MonitorDelivery = () => {
               >
                 <MapContainer
                   center={companyLocation}
-                  zoom={10}
+                  zoom={20}
                   style={{ height: "100%", width: "100%" }}
                   scrollWheelZoom={true}
+                  doubleClickZoom={true}
+                  zoomControl={true}
+                  dragging={true}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="&copy; OpenStreetMap contributors"
                   />
-                  <RecenterMap
-                    location={selectedCustomerPosition || companyLocation}
-                    zoom={14}
-                    bounds={mapBounds}
+                  <MapViewUpdater
+                    position={
+                      selectedDeviceId && currentPositions[selectedDeviceId]
+                        ? currentPositions[selectedDeviceId].position
+                        : companyLocation // default
+                    }
+                    zoom={17}
+                    triggerZoom={zoomOnNextClick}
+                    onZoomDone={() => setZoomOnNextClick(false)}
                   />
+
                   <Marker position={companyLocation} icon={buildingIcon}>
                     <Popup>
-                      <div className="text-center">
-                        <strong>Envirocool Company</strong>
-                      </div>
+                      <strong>Envirocool Company</strong>
                     </Popup>
                   </Marker>
+{/* Truck & Customer Markers */}
+{Object.keys(deviceRoutes).map((deviceId) => {
+  const currentData = currentPositions[deviceId];
+  const route = deviceRoutes[deviceId];
 
-                  {Object.keys(deviceRoutes).map((deviceId) => {
-                    const route = deviceRoutes[deviceId];
-                    if (!route?.length) return null;
-                    const currentData = currentPositions[deviceId];
-                    if (!currentData) return null;
+ 
+  if (!currentData?.position || !route?.length) return null;
 
-                    return (
-                      <React.Fragment key={deviceId}>
-                        <Polyline
-                          positions={route}
-                          color="#9a0606ff"
-                          weight={2}
-                        />
-                        <Marker
-                          position={currentData.position}
-                          icon={createTruckIcon(deviceId, currentData.status)}
-                        >
-                          <Popup>
-                            <div>
-                              <strong>
-                                {deviceId.replace(/device[-_]?/i, "Truck ")}
-                              </strong>
-                              <br />
-                              <strong>Status:</strong> {currentData.status}
-                              {currentData.status === "Stopped" &&
-                                ` (${currentData.stoppedMinutes} min)`}
-                              {activeTab === "inTransit" &&
-                                selectedCustomerPosition && (
-                                  <>
-                                    <br />
-                                    <strong>Distance to Customer:</strong>{" "}
-                                    {getDistanceFromLatLonInKm(
-                                      currentData.position[0],
-                                      currentData.position[1],
-                                      selectedCustomerPosition[0],
-                                      selectedCustomerPosition[1]
-                                    ).toFixed(2)}{" "}
-                                    km
-                                    <br />
-                                    <strong>ETA:</strong>{" "}
-                                    {formatDateTime(etas[deviceId] )|| "Calculating..."}
-                                    <br />
-                                    <strong>Last Update:</strong>{" "}
-                                    {formatDateTime(currentData.lastRecordedAt)}
-                                  </>
-                                )}
-                            </div>
-                          </Popup>
-                        </Marker>
-                      </React.Fragment>
-                    );
-                  })}
+
+  if (selectedDeviceId && deviceId !== selectedDeviceId) return null;
+
+  return (
+    <React.Fragment key={deviceId}>
+      <Polyline positions={route} color="#9a0606ff" weight={2} />
+      <Marker
+        position={currentData.position}
+        icon={createTruckIcon(deviceId, currentData.status)}
+        ref={(el) => (truckMarkerRefs.current[deviceId] = el)}
+      >
+        
+        <Popup>
+          <div>
+            <strong style={{ fontSize: "1rem" }}>
+              {deviceId.replace(/device[-_]?/i, "Truck ")}
+            </strong>
+
+            {activeTab === "inTransit" && selectedCustomerPosition ? (
+              <>
+                <br />
+                <strong>Status:</strong> {currentData.status}
+                {currentData.status === "Stopped"}
+                <br />
+                <strong>Distance to Customer:</strong>{" "}
+                {getDistanceFromLatLonInKm(
+                  currentData.position[0],
+                  currentData.position[1],
+                  selectedCustomerPosition[0],
+                  selectedCustomerPosition[1]
+                ).toFixed(2)}{" "}
+                km
+                <br />
+                <strong>ETA:</strong>{" "}
+                {formatDateTime(etas[deviceId]) || "Calculating..."}
+                <br />
+                <strong>Last Update:</strong>{" "}
+                {formatDateTime(currentData.lastRecordedAt)}
+                <br />
+                <strong>Delivery Incharge:</strong>{" "}
+                {selectedCustomerInfo?.driver || "N/A"}
+              </>
+            ) : activeTab === "completed" && selectedCustomerInfo ? (
+              <>
+                <br />
+                <strong>Delivered:</strong>{" "}
+                {formatDateTime(selectedCustomerInfo.completed_time)}
+                <br />
+                <strong>Delivery Incharge:</strong>{" "}
+                {selectedCustomerInfo.driver}
+              </>
+            ) : activeTab === "cancelled" && selectedCustomerInfo ? (
+              <>
+                <br />
+                <strong>Cancelled:</strong>{" "}
+                {formatDateTime(selectedCustomerInfo.cancelled_time)}
+                <br />
+                <strong>Delivery Incharge:</strong>{" "}
+                {selectedCustomerInfo.driver}
+                <br />
+                <strong>Reason:</strong> {selectedCustomerInfo.cancelled_reason}
+              </>
+            ) : null}
+          </div>
+        </Popup>
+      </Marker>
+    </React.Fragment>
+  );
+})}
+
 
                   {selectedCustomerPosition && selectedCustomerInfo && (
                     <Marker
