@@ -11,7 +11,7 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 }
 
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
@@ -24,46 +24,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 include 'database.php';
 
 try {
-    // Decode JSON input
-    $data = json_decode(file_get_contents("php://input"), true);
-
-    if (!isset($data['transaction_id']) || empty($data['transaction_id'])) {
-        http_response_code(400);
+    // Check session
+    if (!isset($_SESSION['ad_username'])) {
+        http_response_code(401);
         echo json_encode([
             "success" => false,
-            "message" => "Transaction ID is required",
-            "error_code" => "ERR_MISSING_ID"
+            "message" => "Unauthorized - please log in again",
+            "error_code" => "ERR_UNAUTHORIZED"
         ]);
         exit;
     }
 
-    $transactionId = $conn->real_escape_string($data['transaction_id']);
+    // Decode JSON
+    $data = json_decode(file_get_contents("php://input"), true);
 
-   
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid or missing JSON data",
+            "error_code" => "ERR_INVALID_JSON"
+        ]);
+        exit;
+    }
+
+    // Validate fields
+    $required = ['ad_username', 'ad_fname', 'ad_lname', 'ad_email', 'ad_phone'];
+    foreach ($required as $field) {
+        if (!isset($data[$field]) || empty(trim($data[$field]))) {
+            http_response_code(400);
+            echo json_encode([
+                "success" => false,
+                "message" => "Missing required field: $field",
+                "error_code" => "ERR_MISSING_FIELD"
+            ]);
+            exit;
+        }
+    }
+
+    // Prepare SQL
     $stmt = $conn->prepare("
-        UPDATE Transactions 
-        SET status = 'Delivered', completed_at = NOW()
-        WHERE transaction_id = ? AND status = 'Out for Delivery'
+        UPDATE Admin 
+        SET ad_fname = ?, ad_lname = ?, ad_email = ?, ad_phone = ?
+        WHERE ad_username = ?
     ");
 
     if (!$stmt) {
-        throw new Exception("Failed to prepare SQL statement: " . $conn->error);
+        throw new Exception("Failed to prepare SQL: " . $conn->error);
     }
 
-    $stmt->bind_param("s", $transactionId);
+    $stmt->bind_param(
+        "sssss",
+        $data['ad_fname'],
+        $data['ad_lname'],
+        $data['ad_email'],
+        $data['ad_phone'],
+        $data['ad_username']
+    );
 
+    // Execute update
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
             echo json_encode([
                 "success" => true,
-                "message" => "Delivery marked as Delivered successfully",
+                "message" => "Profile updated successfully"
             ]);
         } else {
             http_response_code(404);
             echo json_encode([
                 "success" => false,
-                "message" => "No matching record found or already updated",
-                "error_code" => "ERR_NOT_FOUND"
+                "message" => "No changes detected or record not found",
+                "error_code" => "ERR_NO_CHANGE"
             ]);
         }
     } else {
@@ -72,6 +103,7 @@ try {
 
     $stmt->close();
     $conn->close();
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

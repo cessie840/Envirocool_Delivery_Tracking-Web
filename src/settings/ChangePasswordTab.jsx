@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { FaLock } from "react-icons/fa";
+import { FaLock, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
 const ChangePasswordTab = ({ role }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +9,14 @@ const ChangePasswordTab = ({ role }) => {
     confirmPassword: "",
   });
 
+  const [showPassword, setShowPassword] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
+  const [focusedField, setFocusedField] = useState(""); // track focused field
+
   const [validation, setValidation] = useState({
     length: false,
     uppercase: false,
@@ -16,7 +24,7 @@ const ChangePasswordTab = ({ role }) => {
     special: false,
   });
 
-  const [message, setMessage] = useState({ text: "", type: "" }); // For error alerts only
+  const [message, setMessage] = useState({ text: "", type: "" });
 
   const validatePassword = (password) => {
     const rules = {
@@ -36,13 +44,22 @@ const ChangePasswordTab = ({ role }) => {
     if (name === "newPassword") validatePassword(value);
   };
 
+  const togglePassword = (field) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
+  };
+
+  const handleFocus = (field) => setFocusedField(field);
+  const handleBlur = () => setFocusedField("");
+
   const handleSubmit = async () => {
     const { currentPassword, newPassword, confirmPassword } = formData;
-    setMessage({ text: "", type: "" }); // Clear previous error message
+    setMessage({ text: "", type: "" });
 
-    // Validation checks
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setMessage({ text: " All fields are required.", type: "error" });
+      setMessage({ text: "All fields are required.", type: "error" });
       return;
     }
 
@@ -60,7 +77,7 @@ const ChangePasswordTab = ({ role }) => {
     }
 
     const url =
-      "http://localhost/DeliveryTrackingSystem/change_adops_password.php";
+      "https://13.239.143.31/DeliveryTrackingSystem/change_adops_password.php";
 
     try {
       const response = await axios.post(
@@ -73,9 +90,7 @@ const ChangePasswordTab = ({ role }) => {
       );
 
       if (response.data.success) {
-        // ✅ Show success as an alert popup
-        alert(" Password changed successfully!");
-        // Reset fields after success
+        alert("Password changed successfully!");
         setFormData({
           currentPassword: "",
           newPassword: "",
@@ -87,115 +102,92 @@ const ChangePasswordTab = ({ role }) => {
           number: false,
           special: false,
         });
-        setMessage({ text: "", type: "" }); // Clear error message
+        setMessage({ text: "", type: "" });
       } else {
-        // ❌ Show backend error below button
         setMessage({
-          text: response.data.error || " Password change failed.",
+          text: response.data.error || "Password change failed.",
           type: "error",
         });
       }
     } catch (error) {
       console.error("Password change failed:", error);
       setMessage({
-        text: error.response?.data?.error || " An unexpected error occurred.",
+        text: error.response?.data?.error || "An unexpected error occurred.",
         type: "error",
       });
     }
   };
 
+  // Reusable password input
+const renderPasswordInput = (label, name) => (
+  <div className="form-group mb-3 position-relative">
+    <label>{label}</label>
+    <div className="position-relative">
+      <input
+        type={showPassword[name] ? "text" : "password"}
+        name={name}
+        className="settings form-control pe-5"
+        value={formData[name]}
+        onChange={handleChange}
+        onFocus={() => handleFocus(name)}
+        onBlur={handleBlur}
+        autoComplete="off"
+      />
+      {focusedField === name && (
+        <span
+          onMouseDown={(e) => {
+            e.preventDefault(); // keeps input focused
+            togglePassword(name);
+          }}
+          className="position-absolute end-0 top-50 translate-middle-y me-3"
+          style={{ cursor: "pointer", color: "#555" }}
+        >
+          {showPassword[name] ? <FaRegEyeSlash /> : <FaRegEye />}
+        </span>
+      )}
+    </div>
+  </div>
+);
+
+
   return (
     <div className="settings p-4 rounded">
-      <h4 className="title">
+      <h4 className="title mb-3">
         <FaLock /> Change Password
       </h4>
       <p>Change your password here.</p>
       <hr />
 
-      {/* Current password */}
-      <div className="form-group mb-3">
-        <label>Current Password</label>
-        <input
-          type="password"
-          name="currentPassword"
-          className="settings form-control"
-          value={formData.currentPassword}
-          onChange={handleChange}
-          autoComplete="off"
-        />
+      {renderPasswordInput("Current Password", "currentPassword")}
+      {renderPasswordInput("New Password", "newPassword")}
+
+      {/* Always show password requirements */}
+      <div className="mt-2" style={{ fontSize: "0.95rem" }}>
+        <p style={{ color: validation.length ? "green" : "#8B0000", margin: 0 }}>
+          • At least 6 characters
+        </p>
+        <p style={{ color: validation.uppercase ? "green" : "#8B0000", margin: 0 }}>
+          • Contains at least one uppercase letter
+        </p>
+        <p style={{ color: validation.number ? "green" : "#8B0000", margin: 0 }}>
+          • Contains at least one number
+        </p>
+        <p style={{ color: validation.special ? "green" : "#8B0000", margin: 0 }}>
+          • Contains at least one special character (! @ # $ % ^ & * ( ) , . ? " : {'{'} {'}'} | &lt; &gt;)
+        </p>
       </div>
 
-      {/* New password */}
-      <div className="form-group mb-3">
-        <label>New Password</label>
-        <input
-          type="password"
-          name="newPassword"
-          className="settings form-control"
-          value={formData.newPassword}
-          onChange={handleChange}
-          autoComplete="new-password"
-        />
-        <div className="mt-2" style={{ fontSize: "0.95rem" }}>
-          <p
-            style={{
-              color: validation.length ? "green" : "#8B0000",
-              margin: 0,
-            }}
-          >
-            • At least 6 characters
-          </p>
-          <p
-            style={{
-              color: validation.uppercase ? "green" : "#8B0000",
-              margin: 0,
-            }}
-          >
-            • Contains at least one uppercase letter
-          </p>
-          <p
-            style={{
-              color: validation.number ? "green" : "#8B0000",
-              margin: 0,
-            }}
-          >
-            • Contains at least one number
-          </p>
-          <p
-            style={{
-              color: validation.special ? "green" : "#8B0000",
-              margin: 0,
-            }}
-          >
-              • Contains at least one special character (! @ # $ % ^ & * ( ) , . ? " : {'{'} {'}'} | &lt; &gt;)
-          </p>
-        </div>
-      </div>
-
-      {/* Confirm password */}
-      <div className="form-group mb-4">
-        <label>Confirm New Password</label>
-        <input
-          type="password"
-          name="confirmPassword"
-          className="settings form-control"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          autoComplete="new-password"
-        />
-      </div>
+      {renderPasswordInput("Confirm New Password", "confirmPassword")}
 
       <hr />
 
-      {/* Submit button */}
       <button
-        className="btn add-btn mt-2 px-4 py-1 fs-6"
+        className="btn add-btn px-4 py-2 fs-6 rounded-2 mt-2"
         onClick={handleSubmit}
       >
         Change Password
       </button>
 
-      {/* Error alert message (only shows for errors) */}
       {message.text && message.type === "error" && (
         <div
           className="alert alert-danger mt-3"

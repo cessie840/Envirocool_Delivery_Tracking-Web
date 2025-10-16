@@ -23,78 +23,77 @@ const Login = () => {
     }
   }, [errorMessage]);
 
-const handleLogin = async (e) => {
-  e.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-  setLoading(true);
-  setErrorMessage("");
+    setLoading(true);
+    setErrorMessage("");
 
-  try {
-    const response = await axios.post(
-      "https://13.239.143.31/DeliveryTrackingSystem/login.php",
-      { username, password },
-      {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      }
-    );
-
-    const user = response.data.user;
-
-    if (!agreed) {
-      setErrorMessage(
-        "You must agree to the Terms and Conditions before logging in."
+    try {
+      const response = await axios.post(
+        "https://13.239.143.31/DeliveryTrackingSystem/login.php",
+        { username, password },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
       );
+
+      const user = response.data.user;
+
+      if (!agreed) {
+        setErrorMessage(
+          "You must agree to the Terms and Conditions before logging in."
+        );
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("user", JSON.stringify(user));
+      sessionStorage.setItem("showLoginNotif", "true");
+
+      alert("Login successful!");
+
+      switch (user.role) {
+        case "admin":
+          navigate("/admin-dashboard");
+          break;
+        case "operationalmanager":
+          navigate("/operational-delivery-details");
+          break;
+        case "deliverypersonnel":
+          navigate("/driver-dashboard");
+          break;
+        default:
+          navigate("/");
+          break;
+      }
+    } catch (error) {
+      const errMsg = error?.response?.data?.error;
+
+      switch (errMsg) {
+        case "Missing username or password":
+          setErrorMessage("Please enter both username and password.");
+          break;
+        case "Invalid password":
+          setErrorMessage("The password you entered is incorrect. Try again.");
+          break;
+        case "Invalid username":
+          setErrorMessage("Username not found. Please check and try again.");
+          break;
+        case "db_error":
+          setErrorMessage("A database error occurred. Try again later.");
+          break;
+        case "server_error":
+          setErrorMessage("Server error. Please contact support.");
+          break;
+        default:
+          setErrorMessage("Login failed. Please try again.");
+      }
+    } finally {
       setLoading(false);
-      return;
     }
-
-    localStorage.setItem("user", JSON.stringify(user));
-    sessionStorage.setItem("showLoginNotif", "true");
-
-    alert("Login successful!");
-
-    switch (user.role) {
-      case "admin":
-        navigate("/admin-dashboard");
-        break;
-      case "operationalmanager":
-        navigate("/operational-delivery-details");
-        break;
-      case "deliverypersonnel":
-        navigate("/driver-dashboard");
-        break;
-      default:
-        navigate("/");
-        break;
-    }
-  } catch (error) {
-    const errMsg = error?.response?.data?.error;
-
-    switch (errMsg) {
-      case "Missing username or password":
-        setErrorMessage("Please enter both username and password.");
-        break;
-      case "Invalid password":
-        setErrorMessage("The password you entered is incorrect. Try again.");
-        break;
-      case "Invalid username":
-        setErrorMessage("Username not found. Please check and try again.");
-        break;
-      case "db_error":
-        setErrorMessage("A database error occurred. Try again later.");
-        break;
-      case "server_error":
-        setErrorMessage("Server error. Please contact support.");
-        break;
-      default:
-        setErrorMessage("Login failed. Please try again.");
-    }
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="login-container container-fluid">

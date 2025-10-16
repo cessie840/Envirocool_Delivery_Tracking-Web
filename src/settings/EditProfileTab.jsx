@@ -16,9 +16,10 @@ const EditProfileTab = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost/DeliveryTrackingSystem/get_profile.php", {
+      .get("https://13.239.143.31/DeliveryTrackingSystem/get_profile.php", {
         withCredentials: true,
       })
+
       .then((res) => {
         const data = res.data;
         setUserData(data);
@@ -57,8 +58,8 @@ const EditProfileTab = () => {
   const handleUpdate = () => {
     const updateUrl =
       role === "admin"
-        ? "http://localhost/DeliveryTrackingSystem/update_admin_profile.php"
-        : "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
+        ? "https://13.239.143.31/DeliveryTrackingSystem/update_admin_profile.php"
+        : "https://13.239.143.31/DeliveryTrackingSystem/update_operational_profile.php";
 
     const payload =
       role === "admin"
@@ -121,7 +122,7 @@ const EditProfileTab = () => {
           </p>
           <hr />
           <button
-            className="btn btn-view mt-2 px-4 py-1 fs-6"
+            className="btn btn-view mt-2 px-5 py-2 fs-6 rounded-2 "
             onClick={() => setIsEditing(true)}
           >
             Edit
@@ -141,11 +142,11 @@ const EditProfileTab = () => {
               />
             </div>
           ))}
-          <button className="btn add-btn me-2" onClick={handleUpdate}>
+          <button className="btn add-btn px-4 py-2 fs-6 rounded-2 me-4" onClick={handleUpdate}>
             Save
           </button>
           <button
-            className="btn cancel-btn bg-secondary"
+            className="btn cancel-btn px-4 py-2 fs-6 rounded-2 bg-secondary"
             onClick={() => setIsEditing(false)}
           >
             Cancel
