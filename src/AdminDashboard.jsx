@@ -52,9 +52,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     document.title = "Admin Dashboard";
 
-    // Fetch dashboard totals
     axios
-      .get("https://13.239.143.31/DeliveryTrackingSystem/get_total_dashboard.php", {
+      .get("http://localhost/DeliveryTrackingSystem/get_total_dashboard.php", {
         withCredentials: true,
       })
       .then((res) => {
@@ -64,10 +63,9 @@ const AdminDashboard = () => {
       })
       .catch((err) => console.error("Error fetching dashboard data:", err));
 
-    // Fetch recent transactions
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_recent_transactions.php",
+        "http://localhost/DeliveryTrackingSystem/get_recent_transactions.php",
         {
           withCredentials: true,
         }
@@ -81,10 +79,9 @@ const AdminDashboard = () => {
         console.error("Error fetching recent transactions:", err)
       );
 
-    // Fetch pending transactions
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_pending_transactions.php",
+        "http://localhost/DeliveryTrackingSystem/get_pending_transactions.php",
         {
           withCredentials: true,
         }
@@ -100,7 +97,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_yearly_distribution.php",
+        "http://localhost/DeliveryTrackingSystem/get_yearly_distribution.php",
         { withCredentials: true }
       )
       .then((res) => {
@@ -112,14 +109,13 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_monthly_transactions.php",
+        "http://localhost/DeliveryTrackingSystem/get_monthly_transactions.php",
         {
           withCredentials: true,
         }
       )
       .then((res) => {
         if (res.data.success) {
-          // No need to overwrite with count
           setTransactionStatusData(res.data.monthly);
         }
       })
@@ -440,7 +436,6 @@ const AdminDashboard = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Responsive stacked labels below the chart */}
               <div
                 style={{
                   textAlign: "center",
@@ -449,12 +444,12 @@ const AdminDashboard = () => {
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "8px",
-                  fontSize: "clamp(13px, 1.4vw, 16px)", // increased font size here
-                  fontWeight: "600", // slightly bolder for better visibility
+                  fontSize: "clamp(13px, 1.4vw, 16px)", 
+                  fontWeight: "600", 
                 }}
               >
                 {yearlyData.distribution
-                  .sort((a, b) => (a.name === "Successful" ? -1 : 1)) // ensures Successful appears first
+                  .sort((a, b) => (a.name === "Successful" ? -1 : 1)) 
                   .map((entry, index) => (
                     <div
                       key={index}

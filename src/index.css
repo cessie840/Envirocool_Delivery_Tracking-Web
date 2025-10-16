@@ -354,13 +354,13 @@ input::placeholder {
 .order-table th,
 .order-table td {
   border: 1px solid #ccc;
-  padding: 10px;
+  padding: 12px;
   text-align: center;
   text-transform: uppercase;
 }
 
 .order-table th {
-  background-color: #d3eed3;
+  background-color: #d2e9d2e5;
 }
 
 .order-summary {

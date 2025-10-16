@@ -47,10 +47,10 @@ try {
         }
     }
 
-    $sql2 = "UPDATE DeliveryDetails SET delivery_status = 'Out for Delivery', updated_at = NOW() WHERE transaction_id = ?";
-    $stmt2 = $conn->prepare($sql2);
-    $stmt2->bind_param("i", $transactionId);
-    $stmt2->execute();
+    // $sql2 = "UPDATE DeliveryDetails SET delivery_status = 'Out for Delivery', updated_at = NOW() WHERE transaction_id = ?";
+    // $stmt2 = $conn->prepare($sql2);
+    // $stmt2->bind_param("i", $transactionId);
+    // $stmt2->execute();
 
     $sql3 = "SELECT customer_name, customer_contact, tracking_number FROM Transactions WHERE transaction_id = ?";
     $stmt3 = $conn->prepare($sql3);

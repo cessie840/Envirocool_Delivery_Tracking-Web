@@ -8,11 +8,9 @@ import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import "./loading-overlay.css";
 
-
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
-  { label: "BANK TRANSFER" ,value: "Bank Transfer"}
-    
+  { label: "BANK TRANSFER", value: "Bank Transfer" },
 ];
 
 import { components } from "react-select";
@@ -60,13 +58,10 @@ const CustomMenuList = (props) => {
             (e.currentTarget.style.color = "#a71d2a"),
               (e.currentTarget.style.backgroundColor = "white");
           }}
-          onMouseOut={(e) =>
-            {
-              (e.currentTarget.style.backgroundColor = "#dc3545"),
-              (e.currentTarget.style.color = "white")
-            ; 
-            }
-          }
+          onMouseOut={(e) => {
+            (e.currentTarget.style.backgroundColor = "#dc3545"),
+              (e.currentTarget.style.color = "white");
+          }}
         >
           DELETE
         </button>
@@ -74,11 +69,6 @@ const CustomMenuList = (props) => {
     </components.MenuList>
   );
 };
-
-
-
-
-
 
 const AddDelivery = () => {
   const [products, setProducts] = useState([]);
@@ -90,80 +80,84 @@ const AddDelivery = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
   const [showCancelModal, setShowCancelModal] = useState(false);
 
-  
   const [editModal, setEditModal] = useState({
     show: false,
-    type: "", 
+    type: "",
     currentValue: "",
     index: null,
-    typeOfProduct: "", 
+    typeOfProduct: "",
   });
   const [newValue, setNewValue] = useState("");
 
-const [form, setForm] = useState({
-  customer_name: "",
-  house_no: "",
-  street_name: "",
-  barangay: "",
-  city: "",
-  customer_contact: "",
-  date_of_order: "",
-  target_date_delivery: "",
-  payment_method: "",
-  payment_option: "",
-  full_payment: "",
-  fp_collection_date: "",
-  down_payment: "",
-  dp_collection_date: "",
-  balance: "",
-  total: "",
-});
-
- 
-const [lagunaData, setLagunaData] = useState({});
-const [cityOptions, setCityOptions] = useState([]);
-const [barangayOptions, setBarangayOptions] = useState([]);
+  const [proofFile, setProofFile] = useState(null);
+  const [proofPreview, setProofPreview] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [dateError, setDateError] = useState("");
+  const [orderDateError, setOrderDateError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [fpBillingError, setFpBillingError] = useState("");
 
 
+  const [form, setForm] = useState({
+    customer_name: "",
+    house_no: "",
+    street_name: "",
+    barangay: "",
+    city: "",
+    customer_contact: "",
+    date_of_order: "",
+    target_date_delivery: "",
+    payment_method: "",
+    payment_option: "",
+    full_payment: "",
+    fp_collection_date: "",
+    down_payment: "",
+    dp_collection_date: "",
+    balance: "",
+    total: "",
+  });
 
-useEffect(() => {
-  const fetchLagunaData = async () => {
-    try {
-      const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_barangay.php"
-      );
-      setLagunaData(res.data);
+  const [lagunaData, setLagunaData] = useState({});
+  const [cityOptions, setCityOptions] = useState([]);
+  const [barangayOptions, setBarangayOptions] = useState([]);
 
-      // Convert keys of fetched object to city dropdown options
-      const cities = Object.keys(res.data).map((city) => ({
-        label: city,
-        value: city,
-      }));
-      setCityOptions(cities);
-    } catch (err) {
-      console.error("Error fetching Laguna data", err);
-    }
+  useEffect(() => {
+    const fetchLagunaData = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost/DeliveryTrackingSystem/get_barangay.php"
+        );
+        setLagunaData(res.data);
+
+        const cities = Object.keys(res.data).map((city) => ({
+          label: city,
+          value: city,
+        }));
+        setCityOptions(cities);
+      } catch (err) {
+        console.error("Error fetching Laguna data", err);
+      }
+    };
+
+    fetchLagunaData();
+  }, []);
+
+  const handleCityChange = (selected) => {
+    const city = selected.value;
+    setForm((prev) => ({ ...prev, city, barangay: "" }));
+
+    const barangays = lagunaData[city] || [];
+    setBarangayOptions(barangays.map((b) => ({ label: b, value: b })));
   };
 
-  fetchLagunaData();
-}, []);
-
-const handleCityChange = (selected) => {
-  const city = selected.value;
-  setForm((prev) => ({ ...prev, city, barangay: "" }));
-
-  const barangays = lagunaData[city] || [];
-  setBarangayOptions(barangays.map((b) => ({ label: b, value: b })));
-};
-
-const handleBarangayChange = (selected) => {
-  setForm((prev) => ({ ...prev, barangay: selected.value }));
-};
+  const handleBarangayChange = (selected) => {
+    setForm((prev) => ({ ...prev, barangay: selected.value }));
+  };
 
   const handleEditClick = (type, currentValue, index, typeOfProduct = "") => {
     setEditModal({ show: true, type, currentValue, index, typeOfProduct });
@@ -175,7 +169,7 @@ const handleBarangayChange = (selected) => {
 
     try {
       await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/delete_product.php",
+        "http://localhost/DeliveryTrackingSystem/delete_product.php",
         {
           type_of_product: typeOfProduct || value,
           description: type === "item" ? value : "",
@@ -214,17 +208,41 @@ const handleBarangayChange = (selected) => {
     }
   };
 
+  // --- Inside AddDelivery component ---
   const handleContactChange = (e) => {
     const value = e.target.value;
+
+    // Instant validation for non-numeric input
+    if (/\D/.test(value)) {
+      setContactError("Contact number should contain numbers only.");
+      return;
+    }
+
+    // Update value
     setForm((prev) => ({ ...prev, customer_contact: value }));
 
-  
-    if (!value.startsWith("0")) {
-      setContactError("Contact number must start with '0'.");
+    // Validation rules
+    if (value && !value.startsWith("09")) {
+      setContactError("Contact number must start with '09'.");
     } else if (value.length > 11) {
       setContactError("Contact number cannot exceed 11 digits.");
+    } else if (value.length < 11 && value.length > 0) {
+      setContactError("Contact number must have 11 digits.");
     } else {
       setContactError("");
+    }
+  };
+
+  const handleProofFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProofFile(file);
+      setSelectedFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -337,7 +355,7 @@ const handleBarangayChange = (selected) => {
       fp_collection_date: "",
       down_payment: "",
       dp_collection_date: "",
-    
+
       balance: "",
       total: "",
     });
@@ -365,6 +383,13 @@ const handleBarangayChange = (selected) => {
     },
   ]);
 
+  const getLocalDate = () => {
+    const now = new Date();
+    // Convert to PH time (UTC+8)
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset() + 480);
+    return now.toISOString().slice(0, 10);
+  };
+
   useEffect(() => {
     document.title = "Add Delivery";
     fetchLatestIDs();
@@ -372,12 +397,12 @@ const handleBarangayChange = (selected) => {
     const fetchProducts = async () => {
       try {
         const res = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_products.php"
+          "http://localhost/DeliveryTrackingSystem/get_products.php"
         );
         setProductOptions(res.data);
 
         const itemsRes = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_items.php"
+          "http://localhost/DeliveryTrackingSystem/get_items.php"
         );
         setItemOptions(itemsRes.data);
       } catch (err) {
@@ -391,7 +416,7 @@ const handleBarangayChange = (selected) => {
   const fetchLatestIDs = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_latest_ids.php"
+        "http://localhost/DeliveryTrackingSystem/get_latest_ids.php"
       );
       setTransactionId(res.data.transaction_id);
       setPoId(res.data.po_id);
@@ -510,16 +535,23 @@ const handleBarangayChange = (selected) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-      setLoading(true);
-
+    setLoading(true);
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
       alert("Contact number must start with '09' and be exactly 11 digits.");
+      setLoading(false);
       return;
     }
 
     if (!form.payment_method) {
       alert("Please select a payment method.");
+      setLoading(false);
+      return;
+    }
+
+    if (form.payment_method && !proofFile) {
+      alert("Please upload proof of payment.");
+      setLoading(false);
       return;
     }
 
@@ -558,34 +590,65 @@ const handleBarangayChange = (selected) => {
       total_cost: parseFloat(item.total_cost) || 0,
     }));
 
-   const dataToSend = {
-     ...form,
-     customer_address: `${form.house_no}, ${form.street_name},${form.barangay},${form.city}, Laguna,Philippines  `,
-     down_payment: parseFloat(parsePeso(form.down_payment)) || 0,
-     full_payment: parseFloat(parsePeso(form.full_payment)) || 0,
-     total: parseFloat(parsePeso(form.total)) || 0,
-     order_items: normalizedOrderItems,
-   };
+    const formData = new FormData();
+    formData.append("customer_name", form.customer_name);
+    formData.append("house_no", form.house_no);
+    formData.append("street_name", form.street_name);
+    formData.append("barangay", form.barangay);
+    formData.append("city", form.city);
+    formData.append("customer_contact", form.customer_contact);
+    formData.append("date_of_order", form.date_of_order);
+    formData.append("target_date_delivery", form.target_date_delivery);
+    formData.append("payment_method", form.payment_method);
+    formData.append("payment_option", form.payment_option);
+    formData.append(
+      "full_payment",
+      parseFloat(parsePeso(form.full_payment)) || 0
+    );
+    formData.append("fp_collection_date", form.fp_collection_date);
+    formData.append(
+      "down_payment",
+      parseFloat(parsePeso(form.down_payment)) || 0
+    );
+    formData.append("dp_collection_date", form.dp_collection_date);
+    formData.append("balance", parseFloat(parsePeso(form.balance)) || 0);
+    formData.append("total", parseFloat(parsePeso(form.total)) || 0);
+formData.append(
+  "customer_address",
+  [
+    form.house_no,
+    form.street_name,
+    form.barangay,
+    form.city,
+    "Laguna",
+    "Philippines",
+  ]
+    .filter(Boolean) 
+    .join(", ") 
+);
+    formData.append("order_items", JSON.stringify(normalizedOrderItems));
+    formData.append("proofOfPayment", proofFile);
 
     try {
-  const res = await axios.post(
-    "https://13.239.143.31/DeliveryTrackingSystem/add_delivery.php",
-    dataToSend,
-    { headers: { "Content-Type": "application/json" } }
-  );
-    setLoading(true);
-  alert("Delivery added successfully!");
-
- 
-  
-
+      const res = await axios.post(
+        "http://localhost/DeliveryTrackingSystem/add_delivery.php",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      alert("Delivery added successfully!");
       setForm({
         customer_name: "",
-        customer_address: "",
+        house_no: "",
+        street_name: "",
+        barangay: "",
+        city: "",
         customer_contact: "",
-        target_date_delivery: "",
         date_of_order: "",
-        date_of_deliver:"",
+        target_date_delivery: "",
         payment_method: "",
         payment_option: "",
         full_payment: "",
@@ -595,7 +658,6 @@ const handleBarangayChange = (selected) => {
         balance: "",
         total: "",
       });
-
       setOrderItems([
         {
           quantity: "",
@@ -605,18 +667,14 @@ const handleBarangayChange = (selected) => {
           total_cost: "",
         },
       ]);
-
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
       alert("Error saving delivery.");
+    } finally {
+      setLoading(false);
     }
-    finally {
-    setLoading(false); 
-  }
   };
-  
-
 
   return (
     <AdminLayout title="Add Delivery" showSearch={false}>
@@ -652,15 +710,28 @@ const handleBarangayChange = (selected) => {
               </label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${nameError ? "is-invalid" : ""}`}
                 id="customerName"
                 name="customer_name"
                 value={form.customer_name}
                 placeholder="Client's Name"
-                onChange={handleChange}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (/^[A-Za-z-ñÑ\s]*$/.test(value)) {
+                    setForm((prev) => ({ ...prev, customer_name: value }));
+                    setNameError("");
+                  } else {
+                    setNameError(
+                      "Name should only contain letters and spaces."
+                    );
+                  }
+                }}
                 required
               />
+              {nameError && <div className="invalid-feedback">{nameError}</div>}
             </div>
+
             <div className="col-md-6">
               <label htmlFor="dateOfOrder" className="form-label">
                 Date of Order:
@@ -669,18 +740,35 @@ const handleBarangayChange = (selected) => {
                 type="date"
                 className={`form-control ${
                   form.date_of_order ? "text-black" : "text-muted"
-                }`}
+                } ${orderDateError ? "is-invalid" : ""}`}
                 id="dateOfOrder"
                 name="date_of_order"
                 value={
                   form.date_of_order
-                    ? new Date(form.date_of_order).toISOString().slice(0, 10)
+                    ? new Date(form.date_of_order).toISOString().split("T")[0]
                     : ""
                 }
-                onChange={handleChange}
+                onChange={(e) => {
+                  handleChange(e);
+
+                  const selectedDate = new Date(e.target.value + "T00:00:00");
+                  const today = new Date(getLocalDate() + "T00:00:00");
+
+                  if (isNaN(selectedDate.getTime())) {
+                    setOrderDateError("Please enter a valid date.");
+                  } else if (selectedDate > today) {
+                    setOrderDateError("Date of order cannot be in the future.");
+                  } else {
+                    setOrderDateError("");
+                  }
+                }}
                 required
-                max={new Date().toISOString().split("T")[0]}
+                max={getLocalDate()} // ✅ today's date, adjusted to your timezone
               />
+
+              {orderDateError && (
+                <div className="invalid-feedback">{orderDateError}</div>
+              )}
             </div>
           </div>
           <div className="mb-3">
@@ -751,7 +839,7 @@ const handleBarangayChange = (selected) => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="House No."
+                  placeholder="House No./Street Name"
                   name="house_no"
                   value={form.house_no ?? ""}
                   onChange={handleChange}
@@ -762,7 +850,7 @@ const handleBarangayChange = (selected) => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Street Name"
+                  placeholder="Village/Subdivision"
                   name="street_name"
                   value={form.street_name ?? ""}
                   onChange={handleChange}
@@ -784,27 +872,56 @@ const handleBarangayChange = (selected) => {
                 value={form.customer_contact}
                 placeholder="Client's Contact No."
                 onChange={handleContactChange}
+                onKeyDown={(e) => {
+                  // Prevent typing invalid characters (like e, +, -, ., spaces)
+                  if (
+                    ["e", "E", "+", "-", ".", " "].includes(e.key) ||
+                    (isNaN(e.key) && e.key !== "Backspace")
+                  ) {
+                    e.preventDefault();
+                    setContactError(
+                      "Contact number should contain numbers only."
+                    ); // show error instantly
+                  }
+                }}
+                maxLength={11}
                 required
               />
+
               {contactError && (
                 <div className="invalid-feedback">{contactError}</div>
               )}
             </div>
             <div className="col-md-6">
-              <label htmlFor="dateOfOrder" className="form-label">
-                Date of Deliver:
+              <label htmlFor="targetDate" className="form-label">
+                Date of Delivery:
               </label>
               <input
-                style={{ color: "gray" }}
                 type="date"
                 id="targetDate"
                 name="target_date_delivery"
                 className={`form-control ${
                   form.target_date_delivery ? "text-black" : "text-muted"
-                }`}
-                onChange={handleChange}
+                } ${dateError ? "is-invalid" : ""}`}
+                value={form.target_date_delivery || ""}
+                onChange={(e) => {
+                  handleChange(e);
+
+                  const selectedDate = new Date(e.target.value + "T00:00:00");
+                  const today = new Date(getLocalDate() + "T00:00:00");
+
+                  if (isNaN(selectedDate.getTime())) {
+                    setDateError("Please enter a valid date.");
+                  } else if (selectedDate < today) {
+                    setDateError("Date of delivery cannot be in the past.");
+                  } else {
+                    setDateError("");
+                  }
+                }}
                 required
+                min={getLocalDate()} // Prevent past dates
               />
+              {dateError && <div className="invalid-feedback">{dateError}</div>}
             </div>
           </div>
 
@@ -827,20 +944,34 @@ const handleBarangayChange = (selected) => {
                   <tr key={index}>
                     <td style={{ width: "80px" }}>
                       <input
-                        type="number"
+                        type="text"
                         name="quantity"
-                        min={1}
                         placeholder="0"
                         className="form-control"
                         value={item.quantity}
                         onChange={(e) => {
-                          const value = Math.max(
-                            1,
-                            parseInt(e.target.value) || 1
-                          );
-                          handleItemChange(index, {
-                            target: { name: "quantity", value },
-                          });
+                          const value = e.target.value;
+
+                          // Allow only digits
+                          if (/^\d*$/.test(value)) {
+                            handleItemChange(index, {
+                              target: { name: "quantity", value },
+                            });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          // Block non-digit keys immediately
+                          if (
+                            ["e", "E", "+", "-", ".", " "].includes(e.key) ||
+                            (isNaN(e.key) &&
+                              e.key !== "Backspace" &&
+                              e.key !== "Delete" &&
+                              e.key !== "ArrowLeft" &&
+                              e.key !== "ArrowRight" &&
+                              e.key !== "Tab")
+                          ) {
+                            e.preventDefault();
+                          }
                         }}
                         required
                       />
@@ -878,7 +1009,7 @@ const handleBarangayChange = (selected) => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "http://localhost/DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: newValue,
                                 description: "",
@@ -994,7 +1125,7 @@ const handleBarangayChange = (selected) => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "http://localhost/DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: item.type_of_product,
                                 description: newValue,
@@ -1102,7 +1233,7 @@ const handleBarangayChange = (selected) => {
                           onClick={async () => {
                             try {
                               await axios.post(
-                                "https://13.239.143.31/DeliveryTrackingSystem/update_product.php",
+                                "http://localhost/DeliveryTrackingSystem/update_product.php",
                                 {
                                   type_of_product_current:
                                     editModal.type === "product"
@@ -1172,16 +1303,28 @@ const handleBarangayChange = (selected) => {
                         className="form-control"
                         value={orderItems[index].unit_cost}
                         onChange={(e) => {
-                          const value = parseFloat(parsePeso(e.target.value));
+                          const value = e.target.value.replace(/[^0-9.]/g, "");
                           handleUnitCostChange(index, {
-                            target: { value: Math.max(0, value) },
+                            target: { value },
                           });
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            ["e", "E", "+", "-", " "].includes(e.key) ||
+                            (isNaN(e.key) &&
+                              e.key !== "Backspace" &&
+                              e.key !== "Delete" &&
+                              e.key !== ".")
+                          ) {
+                            e.preventDefault();
+                          }
                         }}
                         onBlur={() => handleUnitCostBlur(index)}
                         onFocus={() => handleUnitCostFocus(index)}
                         required
                       />
                     </td>
+
                     <td>
                       <input
                         type="text"
@@ -1208,10 +1351,11 @@ const handleBarangayChange = (selected) => {
                 ))}
               </tbody>
             </table>
+
             <div className="d-flex justify-content-end mt-2">
               <button
                 type="button"
-                className="btn add-item"
+                className="btn add-item rounded-1"
                 onClick={addNewItem}
               >
                 ✚ Add Another Item
@@ -1317,23 +1461,46 @@ const handleBarangayChange = (selected) => {
                 />
               </div>
 
-              <div className="col-md-6">
-                <label htmlFor="fpBillingDate" className="form-label">
-                  Billing Date:
-                </label>
-                <input
-                  style={{ color: "gray" }}
-                  type="date"
-                  className={`form-control ${
-                    form.fp_collection_date ? "text-black" : "text-muted"
-                  }`}
-                  id="fpBillingDate"
-                  name="fp_collection_date"
-                  value={form.fp_collection_date || ""}
-                  onChange={handleChange}
-                  max={new Date().toISOString().split("T")[0]}
-                />
-              </div>
+             <div className="col-md-6">
+  <label htmlFor="fpBillingDate" className="form-label">
+    Billing Date:
+  </label>
+  <input
+    style={{ color: "gray" }}
+    type="date"
+    className={`form-control ${
+      form.fp_collection_date ? "text-black" : "text-muted"
+    } ${fpBillingError ? "is-invalid" : ""}`}
+    id="fpBillingDate"
+    name="fp_collection_date"
+    value={
+      form.fp_collection_date
+        ? new Date(form.fp_collection_date).toISOString().split("T")[0]
+        : ""
+    }
+    onChange={(e) => {
+      handleChange(e);
+
+      const selectedDate = new Date(e.target.value + "T00:00:00");
+      const today = new Date(getLocalDate() + "T00:00:00");
+
+      if (isNaN(selectedDate.getTime())) {
+        setFpBillingError("Please enter a valid date.");
+      } else if (selectedDate > today) {
+        setFpBillingError("Billing date cannot be in the future.");
+      } else {
+        setFpBillingError("");
+      }
+    }}
+    required
+    max={getLocalDate()} // ✅ allows today, blocks future (PH timezone)
+  />
+  {fpBillingError && (
+    <div className="invalid-feedback">{fpBillingError}</div>
+  )}
+</div>
+
+
             </div>
 
             <div className="row mb-3">
@@ -1423,6 +1590,62 @@ const handleBarangayChange = (selected) => {
                 />
               </div>
             </div>
+
+            <h4 className="mt-5">PROOF OF PAYMENT</h4>
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label htmlFor="proofOfPayment" className="form-label">
+                  Upload Proof of Payment:
+                </label>
+                <div className="d-flex align-items-center">
+                  <input
+                    type="file"
+                    className="form-control"
+                    id="proofOfPayment"
+                    name="proofOfPayment"
+                    accept="image/*"
+                    onChange={handleProofFileChange}
+                  />
+                  {selectedFileName && (
+                    <button
+                      type="button"
+                      className="btn add-item px-3 py-1 btn-sm ms-2 fs-6"
+                      onClick={() => setShowPreviewModal(true)}
+                    >
+                      View
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Modal
+              show={showPreviewModal}
+              onHide={() => setShowPreviewModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header closeButton className="bg-primary text-white bg-opacity-75">
+                <Modal.Title>Proof of Payment Preview</Modal.Title>
+              </Modal.Header>
+              <Modal.Body className="text-center bg-light">
+                {proofPreview &&
+                  typeof proofPreview === "string" &&
+                  proofPreview.startsWith("data:") && (
+                    <img
+                      src={proofPreview}
+                      alt="Proof of Payment"
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "500px",
+                        objectFit: "contain",
+                      
+                      }}
+                      className="border border-secondary border-1"
+                    />
+                  )}
+              </Modal.Body>
+            </Modal>
           </div>
         </form>
         <div className="btn-group mx-3 mt-4 gap-4">
@@ -1455,7 +1678,7 @@ const handleBarangayChange = (selected) => {
                 No
               </Button>
               <Button
-                className="cancel-btn py-2 px-3 fs-6"
+                className="cancel-btn py-2 px-3 fs-6 shadow"
                 variant="danger"
                 onClick={handleConfirmCancel}
               >
@@ -1470,7 +1693,11 @@ const handleBarangayChange = (selected) => {
               </div>
             </div>
           ) : (
-            <button type="submit" form="deliveryForm" className="add-btn">
+            <button
+              type="submit"
+              form="deliveryForm"
+              className="add-btn shadow"
+            >
               Add
             </button>
           )}
