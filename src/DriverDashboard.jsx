@@ -30,7 +30,7 @@ function DriverDashboard() {
 
     axios
       .post(
-        "http:/localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
+        "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
         { pers_username: username }
       )
       .then((res) => {
@@ -121,7 +121,7 @@ function DriverDashboard() {
 
     axios
       .post(
-        "http:/localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
+        "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
         { transaction_id: transactionNo }
       )
       .then((res) => {

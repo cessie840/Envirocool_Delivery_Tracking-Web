@@ -31,7 +31,7 @@ const Login = () => {
 
     try {
       const response = await axios.post(
-        "http:/localhost/DeliveryTrackingSystem/login.php",
+        "http://localhost/DeliveryTrackingSystem/login.php",
         { username, password },
         {
           headers: { "Content-Type": "application/json" },
@@ -43,7 +43,7 @@ const Login = () => {
 
       if (!agreed) {
         setErrorMessage(
-          "You must agree to the Terms and Conditions before logging in."
+        "You must agree to the Terms and Conditions before logging in."
         );
         setLoading(false);
         return;

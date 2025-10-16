@@ -135,7 +135,7 @@ useEffect(() => {
   const fetchLagunaData = async () => {
     try {
       const res = await axios.get(
-        "http:/localhost/DeliveryTrackingSystem/get_barangay.php"
+        "http://localhost/DeliveryTrackingSystem/get_barangay.php"
       );
       setLagunaData(res.data);
 
