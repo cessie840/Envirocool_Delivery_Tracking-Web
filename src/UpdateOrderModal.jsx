@@ -47,12 +47,12 @@ const UpdateOrderModal = ({
     const fetchOptions = async () => {
       try {
         const productsRes = await axios.get(
-          "http:/localhost/DeliveryTrackingSystem/get_products.php"
+          "http://localhost/DeliveryTrackingSystem/get_products.php"
         );
         setProductOptions(productsRes.data);
 
         const itemsRes = await axios.get(
-          "http:/localhost/DeliveryTrackingSystem/get_items.php"
+          "http://localhost/DeliveryTrackingSystem/get_items.php"
         );
         setItemOptions(itemsRes.data);
       } catch (err) {

@@ -16,7 +16,7 @@ function FailedDeliveries() {
 
     axios
       .post(
-        "http:/localhost/DeliveryTrackingSystem/fetch_cancelled_deliveries.php",
+        "http://localhost/DeliveryTrackingSystem/fetch_cancelled_deliveries.php",
         {
           pers_username: user.pers_username,
         }

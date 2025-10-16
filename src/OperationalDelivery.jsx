@@ -46,7 +46,7 @@ const OperationalDelivery = () => {
   const fetchOrders = async () => {
     try {
       const res = await axios.get(
-        "http:/localhost/DeliveryTrackingSystem/fetch_delivery_orders.php"
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_orders.php"
       );
       setOrders(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
@@ -58,7 +58,7 @@ const OperationalDelivery = () => {
   const fetchPersonnel = async () => {
     try {
       const res = await axios.get(
-        "http:/localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
       );
       if (res.data.success && Array.isArray(res.data.data)) {
         setPersonnelList(res.data.data);
@@ -74,7 +74,7 @@ const OperationalDelivery = () => {
   const fetchDevices = async () => {
     try {
       const res = await axios.get(
-        "http:/localhost/DeliveryTrackingSystem/fetch_device_ids.php"
+        "http://localhost/DeliveryTrackingSystem/fetch_device_ids.php"
       );
       if (Array.isArray(res.data)) {
         // remove duplicates
@@ -111,7 +111,7 @@ if (!deviceId) {
 
   try {
     const res = await axios.post(
-      "http:/localhost/DeliveryTrackingSystem/assign_personnel.php",
+      "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
       {
         transaction_id: selectedOrder.transaction_id,
         personnelUsername: selectedPersonnel,
@@ -482,7 +482,7 @@ if (!deviceId) {
                             selectedOrder?.personnel_image &&
                             selectedOrder.personnel_image.trim() !== ""
                               ? selectedOrder.personnel_image
-                              : "http:/localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                              : "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                           }
                           alt={
                             selectedOrder?.assigned_personnel ||
@@ -491,7 +491,7 @@ if (!deviceId) {
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
-                              "http:/localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+                              "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
                           }}
                           className="rounded-circle border border-2 border-dark"
                           style={{

@@ -15,7 +15,7 @@ const RescheduleModal = ({
       return;
     }
 
-    fetch("http:/localhost/DeliveryTrackingSystem/reschedule_delivery.php", {
+    fetch("http://localhost/DeliveryTrackingSystem/reschedule_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
