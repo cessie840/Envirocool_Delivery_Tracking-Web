@@ -43,7 +43,7 @@ const Login = () => {
 
       if (!agreed) {
         setErrorMessage(
-          "You must agree to the Terms and Conditions before logging in."
+        "You must agree to the Terms and Conditions before logging in."
         );
         setLoading(false);
         return;

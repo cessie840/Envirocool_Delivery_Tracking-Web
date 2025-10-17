@@ -323,7 +323,7 @@ const GenerateReport = () => {
       if (reportType === "sales" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-             "http:/localhost/DeliveryTrackingSystem/get_sales_report.php"
+             "http://localhost/DeliveryTrackingSystem/get_sales_report.php"
           )
         );
         if (!res.ok) throw new Error("get_sales_report failed");
@@ -341,7 +341,7 @@ const GenerateReport = () => {
       if (reportType === "transaction" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_transaction_report.php"
+            "http://localhost//DeliveryTrackingSystem/get_transaction_report.php"
           )
         );
         if (!res.ok) throw new Error("get_transaction_report failed");
@@ -1898,7 +1898,7 @@ const GenerateReport = () => {
     const fetchCustomerSatisfactionData = async () => {
       try {
         const res = await fetch(
-          "http:/localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
+          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
