@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import AdminLayout from "./AdminLayout";
 import { useNavigate } from "react-router-dom";
 import {
@@ -16,6 +16,8 @@ import { renderToString } from "react-dom/server";
 import { PiBuildingApartmentDuotone } from "react-icons/pi";
 import { IoStorefrontSharp } from "react-icons/io5";
 import { FaTruckFront, FaLocationDot } from "react-icons/fa6";
+
+
 
 import "leaflet/dist/leaflet.css";
 
@@ -151,10 +153,13 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
 const MonitorDelivery = () => {
   const [zoomOnNextClick, setZoomOnNextClick] = useState(false);
 
-  const [etas, setEtas] = useState({});
+ const [etas, setEtas] = useState({});
+ const [lastEtaUpdate, setLastEtaUpdate] = useState({});
+
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
   const [transactions, setTransactions] = useState({
+
     inTransit: [],
     completed: [],
     cancelled: [],
@@ -174,6 +179,7 @@ const MonitorDelivery = () => {
 
   
 
+const truckMarkerRefs = useRef({});
 
 
   const handleAddDelivery = () => navigate("/add-delivery");
@@ -185,13 +191,13 @@ const [hasZoomed, setHasZoomed] = useState(false);
     useEffect(() => {
       if (!position || !triggerZoom) return;
 
-      // Fly only once
+    
       map.flyTo(position, zoom || map.getZoom(), {
         animate: true,
         duration: 1.2,
       });
 
-      if (onZoomDone) onZoomDone(); // reset trigger
+      if (onZoomDone) onZoomDone(); 
     }, [position, zoom, triggerZoom, map, onZoomDone]);
 
     return null;
@@ -221,25 +227,37 @@ const [hasZoomed, setHasZoomed] = useState(false);
 
   // ======== Fetch Deliveries ========
   useEffect(() => {
+    
     const fetchDeliveries = async () => {
       try {
         const [outRes, completedRes, cancelledRes] = await Promise.all([
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
+            "http://localhost/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
+            "http://localhost/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_cancelled_deliveries.php"
+            "http://localhost/DeliveryTrackingSystem/get_cancelled_deliveries.php"
           ),
         ]);
 
-        const outData = outRes.data.deliveries || outRes.data || [];
-        const completedData =
-          completedRes.data.deliveries || completedRes.data || [];
-        const cancelledData =
-          cancelledRes.data.deliveries || cancelledRes.data || [];
+        // const outData = outRes.data.deliveries || outRes.data || [];
+        // const completedData =
+        //   completedRes.data.deliveries || completedRes.data || [];
+        // const cancelledData =
+        //   cancelledRes.data.deliveries || cancelledRes.data || [];
+
+        const toArray = (data) => {
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.deliveries)) return data.deliveries;
+          return [];
+        };
+
+        const outData = toArray(outRes.data);
+        const completedData = toArray(completedRes.data);
+        const cancelledData = toArray(cancelledRes.data);
+
 
         const uniqueById = (arr) =>
           Array.from(
@@ -291,42 +309,52 @@ const [hasZoomed, setHasZoomed] = useState(false);
     fetchDeliveries();
   }, []);
 
-  // ======== Fetch ETA ========
-  const fetchETA = async (deviceId, distanceKm) => {
-    try {
-      const res = await axios.get(
-        `https://13.239.143.31/DeliveryTrackingSystem/get_eta.php`,
-        { params: { device_id: deviceId, distance_km: distanceKm } }
-      );
-      return res.data?.eta || "N/A";
-    } catch (err) {
-      console.error("Error fetching ETA for device:", deviceId, err);
-      return "N/A";
-    }
-  };
 
-  useEffect(() => {
-    if (!selectedCustomerPosition) return;
 
-    Object.keys(currentPositions).forEach(async (deviceId) => {
-      const currentData = currentPositions[deviceId];
-      if (!currentData?.position) return;
+ useEffect(() => {
+   if (!selectedCustomerPosition) return;
 
-      // Skip ETA for Completed or Failed deliveries
-      if (currentData.status === "Completed" || currentData.status === "Failed")
-        return;
+   Object.keys(currentPositions).forEach(async (deviceId) => {
+     const currentData = currentPositions[deviceId];
+     if (!currentData?.position) return;
+     if (["Completed", "Failed"].includes(currentData.status)) return;
 
-      const distanceKm = getDistanceFromLatLonInKm(
-        currentData.position[0],
-        currentData.position[1],
-        selectedCustomerPosition[0],
-        selectedCustomerPosition[1]
-      );
+     const distanceKm = getDistanceFromLatLonInKm(
+       currentData.position[0],
+       currentData.position[1],
+       selectedCustomerPosition[0],
+       selectedCustomerPosition[1]
+     );
 
-      const eta = await fetchETA(deviceId, distanceKm);
-      setEtas((prev) => ({ ...prev, [deviceId]: eta }));
-    });
-  }, [currentPositions, selectedCustomerPosition]);
+     const now = Date.now();
+     const lastUpdate = lastEtaUpdate[deviceId] || 0;
+     const prevEta = etas[deviceId];
+     const prevDistance = currentData.prevDistance || null;
+
+    
+     if (now - lastUpdate < 30000 && Math.abs(distanceKm - prevDistance) < 0.2)
+       return;
+
+     try {
+       const res = await axios.get(
+         `http://localhost/DeliveryTrackingSystem/get_eta.php`,
+         { params: { device_id: deviceId, distance_km: distanceKm } }
+       );
+
+       const eta = res.data?.eta || prevEta || "N/A";
+       setEtas((prev) => ({ ...prev, [deviceId]: eta }));
+       setLastEtaUpdate((prev) => ({ ...prev, [deviceId]: now }));
+
+       
+       setCurrentPositions((prev) => ({
+         ...prev,
+         [deviceId]: { ...prev[deviceId], prevDistance: distanceKm },
+       }));
+     } catch (err) {
+       console.error("ETA fetch failed for", deviceId, err);
+     }
+   });
+ }, [currentPositions, selectedCustomerPosition]);
 
   // ======== Device Tracking ========
  const startTrackingDevice = (deviceId) => {
@@ -335,7 +363,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
    const interval = setInterval(async () => {
      try {
        const res = await axios.get(
-         `https://13.239.143.31/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
+         `http://localhost/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
        );
 
        const gpsData = res.data.data;
@@ -358,7 +386,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
          }
 
          let status = "Moving";
-         let stoppedMinutes = 0;
+       
 
          if (prevData) {
            const distanceKm = getDistanceFromLatLonInKm(
@@ -372,17 +400,17 @@ const [hasZoomed, setHasZoomed] = useState(false);
            const now = new Date();
            const diffMin = (now - lastRecorded) / 60000;
 
-           // 🕒 STATUS LOGIC
+        
            if (diffMin >= 20) {
-             status = "Inactive"; // No updates for 20+ minutes
+             status = "Inactive"; 
            } else if (distanceKm < 0.005) {
-             // Almost same spot (5 meters)
-             if (diffMin >= 5) status = "Stopped"; // Same spot for 5+ min
-             else status = "Traffic"; // Slight movement or short delay
+        
+             if (diffMin >= 5) status = "Stopped"; 
+             else status = "Traffic"; 
            } else if (distanceKm >= 0.005 && distanceKm < 0.05) {
-             status = "Traffic"; // Slow movement (<50m change)
+             status = "Traffic"; 
            } else {
-             status = "Moving"; // Normal movement
+             status = "Moving"; 
            }
          }
 
@@ -391,7 +419,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
            [deviceId]: {
              position: [currPoint.lat, currPoint.lng],
              status,
-             stoppedMinutes,
+          
              lastRecordedAt: currPoint.recorded_at,
            },
          };
@@ -455,6 +483,8 @@ const handleTransactionClick = async (transaction) => {
 
   setZoomOnNextClick(true);
   return;
+
+  
 }
    
 
@@ -465,7 +495,8 @@ const handleTransactionClick = async (transaction) => {
       ? [transaction.latitude, transaction.longitude]
       : null;
   setSelectedCustomerPosition(customerPos);
-  setSelectedCustomerInfo(customerPos ? transaction : null);
+ setSelectedCustomerInfo(transaction);
+
 
 
   if (!deviceId) {
@@ -478,7 +509,7 @@ const handleTransactionClick = async (transaction) => {
 
   try {
     const res = await axios.get(
-      `https://13.239.143.31/DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
+      `http://localhost/DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
     );
 
     const route = (res.data || []).map((p) => [
@@ -495,7 +526,7 @@ const handleTransactionClick = async (transaction) => {
       [deviceId]: {
         position: initialTruckPos,
         status: "Moving",
-        stoppedMinutes: 0,
+   
         lastRecordedAt: new Date().toISOString(),
       },
     }));
@@ -510,9 +541,21 @@ const handleTransactionClick = async (transaction) => {
 
    
     if (activeTab === "inTransit") startTrackingDevice(deviceId);
+    if (deviceId) {
+      setTimeout(() => {
+        if (truckMarkerRefs.current[deviceId]) {
+          truckMarkerRefs.current[deviceId].openPopup();
+
+          setTimeout(() => {
+            truckMarkerRefs.current[deviceId]?.closePopup();
+          }, 6000);
+        }
+      }, 1500); // 200ms wait for Marker to mount
+    }
+
   } catch (err) {
     console.error(err);
-    // Fallback if route fetch fails
+   
     setCurrentPositions({ [deviceId]: [companyLocation] });
     setDeviceRoutes({ [deviceId]: [companyLocation] });
     setSelectedDeviceId(deviceId);
@@ -572,7 +615,7 @@ const handleTransactionClick = async (transaction) => {
                 "Item Name:",
                 `${t.type_of_product || ""} ${t.description || ""}`.trim(),
               ],
-              ["Date of Order:", formatDateTime(t.time)],
+              ["Date of Order:", (t.time)],
               ...(activeTab === "completed"
                 ? [
                     ["Shipout Date:", formatDateTime(t.shipout_time)],
@@ -619,6 +662,17 @@ const handleTransactionClick = async (transaction) => {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+ 
+    setExpandedIndex(null);
+    setSelectedDeviceId(null);
+    setSelectedCustomerPosition(null);
+    setSelectedCustomerInfo(null);
+    setCurrentPositions({});
+    setDeviceRoutes({});
+
+    setZoomOnNextClick(true);
+  }, [activeTab]);
   return (
     <AdminLayout
       title="Monitor Deliveries"
@@ -704,18 +758,20 @@ const handleTransactionClick = async (transaction) => {
       <Marker
         position={currentData.position}
         icon={createTruckIcon(deviceId, currentData.status)}
+        ref={(el) => (truckMarkerRefs.current[deviceId] = el)}
       >
-
+        
         <Popup>
           <div>
-            <strong>{deviceId.replace(/device[-_]?/i, "Truck ")}</strong>
+            <strong style={{ fontSize: "1rem" }}>
+              {deviceId.replace(/device[-_]?/i, "Truck ")}
+            </strong>
 
             {activeTab === "inTransit" && selectedCustomerPosition ? (
               <>
-              <br/>
+                <br />
                 <strong>Status:</strong> {currentData.status}
-                {currentData.status === "Stopped" &&
-                  ` (${currentData.stoppedMinutes} min)`}
+                {currentData.status === "Stopped"}
                 <br />
                 <strong>Distance to Customer:</strong>{" "}
                 {getDistanceFromLatLonInKm(
@@ -733,7 +789,7 @@ const handleTransactionClick = async (transaction) => {
                 {formatDateTime(currentData.lastRecordedAt)}
                 <br />
                 <strong>Delivery Incharge:</strong>{" "}
-                {selectedCustomerInfo.driver}
+                {selectedCustomerInfo?.driver || "N/A"}
               </>
             ) : activeTab === "completed" && selectedCustomerInfo ? (
               <>

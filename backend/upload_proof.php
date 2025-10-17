@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $transaction_id = intval($_POST['transaction_id']);
 
-    $targetDir = __DIR__ . "/proofs/";
+    $targetDir = __DIR__ . "/uploads/proofs/";
     if (!file_exists($targetDir)) {
         mkdir($targetDir, 0777, true);
     }

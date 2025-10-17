@@ -43,7 +43,7 @@ const ViewOrder = () => {
   useEffect(() => {
     document.title = "View Order Details";
     fetch(
-      `https://13.239.143.31/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -121,7 +121,7 @@ const ViewOrder = () => {
       items: editableItems,
     };
 
-    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
+    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -239,14 +239,28 @@ const ViewOrder = () => {
                     )}
 
                   {/* Proof of Delivery Button */}
+
+                  {orderDetails.proof_of_payment && (
+                    <div className="mt-5">
+                      <button
+                        className="btn btn-view py-2 px-3 fs-6"
+                        onClick={() => {
+                          setProofUrl(orderDetails.proof_of_payment);
+                          setShowProofViewModal(true);
+                        }}
+                      >
+                        View Proof of Payment
+                      </button>
+                    </div>
+                  )}
                   {orderDetails.status === "Delivered" &&
                     orderDetails.proof_of_delivery && (
-                      <div className="mt-3">
+                      <div className="mt-2">
                         <button
-                          className="btn btn-success"
+                          className="btn add-btn py-2 px-3 fs-6 rounded-1"
                           onClick={() => {
                             setProofUrl(
-                              `https://13.239.143.31/DeliveryTrackingSystem/${orderDetails.proof_of_delivery}`
+                              `http://localhost/DeliveryTrackingSystem/uploads/${orderDetails.proof_of_delivery}`
                             );
                             setShowProofViewModal(true);
                           }}
@@ -361,7 +375,10 @@ const ViewOrder = () => {
         centered
         size="lg"
       >
-        <Modal.Header closeButton>
+        <Modal.Header
+          closeButton
+          className="bg-primary bg-opacity-75 text-white"
+        >
           <Modal.Title>Proof of Delivery</Modal.Title>
         </Modal.Header>
         <Modal.Body className="d-flex justify-content-center">
@@ -371,10 +388,9 @@ const ViewOrder = () => {
               alt="Proof of Delivery"
               className="w-100 h-auto"
               style={{
-                maxHeight: "85vh",
+                maxHeight: "75vh",
                 objectFit: "contain",
                 borderRadius: "10px",
-                boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
               }}
             />
           ) : (
@@ -386,6 +402,7 @@ const ViewOrder = () => {
           <Button
             variant="secondary"
             onClick={() => setShowProofViewModal(false)}
+            className="close-btn px-3 py-2 rounded-2 fs-6"
           >
             Close
           </Button>
