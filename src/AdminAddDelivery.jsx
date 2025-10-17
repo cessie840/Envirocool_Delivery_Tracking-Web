@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
@@ -70,7 +70,10 @@ const CustomMenuList = (props) => {
   );
 };
 
+
 const AddDelivery = () => {
+  const proofFileRef = useRef(null);
+
   const [products, setProducts] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
   const [productOptions, setProductOptions] = useState([]);
@@ -613,19 +616,19 @@ const AddDelivery = () => {
     formData.append("dp_collection_date", form.dp_collection_date);
     formData.append("balance", parseFloat(parsePeso(form.balance)) || 0);
     formData.append("total", parseFloat(parsePeso(form.total)) || 0);
-formData.append(
-  "customer_address",
-  [
-    form.house_no,
-    form.street_name,
-    form.barangay,
-    form.city,
-    "Laguna",
-    "Philippines",
-  ]
-    .filter(Boolean) 
-    .join(", ") 
-);
+    formData.append(
+      "customer_address",
+      [
+        form.house_no,
+        form.street_name,
+        form.barangay,
+        form.city,
+        "Laguna",
+        "Philippines",
+      ]
+        .filter(Boolean)
+        .join(", ")
+    );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
     formData.append("proofOfPayment", proofFile);
 
@@ -668,6 +671,14 @@ formData.append(
           total_cost: "",
         },
       ]);
+
+      // Clear proof-of-payment
+      setProofFile(null);
+      setSelectedFileName("");
+      if (proofFileRef.current) {
+        proofFileRef.current.value = ""; // reset the actual file input
+      }
+
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
@@ -1462,46 +1473,48 @@ formData.append(
                 />
               </div>
 
-             <div className="col-md-6">
-  <label htmlFor="fpBillingDate" className="form-label">
-    Billing Date:
-  </label>
-  <input
-    style={{ color: "gray" }}
-    type="date"
-    className={`form-control ${
-      form.fp_collection_date ? "text-black" : "text-muted"
-    } ${fpBillingError ? "is-invalid" : ""}`}
-    id="fpBillingDate"
-    name="fp_collection_date"
-    value={
-      form.fp_collection_date
-        ? new Date(form.fp_collection_date).toISOString().split("T")[0]
-        : ""
-    }
-    onChange={(e) => {
-      handleChange(e);
+              <div className="col-md-6">
+                <label htmlFor="fpBillingDate" className="form-label">
+                  Billing Date:
+                </label>
+                <input
+                  style={{ color: "gray" }}
+                  type="date"
+                  className={`form-control ${
+                    form.fp_collection_date ? "text-black" : "text-muted"
+                  } ${fpBillingError ? "is-invalid" : ""}`}
+                  id="fpBillingDate"
+                  name="fp_collection_date"
+                  value={
+                    form.fp_collection_date
+                      ? new Date(form.fp_collection_date)
+                          .toISOString()
+                          .split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) => {
+                    handleChange(e);
 
-      const selectedDate = new Date(e.target.value + "T00:00:00");
-      const today = new Date(getLocalDate() + "T00:00:00");
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
 
-      if (isNaN(selectedDate.getTime())) {
-        setFpBillingError("Please enter a valid date.");
-      } else if (selectedDate > today) {
-        setFpBillingError("Billing date cannot be in the future.");
-      } else {
-        setFpBillingError("");
-      }
-    }}
-    required
-    max={getLocalDate()} // ✅ allows today, blocks future (PH timezone)
-  />
-  {fpBillingError && (
-    <div className="invalid-feedback">{fpBillingError}</div>
-  )}
-</div>
-
-
+                    if (isNaN(selectedDate.getTime())) {
+                      setFpBillingError("Please enter a valid date.");
+                    } else if (selectedDate > today) {
+                      setFpBillingError(
+                        "Billing date cannot be in the future."
+                      );
+                    } else {
+                      setFpBillingError("");
+                    }
+                  }}
+                  required
+                  max={getLocalDate()} // ✅ allows today, blocks future (PH timezone)
+                />
+                {fpBillingError && (
+                  <div className="invalid-feedback">{fpBillingError}</div>
+                )}
+              </div>
             </div>
 
             <div className="row mb-3">
@@ -1606,7 +1619,9 @@ formData.append(
                     name="proofOfPayment"
                     accept="image/*"
                     onChange={handleProofFileChange}
+                    ref={proofFileRef}
                   />
+
                   {selectedFileName && (
                     <button
                       type="button"
@@ -1626,7 +1641,10 @@ formData.append(
               centered
               size="lg"
             >
-              <Modal.Header closeButton className="bg-primary text-white bg-opacity-75">
+              <Modal.Header
+                closeButton
+                className="bg-primary text-white bg-opacity-75"
+              >
                 <Modal.Title>Proof of Payment Preview</Modal.Title>
               </Modal.Header>
               <Modal.Body className="text-center bg-light">
@@ -1640,7 +1658,6 @@ formData.append(
                         maxWidth: "100%",
                         maxHeight: "500px",
                         objectFit: "contain",
-                      
                       }}
                       className="border border-secondary border-1"
                     />
