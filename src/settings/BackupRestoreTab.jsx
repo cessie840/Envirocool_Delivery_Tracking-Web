@@ -18,7 +18,7 @@ const BackupRestoreTab = () => {
   const handleBackupClick = async () => {
     try {
       const response = await axios.get(
-        "http://localhost/DeliveryTrackingSystem/backup.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/backup.php",
         {
           responseType: "blob",
           withCredentials: true,

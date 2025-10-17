@@ -1,19 +1,22 @@
 <?php
-session_start(); 
+session_start();
 include 'database.php';
 
-$allowed_origins = ['http://localhost:5173'];
+// Allowed origins
+$allowed_origins = [
+    "https://cessie840.github.io",
+    "http://localhost:5173",
+    "http://localhost:5173/Envirocool-Tracking-Page"
+];
 
+// If the request's origin is allowed, set the header
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-} else {
-    header("Access-Control-Allow-Origin: http://localhost:5173");
 }
 
-header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
 
 // Handle preflight request
@@ -21,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
 
 $data = json_decode(file_get_contents("php://input"));
 

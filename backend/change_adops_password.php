@@ -1,9 +1,8 @@
 <?php
-// ✅ Handle CORS immediately
 $allowed_origins = [
     'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174'
+    'https://cessie840.github.io',
+    'http://localhost:5173/Envirocool-Tracking-Page'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -17,7 +16,6 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
 
-// ✅ Handle preflight request before starting session or DB
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -26,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 session_start();
 include 'database.php';
 
-// ✅ Parse JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!isset($data['currentPassword']) || !isset($data['newPassword'])) {
@@ -38,7 +35,6 @@ if (!isset($data['currentPassword']) || !isset($data['newPassword'])) {
 $currentPassword = trim($data['currentPassword']);
 $newPassword = trim($data['newPassword']);
 
-// ✅ Determine user type
 if (isset($_SESSION['ad_username'])) {
     $table = "Admin";
     $userCol = "ad_username";

@@ -1,8 +1,9 @@
 <?php
 // Allowed origins
 $allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174'
+    "https://cessie840.github.io",
+    "http://localhost:5173",
+    "http://localhost:5173/Envirocool-Tracking-Page"
 ];
 
 // If request origin is allowed, set CORS headers
@@ -20,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
 
 include 'database.php';
 
