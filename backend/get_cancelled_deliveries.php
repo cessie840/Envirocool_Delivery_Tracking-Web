@@ -19,7 +19,7 @@ $query = "
         t.customer_address,
         po.type_of_product AS type_of_product,
         po.description,
-        t.created_at AS created_at,
+        t.date_of_order AS time,
         t.completed_at AS completed_time,
         t.shipout_at AS shipout_time,
         t.cancelled_reason,
@@ -27,9 +27,9 @@ $query = "
            t.tracking_number AS tracking_number,
             t.assigned_device_id,
        t.latitude,             
-    t.longitude,    
+       t.longitude,    
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
-        t.status
+       t.status
     FROM Transactions t
     LEFT JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
     LEFT JOIN DeliveryAssignments da ON da.transaction_id = t.transaction_id
@@ -50,15 +50,15 @@ if ($result && $result->num_rows > 0) {
             "customer_address" => $row['customer_address'],
             "type_of_product" => $row['type_of_product'],
             "description"      => $row['description'],
-            "created_at"             => $row['created_at'],
+            "date_of_order"             => $row['time'],
             "completed_time"   => $row['completed_time'],
             "shipout_time"           => $row['shipout_time'],
             "cancelled_reason" => $row['cancelled_reason'],
             "cancelled_time"   => $row['cancelled_time'],
             "driver"           => $row['driver'] ?: "N/A",
-           "tracking_number"           => $row['tracking_number'],
-           "latitude"         => $row['latitude'],  
-           "longitude"        => $row['longitude'],  
+            "tracking_number"           => $row['tracking_number'],
+            "latitude"         => $row['latitude'],  
+            "longitude"        => $row['longitude'],  
             "assigned_device_id" => $row['assigned_device_id'], 
             "status"           => $row['status'],
             "distance"         => "N/A",

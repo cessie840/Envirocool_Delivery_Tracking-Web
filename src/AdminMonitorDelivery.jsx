@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import AdminLayout from "./AdminLayout";
 import { useNavigate } from "react-router-dom";
 import {
@@ -16,6 +16,8 @@ import { renderToString } from "react-dom/server";
 import { PiBuildingApartmentDuotone } from "react-icons/pi";
 import { IoStorefrontSharp } from "react-icons/io5";
 import { FaTruckFront, FaLocationDot } from "react-icons/fa6";
+
+
 
 import "leaflet/dist/leaflet.css";
 
@@ -157,6 +159,7 @@ const MonitorDelivery = () => {
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("inTransit");
   const [transactions, setTransactions] = useState({
+
     inTransit: [],
     completed: [],
     cancelled: [],
@@ -176,6 +179,7 @@ const MonitorDelivery = () => {
 
   
 
+const truckMarkerRefs = useRef({});
 
 
   const handleAddDelivery = () => navigate("/add-delivery");
@@ -187,13 +191,13 @@ const [hasZoomed, setHasZoomed] = useState(false);
     useEffect(() => {
       if (!position || !triggerZoom) return;
 
-      // Fly only once
+    
       map.flyTo(position, zoom || map.getZoom(), {
         animate: true,
         duration: 1.2,
       });
 
-      if (onZoomDone) onZoomDone(); // reset trigger
+      if (onZoomDone) onZoomDone(); 
     }, [position, zoom, triggerZoom, map, onZoomDone]);
 
     return null;
@@ -238,11 +242,22 @@ const [hasZoomed, setHasZoomed] = useState(false);
           ),
         ]);
 
-        const outData = outRes.data.deliveries || outRes.data || [];
-        const completedData =
-          completedRes.data.deliveries || completedRes.data || [];
-        const cancelledData =
-          cancelledRes.data.deliveries || cancelledRes.data || [];
+        // const outData = outRes.data.deliveries || outRes.data || [];
+        // const completedData =
+        //   completedRes.data.deliveries || completedRes.data || [];
+        // const cancelledData =
+        //   cancelledRes.data.deliveries || cancelledRes.data || [];
+
+        const toArray = (data) => {
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.deliveries)) return data.deliveries;
+          return [];
+        };
+
+        const outData = toArray(outRes.data);
+        const completedData = toArray(completedRes.data);
+        const cancelledData = toArray(cancelledRes.data);
+
 
         const uniqueById = (arr) =>
           Array.from(
@@ -316,7 +331,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
      const prevEta = etas[deviceId];
      const prevDistance = currentData.prevDistance || null;
 
-     // Prevents over-calling PHP ETA when not needed
+    
      if (now - lastUpdate < 30000 && Math.abs(distanceKm - prevDistance) < 0.2)
        return;
 
@@ -330,7 +345,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
        setEtas((prev) => ({ ...prev, [deviceId]: eta }));
        setLastEtaUpdate((prev) => ({ ...prev, [deviceId]: now }));
 
-       // Save last computed distance
+       
        setCurrentPositions((prev) => ({
          ...prev,
          [deviceId]: { ...prev[deviceId], prevDistance: distanceKm },
@@ -371,7 +386,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
          }
 
          let status = "Moving";
-         let stoppedMinutes = 0;
+       
 
          if (prevData) {
            const distanceKm = getDistanceFromLatLonInKm(
@@ -404,7 +419,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
            [deviceId]: {
              position: [currPoint.lat, currPoint.lng],
              status,
-             stoppedMinutes,
+          
              lastRecordedAt: currPoint.recorded_at,
            },
          };
@@ -468,6 +483,8 @@ const handleTransactionClick = async (transaction) => {
 
   setZoomOnNextClick(true);
   return;
+
+  
 }
    
 
@@ -509,7 +526,7 @@ const handleTransactionClick = async (transaction) => {
       [deviceId]: {
         position: initialTruckPos,
         status: "Moving",
-        stoppedMinutes: 0,
+   
         lastRecordedAt: new Date().toISOString(),
       },
     }));
@@ -524,6 +541,18 @@ const handleTransactionClick = async (transaction) => {
 
    
     if (activeTab === "inTransit") startTrackingDevice(deviceId);
+    if (deviceId) {
+      setTimeout(() => {
+        if (truckMarkerRefs.current[deviceId]) {
+          truckMarkerRefs.current[deviceId].openPopup();
+
+          setTimeout(() => {
+            truckMarkerRefs.current[deviceId]?.closePopup();
+          }, 6000);
+        }
+      }, 1500); // 200ms wait for Marker to mount
+    }
+
   } catch (err) {
     console.error(err);
    
@@ -586,7 +615,7 @@ const handleTransactionClick = async (transaction) => {
                 "Item Name:",
                 `${t.type_of_product || ""} ${t.description || ""}`.trim(),
               ],
-              ["Date of Order:", formatDateTime(t.created_at)],
+              ["Date of Order:", (t.time)],
               ...(activeTab === "completed"
                 ? [
                     ["Shipout Date:", formatDateTime(t.shipout_time)],
@@ -633,6 +662,17 @@ const handleTransactionClick = async (transaction) => {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+ 
+    setExpandedIndex(null);
+    setSelectedDeviceId(null);
+    setSelectedCustomerPosition(null);
+    setSelectedCustomerInfo(null);
+    setCurrentPositions({});
+    setDeviceRoutes({});
+
+    setZoomOnNextClick(true);
+  }, [activeTab]);
   return (
     <AdminLayout
       title="Monitor Deliveries"
@@ -718,17 +758,20 @@ const handleTransactionClick = async (transaction) => {
       <Marker
         position={currentData.position}
         icon={createTruckIcon(deviceId, currentData.status)}
+        ref={(el) => (truckMarkerRefs.current[deviceId] = el)}
       >
+        
         <Popup>
           <div>
-            <strong>{deviceId.replace(/device[-_]?/i, "Truck ")}</strong>
+            <strong style={{ fontSize: "1rem" }}>
+              {deviceId.replace(/device[-_]?/i, "Truck ")}
+            </strong>
 
             {activeTab === "inTransit" && selectedCustomerPosition ? (
               <>
                 <br />
                 <strong>Status:</strong> {currentData.status}
-                {currentData.status === "Stopped" &&
-                  ` (${currentData.stoppedMinutes} min)`}
+                {currentData.status === "Stopped"}
                 <br />
                 <strong>Distance to Customer:</strong>{" "}
                 {getDistanceFromLatLonInKm(
