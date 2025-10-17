@@ -16,7 +16,7 @@ function SuccessfulDelivery() {
 
     axios
       .post(
-        "http://localhost/DeliveryTrackingSystem/fetch_delivered_deliveries.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/fetch_delivered_deliveries.php",
         {
           pers_username: user.pers_username,
         }

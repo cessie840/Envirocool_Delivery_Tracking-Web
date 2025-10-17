@@ -23,7 +23,7 @@ useEffect(() => {
     const parsed = JSON.parse(storedProfile);
 
     axios
-      .post("http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php", {
+      .post("https://13.239.143.31/DeliveryTrackingSystem/check_delivery_personnel.php", {
         pers_username: parsed.pers_username,
       })
       .then((response) => {
@@ -34,8 +34,8 @@ useEffect(() => {
 
           // ✅ Use uploaded image if available, else default
           const profilePicUrl = user.pers_profile_pic
-            ? `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
-            : `http://localhost/DeliveryTrackingSystem/default-profile-pic.png`;
+            ? `https://13.239.143.31//DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
+            : `https://13.239.143.31//DeliveryTrackingSystem/default-profile-pic.png`;
 
           setProfile({
             name: `${user.pers_fname} ${user.pers_lname}`,
@@ -70,7 +70,7 @@ const handleProfileChange = async (e) => {
 
   try {
     const response = await axios.post(
-      "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
+      "https://13.239.143.31/DeliveryTrackingSystem/upload_profile_pic.php",
       formData,
       {
         headers: {
@@ -173,7 +173,7 @@ const handleProfileChange = async (e) => {
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src =
-                        "http://localhost/DeliveryTrackingSystem/default-profile-pic.png";
+                        "https://13.239.143.31/DeliveryTrackingSystem/default-profile-pic.png";
                     }}
                     style={{
                       width: "100%",

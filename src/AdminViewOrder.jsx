@@ -43,7 +43,7 @@ const ViewOrder = () => {
   useEffect(() => {
     document.title = "View Order Details";
     fetch(
-      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
+      `https://13.239.143.31//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -121,7 +121,7 @@ const ViewOrder = () => {
       items: editableItems,
     };
 
-    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
+    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -260,7 +260,7 @@ const ViewOrder = () => {
                           className="btn add-btn py-2 px-3 fs-6 rounded-1"
                           onClick={() => {
                             setProofUrl(
-                              `http://localhost/DeliveryTrackingSystem/uploads/${orderDetails.proof_of_delivery}`
+                              `https://13.239.143.31//DeliveryTrackingSystem/uploads/${orderDetails.proof_of_delivery}`
                             );
                             setShowProofViewModal(true);
                           }}

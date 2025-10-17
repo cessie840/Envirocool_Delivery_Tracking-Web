@@ -32,7 +32,7 @@ const DeliveryDetails = () => {
     return dateString.split("T")[0] || dateString.split(" ")[0];
   };
   const fetchDeliveries = () => {
-    fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
+    fetch("https://13.239.143.31/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
       .then((data) => {
         setDeliveries(data);
@@ -49,7 +49,7 @@ const DeliveryDetails = () => {
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
-      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}`
+      `https://13.239.143.31//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -95,7 +95,7 @@ const DeliveryDetails = () => {
     const down_payment = parseFloat(formData.down_payment) || 0;
     const balance = total - down_payment;
 
-    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
+    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
