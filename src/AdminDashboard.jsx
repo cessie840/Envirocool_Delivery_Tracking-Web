@@ -52,7 +52,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     document.title = "Admin Dashboard";
 
-    // Fetch dashboard totals
+
     axios
       .get("http://localhost/DeliveryTrackingSystem/get_total_dashboard.php", {
         withCredentials: true,
@@ -64,7 +64,6 @@ const AdminDashboard = () => {
       })
       .catch((err) => console.error("Error fetching dashboard data:", err));
 
-    // Fetch recent transactions
     axios
       .get(
         "http://localhost/DeliveryTrackingSystem/get_recent_transactions.php",
@@ -81,7 +80,7 @@ const AdminDashboard = () => {
         console.error("Error fetching recent transactions:", err)
       );
 
-    // Fetch pending transactions
+   
     axios
       .get(
         "http://localhost/DeliveryTrackingSystem/get_pending_transactions.php",
@@ -119,7 +118,7 @@ const AdminDashboard = () => {
       )
       .then((res) => {
         if (res.data.success) {
-          // No need to overwrite with count
+      
           setTransactionStatusData(res.data.monthly);
         }
       })
@@ -152,7 +151,7 @@ const AdminDashboard = () => {
       onAddClick={handleAddDelivery}
     >
       <div className="container-fluid">
-        {/* Top 4 Cards */}
+    
         <Row className="mb-4 g-3">
           <Col xl={3} lg={6} md={6} sm={12}>
             <Card className="p-3 h-100 dashboard-panel">
@@ -219,9 +218,9 @@ const AdminDashboard = () => {
           </Col>
         </Row>
 
-        {/* Bottom Panels */}
+   
         <Row className="g-3">
-          {/* Recent Transactions */}
+      
           <Col lg={7} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -363,7 +362,7 @@ const AdminDashboard = () => {
         </Row>
 
         <Row className="mt-4 g-3">
-          {/* Left: Monthly Bar Chart */}
+
           <Col xs={12} lg={8}>
             <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
               <h5 className="fw-bold mb-3 text-center text-lg-start">
@@ -380,7 +379,7 @@ const AdminDashboard = () => {
                     <YAxis allowDecimals={false} />
                     <Tooltip formatter={(value) => `${value} transactions`} />
                     <Legend />
-                    {/* Order: Total first, then Successful, then Cancelled */}
+            
                     <Bar
                       dataKey="total"
                       fill="#2196F3"
@@ -402,14 +401,13 @@ const AdminDashboard = () => {
             </div>
           </Col>
 
-          {/* Right: Yearly Distribution Pie Chart */}
+
           <Col xs={12} lg={4}>
             <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
               <h5 className="fw-bold mb-3 text-center text-lg-start">
                 Successful vs Cancelled (Year {yearlyData.year})
               </h5>
 
-              {/* Pie Chart */}
               <div style={{ width: "100%", height: "300px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -440,7 +438,7 @@ const AdminDashboard = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Responsive stacked labels below the chart */}
+
               <div
                 style={{
                   textAlign: "center",
@@ -449,12 +447,12 @@ const AdminDashboard = () => {
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "8px",
-                  fontSize: "clamp(13px, 1.4vw, 16px)", // increased font size here
-                  fontWeight: "600", // slightly bolder for better visibility
+                  fontSize: "clamp(13px, 1.4vw, 16px)", 
+                  fontWeight: "600", 
                 }}
               >
                 {yearlyData.distribution
-                  .sort((a, b) => (a.name === "Successful" ? -1 : 1)) // ensures Successful appears first
+                  .sort((a, b) => (a.name === "Successful" ? -1 : 1)) 
                   .map((entry, index) => (
                     <div
                       key={index}
@@ -466,7 +464,7 @@ const AdminDashboard = () => {
                         justifyContent: "center",
                       }}
                     >
-                      {/* Color indicator */}
+             
                       <span
                         style={{
                           display: "inline-block",
@@ -477,7 +475,6 @@ const AdminDashboard = () => {
                         }}
                       ></span>
 
-                      {/* Text label */}
                       <span>
                         {entry.name}: {entry.value} (
                         {((entry.value / yearlyData.total) * 100).toFixed(1)}%)
@@ -486,7 +483,6 @@ const AdminDashboard = () => {
                   ))}
               </div>
 
-              {/* Total */}
               <div
                 className="text-muted small mt-2 fw-bold text-center"
                 style={{ fontSize: "clamp(11px, 1.1vw, 15px)" }}
