@@ -157,7 +157,7 @@ const CreatePersonnelAccount = () => {
 
               <div className="form-group">
                 <label htmlFor="gender">
-                  Sex <span className="required">*</span>
+                  Gender <span className="required">*</span>
                 </label>
                 <select
                   id="gender"
@@ -165,7 +165,7 @@ const CreatePersonnelAccount = () => {
                   value={formData.gender}
                   onChange={handleChange}
                 >
-                  <option value="">Select Sex</option>
+                  <option value="">Select Gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>

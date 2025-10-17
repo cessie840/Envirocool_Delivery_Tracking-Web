@@ -1,26 +1,25 @@
 <?php
-session_start(); 
-include 'database.php';
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+     $allowed_origins = ['http://localhost:5173', 'http://localhost:5174'];
 
-$allowed_origins = ['http://localhost:5173'];
 
-if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-} else {
-    header("Access-Control-Allow-Origin: http://localhost:5173");
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        header("Access-Control-Allow-Credentials: true");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+        header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    }
 }
 
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json; charset=UTF-8");
-
-// Handle preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
+session_start();
+include 'database.php';
+
+header("Content-Type: application/json; charset=UTF-8");
 
 $data = json_decode(file_get_contents("php://input"));
 
@@ -32,6 +31,37 @@ if (!isset($data->username) || !isset($data->password)) {
 
 $username = $data->username;
 $password = $data->password;
+$token = $data->token ?? null;
+
+if (!$token) {
+    http_response_code(400);
+    echo json_encode(["error" => "captcha_missing"]);
+    exit();
+}
+
+$secretKey = "6LcaEe0rAAAAAH_LDvgmTV0q1EHROYovEdRfkjW0"; // Your Secret Key
+$verifyURL = "https://www.google.com/recaptcha/api/siteverify?secret=$secretKey&response=$token";
+
+$response = file_get_contents($verifyURL);
+$responseData = json_decode($response);
+
+if (!$responseData->success) {
+    http_response_code(400);
+    echo json_encode(["error" => "captcha_failed"]);
+    exit();
+}
+
+// ✅ Function to log successful logins
+function logLogin($username, $role, $details = []) {
+    $logFile = __DIR__ . '/login_logs.txt';
+    $timestamp = date("Y-m-d H:i:s");
+
+    $userDetails = isset($details['email']) ? $details['email'] : 'N/A';
+    $fullname = trim(($details['fname'] ?? '') . ' ' . ($details['lname'] ?? ''));
+
+    $logEntry = "[$timestamp] USER: $username | ROLE: $role | NAME: $fullname | EMAIL: $userDetails\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
+}
 
 function checkUser($conn, $table, $user_col, $pass_col, $fields) {
     global $username, $password;
@@ -62,6 +92,14 @@ $user = checkUser($conn, "Admin", "ad_username", "ad_password", "ad_fname, ad_ln
 if ($user) {
     unset($_SESSION['manager_username'], $_SESSION['pers_username']); 
     $_SESSION['ad_username'] = $username;
+
+    // ✅ Log this login
+    logLogin($username, 'Admin', [
+        'fname' => $user['ad_fname'],
+        'lname' => $user['ad_lname'],
+        'email' => $user['ad_email']
+    ]);
+
     echo json_encode(["status" => "success", "user" => $user]);
     exit();
 }
@@ -71,6 +109,14 @@ $user = checkUser($conn, "OperationalManager", "manager_username", "manager_pass
 if ($user) {
     unset($_SESSION['ad_username'], $_SESSION['pers_username']); 
     $_SESSION['manager_username'] = $username;
+
+    // ✅ Log this login
+    logLogin($username, 'OperationalManager', [
+        'fname' => $user['manager_fname'],
+        'lname' => $user['manager_lname'],
+        'email' => $user['manager_email']
+    ]);
+
     echo json_encode(["status" => "success", "user" => $user]);
     exit();
 }
@@ -86,6 +132,14 @@ $user = checkUser(
 if ($user) {
     unset($_SESSION['ad_username'], $_SESSION['manager_username']); 
     $_SESSION['pers_username'] = $username;
+
+    // ✅ Log this login
+    logLogin($username, 'DeliveryPersonnel', [
+        'fname' => $user['pers_fname'],
+        'lname' => $user['pers_lname'],
+        'email' => $user['pers_email']
+    ]);
+
     echo json_encode(["status" => "success", "user" => $user]);
     exit();
 }
@@ -93,3 +147,4 @@ if ($user) {
 http_response_code(404);
 echo json_encode(["error" => "Invalid username"]);
 $conn->close();
+?>

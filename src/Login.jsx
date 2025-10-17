@@ -1,16 +1,18 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef} from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./loading-overlay.css";
 
 const Login = () => {
   const navigate = useNavigate();
+  const recaptchaRef = useRef();
   const [loading, setLoading] = useState(false);
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const [showTerms, setShowTerms] = useState(false);
@@ -23,6 +25,14 @@ const Login = () => {
     }
   }, [errorMessage]);
 
+
+
+  
+  const handleCaptchaChange = (token) => {
+    console.log("Captcha token:", token);
+    setCaptchaToken(token);
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -32,7 +42,7 @@ const Login = () => {
     try {
       const response = await axios.post(
         "http://localhost/DeliveryTrackingSystem/login.php",
-        { username, password },
+        { username, password, token: captchaToken },
         {
           headers: { "Content-Type": "application/json" },
           withCredentials: true,
@@ -48,6 +58,12 @@ const Login = () => {
         setLoading(false);
         return;
       }
+
+  if (!captchaToken) {
+    setErrorMessage("Please complete the CAPTCHA before logging in.");
+    setLoading(false);
+    return;
+  }
 
       localStorage.setItem("user", JSON.stringify(user));
       sessionStorage.setItem("showLoginNotif", "true");
@@ -75,6 +91,12 @@ const Login = () => {
         case "Missing username or password":
           setErrorMessage("Please enter both username and password.");
           break;
+     case "captcha_missing":
+        setErrorMessage("Please complete the CAPTCHA before logging in.");
+        break;
+      case "captcha_failed":
+        setErrorMessage("CAPTCHA verification failed. Please try again.");
+        break;
         case "Invalid password":
           setErrorMessage("The password you entered is incorrect. Try again.");
           break;
@@ -92,6 +114,7 @@ const Login = () => {
       }
     } finally {
       setLoading(false);
+     recaptchaRef.current?.reset();
     }
   };
 
@@ -131,6 +154,13 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="form-control"
               required
+            />
+          </div>
+
+            <div className="d-flex justify-content-center my-3">
+            <ReCAPTCHA
+              sitekey="6LcaEe0rAAAAAMUF_ot7tNAqxIfkJRqj1-kRflXk" // Your site key
+              onChange={handleCaptchaChange}
             />
           </div>
 
