@@ -15,10 +15,11 @@ const EditProfileTab = () => {
   const [role, setRole] = useState("");
 
   useEffect(() => {
-    axios
-      .get("https://13.239.143.31/DeliveryTrackingSystem/get_profile.php", {
-        withCredentials: true,
-      })
+  axios.get("https://13.239.143.31/DeliveryTrackingSystem/get_profile.php", {
+  withCredentials: true, // ✅ send PHP session
+})
+
+
 
       .then((res) => {
         const data = res.data;
@@ -78,11 +79,11 @@ const EditProfileTab = () => {
             manager_phone: formData.phone,
           };
 
-    axios
-      .post(updateUrl, JSON.stringify(payload), {
-        withCredentials: true,
-        headers: { "Content-Type": "application/json" },
-      })
+  axios.post(updateUrl, payload, {
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
+})
+
       .then(() => {
         alert("Profile updated successfully.");
         setIsEditing(false);

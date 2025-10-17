@@ -637,6 +637,7 @@ formData.append(
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          withCredentials: true,
         }
       );
       alert("Delivery added successfully!");
