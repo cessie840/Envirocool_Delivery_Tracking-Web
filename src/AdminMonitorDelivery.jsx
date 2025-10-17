@@ -238,11 +238,22 @@ const [hasZoomed, setHasZoomed] = useState(false);
           ),
         ]);
 
-        const outData = outRes.data.deliveries || outRes.data || [];
-        const completedData =
-          completedRes.data.deliveries || completedRes.data || [];
-        const cancelledData =
-          cancelledRes.data.deliveries || cancelledRes.data || [];
+        // const outData = outRes.data.deliveries || outRes.data || [];
+        // const completedData =
+        //   completedRes.data.deliveries || completedRes.data || [];
+        // const cancelledData =
+        //   cancelledRes.data.deliveries || cancelledRes.data || [];
+
+        const toArray = (data) => {
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.deliveries)) return data.deliveries;
+          return [];
+        };
+
+        const outData = toArray(outRes.data);
+        const completedData = toArray(completedRes.data);
+        const cancelledData = toArray(cancelledRes.data);
+
 
         const uniqueById = (arr) =>
           Array.from(
