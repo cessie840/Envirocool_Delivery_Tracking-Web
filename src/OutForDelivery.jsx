@@ -52,7 +52,7 @@ function OutForDelivery() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_out_for_delivery.php",
+        "http://localhost/DeliveryTrackingSystem/fetch_out_for_delivery.php",
         { pers_username: user.pers_username }
       )
       .then((res) => {
@@ -141,7 +141,7 @@ function OutForDelivery() {
     }
 
     axios
-      .post("https://13.239.143.31/DeliveryTrackingSystem/cancelled_delivery.php", {
+      .post("http://localhost/DeliveryTrackingSystem/cancelled_delivery.php", {
         transaction_id: selectedDelivery.transactionNo,
         reason: cancelReason,
       })
@@ -188,7 +188,7 @@ function OutForDelivery() {
 
    axios
      .post(
-       "https://13.239.143.31/DeliveryTrackingSystem/upload_proof.php",
+       "http://localhost/DeliveryTrackingSystem/upload_proof.php",
        formData,
        {
          headers: { "Content-Type": "multipart/form-data" },

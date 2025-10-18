@@ -232,13 +232,13 @@ const [hasZoomed, setHasZoomed] = useState(false);
       try {
         const [outRes, completedRes, cancelledRes] = await Promise.all([
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
+            "http://localhost/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
+            "http://localhost/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_cancelled_deliveries.php"
+            "http://localhost/DeliveryTrackingSystem/get_cancelled_deliveries.php"
           ),
         ]);
 
@@ -337,7 +337,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
 
      try {
        const res = await axios.get(
-         `https://13.239.143.31//DeliveryTrackingSystem/get_eta.php`,
+         `http://localhost//DeliveryTrackingSystem/get_eta.php`,
          { params: { device_id: deviceId, distance_km: distanceKm } }
        );
 
@@ -363,7 +363,7 @@ const [hasZoomed, setHasZoomed] = useState(false);
    const interval = setInterval(async () => {
      try {
        const res = await axios.get(
-         `https://13.239.143.31//DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
+         `http://localhost//DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
        );
 
        const gpsData = res.data.data;
@@ -509,7 +509,7 @@ const handleTransactionClick = async (transaction) => {
 
   try {
     const res = await axios.get(
-      `https://13.239.143.31//DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
+      `http://localhost//DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
     );
 
     const route = (res.data || []).map((p) => [
