@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import ReCAPTCHA from "react-google-recaptcha";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -17,6 +18,7 @@ const Login = () => {
 
   const [showTerms, setShowTerms] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (errorMessage) {
@@ -140,18 +142,33 @@ const Login = () => {
             />
           </div>
 
-          <div className="mb-1">
+          <div className="mb-1 position-relative">
             <label htmlFor="password" className="login form-label">
               Password:
             </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="form-control"
-              required
-            />
+            <div className="position-relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-control pe-5"
+                required
+              />
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "15px",
+                  top: "49%",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                  color: "#1E1F1FFF",
+                }}
+              >
+                {showPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+              </span>
+            </div>
           </div>
 
           <div className="d-flex justify-content-center my-3">
