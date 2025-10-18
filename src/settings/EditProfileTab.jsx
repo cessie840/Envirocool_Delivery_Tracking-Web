@@ -16,7 +16,7 @@ const EditProfileTab = () => {
 
   useEffect(() => {
     axios
-      .get("https://13.239.143.31/DeliveryTrackingSystem/get_profile.php", {
+      .get("http://localhost/DeliveryTrackingSystem/get_profile.php", {
         withCredentials: true, // ✅ send PHP session
       })
       .then((res) => {
@@ -72,7 +72,7 @@ const EditProfileTab = () => {
 
     switch (role) {
       case "admin":
-        updateUrl = "https://13.239.143.31/DeliveryTrackingSystem/update_admin_profile.php";
+        updateUrl = "http://localhost/DeliveryTrackingSystem/update_admin_profile.php";
         payload = {
           ad_username: formData.username,
           ad_fname: formData.fname,
@@ -82,7 +82,7 @@ const EditProfileTab = () => {
         };
         break;
       case "manager":
-        updateUrl = "https://13.239.143.31/DeliveryTrackingSystem/update_operational_profile.php";
+        updateUrl = "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
         payload = {
           manager_username: formData.username,
           manager_fname: formData.fname,
@@ -92,7 +92,7 @@ const EditProfileTab = () => {
         };
         break;
       case "personnel":
-        updateUrl = "https://13.239.143.31/DeliveryTrackingSystem/update_personnel_profile.php";
+        updateUrl = "http://localhost/DeliveryTrackingSystem/update_personnel_profile.php";
         payload = {
           pers_username: formData.username,
           pers_fname: formData.fname,

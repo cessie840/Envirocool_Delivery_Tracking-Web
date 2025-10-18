@@ -77,7 +77,7 @@ const ChangePasswordTab = ({ role }) => {
     }
 
     const url =
-      "https://13.239.143.31/DeliveryTrackingSystem/change_adops_password.php";
+      "http://localhost/DeliveryTrackingSystem/change_adops_password.php";
 
     try {
       const response = await axios.post(

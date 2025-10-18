@@ -1,0 +1,15 @@
+[2025-10-18 06:10:03] USER: admin101 | ROLE: Admin | NAME: Jessa Cariñaga | EMAIL: contactenvirocool@gmail.com
+[2025-10-18 06:13:12] USER: opsmanager101 | ROLE: OperationalManager | NAME: Carlos Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-10-18 06:13:21] USER: admin101 | ROLE: Admin | NAME: Jessa Cariñaga | EMAIL: contactenvirocool@gmail.com
+[2025-10-18 06:21:25] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Kuro The Cat | EMAIL: kurothecat@gmail.com
+[2025-10-18 06:27:44] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Kuro The Cat | EMAIL: kurothecat@gmail.com
+[2025-10-18 06:38:31] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Kuro The Cat | EMAIL: kurothecat@gmail.com
+[2025-10-18 06:51:15] USER: admin101 | ROLE: Admin | NAME: Jessa Cariñaga | EMAIL: contactenvirocool@gmail.com
+[2025-10-18 06:51:40] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Kuro The Cat | EMAIL: kurothecat@gmail.com
+[2025-10-18 06:53:57] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Kuro The Cat | EMAIL: kurothecat@gmail.com
+[2025-10-18 06:54:15] USER: opsmanager101 | ROLE: OperationalManager | NAME: Carlos Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-10-18 06:54:45] USER: admin101 | ROLE: Admin | NAME: Jessa Cariñaga | EMAIL: contactenvirocool@gmail.com
+[2025-10-18 06:55:08] USER: opsmanager101 | ROLE: OperationalManager | NAME: Carlos Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-10-18 06:56:09] USER: opsmanager101 | ROLE: OperationalManager | NAME: Carlos Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-10-18 06:58:26] USER: opsmanager101 | ROLE: OperationalManager | NAME: Carlos Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-10-18 07:12:17] USER: admin101 | ROLE: Admin | NAME: Jessa Cariñaga | EMAIL: contactenvirocool@gmail.com

@@ -257,15 +257,14 @@ const ViewOrder = () => {
                     orderDetails.proof_of_delivery && (
                       <div className="mt-2">
                         <button
-                          className="btn add-btn py-2 px-3 fs-6 rounded-1"
+                          className="btn btn-view py-2 px-3 fs-6"
                           onClick={() => {
-                            setProofUrl(
-                              `http://localhost//DeliveryTrackingSystem/uploads/${orderDetails.proof_of_delivery}`
-                            );
+                            const fullUrl = `http://localhost//DeliveryTrackingSystem/uploads/${orderDetails.proof_of_payment}`;
+                            setProofUrl(fullUrl);
                             setShowProofViewModal(true);
                           }}
                         >
-                          View Proof of Delivery
+                          View Proof of Payment
                         </button>
                       </div>
                     )}
