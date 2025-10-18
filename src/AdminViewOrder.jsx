@@ -227,7 +227,6 @@ const ViewOrder = () => {
                     <span>Current Delivery Status: </span>
                     {renderStatusBadge(orderDetails.status)}
                   </p>
-
                   {orderDetails.status === "Cancelled" &&
                     orderDetails.cancelled_reason && (
                       <p>
@@ -237,9 +236,7 @@ const ViewOrder = () => {
                         </strong>
                       </p>
                     )}
-
                   {/* Proof of Delivery Button */}
-
                   {orderDetails.proof_of_payment && (
                     <div className="mt-5">
                       <button
@@ -257,17 +254,17 @@ const ViewOrder = () => {
                     orderDetails.proof_of_delivery && (
                       <div className="mt-2">
                         <button
-                          className="btn btn-view py-2 px-3 fs-6"
+                          className="btn add-btn py-2 px-3 fs-6 rounded-1"
                           onClick={() => {
-                            const fullUrl = `http://localhost//DeliveryTrackingSystem/uploads/${orderDetails.proof_of_payment}`;
-                            setProofUrl(fullUrl);
+                            setProofUrl(orderDetails.proof_of_delivery);
                             setShowProofViewModal(true);
                           }}
                         >
-                          View Proof of Payment
+                          View Proof of Delivery
                         </button>
                       </div>
                     )}
+         
                 </div>
 
                 <div className="col-md-6">
