@@ -171,13 +171,6 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="d-flex justify-content-center my-3">
-            <ReCAPTCHA
-              sitekey="6LcaEe0rAAAAAMUF_ot7tNAqxIfkJRqj1-kRflXk" // Your site key
-              onChange={handleCaptchaChange}
-            />
-          </div>
-
           <div className="d-flex justify-content-between align-items-center mt-3 mb-4 fs-6">
             <div className="d-flex align-items-center justify-content-center">
               <input
@@ -232,7 +225,14 @@ const Login = () => {
             </button>
           )}
         </form>
+         <div className="d-flex justify-content-center my-3">
+            <ReCAPTCHA
+              sitekey="6LcaEe0rAAAAAMUF_ot7tNAqxIfkJRqj1-kRflXk" // Your site key
+              onChange={handleCaptchaChange}
+            />
+          </div>
       </div>
+      
 
       {showTerms && (
         <div className="modal d-block" tabIndex="-1">
