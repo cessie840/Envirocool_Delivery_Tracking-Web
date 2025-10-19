@@ -1,7 +1,6 @@
 <?php
 include 'database.php'; 
-
-date_default_timezone_set("Asia/Manila"); 
+date_default_timezone_set("Asia/Manila");
 
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
@@ -15,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     if (empty($_POST['transaction_id']) || empty($_FILES['proof_of_delivery'])) {
         echo json_encode(["success" => false, "message" => "Transaction ID and proof file required."]);
         exit;
@@ -22,34 +22,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $transaction_id = intval($_POST['transaction_id']);
 
-    $targetDir = __DIR__ . "/uploads/proofs/";
-    if (!file_exists($targetDir)) {
+    // ✅ Save file to the correct directory
+    $targetDir = __DIR__ . "/uploads/proof_of_delivery/";
+    if (!is_dir($targetDir)) {
         mkdir($targetDir, 0777, true);
     }
 
+    // ✅ Determine file extension (default jpg)
     $fileExt = pathinfo($_FILES["proof_of_delivery"]["name"], PATHINFO_EXTENSION);
-    if ($fileExt == "") $fileExt = "jpg";
+    if (empty($fileExt)) $fileExt = "jpg";
 
-    $dateTime = date("Ymd_Hi");
-    $fileName = "TN_" . $transaction_id . "_" . $dateTime . "." . $fileExt;
+    // ✅ File name format: TN_[TRANSACTION NUMBER]_[YYYYMMDD].jpg
+    $dateToday = date("Ymd");
+    $fileName = "TN_" . $transaction_id . "_" . $dateToday . "." . $fileExt;
 
     $targetFile = $targetDir . $fileName;
 
     if (move_uploaded_file($_FILES["proof_of_delivery"]["tmp_name"], $targetFile)) {
-        
-      
-        $relativePath = "proofs/" . $fileName;
 
-        $stmt = $conn->prepare("UPDATE Transactions 
+        // ✅ Store correct relative path
+        $relativePath = "uploads/proof_of_delivery/" . $fileName;
+
+        $stmt = $conn->prepare("
+            UPDATE Transactions 
             SET status = 'Delivered', proof_of_delivery = ?, completed_at = NOW() 
-            WHERE transaction_id = ?");
+            WHERE transaction_id = ?
+        ");
         $stmt->bind_param("si", $relativePath, $transaction_id);
 
         if ($stmt->execute()) {
             echo json_encode([
                 "success" => true,
                 "message" => "Proof uploaded successfully.",
-                "file" => "proofs/" . $fileName
+                "file" => $relativePath
             ]);
         } else {
             echo json_encode(["success" => false, "message" => "Database update failed."]);

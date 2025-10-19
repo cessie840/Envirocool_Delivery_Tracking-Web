@@ -1,30 +1,24 @@
 <?php
-session_start();
-include 'database.php';
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    $allowed_origins = ['http://localhost:5173', 'http://localhost:5174'];
 
-// Allowed origins
-$allowed_origins = [
-    "https://cessie840.github.io",
-    "http://localhost:5173",
-    "http://localhost:5173/Envirocool-Tracking-Page"
-];
-
-// If the request's origin is allowed, set the header
-if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        header("Access-Control-Allow-Credentials: true");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+        header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    }
 }
 
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8");
-
-// Handle preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
+session_start();
+include 'database.php';
+
+header("Content-Type: application/json; charset=UTF-8");
 
 $data = json_decode(file_get_contents("php://input"));
 
@@ -36,6 +30,18 @@ if (!isset($data->username) || !isset($data->password)) {
 
 $username = $data->username;
 $password = $data->password;
+
+// ✅ Function to log successful logins
+function logLogin($username, $role, $details = []) {
+    $logFile = __DIR__ . '/login_logs.txt';
+    $timestamp = date("Y-m-d H:i:s");
+
+    $userDetails = isset($details['email']) ? $details['email'] : 'N/A';
+    $fullname = trim(($details['fname'] ?? '') . ' ' . ($details['lname'] ?? ''));
+
+    $logEntry = "[$timestamp] USER: $username | ROLE: $role | NAME: $fullname | EMAIL: $userDetails\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
+}
 
 function checkUser($conn, $table, $user_col, $pass_col, $fields) {
     global $username, $password;
@@ -61,25 +67,39 @@ function checkUser($conn, $table, $user_col, $pass_col, $fields) {
     return null;
 }
 
-// ADMIN 
+// ✅ ADMIN 
 $user = checkUser($conn, "Admin", "ad_username", "ad_password", "ad_fname, ad_lname, ad_email, ad_phone");
 if ($user) {
-    unset($_SESSION['manager_username'], $_SESSION['pers_username']); 
+    unset($_SESSION['manager_username'], $_SESSION['pers_username']);
     $_SESSION['ad_username'] = $username;
+
+    logLogin($username, 'Admin', [
+        'fname' => $user['ad_fname'],
+        'lname' => $user['ad_lname'],
+        'email' => $user['ad_email']
+    ]);
+
     echo json_encode(["status" => "success", "user" => $user]);
     exit();
 }
 
-// OPERATIONAL MANAGER 
+// ✅ OPERATIONAL MANAGER 
 $user = checkUser($conn, "OperationalManager", "manager_username", "manager_password", "manager_fname, manager_lname, manager_email, manager_phone");
 if ($user) {
-    unset($_SESSION['ad_username'], $_SESSION['pers_username']); 
+    unset($_SESSION['ad_username'], $_SESSION['pers_username']);
     $_SESSION['manager_username'] = $username;
+
+    logLogin($username, 'OperationalManager', [
+        'fname' => $user['manager_fname'],
+        'lname' => $user['manager_lname'],
+        'email' => $user['manager_email']
+    ]);
+
     echo json_encode(["status" => "success", "user" => $user]);
     exit();
 }
 
-// DELIVERY PERSONNEL 
+// ✅ DELIVERY PERSONNEL 
 $user = checkUser(
     $conn,
     "DeliveryPersonnel",
@@ -88,8 +108,15 @@ $user = checkUser(
     "pers_fname, pers_lname, pers_email, pers_phone, status, assignment_status"
 );
 if ($user) {
-    unset($_SESSION['ad_username'], $_SESSION['manager_username']); 
+    unset($_SESSION['ad_username'], $_SESSION['manager_username']);
     $_SESSION['pers_username'] = $username;
+
+    logLogin($username, 'DeliveryPersonnel', [
+        'fname' => $user['pers_fname'],
+        'lname' => $user['pers_lname'],
+        'email' => $user['pers_email']
+    ]);
+
     echo json_encode(["status" => "success", "user" => $user]);
     exit();
 }
@@ -97,3 +124,4 @@ if ($user) {
 http_response_code(404);
 echo json_encode(["error" => "Invalid username"]);
 $conn->close();
+?>

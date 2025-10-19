@@ -59,7 +59,7 @@ function DriverProfileSettings() {
             const u = res.data.user;
             const profilePicUrl = u.pers_profile_pic
               ? `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${u.pers_profile_pic}`
-              : `http://localhost/DeliveryTrackingSystem/default-profile-pic.png`;
+              : `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
 
             setProfile({
               Name: `${u.pers_fname} ${u.pers_lname}`,
@@ -187,7 +187,7 @@ function DriverProfileSettings() {
 
     const formData = new FormData();
     formData.append("pers_username", storedUser.pers_username);
-    formData.append("profile_pic", profile.newProfileFile); // ✅ aligned with backend
+    formData.append("profile_pic", profile.newProfileFile); // ✅ aligns with backend
 
     axios
       .post(
@@ -254,11 +254,11 @@ function DriverProfileSettings() {
                   <Image
                     src={
                       profile.profilePic ||
-                      "http://localhost/DeliveryTrackingSystem/default-profile-pic.png"
+                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                     }
                     onError={(e) =>
                       (e.target.src =
-                        "http://localhost/DeliveryTrackingSystem/default-profile-pic.png")
+                        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
                     }
                     alt="Profile"
                     style={{
@@ -313,7 +313,7 @@ function DriverProfileSettings() {
               borderBottomRightRadius: "20px",
             }}
           >
-            {[ // editable fields
+            {[
               { label: "Full Name", key: "Name" },
               { label: "Email", key: "Email" },
               { label: "Contact Number", key: "Contact" },
@@ -391,7 +391,7 @@ function DriverProfileSettings() {
         </Card>
       </Container>
 
-      {/* Edit modals */}
+      {/* Edit Field Modal */}
       <Modal
         show={modalField && modalField !== "password"}
         onHide={() => setModalField(null)}
