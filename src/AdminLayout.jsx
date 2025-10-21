@@ -158,7 +158,7 @@ useEffect(() => {
             onClick={() => navigate("/generate-report")}
           >
             <FaChartBar className="icon" />
-            <span className="nav-text"> GENERATE REPORT</span>
+            <span className="nav-text"> DATA ANALYTICS & REPORT</span>
             <span className="tooltip-text">Generate Report</span>
           </button>
 

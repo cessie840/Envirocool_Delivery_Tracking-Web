@@ -386,8 +386,8 @@ const ViewOrder = () => {
               alt="Proof of Delivery"
               className="w-100 h-auto"
               style={{
-                maxHeight: "70vh",
-                maxWidth: "40rem",
+                maxHeight: "75vh",
+                maxWidth: "35rem",
                 objectFit: "fill",
                 // borderRadius: "10px",
                 border: "1px solid #9E9E9EFF",

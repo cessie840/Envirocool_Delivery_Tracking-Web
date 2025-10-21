@@ -6,6 +6,8 @@ import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
 import { Button, Modal } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
+import { Row, Col } from "react-bootstrap";
+
 import "./loading-overlay.css";
 
 const paymentOptions = [
@@ -70,7 +72,6 @@ const CustomMenuList = (props) => {
   );
 };
 
-
 const AddDelivery = () => {
   const proofFileRef = useRef(null);
 
@@ -105,6 +106,8 @@ const AddDelivery = () => {
   const [nameError, setNameError] = useState("");
   const [fpBillingError, setFpBillingError] = useState("");
 
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
 
   const [form, setForm] = useState({
     customer_name: "",
@@ -213,23 +216,33 @@ const AddDelivery = () => {
 
   // --- Inside AddDelivery component ---
   const handleContactChange = (e) => {
-    const value = e.target.value;
+    let value = e.target.value || "";
 
-    // Instant validation for non-numeric input
-    if (/\D/.test(value)) {
+    // Trim spaces and normalize any weird autofill chars
+    value = value.replace(/\s+/g, "").trim();
+
+    // ✅ If empty (autofill still loading or clearing) — don't show an error
+    if (value === "") {
+      setForm((prev) => ({ ...prev, customer_contact: "" }));
+      setContactError("");
+      return;
+    }
+
+    // ✅ Only digits allowed, but allow autofill numeric values safely
+    if (!/^\d+$/.test(value)) {
       setContactError("Contact number should contain numbers only.");
       return;
     }
 
-    // Update value
+    // ✅ Update form after validation
     setForm((prev) => ({ ...prev, customer_contact: value }));
 
-    // Validation rules
-    if (value && !value.startsWith("09")) {
+    // ✅ Additional rules
+    if (!value.startsWith("09")) {
       setContactError("Contact number must start with '09'.");
     } else if (value.length > 11) {
       setContactError("Contact number cannot exceed 11 digits.");
-    } else if (value.length < 11 && value.length > 0) {
+    } else if (value.length < 11) {
       setContactError("Contact number must have 11 digits.");
     } else {
       setContactError("");
@@ -313,20 +326,16 @@ const AddDelivery = () => {
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
 
-    if (form.payment_option === "Down Payment") {
-      const downPayment = parseFloat(form.down_payment) || 0;
-      setForm((prevForm) => ({
-        ...prevForm,
-        total: totalCost.toFixed(2),
-        balance: (totalCost - downPayment).toFixed(2),
-      }));
-    } else {
-      setForm((prevForm) => ({
-        ...prevForm,
-        total: totalCost.toFixed(2),
-        balance: "",
-      }));
-    }
+    const downPayment = parseFloat(form.down_payment) || 0;
+    const isDownPayment = form.payment_option === "Down Payment";
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      total: totalCost.toFixed(2),
+      balance: isDownPayment
+        ? (totalCost - downPayment).toFixed(2)
+        : prevForm.balance || "",
+    }));
   };
 
   const formatPeso = (value) => {
@@ -387,11 +396,13 @@ const AddDelivery = () => {
   ]);
 
   const getLocalDate = () => {
-    const now = new Date();
-    // Convert to PH time (UTC+8)
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset() + 480);
-    return now.toISOString().slice(0, 10);
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
   };
+
+  // ✅ Automatically recalculate total when any item changes
+  useEffect(() => {
+    recalcTotal(orderItems);
+  }, [orderItems]);
 
   useEffect(() => {
     document.title = "Add Delivery";
@@ -566,24 +577,36 @@ const AddDelivery = () => {
 
       if (!typeOfProduct) {
         alert(`Please select a type of product for item #${index + 1}`);
+        setLoading(false);
         return;
       }
 
       if (!description) {
         alert(`Please select an item name for item #${index + 1}`);
+        setLoading(false);
         return;
       }
 
       if (isNaN(quantity) || quantity < 1) {
         alert(`Quantity for item #${index + 1} must be at least 1`);
+        setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
         alert(`Unit cost for item #${index + 1} must be a non-negative number`);
+        setLoading(false);
         return;
       }
     }
+
+    setLoading(false);
+    setShowSummaryModal(true); // Show the summary modal instead of submitting
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowSummaryModal(false);
+    setLoading(true);
 
     const normalizedOrderItems = orderItems.map((item) => ({
       quantity: parseInt(item.quantity) || 0,
@@ -687,7 +710,6 @@ const AddDelivery = () => {
       setLoading(false);
     }
   };
-
   return (
     <AdminLayout title="Add Delivery" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
@@ -878,24 +900,15 @@ const AddDelivery = () => {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                pattern="\d*"
                 className={`form-control ${contactError ? "is-invalid" : ""}`}
                 id="contactNumber"
                 name="customer_contact"
                 value={form.customer_contact}
                 placeholder="Client's Contact No."
                 onChange={handleContactChange}
-                onKeyDown={(e) => {
-                  // Prevent typing invalid characters (like e, +, -, ., spaces)
-                  if (
-                    ["e", "E", "+", "-", ".", " "].includes(e.key) ||
-                    (isNaN(e.key) && e.key !== "Backspace")
-                  ) {
-                    e.preventDefault();
-                    setContactError(
-                      "Contact number should contain numbers only."
-                    ); // show error instantly
-                  }
-                }}
                 maxLength={11}
                 required
               />
@@ -1216,7 +1229,7 @@ const AddDelivery = () => {
                     >
                       <Modal.Header closeButton>
                         <Modal.Title>
-                          Edit{" "}
+                          Edit
                           {editModal.type === "product"
                             ? "Product Type"
                             : "Item"}
@@ -1362,6 +1375,17 @@ const AddDelivery = () => {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="fw-bold">
+                  <td colSpan="4" className="text-end">
+                    TOTAL:
+                  </td>
+                  <td className="text-end">{formatPeso(form.total)}</td>
+                  {orderItems.length > 1 && (
+                    <td style={{ border: "none" }}></td>
+                  )}
+                </tr>
+              </tfoot>
             </table>
 
             <div className="d-flex justify-content-end mt-2">
@@ -1435,7 +1459,18 @@ const AddDelivery = () => {
                         id={method.toLowerCase().replace(" ", "_")}
                         value={method}
                         checked={form.payment_option === method}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          handleChange(e);
+                          if (e.target.name === "payment_option") {
+                            setForm((prev) => ({
+                              ...prev,
+                              payment_option: e.target.value,
+                              // ✅ Preserve date & down payment if switching temporarily
+                              dp_collection_date: prev.dp_collection_date || "",
+                              down_payment: prev.down_payment || "",
+                            }));
+                          }
+                        }}
                         required
                       />
                       <label
@@ -1452,27 +1487,6 @@ const AddDelivery = () => {
             </div>
 
             <div className="row mb-3">
-              <div className="col-md-6">
-                <label htmlFor="full_payment" className="form-label">
-                  Full Payment Amount:
-                </label>
-                <input
-                  type="text"
-                  name="full_payment"
-                  placeholder="₱0.00"
-                  value={formatPeso(form.full_payment)}
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "full_payment", value: parsedValue },
-                    });
-                  }}
-                  disabled={form.payment_option !== "Full Payment"}
-                  required={form.payment_option === "Full Payment"}
-                  className="form-control"
-                />
-              </div>
-
               <div className="col-md-6">
                 <label htmlFor="fpBillingDate" className="form-label">
                   Billing Date:
@@ -1494,7 +1508,6 @@ const AddDelivery = () => {
                   }
                   onChange={(e) => {
                     handleChange(e);
-
                     const selectedDate = new Date(e.target.value + "T00:00:00");
                     const today = new Date(getLocalDate() + "T00:00:00");
 
@@ -1509,15 +1522,68 @@ const AddDelivery = () => {
                     }
                   }}
                   required
-                  max={getLocalDate()} // ✅ allows today, blocks future (PH timezone)
+                  max={getLocalDate()}
                 />
                 {fpBillingError && (
                   <div className="invalid-feedback">{fpBillingError}</div>
                 )}
               </div>
+
+              <div className="col-md-6">
+                <label htmlFor="full_payment" className="form-label">
+                  Full Payment Amount:
+                </label>
+                <input
+                  type="text"
+                  name="full_payment"
+                  placeholder="₱0.00"
+                  value={formatPeso(form.full_payment)}
+                  onChange={(e) => {
+                    const parsedValue = parsePeso(e.target.value);
+                    handleChange({
+                      target: { name: "full_payment", value: parsedValue },
+                    });
+                  }}
+                  disabled={form.payment_option !== "Full Payment"}
+                  required={form.payment_option === "Full Payment"}
+                  className="form-control"
+                />
+              </div>
             </div>
 
             <div className="row mb-3">
+              <div className="col-md-6">
+                <label htmlFor="dpBillingDate" className="form-label">
+                  Payment Due:
+                </label>
+                <input
+                  type="date"
+                  id="dpBillingDate"
+                  name="dp_collection_date"
+                  value={form.dp_collection_date || ""}
+                  onChange={handleChange}
+                  disabled={form.payment_option !== "Down Payment"}
+                  required={form.payment_option === "Down Payment"}
+                  className={`form-control ${
+                    form.payment_option !== "Down Payment"
+                      ? "text-muted"
+                      : form.dp_collection_date
+                      ? "text-black"
+                      : "text-muted"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      form.payment_option === "Down Payment"
+                        ? "white"
+                        : "#f8f9fa",
+                    cursor:
+                      form.payment_option === "Down Payment"
+                        ? "pointer"
+                        : "not-allowed",
+                  }}
+                />
+              </div>
+
               <div className="col-md-6">
                 <label htmlFor="down_payment" className="form-label">
                   Down Payment Amount:
@@ -1540,24 +1606,6 @@ const AddDelivery = () => {
                   className={`form-control ${dpError ? "is-invalid" : ""}`}
                 />
                 {dpError && <div className="invalid-feedback">{dpError}</div>}
-              </div>
-
-              <div className="col-md-6">
-                <label htmlFor="dpBillingDate" className="form-label">
-                  Payment Due:
-                </label>
-                <input
-                  style={{ color: "gray" }}
-                  type="date"
-                  className={`form-control ${
-                    form.dp_collection_date || "" ? "text-black" : "text-muted"
-                  }`}
-                  id="dpBillingDate"
-                  name="dp_collection_date"
-                  onChange={handleChange}
-                  disabled={form.payment_option !== "Down Payment"}
-                  required={form.payment_option === "Down Payment"}
-                />
               </div>
             </div>
 
@@ -1585,24 +1633,7 @@ const AddDelivery = () => {
                 />
               </div>
 
-              <div className="col-md-6">
-                <label className="form-label">Total:</label>
-                <input
-                  type="text"
-                  name="total"
-                  placeholder="₱0.00"
-                  value={formatPeso(form.total)}
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "total", value: parsedValue },
-                    });
-                  }}
-                  disabled={!form.payment_option}
-                  required={!!form.payment_option}
-                  className="form-control"
-                />
-              </div>
+              <div className="col-md-6"></div>
             </div>
 
             <h4 className="mt-5">PROOF OF PAYMENT</h4>
@@ -1656,13 +1687,190 @@ const AddDelivery = () => {
                       alt="Proof of Payment"
                       style={{
                         maxWidth: "100%",
-                        maxHeight: "500px",
+                        maxHeight: "700px",
                         objectFit: "contain",
                       }}
                       className="border border-secondary border-1"
                     />
                   )}
               </Modal.Body>
+            </Modal>
+            <Modal
+              show={showSummaryModal}
+              onHide={() => setShowSummaryModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header closeButton className="bg-success text-white">
+                <Modal.Title>Transaction Summary</Modal.Title>
+              </Modal.Header>
+              <Modal.Body className="bg-white">
+                <div className="summary-content">
+                  <p>
+                    <strong>Transaction No.:</strong> {transactionId}
+                  </p>
+                  <p className="mb-3">
+                    <strong>P.O. No.:</strong> {poId}
+                  </p>
+
+                  <p>
+                    <strong>Customer Name:</strong> {form.customer_name}
+                  </p>
+                  <p>
+                    <strong>Address: </strong>
+                    {[
+                      form.house_no,
+                      form.street_name,
+                      form.barangay,
+                      form.city,
+                      "Laguna",
+                      "Philippines",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>
+                    <strong>Contact:</strong> {form.customer_contact}
+                  </p>
+                  <p>
+                    <strong>Date of Order:</strong> {form.date_of_order}
+                  </p>
+                  <p>
+                    <strong>Delivery Date:</strong> {form.target_date_delivery}
+                  </p>
+                  <p>
+                    <strong>Payment Method:</strong> {form.payment_method}
+                  </p>
+                  <p>
+                    <strong>Payment Option:</strong> {form.payment_option}
+                  </p>
+                  {form.payment_option === "Full Payment" && (
+                    <>
+                      <p>
+                        <strong>Full Payment: </strong>
+                        {formatPeso(form.full_payment)}
+                      </p>
+                      <p>
+                        <strong>Billing Date: </strong>{" "}
+                        {form.fp_collection_date}
+                      </p>
+                    </>
+                  )}
+                  {form.payment_option === "Down Payment" && (
+                    <>
+                      <p>
+                        <strong>Down Payment:</strong>
+                        {formatPeso(form.down_payment)}
+                      </p>
+                      <p>
+                        <strong>Payment Due:</strong> {form.dp_collection_date}
+                      </p>
+                      <p>
+                        <strong>Balance:</strong> {formatPeso(form.balance)}
+                      </p>
+                    </>
+                  )}
+
+                  <strong className="fs-5">Order Items:</strong>
+                  <table className="table table-bordered table-sm mt-2">
+                    <thead className="table-success text-center align-middle">
+                      <tr>
+                        <th>Qty</th>
+                        <th>Item</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderItems.map((item, index) => (
+                        <tr key={index}>
+                          <td className="text-center">{item.quantity}</td>
+                          <td>
+                            {item.type_of_product} - {item.description}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(
+                              parseFloat(parsePeso(item.unit_cost)) || 0
+                            )}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(item.total_cost)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="3" className="text-end fw-bold">
+                          TOTAL:
+                        </td>
+                        <td className="text-end fw-bold">
+                          {formatPeso(form.total)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {proofFile ? (
+                    <div className="mt-3">
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => setShowImageViewer(true)}
+                      >
+                        View Proof of Payment
+                      </Button>
+                    </div>
+                  ) : (
+                    <p>
+                      <strong>Proof of Payment:</strong> Not uploaded
+                    </p>
+                  )}
+
+                  {showImageViewer && proofFile && (
+                    <div className="mt-3 border p-2 bg-success bg-opacity-10 rounded">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="text-center w-100 fs-5">
+                          Proof of Payment Preview
+                        </h6>
+                        <Button
+                          variant="close"
+                          onClick={() => setShowImageViewer(false)}
+                        />
+                      </div>
+                      <div className="text-center">
+                        {proofPreview && (
+                          <img
+                            src={proofPreview}
+                            alt="Proof of Payment"
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "400px",
+                              objectFit: "contain",
+                              border: "1px solid gray",
+                              borderRadius: "5px",
+                            }}
+                            className="img-fluid"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button
+                  className="cancel-btn px-3 py-2 fs-6 rounded-1"
+                  onClick={() => setShowSummaryModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="add-btn px-3 py-2 fs-6 rounded-1"
+                  onClick={handleConfirmSubmit}
+                >
+                  Confirm
+                </Button>
+              </Modal.Footer>
             </Modal>
           </div>
         </form>
