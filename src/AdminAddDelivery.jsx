@@ -1651,29 +1651,7 @@ const AddDelivery = () => {
                 )}
               </div>
 
-              <div className="col-md-6">
-                <label htmlFor="full_payment" className="form-label">
-                  Full Payment Amount:
-                </label>
-                <input
-                  type="text"
-                  name="full_payment"
-                  placeholder="₱0.00"
-                  value={formatPeso(form.full_payment)}
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "full_payment", value: parsedValue },
-                    });
-                  }}
-                  disabled={form.payment_option !== "Full Payment"}
-                  required={form.payment_option === "Full Payment"}
-                  className="form-control"
-                />
-              </div>
-            </div>
-
-            <div className="row mb-3">
+              {/* ✅ Payment Due moved here to replace Full Payment Amount */}
               <div className="col-md-6">
                 <label htmlFor="dpBillingDate" className="form-label">
                   Payment Due:
@@ -1733,7 +1711,9 @@ const AddDelivery = () => {
                   <div className="invalid-feedback d-block">{dpDateError}</div>
                 )}
               </div>
+            </div>
 
+            <div className="row mb-3">
               <div className="col-md-6">
                 <label htmlFor="down_payment" className="form-label">
                   Down Payment Amount:
@@ -1757,33 +1737,23 @@ const AddDelivery = () => {
                 />
                 {dpError && <div className="invalid-feedback">{dpError}</div>}
               </div>
-            </div>
 
-            <div className="row mb-3">
               <div className="col-md-6">
                 <label className="form-label">Balance:</label>
-                <input
-                  type="text"
-                  name="balance"
-                  placeholder="₱0.00"
-                  value={
-                    form.payment_option === "Down Payment"
-                      ? formatPeso(form.balance)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "balance", value: parsedValue },
-                    });
-                  }}
-                  disabled={form.payment_option !== "Down Payment"}
-                  required={form.payment_option === "Down Payment"}
-                  className="form-control"
-                />
+                <div className="input-group">
+                  <span className="input-group-text bg-secondary text-dark bg-opacity-25">
+                    ₱
+                  </span>
+                  <span className="form-control bg-white text-start fw-semibold fs-6 p-2">
+                    {form.payment_option === "Down Payment"
+                      ? Number(form.balance).toLocaleString("en-PH", {
+                          style: "currency",
+                          currency: "PHP",
+                        })
+                      : "₱0.00"}
+                  </span>
+                </div>
               </div>
-
-              <div className="col-md-6"></div>
             </div>
 
             <h4 className="mt-5">PROOF OF PAYMENT</h4>

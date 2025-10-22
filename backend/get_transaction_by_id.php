@@ -51,7 +51,7 @@ $stmt = $conn->prepare("
         down_payment,
         dbilling_date AS dp_collection_date,
         balance,
-        total,
+        total
     FROM Transactions
     WHERE transaction_id = ?
 ");
