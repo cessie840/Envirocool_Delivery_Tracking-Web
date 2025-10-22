@@ -6,8 +6,8 @@ import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
 import { Button, Modal } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
-import { Row, Col } from "react-bootstrap";
-
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 
 const paymentOptions = [
@@ -79,6 +79,7 @@ const AddDelivery = () => {
   const [itemOptions, setItemOptions] = useState({});
   const [productOptions, setProductOptions] = useState([]);
   const [dpError, setDpError] = useState("");
+  const [dpDateError, setDpDateError] = useState("");
   const [contactError, setContactError] = useState("");
 
   const navigate = useNavigate();
@@ -108,6 +109,11 @@ const AddDelivery = () => {
 
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
+
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const [receiptItems, setReceiptItems] = useState([]);
+  const AUTO_DOWNLOAD_RECEIPT = false;
 
   const [form, setForm] = useState({
     customer_name: "",
@@ -214,30 +220,24 @@ const AddDelivery = () => {
     }
   };
 
-  // --- Inside AddDelivery component ---
   const handleContactChange = (e) => {
     let value = e.target.value || "";
 
-    // Trim spaces and normalize any weird autofill chars
     value = value.replace(/\s+/g, "").trim();
 
-    // ✅ If empty (autofill still loading or clearing) — don't show an error
     if (value === "") {
       setForm((prev) => ({ ...prev, customer_contact: "" }));
       setContactError("");
       return;
     }
 
-    // ✅ Only digits allowed, but allow autofill numeric values safely
     if (!/^\d+$/.test(value)) {
       setContactError("Contact number should contain numbers only.");
       return;
     }
 
-    // ✅ Update form after validation
     setForm((prev) => ({ ...prev, customer_contact: value }));
 
-    // ✅ Additional rules
     if (!value.startsWith("09")) {
       setContactError("Contact number must start with '09'.");
     } else if (value.length > 11) {
@@ -399,10 +399,9 @@ const AddDelivery = () => {
     return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
   };
 
-  // ✅ Automatically recalculate total when any item changes
   useEffect(() => {
     recalcTotal(orderItems);
-  }, [orderItems]);
+  }, [form.payment_option]);
 
   useEffect(() => {
     document.title = "Add Delivery";
@@ -475,16 +474,19 @@ const AddDelivery = () => {
         return sum + (isNaN(cost) ? 0 : cost);
       }, 0);
 
+      updatedForm.total = totalCost.toFixed(2);
+
       if (value === "Full Payment") {
+        updatedForm.balance = "";
         updatedForm.full_payment = totalCost.toFixed(2);
         updatedForm.down_payment = "";
         updatedForm.dp_collection_date = "";
-        updatedForm.balance = "";
-        updatedForm.total = totalCost.toFixed(2);
       } else if (value === "Down Payment") {
         updatedForm.full_payment = "";
         updatedForm.fp_collection_date = "";
-        updatedForm.total = totalCost.toFixed(2);
+        updatedForm.balance = !isNaN(downPayment)
+          ? (totalCost - downPayment).toFixed(2)
+          : totalCost.toFixed(2);
       }
     }
 
@@ -509,7 +511,7 @@ const AddDelivery = () => {
         updatedForm.total = totalCost.toFixed(2);
       } else {
         updatedForm.balance = "";
-        updatedForm.total = "";
+        updatedForm.total = totalCost.toFixed(2);
       }
     }
 
@@ -545,6 +547,59 @@ const AddDelivery = () => {
         2
       ),
     }));
+  };
+
+  const handlePrintReceipt = () => {
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>Delivery Receipt</title>
+        <style>
+          @page { size: auto; margin: 0; } /* Auto size for height, no margins */
+          body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif; 
+            font-size: 11px; /* Standard font size for body */
+            line-height: 1.4; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; /* Center vertically */
+          }
+          .receipt { 
+            width: 80mm; /* Standard receipt width */
+            margin: 0; 
+            padding: 10px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Optional shadow for aesthetics */
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+          }
+          th, td { 
+            border: 1px solid #000; 
+            padding: 2px; 
+            text-align: left; 
+            font-size: 10px; /* Smaller font size for table cells */
+          }
+          .text-center { text-align: center; }
+          .fw-bold { font-weight: bold; }
+          .text-end { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">${
+          document.getElementById("receipt-section").innerHTML
+        }</div>
+      </body>
+    </html>
+  `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const handleSubmit = async (e) => {
@@ -600,8 +655,13 @@ const AddDelivery = () => {
       }
     }
 
+    setForm((prev) => ({
+      ...prev,
+      down_payment: parsePeso(prev.down_payment) || 0,
+    }));
+
     setLoading(false);
-    setShowSummaryModal(true); // Show the summary modal instead of submitting
+    setShowSummaryModal(true);
   };
 
   const handleConfirmSubmit = async () => {
@@ -660,13 +720,53 @@ const AddDelivery = () => {
         "http://localhost/DeliveryTrackingSystem/add_delivery.php",
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         }
       );
+
       alert("Delivery added successfully!");
+
+      const newTransactionId = res.data.transaction_id || transactionId;
+
+      const fetchAndStoreReceipt = async (id) => {
+        try {
+          const res = await axios.get(
+            `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${id}`
+          );
+          console.log("Receipt data fetched:", res.data);
+
+          const data = res.data;
+          if (!data || !data.form) {
+            console.error("Receipt fetch returned empty data", data);
+            return false;
+          }
+
+          setReceiptData(data.form);
+          setReceiptItems(
+            Array.isArray(data.order_items) ? data.order_items : []
+          );
+
+          return true;
+        } catch (err) {
+          console.error("Error fetching receipt data", err);
+          return false;
+        }
+      };
+
+      if (AUTO_DOWNLOAD_RECEIPT) {
+        const ok = await fetchAndStoreReceipt(newTransactionId);
+        if (ok) {
+          setShowReceiptModal(true);
+          setTimeout(() => window.print(), 1000);
+        } else {
+          setShowReceiptModal(true);
+        }
+      } else {
+        const ok = await fetchAndStoreReceipt(newTransactionId);
+        setShowReceiptModal(true);
+      }
+
       setForm({
         customer_name: "",
         house_no: "",
@@ -695,11 +795,10 @@ const AddDelivery = () => {
         },
       ]);
 
-      // Clear proof-of-payment
       setProofFile(null);
       setSelectedFileName("");
       if (proofFileRef.current) {
-        proofFileRef.current.value = ""; // reset the actual file input
+        proofFileRef.current.value = "";
       }
 
       fetchLatestIDs();
@@ -783,21 +882,28 @@ const AddDelivery = () => {
                     : ""
                 }
                 onChange={(e) => {
-                  handleChange(e);
-
                   const selectedDate = new Date(e.target.value + "T00:00:00");
                   const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
 
                   if (isNaN(selectedDate.getTime())) {
                     setOrderDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setOrderDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, date_of_order: "" }));
+                    return;
                   } else if (selectedDate > today) {
                     setOrderDateError("Date of order cannot be in the future.");
                   } else {
                     setOrderDateError("");
+                    handleChange(e);
                   }
                 }}
                 required
-                max={getLocalDate()} // ✅ today's date, adjusted to your timezone
+                max={getLocalDate()}
               />
 
               {orderDateError && (
@@ -930,21 +1036,28 @@ const AddDelivery = () => {
                 } ${dateError ? "is-invalid" : ""}`}
                 value={form.target_date_delivery || ""}
                 onChange={(e) => {
-                  handleChange(e);
-
                   const selectedDate = new Date(e.target.value + "T00:00:00");
                   const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
 
                   if (isNaN(selectedDate.getTime())) {
                     setDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, target_date_delivery: "" }));
+                    return;
                   } else if (selectedDate < today) {
                     setDateError("Date of delivery cannot be in the past.");
                   } else {
                     setDateError("");
+                    handleChange(e);
                   }
                 }}
                 required
-                min={getLocalDate()} // Prevent past dates
+                min={getLocalDate()}
               />
               {dateError && <div className="invalid-feedback">{dateError}</div>}
             </div>
@@ -977,7 +1090,6 @@ const AddDelivery = () => {
                         onChange={(e) => {
                           const value = e.target.value;
 
-                          // Allow only digits
                           if (/^\d*$/.test(value)) {
                             handleItemChange(index, {
                               target: { name: "quantity", value },
@@ -985,7 +1097,6 @@ const AddDelivery = () => {
                           }
                         }}
                         onKeyDown={(e) => {
-                          // Block non-digit keys immediately
                           if (
                             ["e", "E", "+", "-", ".", " "].includes(e.key) ||
                             (isNaN(e.key) &&
@@ -1380,7 +1491,11 @@ const AddDelivery = () => {
                   <td colSpan="4" className="text-end">
                     TOTAL:
                   </td>
-                  <td className="text-end">{formatPeso(form.total)}</td>
+                  <td className="text-end">
+                    {form.total !== "" && form.total !== null
+                      ? formatPeso(form.total)
+                      : "₱0.00"}
+                  </td>
                   {orderItems.length > 1 && (
                     <td style={{ border: "none" }}></td>
                   )}
@@ -1465,7 +1580,6 @@ const AddDelivery = () => {
                             setForm((prev) => ({
                               ...prev,
                               payment_option: e.target.value,
-                              // ✅ Preserve date & down payment if switching temporarily
                               dp_collection_date: prev.dp_collection_date || "",
                               down_payment: prev.down_payment || "",
                             }));
@@ -1507,18 +1621,26 @@ const AddDelivery = () => {
                       : ""
                   }
                   onChange={(e) => {
-                    handleChange(e);
                     const selectedDate = new Date(e.target.value + "T00:00:00");
                     const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
 
                     if (isNaN(selectedDate.getTime())) {
                       setFpBillingError("Please enter a valid date.");
+                    } else if (day === 0 || day === 6) {
+                      setFpBillingError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, fp_collection_date: "" }));
+                      return;
                     } else if (selectedDate > today) {
                       setFpBillingError(
                         "Billing date cannot be in the future."
                       );
                     } else {
                       setFpBillingError("");
+                      handleChange(e);
                     }
                   }}
                   required
@@ -1561,27 +1683,55 @@ const AddDelivery = () => {
                   id="dpBillingDate"
                   name="dp_collection_date"
                   value={form.dp_collection_date || ""}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
+
+                    if (isNaN(selectedDate.getTime())) {
+                      setDpDateError("Please enter a valid date.");
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                    } else if (day === 0 || day === 6) {
+                      setDpDateError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                      return;
+                    } else if (selectedDate < today) {
+                      setDpDateError("Payment due date cannot be in the past.");
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                    } else {
+                      setDpDateError("");
+                      handleChange(e);
+                    }
+                  }}
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
+                  min={getLocalDate()}
                   className={`form-control ${
                     form.payment_option !== "Down Payment"
                       ? "text-muted"
                       : form.dp_collection_date
                       ? "text-black"
                       : "text-muted"
-                  }`}
+                  } ${dpDateError ? "is-invalid" : ""}`}
                   style={{
                     backgroundColor:
                       form.payment_option === "Down Payment"
                         ? "white"
-                        : "#f8f9fa",
+                        : "#E9ECEF",
                     cursor:
                       form.payment_option === "Down Payment"
                         ? "pointer"
                         : "not-allowed",
                   }}
                 />
+                {dpDateError && (
+                  <div className="invalid-feedback d-block">{dpDateError}</div>
+                )}
               </div>
 
               <div className="col-md-6">
@@ -1759,7 +1909,7 @@ const AddDelivery = () => {
                   {form.payment_option === "Down Payment" && (
                     <>
                       <p>
-                        <strong>Down Payment:</strong>
+                        <strong>Down Payment:</strong>{" "}
                         {formatPeso(form.down_payment)}
                       </p>
                       <p>
@@ -1870,6 +2020,181 @@ const AddDelivery = () => {
                 >
                   Confirm
                 </Button>
+              </Modal.Footer>
+            </Modal>
+            <Modal
+              show={showReceiptModal}
+              onHide={() => setShowReceiptModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header
+                closeButton
+                className="bg-light text-black no-print"
+              >
+                <Modal.Title></Modal.Title>
+              </Modal.Header>
+
+              <Modal.Body
+                id="receipt-section"
+                className="bg-white text-black p-4"
+              >
+                <div className="text-center mb-4 border-bottom pb-2">
+                  <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
+                  <p className="mb-0">Official Delivery Receipt</p>
+                  <small>Date Printed: {new Date().toLocaleString()}</small>
+                </div>
+
+                {/* Customer and order details */}
+                <div className="mb-3">
+                  <p>
+                    <b>Customer Name:</b> {receiptData?.customer_name || ""}
+                  </p>
+                  <p>
+                    <b>Address:</b>{" "}
+                    {[
+                      receiptData?.house_no,
+                      receiptData?.street_name,
+                      receiptData?.barangay,
+                      receiptData?.city,
+                      "Laguna",
+                      "Philippines",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>
+                    <b>Contact:</b> {receiptData?.customer_contact || ""}
+                  </p>
+                  <p>
+                    <b>Date of Order:</b> {receiptData?.date_of_order || ""}
+                  </p>
+                  <p>
+                    <b>Delivery Date:</b>{" "}
+                    {receiptData?.target_date_delivery || ""}
+                  </p>
+                </div>
+
+                {/* Payment details */}
+                <div className="mb-3">
+                  <p>
+                    <b>Payment Method:</b>{" "}
+                    {receiptData?.mode_of_payment ||
+                      receiptData?.payment_method ||
+                      ""}
+                  </p>
+                  <p>
+                    <b>Payment Option:</b> {receiptData?.payment_option || ""}
+                  </p>
+
+                  {receiptData?.payment_option === "Down Payment" && (
+                    <>
+                      <p>
+                        <b>Down Payment:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.down_payment || 0))}
+                      </p>
+                      <p>
+                        <b>Payment Due:</b>{" "}
+                        {receiptData?.dbilling_date ||
+                          receiptData?.dp_collection_date ||
+                          ""}
+                      </p>
+                      <p>
+                        <b>Balance:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.balance || 0))}
+                      </p>
+                    </>
+                  )}
+
+                  {receiptData?.payment_option === "Full Payment" && (
+                    <>
+                      <p>
+                        <b>Full Payment:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.full_payment || 0))}
+                      </p>
+                      <p>
+                        <b>Billing Date:</b>{" "}
+                        {receiptData?.fbilling_date ||
+                          receiptData?.fp_collection_date ||
+                          ""}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Order items */}
+                <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
+                <table className="table table-bordered table-sm">
+                  <thead className="table-light text-center">
+                    <tr>
+                      <th>Qty</th>
+                      <th>Item</th>
+                      <th>Unit Price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receiptItems.map((item, i) => (
+                      <tr key={i}>
+                        <td className="text-center">{item.quantity}</td>
+                        <td>
+                          {item.type_of_product} - {item.description}
+                        </td>
+                        <td className="text-end">
+                          {formatPeso(parseFloat(item.unit_cost || 0))}
+                        </td>
+                        <td className="text-end">
+                          {formatPeso(
+                            parseFloat(
+                              item.total_cost ||
+                                item.quantity * item.unit_cost ||
+                                0
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="3" className="text-end fw-bold">
+                        TOTAL:
+                      </td>
+                      <td className="text-end fw-bold">
+                        {formatPeso(parseFloat(receiptData?.total || 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Signature Section */}
+                <div className="signature-section mt-4">
+                  <div className="row">
+                    <div className="col-6 text-center">
+                      <p>________________________</p>
+                      <small>Prepared By</small>
+                    </div>
+                    <div className="col-6 text-center">
+                      <p>________________________</p>
+                      <small>Received By</small>
+                    </div>
+                  </div>
+                </div>
+              </Modal.Body>
+
+              <Modal.Footer className="no-print bg-light">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowReceiptModal(false)}
+                >
+                  Close
+                </Button>
+                <Button variant="success" onClick={handlePrintReceipt}>
+                  Print / Download
+                </Button>
+                {/* <Button variant="primary" onClick={handleDownloadPDF}>
+      Download PDF
+    </Button> */}
               </Modal.Footer>
             </Modal>
           </div>
