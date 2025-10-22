@@ -19,82 +19,62 @@ const Login = () => {
 
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(""), 3000);
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+ const handleLogin = async (e) => {
+  e.preventDefault();
 
-    setLoading(true);
-    setErrorMessage("");
+  if (!agreed) {
+    setErrorMessage("You must agree to the Terms and Conditions before logging in.");
+    return;
+  }
 
-    try {
-      const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/login.php",
-        { username, password },
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
+  setLoading(true);
+  setErrorMessage("");
 
-      const user = response.data.user;
+  try {
+    const response = await axios.post(
+      "http://localhost/DeliveryTrackingSystem/login.php",
+      { username, password },
+      { headers: { "Content-Type": "application/json" }, withCredentials: true }
+    );
 
-      if (!agreed) {
-        setErrorMessage(
-          "You must agree to the Terms and Conditions before logging in."
-        );
-        setLoading(false);
-        return;
-      }
+    const res = response.data;
 
-      localStorage.setItem("user", JSON.stringify(user));
-      sessionStorage.setItem("showLoginNotif", "true");
-
-      alert("Login successful!");
-
-      switch (user.role) {
-        case "admin":
-          navigate("/admin-dashboard");
-          break;
-        case "operationalmanager":
-          navigate("/operational-delivery-details");
-          break;
-        case "deliverypersonnel":
-          navigate("/driver-dashboard");
-          break;
-        default:
-          navigate("/");
-          break;
-      }
-    } catch (error) {
-      const errMsg = error?.response?.data?.error;
-
-      switch (errMsg) {
-        case "Missing username or password":
-          setErrorMessage("Please enter both username and password.");
-          break;
-        case "Invalid password":
-          setErrorMessage("The password you entered is incorrect. Try again.");
-          break;
-        case "Invalid username":
-          setErrorMessage("Username not found. Please check and try again.");
-          break;
-        case "db_error":
-          setErrorMessage("A database error occurred. Try again later.");
-          break;
-        case "server_error":
-          setErrorMessage("Server error. Please contact support.");
-          break;
-        default:
-          setErrorMessage("Login failed. Please try again.");
-      }
-    } finally {
-      setLoading(false);
+    if (res.status === "error") {
+      setErrorMessage(res.message);
+      return;
     }
-  };
+
+    const user = res.user;
+    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("showLoginNotif", "true");
+
+    alert("Login successful!");
+
+    switch (user.role) {
+      case "admin":
+        navigate("/admin-dashboard");
+        break;
+      case "operationalmanager":
+        navigate("/operational-delivery-details");
+        break;
+      case "deliverypersonnel":
+        navigate("/driver-dashboard");
+        break;
+      default:
+        navigate("/");
+    }
+  } catch {
+    setErrorMessage("Unable to connect to server. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="login-container container-fluid">

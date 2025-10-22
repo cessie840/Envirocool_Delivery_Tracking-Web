@@ -79,8 +79,9 @@ $lockCheckStmt->close();
 
 
 $token = strtoupper(bin2hex(random_bytes(3))); // 6-character token
-$reset_expire = date("Y-m-d H:i:s", strtotime("+15 minutes"));
+$reset_expire = date("Y-m-d H:i:s", strtotime("+5 minutes"));
 $reset_requested_at = date("Y-m-d H:i:s");
+
 
 switch ($table) {
     case "Admin":
@@ -105,6 +106,18 @@ if (!$updateSuccess) {
     exit;
 }
 
+ // Reset failed login attempts when password reset is requested
+$user_col = match ($table) {
+    "Admin" => "ad_username",
+    "OperationalManager" => "manager_username",
+    "DeliveryPersonnel" => "pers_username",
+};
+
+$update = $conn->prepare("UPDATE $table SET login_attempts = 0, last_attempt = NULL WHERE BINARY $user_col = ?");
+$update->bind_param("s", $username);
+$update->execute();
+$update->close();
+
 $mail = new PHPMailer(true);
 try {
     $mail->isSMTP();
@@ -124,7 +137,7 @@ try {
         <p>Hello <strong>$username</strong>,</p>
         <p>Your password reset code is:</p>
         <h2>$token</h2>
-        <p>This code will expire in <strong>15 minutes</strong>.</p>
+        <p>This code will expire in <strong>5 minutes</strong>.</p>
         <p>If you didn't request a reset, please ignore this message.</p>
         <br><p>- EnviroCool Team</p>
     ";
