@@ -21,6 +21,8 @@ CREATE TABLE Admin (
     reset_expire DATETIME,
     reset_requested_at DATETIME,
     attempts INT DEFAULT 0,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
     lock_until DATETIME DEFAULT NULL
 );
 
@@ -35,6 +37,9 @@ CREATE TABLE OperationalManager (
     reset_expire DATETIME,
     reset_requested_at DATETIME,
     attempts INT DEFAULT 0,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+    is_locked TINYINT(1) DEFAULT 0,
     lock_until DATETIME DEFAULT NULL
 );
 
@@ -48,7 +53,7 @@ CREATE TABLE DeliveryPersonnel (
     pers_birth DATE,
     pers_phone VARCHAR(11),
     status ENUM('Active','Inactive') DEFAULT 'Active',
-    assignment_status ENUM('Available', 'Assigned') DEFAULT 'Available',
+    assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available',
     assigned_transaction_id INT DEFAULT NULL,
     pers_resetToken VARCHAR(100),
     reset_expire DATETIME,
@@ -56,6 +61,9 @@ CREATE TABLE DeliveryPersonnel (
     pers_profile_pic VARCHAR(255) DEFAULT 'default-profile-pic.png',
     pers_email VARCHAR(255),
     attempts INT DEFAULT 0,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+    is_locked TINYINT(1) DEFAULT 0,
     lock_until DATETIME DEFAULT NULL
 );
 
@@ -63,6 +71,8 @@ CREATE TABLE Transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_name VARCHAR(255),
     customer_address TEXT,
+    latitude DOUBLE DEFAULT 0,
+    longitude DOUBLE DEFAULT 0,
     customer_contact VARCHAR(20),
     date_of_order DATE,
     target_date_delivery DATE,
@@ -74,10 +84,12 @@ CREATE TABLE Transactions (
     down_payment DECIMAL(10,2),
     balance DECIMAL(10,2),
     total DECIMAL(10,2),
+    proof_of_payment VARCHAR(100) NULL,
     tracking_number VARCHAR(20),
     status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     completed_at DATETIME NULL,
     proof_of_delivery VARCHAR(255) NULL,
+    assigned_device_id VARCHAR(50) DEFAULT NULL,
     shipout_at DATETIME NULL,
     cancelled_reason TEXT NULL,
     cancelled_at DATETIME NULL,
@@ -92,7 +104,7 @@ CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
     type_of_product VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
-    unit_cost DECIMAL(10,2) NOT NULL,
+    unit_cost DECIMAL(10,2) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(type_of_product, description)
 );
@@ -115,6 +127,7 @@ CREATE TABLE DeliveryAssignments (
     transaction_id INT,
     personnel_username VARCHAR(100),
     assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    device_id VARCHAR(50) NULL,
     FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_username) REFERENCES DeliveryPersonnel(pers_username) ON DELETE SET NULL
 );
@@ -179,6 +192,12 @@ CREATE TABLE DeliveryHistory (
     FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
 );
 
+CREATE TABLE laguna (
+city_id INT AUTO_INCREMENT PRIMARY KEY,
+city_name VARCHAR (50),
+barangay_name varchar (50)
+);
+
 
 INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone) 
 VALUES (
@@ -199,20 +218,6 @@ VALUES (
     'pacienteliezel04@gmail.com',
     '09171234567'
 );
-
-ALTER TABLE DeliveryPersonnel
-MODIFY assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available';
-
-ALTER TABLE DeliveryAssignments
-ADD COLUMN notified TINYINT(1) DEFAULT 0;
-
-select*from transactions;
-select*from DeliveryPersonnel;
-select*from Product;
-
-select*from DeliveryAssignments;
-ALTER TABLE Product MODIFY unit_cost DECIMAL(10,2) NULL;
-
 
 INSERT INTO Product (type_of_product, description, unit_cost) 
 VALUES 
@@ -237,26 +242,29 @@ VALUES
 ("AIRCON", "FLOOR MOUNTED TYPE 3TR", NULL),
 ("AIRCON", "FLOOR MOUNTED TYPE 5TR", NULL);
 
-ALTER TABLE DeliveryAssignments
-ADD COLUMN device_id VARCHAR(50) NULL AFTER personnel_username;
 
-ALTER TABLE Transactions
-ADD COLUMN assigned_device_id VARCHAR(50) DEFAULT NULL;
+INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
+ ('DEVICE_01', 14.2091835, 121.1368418, NOW() ),                    
+('DEVICE_01', 14.2092500, 121.1369000, NOW() + INTERVAL 1 MINUTE), 
+('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE), 
+('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE), 
+('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE), 
+('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE),
+('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
+('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
+('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
+('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE),
+('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE),
+('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
+('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
+('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
+('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
+('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
 
-
-ALTER TABLE Transactions
-ADD COLUMN latitude DOUBLE DEFAULT 0,
-ADD COLUMN longitude DOUBLE DEFAULT 0;
-
-ALTER TABLE Transactions
-ADD COLUMN customer_feedback VARCHAR(500) NULL;
-
-
-CREATE TABLE laguna (
-city_id INT AUTO_INCREMENT PRIMARY KEY,
-city_name VARCHAR (50),
-barangay_name varchar (50)
-);
+-- ('DEVICE_01', 14.2676156, 121.1112100, NOW()),
+-- ('DEVICE_01', 14.2790196, 121.14540180524608, NOW()),
+-- ('DEVICE_01', 14.2754855, 121.1446400, NOW()+ INTERVAL 5 MINUTE),
+-- ('DEVICE_01', 14.2742996, 121.1475564, NOW()+ INTERVAL 5 MINUTE);
 
 INSERT INTO laguna (city_name, barangay_name) VALUES
 -- Santa Rosa
@@ -414,38 +422,6 @@ INSERT INTO laguna (city_name, barangay_name) VALUES
 ('Calauan', 'San Antonio'),
 ('Calauan', 'Santo Niño'),
 ('Calauan', 'Mayamot');
-
-
-select*from transactions;
-select*from deliveryassignments;
-
--- Assuming table already exists:
--- CREATE TABLE gps_coordinates (
---     id INT AUTO_INCREMENT PRIMARY KEY,
---     device_id VARCHAR(50) NOT NULL,
---     lat DOUBLE NOT NULL,
---     lng DOUBLE NOT NULL,
---     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
-
--- INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
--- -- ('DEVICE_01', 14.2091835, 121.1368418, NOW() ),                    
--- ('DEVICE_01', 14.2092500, 121.1369000, NOW() + INTERVAL 1 MINUTE), 
--- ('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE), 
--- ('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE), 
--- ('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE), 
--- ('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE),
--- ('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
--- ('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
--- ('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
--- ('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE),
--- ('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE),
--- ('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
--- ('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
--- ('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
--- ('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
--- ('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
-
 
 -- CREDENTIALS
 
