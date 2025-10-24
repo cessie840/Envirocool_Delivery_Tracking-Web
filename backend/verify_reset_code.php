@@ -85,7 +85,8 @@ foreach ($tablesToCheck as $table => $cols) {
             // Invalid code
             $attempts++;
             if ($attempts >= $maxAttempts) {
-                $lockTime = date("Y-m-d H:i:s", strtotime("+1 hour"));
+            $lockTime = date("Y-m-d H:i:s", strtotime("+5 minutes"));
+
                 $lockStmt = $conn->prepare("
                     UPDATE $table 
                     SET {$cols['attempt_col']} = ?, {$cols['lock_col']} = ? 
@@ -97,7 +98,7 @@ foreach ($tablesToCheck as $table => $cols) {
 
                 echo json_encode([
                     "status" => "locked",
-                    "message" => "Too many failed attempts. Try again after 1 hour."
+                    "message" => "Too many failed attempts. Try again after 5 minutes."
                 ]);
             } else {
                 $update = $conn->prepare("

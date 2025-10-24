@@ -15,16 +15,15 @@ const EditProfileTab = () => {
   const [role, setRole] = useState("");
 
   useEffect(() => {
-  axios.get("https://13.239.143.31/DeliveryTrackingSystem/get_profile.php", {
-  withCredentials: true, // ✅ send PHP session
-})
-
-
-
+    axios
+      .get("http://localhost/DeliveryTrackingSystem/get_profile.php", {
+        withCredentials: true, // ✅ send PHP session
+      })
       .then((res) => {
         const data = res.data;
         setUserData(data);
 
+        // Determine role and set formData accordingly
         if (data.ad_username) {
           setRole("admin");
           setFormData({
@@ -35,7 +34,7 @@ const EditProfileTab = () => {
             phone: data.ad_phone,
           });
         } else if (data.manager_username) {
-          setRole("operational");
+          setRole("manager");
           setFormData({
             username: data.manager_username,
             fname: data.manager_fname,
@@ -43,11 +42,22 @@ const EditProfileTab = () => {
             email: data.manager_email,
             phone: data.manager_phone,
           });
+        } else if (data.pers_username) {
+          setRole("personnel");
+          setFormData({
+            username: data.pers_username,
+            fname: data.pers_fname,
+            lname: data.pers_lname,
+            email: data.pers_email,
+            phone: data.pers_phone,
+          });
+        } else {
+          throw new Error("No valid session found");
         }
       })
       .catch((err) => {
         console.error("Error fetching profile:", err);
-        alert("Unable to load profile.");
+        alert("Unable to load profile. Please login again.");
       });
   }, []);
 
@@ -57,37 +67,57 @@ const EditProfileTab = () => {
   };
 
   const handleUpdate = () => {
-    const updateUrl =
-      role === "admin"
-        ? "https://13.239.143.31/DeliveryTrackingSystem/update_admin_profile.php"
-        : "https://13.239.143.31/DeliveryTrackingSystem/update_operational_profile.php";
+    let updateUrl = "";
+    let payload = {};
 
-    const payload =
-      role === "admin"
-        ? {
-            ad_username: formData.username,
-            ad_fname: formData.fname,
-            ad_lname: formData.lname,
-            ad_email: formData.email,
-            ad_phone: formData.phone,
-          }
-        : {
-            manager_username: formData.username,
-            manager_fname: formData.fname,
-            manager_lname: formData.lname,
-            manager_email: formData.email,
-            manager_phone: formData.phone,
-          };
+    switch (role) {
+      case "admin":
+        updateUrl =
+          "http://localhost/DeliveryTrackingSystem/update_admin_profile.php";
+        payload = {
+          ad_username: formData.username,
+          ad_fname: formData.fname,
+          ad_lname: formData.lname,
+          ad_email: formData.email,
+          ad_phone: formData.phone,
+        };
+        break;
+      case "manager":
+        updateUrl =
+          "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
+        payload = {
+          manager_username: formData.username,
+          manager_fname: formData.fname,
+          manager_lname: formData.lname,
+          manager_email: formData.email,
+          manager_phone: formData.phone,
+        };
+        break;
+      case "personnel":
+        updateUrl =
+          "http://localhost/DeliveryTrackingSystem/update_personnel_profile.php";
+        payload = {
+          pers_username: formData.username,
+          pers_fname: formData.fname,
+          pers_lname: formData.lname,
+          pers_email: formData.email,
+          pers_phone: formData.phone,
+        };
+        break;
+      default:
+        alert("Unknown role. Cannot update profile.");
+        return;
+    }
 
-  axios.post(updateUrl, payload, {
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-})
-
+    axios
+      .post(updateUrl, payload, {
+        withCredentials: true, // ✅ send PHP session
+        headers: { "Content-Type": "application/json" },
+      })
       .then(() => {
         alert("Profile updated successfully.");
         setIsEditing(false);
-        window.location.reload(); // optional — removes stale session/view
+        window.location.reload(); // optional
       })
       .catch((err) => {
         console.error("Update failed:", err);
@@ -123,7 +153,7 @@ const EditProfileTab = () => {
           </p>
           <hr />
           <button
-            className="btn btn-view mt-2 px-5 py-2 fs-6 rounded-2 "
+            className="btn btn-view mt-2 px-5 py-2 fs-6 rounded-2"
             onClick={() => setIsEditing(true)}
           >
             Edit
@@ -143,7 +173,10 @@ const EditProfileTab = () => {
               />
             </div>
           ))}
-          <button className="btn add-btn px-4 py-2 fs-6 rounded-2 me-4" onClick={handleUpdate}>
+          <button
+            className="btn add-btn px-4 py-2 fs-6 rounded-2 me-4"
+            onClick={handleUpdate}
+          >
             Save
           </button>
           <button

@@ -16,7 +16,7 @@ include 'database.php';
 
 $orders = [];
 
-// ✅ FIXED: get only the latest GPS coordinate per device_id
+// ✅ Get only the latest GPS coordinate per device_id
 $sql = "
 SELECT 
     t.*, 
@@ -43,13 +43,15 @@ ORDER BY t.transaction_id DESC
 
 $result = $conn->query($sql);
 
-$base_url = "http://localhost/DeliveryTrackingSystem/uploads/";
+// ✅ Base directories
+$profilePicDir = __DIR__ . "/uploads/personnel_profile_pic/";
+$baseUrl = "http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/";
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $transactionId = (int) $row['transaction_id'];
 
-        // 🟢 Updated query: include product/type name
+        // 🟢 Fetch items for this transaction
         $itemsSql = "
             SELECT 
                 type_of_product AS product_name,
@@ -70,7 +72,6 @@ if ($result && $result->num_rows > 0) {
                 $itemTotal = floatval($item['total_cost']);
                 $calculatedTotal += $itemTotal;
 
-                // 🟢 Combine product name + description
                 $items[] = [
                     'name' => trim(($item['product_name'] ?? '') . ' ' . ($item['description'] ?? '')),
                     'quantity' => intval($item['quantity']),
@@ -80,16 +81,25 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
-        // Handle profile picture
+        // ✅ Correct handling of personnel profile picture
         $profilePic = trim($row['pers_profile_pic']);
+        $defaultPic = "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+
         if (!empty($profilePic)) {
-            $profilePic = basename($profilePic);
-            $profilePic = $base_url . $profilePic;
+            $picFilename = basename($profilePic);
+            $fullPath = $profilePicDir . $picFilename;
+
+            // Check if the file exists in uploads/personnel_profile_pic/
+            if (file_exists($fullPath)) {
+                $profilePic = $baseUrl . $picFilename;
+            } else {
+                $profilePic = $defaultPic;
+            }
         } else {
-            $profilePic = $base_url . "default-profile-pic.png";
+            $profilePic = $defaultPic;
         }
 
-        // Push order data
+        // 🟢 Build the order object
         $orders[] = [
             'transaction_id' => $transactionId,
             'customer_name' => $row['customer_name'],

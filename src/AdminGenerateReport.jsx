@@ -323,7 +323,7 @@ const GenerateReport = () => {
       if (reportType === "sales" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_sales_report.php"
+            "http://localhost/DeliveryTrackingSystem/get_sales_report.php"
           )
         );
         if (!res.ok) throw new Error("get_sales_report failed");
@@ -341,7 +341,7 @@ const GenerateReport = () => {
       if (reportType === "transaction" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_transaction_report.php"
+            "http://localhost/DeliveryTrackingSystem/get_transaction_report.php"
           )
         );
         if (!res.ok) throw new Error("get_transaction_report failed");
@@ -376,7 +376,7 @@ const GenerateReport = () => {
       ) {
         const res = await fetch(
           buildUrl(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_service_delivery_report.php"
+            "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
           )
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
@@ -410,7 +410,7 @@ const GenerateReport = () => {
       if (reportType === "customer" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
+            "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
           )
         );
         if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
@@ -1751,39 +1751,28 @@ const GenerateReport = () => {
       }
     };
 
-    // Signature section – shown only at the end of each report
-    const addSignatureSection = (doc, pageWidth, pageHeight) => {
-      const lineY = pageHeight - 25; // position above footer
-      const nameY = lineY + 6;
-      const titleY = lineY + 10;
+  // Signature section – "Prepared By" in bold with line below
+const addSignatureSection = (doc, pageWidth, pageHeight) => {
+  const spaceAboveLine = 10; // space between "Prepared By:" and the line
+  const lineY = pageHeight - 35; // position above footer
+  const labelY = lineY - spaceAboveLine; // "Prepared By:" position
 
-      doc.setFont("helvetica", "normal");
-      doc.setLineWidth(0.2);
+  // "Prepared By:" text in bold
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Prepared By:", pageWidth / 2, labelY, { align: "center" });
 
-      // Draw signature line (centered)
-      const lineWidth = 60;
-      const lineX = (pageWidth - lineWidth) / 2;
-      doc.line(lineX, lineY, lineX + lineWidth, lineY);
+  // Draw signature line (centered, blank for manual name)
+  const lineWidth = 60;
+  const lineX = (pageWidth - lineWidth) / 2;
+  doc.setLineWidth(0.2);
+  doc.line(lineX, lineY, lineX + lineWidth, lineY);
 
-      // Name (normal)
-      doc.setFontSize(10);
-      doc.text(
-        "Ms. Janine Sarah Marie De Guzman Bacuyag",
-        pageWidth / 2,
-        nameY,
-        {
-          align: "center",
-        }
-      );
+  // Reset font to normal for safety
+  doc.setFont("helvetica", "normal");
+};
 
-      // Title (bold)
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text("Sales Manager", pageWidth / 2, titleY, { align: "center" });
 
-      // Reset to normal font afterward (for safety)
-      doc.setFont("helvetica", "normal");
-    };
 
     const addFooter = (pageNum, totalPages) => {
       // Draw a clear separator line above the footer
@@ -1819,7 +1808,7 @@ const GenerateReport = () => {
     const fetchSalesData = async () => {
       try {
         const res = await fetch(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_sales_report.php",
+          "http://localhost/DeliveryTrackingSystem/get_sales_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_sales_report failed");
@@ -1845,7 +1834,7 @@ const GenerateReport = () => {
     const fetchTransactionData = async () => {
       try {
         const res = await fetch(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_transaction_report.php",
+          "http://localhost/DeliveryTrackingSystem/get_transaction_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_transaction_report failed");
@@ -1873,7 +1862,7 @@ const GenerateReport = () => {
     const fetchServiceData = async () => {
       try {
         const res = await fetch(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_service_delivery_report.php",
+          "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
@@ -1898,7 +1887,7 @@ const GenerateReport = () => {
     const fetchCustomerSatisfactionData = async () => {
       try {
         const res = await fetch(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
+          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_customer_satisfaction_report failed");

@@ -13,6 +13,8 @@ function DriverDashboard() {
   const [newDeliveriesCount, setNewDeliveriesCount] = useState(0);
   const [showNewDeliveryPopup, setShowNewDeliveryPopup] = useState(false);
   const [newDeliveries, setNewDeliveries] = useState([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedTxn, setSelectedTxn] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [highlightedTxn, setHighlightedTxn] = useState(null);
@@ -30,7 +32,7 @@ function DriverDashboard() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
+        "http://localhost/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
         { pers_username: username }
       )
       .then((res) => {
@@ -61,7 +63,6 @@ function DriverDashboard() {
           setNewDeliveriesCount(freshOnes.length);
           setShowNewDeliveryPopup(true);
 
-        
           const newNotifs = freshOnes.map((d) => ({
             transactionNo: d.transactionNo,
             message: `You have a new assigned delivery for Transaction No. ${d.transactionNo}`,
@@ -80,7 +81,6 @@ function DriverDashboard() {
       .catch((err) => console.error("Error fetching deliveries:", err));
   };
 
- 
   useEffect(() => {
     fetchAssignedDeliveries();
     const interval = setInterval(fetchAssignedDeliveries, 10000);
@@ -110,9 +110,18 @@ function DriverDashboard() {
     setNewDeliveriesCount(0);
   };
 
-  const markAsOutForDelivery = (transactionNo) => {
+  // --- Trigger the confirmation modal ---
+  const handleOutForDeliveryClick = (transactionNo) => {
+    setSelectedTxn(transactionNo);
+    setShowConfirmModal(true);
+  };
+
+  // --- Confirm and proceed with marking out for delivery ---
+  const handleConfirmOutForDelivery = () => {
+    if (!selectedTxn) return;
+
     const delivery = assignedDeliveries.find(
-      (d) => d.transactionNo === transactionNo
+      (d) => d.transactionNo === selectedTxn
     );
     if (!delivery) {
       alert("Delivery not found.");
@@ -121,15 +130,15 @@ function DriverDashboard() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/update_out_of_order_status.php",
-        { transaction_id: transactionNo }
+        "http://localhost/DeliveryTrackingSystem/update_out_of_order_status.php",
+        { transaction_id: selectedTxn }
       )
       .then((res) => {
         const { success, message } = res.data;
         if (success) {
           alert("Order is now marked as 'Out for Delivery'.");
           fetchAssignedDeliveries();
-          navigate("/out-for-delivery");
+          navigate("/driver-dashboard");
         } else {
           alert(`Error: ${message}`);
         }
@@ -137,6 +146,10 @@ function DriverDashboard() {
       .catch((err) => {
         console.error("API error:", err);
         alert("Failed to update delivery status. Please try again later.");
+      })
+      .finally(() => {
+        setShowConfirmModal(false);
+        setSelectedTxn(null);
       });
   };
 
@@ -169,6 +182,7 @@ function DriverDashboard() {
       />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
+      {/* New Delivery Notification Modal */}
       <Modal show={showNewDeliveryPopup} onHide={handleClosePopup} centered>
         <Modal.Header closeButton>
           <Modal.Title>New Assigned Deliveries</Modal.Title>
@@ -181,6 +195,39 @@ function DriverDashboard() {
         <Modal.Footer>
           <Button variant="success" onClick={handleClosePopup}>
             Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* --- Confirmation Modal --- */}
+      <Modal
+        show={showConfirmModal}
+        onHide={() => setShowConfirmModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Action</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedTxn ? (
+            <>
+              Are you sure you want to mark{" "}
+              <strong>Transaction No. {selectedTxn}</strong> as{" "}
+              <strong>Out for Delivery</strong>?
+            </>
+          ) : (
+            "Are you sure you want to proceed?"
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowConfirmModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button variant="success" onClick={handleConfirmOutForDelivery}>
+            Yes, Confirm
           </Button>
         </Modal.Footer>
       </Modal>
@@ -213,6 +260,15 @@ function DriverDashboard() {
               </h5>
 
               <div className="border p-3 rounded bg-white">
+                <div className="d-flex justify-content-between mb-1">
+                  <strong>Truck Device:</strong>
+                  <span>
+                    {delivery.device_id
+                      ? delivery.device_id.replace(/device[-_]?/i, "Truck ")
+                      : "Not Assigned"}
+                  </span>
+                </div>
+
                 <div className="d-flex justify-content-between mb-1">
                   <strong>Customer:</strong>
                   <span>{delivery.customerName}</span>
@@ -267,7 +323,9 @@ function DriverDashboard() {
                     borderColor: "#198754",
                     borderRadius: "10px",
                   }}
-                  onClick={() => markAsOutForDelivery(delivery.transactionNo)}
+                  onClick={() =>
+                    handleOutForDeliveryClick(delivery.transactionNo)
+                  }
                 >
                   Out for Delivery
                 </Button>

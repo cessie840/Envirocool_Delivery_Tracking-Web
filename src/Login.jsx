@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./loading-overlay.css";
@@ -8,13 +9,12 @@ import "./loading-overlay.css";
 const Login = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
   const [showTerms, setShowTerms] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (errorMessage) {
@@ -25,13 +25,20 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+      setErrorMessage("");
 
+      if (!agreed) {
+        setErrorMessage(
+          "You must agree to the Terms and Conditions before logging in."
+        );
+        return; 
+      }
     setLoading(true);
-    setErrorMessage("");
+  
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/login.php",
+        "http://localhost/DeliveryTrackingSystem/login.php",
         { username, password },
         {
           headers: { "Content-Type": "application/json" },
@@ -40,14 +47,6 @@ const Login = () => {
       );
 
       const user = response.data.user;
-
-      if (!agreed) {
-        setErrorMessage(
-          "You must agree to the Terms and Conditions before logging in."
-        );
-        setLoading(false);
-        return;
-      }
 
       localStorage.setItem("user", JSON.stringify(user));
       sessionStorage.setItem("showLoginNotif", "true");
@@ -69,27 +68,34 @@ const Login = () => {
           break;
       }
     } catch (error) {
-      const errMsg = error?.response?.data?.error;
+     const errName = error?.response?.data?.errorName;
 
-      switch (errMsg) {
-        case "Missing username or password":
-          setErrorMessage("Please enter both username and password.");
-          break;
-        case "Invalid password":
-          setErrorMessage("The password you entered is incorrect. Try again.");
-          break;
-        case "Invalid username":
-          setErrorMessage("Username not found. Please check and try again.");
-          break;
-        case "db_error":
-          setErrorMessage("A database error occurred. Try again later.");
-          break;
-        case "server_error":
-          setErrorMessage("Server error. Please contact support.");
-          break;
-        default:
-          setErrorMessage("Login failed. Please try again.");
-      }
+     switch (errName) {
+       case "MISSING_CREDENTIALS":
+         setErrorMessage("Please enter both username and password.");
+         break;
+       case "INVALID_USERNAME":
+         setErrorMessage("Username not found. Please check and try again.");
+         break;
+       case "INVALID_PASSWORD":
+         setErrorMessage(error?.response?.data?.error); // Shows attempt count
+         break;
+       case "MAX_ATTEMPTS_REACHED":
+         setErrorMessage(error?.response?.data?.error);
+         break;
+       case "ACCOUNT_LOCKED":
+         setErrorMessage(error?.response?.data?.error);
+         break;
+       case "DB_ERROR":
+         setErrorMessage("A database error occurred. Please try again later.");
+         break;
+       case "SERVER_ERROR":
+         setErrorMessage("A server error occurred. Please contact support.");
+         break;
+       default:
+         setErrorMessage("Login failed. Please try again.");
+     }
+
     } finally {
       setLoading(false);
     }
@@ -106,6 +112,7 @@ const Login = () => {
         />
 
         <form className="login-form text-start" onSubmit={handleLogin}>
+          {/* Username */}
           <div className="mb-3">
             <label htmlFor="username" className="login form-label">
               Username:
@@ -120,20 +127,37 @@ const Login = () => {
             />
           </div>
 
-          <div className="mb-1">
+          {/* Password */}
+          <div className="mb-1 position-relative">
             <label htmlFor="password" className="login form-label">
               Password:
             </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="form-control"
-              required
-            />
+            <div className="position-relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-control pe-5"
+                required
+              />
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "15px",
+                  top: "49%",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                  color: "#1E1F1FFF",
+                }}
+              >
+                {showPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+              </span>
+            </div>
           </div>
 
+          {/* Terms + Forgot Password */}
           <div className="d-flex justify-content-between align-items-center mt-3 mb-4 fs-6">
             <div className="d-flex align-items-center justify-content-center">
               <input
@@ -167,12 +191,14 @@ const Login = () => {
             </span>
           </div>
 
+          {/* Error Message */}
           {errorMessage && (
             <div className="text-danger mb-3 text-center fw-bold">
               {errorMessage}
             </div>
           )}
 
+          {/* Loading / Button */}
           {loading ? (
             <div className="loading-overlay">
               <div className="spinner-border text-primary" role="status">
@@ -190,6 +216,7 @@ const Login = () => {
         </form>
       </div>
 
+      {/* Terms Modal */}
       {showTerms && (
         <div className="modal d-block" tabIndex="-1">
           <div className="modal-dialog modal-md modal-dialog-centered">

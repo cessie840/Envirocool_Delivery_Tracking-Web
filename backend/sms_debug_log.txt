@@ -135,3 +135,139 @@ HTTP 200
 }
 Error: 
 
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":400,"message":"Invalid phone number!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+

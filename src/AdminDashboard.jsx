@@ -53,7 +53,7 @@ const AdminDashboard = () => {
     document.title = "Admin Dashboard";
 
     axios
-      .get("https://13.239.143.31/DeliveryTrackingSystem/get_total_dashboard.php", {
+      .get("http://localhost/DeliveryTrackingSystem/get_total_dashboard.php", {
         withCredentials: true,
       })
       .then((res) => {
@@ -65,7 +65,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_recent_transactions.php",
+        "http://localhost/DeliveryTrackingSystem/get_recent_transactions.php",
         {
           withCredentials: true,
         }
@@ -81,7 +81,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_pending_transactions.php",
+        "http://localhost/DeliveryTrackingSystem/get_pending_transactions.php",
         {
           withCredentials: true,
         }
@@ -97,7 +97,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_yearly_distribution.php",
+        "http://localhost/DeliveryTrackingSystem/get_yearly_distribution.php",
         { withCredentials: true }
       )
       .then((res) => {
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_monthly_transactions.php",
+        "http://localhost/DeliveryTrackingSystem/get_monthly_transactions.php",
         {
           withCredentials: true,
         }

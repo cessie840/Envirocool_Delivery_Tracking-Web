@@ -6,6 +6,7 @@ import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
 import { Button, Modal, Form } from "react-bootstrap";
 
+
 const ViewOrder = () => {
   const navigate = useNavigate();
   const { transaction_id } = useParams();
@@ -43,7 +44,7 @@ const ViewOrder = () => {
   useEffect(() => {
     document.title = "View Order Details";
     fetch(
-      `https://13.239.143.31//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
+      `http://localhost//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -121,7 +122,7 @@ const ViewOrder = () => {
       items: editableItems,
     };
 
-    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
+    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -184,17 +185,17 @@ const ViewOrder = () => {
         <div className="view-order card shadow-lg border-0 rounded-4">
           <div className="view-order card-body">
             <div className="d-flex justify-content-between align-items-center mt-3 mb-3">
-              <h4 className="card-title fw-bold text-success">
+              <h3 className="card-title fw-bold text-success">
                 Transaction No. {transaction_id}
-              </h4>
-              <h4 className="card-title fw-bold text-success">
+              </h3>
+              <h3 className="card-title fw-bold text-success">
                 Tracking No. {orderDetails.tracking_number}
-              </h4>
+              </h3>
             </div>
 
             <div className="m-2 p-3 bg-white border rounded-3 shadow-sm">
               <div className="row">
-                <div className="col-md-6">
+                <div className="col-md-6 order-1 order-md-1">
                   <h5 className="text-success fw-bold">Client Details</h5>
                   <p>
                     <span>Name:</span> {orderDetails.customer_name}
@@ -206,7 +207,7 @@ const ViewOrder = () => {
                     <span>Contact:</span> {orderDetails.customer_contact}
                   </p>
                   <p>
-                    <span>Date of Order:</span>
+                    <span>Date of Order:</span>{" "}
                     {formatDate(orderDetails.date_of_order)}
                   </p>
                   <p>
@@ -220,14 +221,11 @@ const ViewOrder = () => {
                       : "—"}
                   </p>
                   <br />
-                  <div>
-                    <h5 className="text-success fw-bold">Delivery Status</h5>
-                  </div>
+                  <h5 className="text-success fw-bold">Delivery Status</h5>
                   <p>
                     <span>Current Delivery Status: </span>
                     {renderStatusBadge(orderDetails.status)}
                   </p>
-
                   {orderDetails.status === "Cancelled" &&
                     orderDetails.cancelled_reason && (
                       <p>
@@ -237,41 +235,9 @@ const ViewOrder = () => {
                         </strong>
                       </p>
                     )}
-
-                  {/* Proof of Delivery Button */}
-
-                  {orderDetails.proof_of_payment && (
-                    <div className="mt-5">
-                      <button
-                        className="btn btn-view py-2 px-3 fs-6"
-                        onClick={() => {
-                          setProofUrl(orderDetails.proof_of_payment);
-                          setShowProofViewModal(true);
-                        }}
-                      >
-                        View Proof of Payment
-                      </button>
-                    </div>
-                  )}
-                  {orderDetails.status === "Delivered" &&
-                    orderDetails.proof_of_delivery && (
-                      <div className="mt-2">
-                        <button
-                          className="btn add-btn py-2 px-3 fs-6 rounded-1"
-                          onClick={() => {
-                            setProofUrl(
-                              `https://13.239.143.31//DeliveryTrackingSystem/uploads/${orderDetails.proof_of_delivery}`
-                            );
-                            setShowProofViewModal(true);
-                          }}
-                        >
-                          View Proof of Delivery
-                        </button>
-                      </div>
-                    )}
                 </div>
 
-                <div className="col-md-6">
+                <div className="col-md-6 order-2 order-md-2">
                   <h5 className="text-success fw-bold">Payment Details</h5>
                   <p>
                     <span>Payment Method:</span> {orderDetails.mode_of_payment}
@@ -291,6 +257,39 @@ const ViewOrder = () => {
                     <span>Balance:</span> ₱
                     {Number(orderDetails?.balance || 0).toLocaleString()}
                   </p>
+                </div>
+
+                <div className="col-md-12 order-3 order-md-3 mt-4">
+                  <h5 className="text-success fw-bold">Transaction Proofs</h5>
+
+                  {orderDetails.proof_of_payment && (
+                    <div className="mb-2">
+                      <button
+                        className="btn btn-view py-2 px-3 fs-6 rounded-2"
+                        onClick={() => {
+                          setProofUrl(orderDetails.proof_of_payment);
+                          setShowProofViewModal(true);
+                        }}
+                      >
+                        View Proof of Payment
+                      </button>
+                    </div>
+                  )}
+
+                  {orderDetails.status === "Delivered" &&
+                    orderDetails.proof_of_delivery && (
+                      <div>
+                        <button
+                          className="btn add-btn py-2 px-3 fs-6 rounded-2"
+                          onClick={() => {
+                            setProofUrl(orderDetails.proof_of_delivery);
+                            setShowProofViewModal(true);
+                          }}
+                        >
+                          View Proof of Delivery
+                        </button>
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
@@ -328,12 +327,17 @@ const ViewOrder = () => {
             </div>
 
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
-              <button
-                className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                onClick={handleUpdate}
-              >
-                Update
-              </button>
+              {orderDetails.status !== "Delivered" &&
+                orderDetails.status !== "Out for Delivery" &&
+                orderDetails.status !== "Cancelled" && (
+                  <Button
+                    variant="primary"
+                    className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                    onClick={handleUpdate}
+                  >
+                    Update
+                  </Button>
+                )}
 
               {orderDetails.status === "Cancelled" && (
                 <button
@@ -381,7 +385,7 @@ const ViewOrder = () => {
         >
           <Modal.Title>Proof of Delivery</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="d-flex justify-content-center">
+        <Modal.Body className="d-flex justify-content-center bg-light">
           {proofUrl ? (
             <img
               src={proofUrl}
@@ -389,8 +393,10 @@ const ViewOrder = () => {
               className="w-100 h-auto"
               style={{
                 maxHeight: "75vh",
-                objectFit: "contain",
-                borderRadius: "10px",
+                maxWidth: "35rem",
+                objectFit: "fill",
+                // borderRadius: "10px",
+                border: "1px solid #9E9E9EFF",
               }}
             />
           ) : (

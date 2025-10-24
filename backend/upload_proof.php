@@ -22,10 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $transaction_id = intval($_POST['transaction_id']);
 
-    $targetDir = __DIR__ . "/uploads/proofs/";
-    if (!file_exists($targetDir)) {
-        mkdir($targetDir, 0777, true);
-    }
+$targetDir = __DIR__ . "/backend/uploads/proofs_of_delivery";
+if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+
+
 
     $fileExt = pathinfo($_FILES["proof_of_delivery"]["name"], PATHINFO_EXTENSION);
     if ($fileExt == "") $fileExt = "jpg";
@@ -38,7 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (move_uploaded_file($_FILES["proof_of_delivery"]["tmp_name"], $targetFile)) {
         
       
-        $relativePath = "proofs/" . $fileName;
+       
+$relativePath = "uploads/proofs_of_delivery" . $fileName;
 
         $stmt = $conn->prepare("UPDATE Transactions 
             SET status = 'Delivered', proof_of_delivery = ?, completed_at = NOW() 

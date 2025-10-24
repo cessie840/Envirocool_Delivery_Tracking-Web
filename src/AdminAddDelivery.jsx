@@ -6,6 +6,8 @@ import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
 import { Button, Modal } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 
 const paymentOptions = [
@@ -70,7 +72,6 @@ const CustomMenuList = (props) => {
   );
 };
 
-
 const AddDelivery = () => {
   const proofFileRef = useRef(null);
 
@@ -78,6 +79,7 @@ const AddDelivery = () => {
   const [itemOptions, setItemOptions] = useState({});
   const [productOptions, setProductOptions] = useState([]);
   const [dpError, setDpError] = useState("");
+  const [dpDateError, setDpDateError] = useState("");
   const [contactError, setContactError] = useState("");
 
   const navigate = useNavigate();
@@ -105,6 +107,15 @@ const AddDelivery = () => {
   const [nameError, setNameError] = useState("");
   const [fpBillingError, setFpBillingError] = useState("");
 
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const [receiptItems, setReceiptItems] = useState([]);
+  const [provinceOptions, setProvinceOptions] = useState([]);
+
+  const AUTO_DOWNLOAD_RECEIPT = false;
 
   const [form, setForm] = useState({
     customer_name: "",
@@ -112,6 +123,7 @@ const AddDelivery = () => {
     street_name: "",
     barangay: "",
     city: "",
+    province: "",
     customer_contact: "",
     date_of_order: "",
     target_date_delivery: "",
@@ -128,27 +140,62 @@ const AddDelivery = () => {
   const [lagunaData, setLagunaData] = useState({});
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
+  
 
-  useEffect(() => {
-    const fetchLagunaData = async () => {
-      try {
-        const res = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_barangay.php"
-        );
-        setLagunaData(res.data);
+useEffect(() => {
+  axios
+    .get("http://localhost/DeliveryTrackingSystem/get_provinces.php")
+    .then((res) => setProvinceOptions(res.data))
+    .catch((err) => console.error(err));
+}, []);
 
-        const cities = Object.keys(res.data).map((city) => ({
-          label: city,
-          value: city,
-        }));
-        setCityOptions(cities);
-      } catch (err) {
-        console.error("Error fetching Laguna data", err);
-      }
-    };
+useEffect(() => {
+  if (form.province) {
+    axios
+      .get(
+        `http://localhost/DeliveryTrackingSystem/get_city.php?province=${form.province}`
+      )
+      .then((res) => setCityOptions(res.data))
+      .catch((err) => console.error(err));
+  } else {
+    setCityOptions([]);
+  }
+}, [form.province]);
 
-    fetchLagunaData();
-  }, []);
+useEffect(() => {
+  if (form.city && form.province) {
+    axios
+      .get(
+        `http://localhost/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
+      )
+      .then((res) => setBarangayOptions(res.data))
+      .catch((err) => console.error(err));
+  } else {
+    setBarangayOptions([]);
+  }
+}, [form.city]);
+
+
+
+useEffect(() => {
+  fetchProvinces();
+}, []);
+
+const fetchProvinces = async () => {
+  try {
+    const response = await axios.get(
+      "http://localhost/backend/get_provinces.php"
+    );
+    const data = response.data;
+    const formatted = data.map((item) => ({
+      label: item.province_name,
+      value: item.province_name,
+    }));
+    setProvinceOptions(formatted);
+  } catch (error) {
+    console.error("Error fetching provinces:", error);
+  }
+};
 
   const handleCityChange = (selected) => {
     const city = selected.value;
@@ -172,7 +219,7 @@ const AddDelivery = () => {
 
     try {
       await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/delete_product.php",
+        "http://localhost/DeliveryTrackingSystem/delete_product.php",
         {
           type_of_product: typeOfProduct || value,
           description: type === "item" ? value : "",
@@ -211,25 +258,29 @@ const AddDelivery = () => {
     }
   };
 
-  // --- Inside AddDelivery component ---
   const handleContactChange = (e) => {
-    const value = e.target.value;
+    let value = e.target.value || "";
 
-    // Instant validation for non-numeric input
-    if (/\D/.test(value)) {
+    value = value.replace(/\s+/g, "").trim();
+
+    if (value === "") {
+      setForm((prev) => ({ ...prev, customer_contact: "" }));
+      setContactError("");
+      return;
+    }
+
+    if (!/^\d+$/.test(value)) {
       setContactError("Contact number should contain numbers only.");
       return;
     }
 
-    // Update value
     setForm((prev) => ({ ...prev, customer_contact: value }));
 
-    // Validation rules
-    if (value && !value.startsWith("09")) {
+    if (!value.startsWith("09")) {
       setContactError("Contact number must start with '09'.");
     } else if (value.length > 11) {
       setContactError("Contact number cannot exceed 11 digits.");
-    } else if (value.length < 11 && value.length > 0) {
+    } else if (value.length < 11) {
       setContactError("Contact number must have 11 digits.");
     } else {
       setContactError("");
@@ -313,20 +364,16 @@ const AddDelivery = () => {
       return sum + (isNaN(cost) ? 0 : cost);
     }, 0);
 
-    if (form.payment_option === "Down Payment") {
-      const downPayment = parseFloat(form.down_payment) || 0;
-      setForm((prevForm) => ({
-        ...prevForm,
-        total: totalCost.toFixed(2),
-        balance: (totalCost - downPayment).toFixed(2),
-      }));
-    } else {
-      setForm((prevForm) => ({
-        ...prevForm,
-        total: totalCost.toFixed(2),
-        balance: "",
-      }));
-    }
+    const downPayment = parseFloat(form.down_payment) || 0;
+    const isDownPayment = form.payment_option === "Down Payment";
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      total: totalCost.toFixed(2),
+      balance: isDownPayment
+        ? (totalCost - downPayment).toFixed(2)
+        : prevForm.balance || "",
+    }));
   };
 
   const formatPeso = (value) => {
@@ -387,11 +434,12 @@ const AddDelivery = () => {
   ]);
 
   const getLocalDate = () => {
-    const now = new Date();
-    // Convert to PH time (UTC+8)
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset() + 480);
-    return now.toISOString().slice(0, 10);
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
   };
+
+  useEffect(() => {
+    recalcTotal(orderItems);
+  }, [form.payment_option]);
 
   useEffect(() => {
     document.title = "Add Delivery";
@@ -400,12 +448,12 @@ const AddDelivery = () => {
     const fetchProducts = async () => {
       try {
         const res = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_products.php"
+          "http://localhost/DeliveryTrackingSystem/get_products.php"
         );
         setProductOptions(res.data);
 
         const itemsRes = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_items.php"
+          "http://localhost/DeliveryTrackingSystem/get_items.php"
         );
         setItemOptions(itemsRes.data);
       } catch (err) {
@@ -419,7 +467,7 @@ const AddDelivery = () => {
   const fetchLatestIDs = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_latest_ids.php"
+        "http://localhost/DeliveryTrackingSystem/get_latest_ids.php"
       );
       setTransactionId(res.data.transaction_id);
       setPoId(res.data.po_id);
@@ -464,16 +512,19 @@ const AddDelivery = () => {
         return sum + (isNaN(cost) ? 0 : cost);
       }, 0);
 
+      updatedForm.total = totalCost.toFixed(2);
+
       if (value === "Full Payment") {
+        updatedForm.balance = "";
         updatedForm.full_payment = totalCost.toFixed(2);
         updatedForm.down_payment = "";
         updatedForm.dp_collection_date = "";
-        updatedForm.balance = "";
-        updatedForm.total = totalCost.toFixed(2);
       } else if (value === "Down Payment") {
         updatedForm.full_payment = "";
         updatedForm.fp_collection_date = "";
-        updatedForm.total = totalCost.toFixed(2);
+        updatedForm.balance = !isNaN(downPayment)
+          ? (totalCost - downPayment).toFixed(2)
+          : totalCost.toFixed(2);
       }
     }
 
@@ -498,7 +549,7 @@ const AddDelivery = () => {
         updatedForm.total = totalCost.toFixed(2);
       } else {
         updatedForm.balance = "";
-        updatedForm.total = "";
+        updatedForm.total = totalCost.toFixed(2);
       }
     }
 
@@ -536,6 +587,59 @@ const AddDelivery = () => {
     }));
   };
 
+  const handlePrintReceipt = () => {
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>Delivery Receipt</title>
+        <style>
+          @page { size: auto; margin: 0; } /* Auto size for height, no margins */
+          body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif; 
+            font-size: 11px; /* Standard font size for body */
+            line-height: 1.4; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; /* Center vertically */
+          }
+          .receipt { 
+            width: 80mm; /* Standard receipt width */
+            margin: 0; 
+            padding: 10px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Optional shadow for aesthetics */
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+          }
+          th, td { 
+            border: 1px solid #000; 
+            padding: 2px; 
+            text-align: left; 
+            font-size: 10px; /* Smaller font size for table cells */
+          }
+          .text-center { text-align: center; }
+          .fw-bold { font-weight: bold; }
+          .text-end { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">${
+          document.getElementById("receipt-section").innerHTML
+        }</div>
+      </body>
+    </html>
+  `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -566,24 +670,41 @@ const AddDelivery = () => {
 
       if (!typeOfProduct) {
         alert(`Please select a type of product for item #${index + 1}`);
+        setLoading(false);
         return;
       }
 
       if (!description) {
         alert(`Please select an item name for item #${index + 1}`);
+        setLoading(false);
         return;
       }
 
       if (isNaN(quantity) || quantity < 1) {
         alert(`Quantity for item #${index + 1} must be at least 1`);
+        setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
         alert(`Unit cost for item #${index + 1} must be a non-negative number`);
+        setLoading(false);
         return;
       }
     }
+
+    setForm((prev) => ({
+      ...prev,
+      down_payment: parsePeso(prev.down_payment) || 0,
+    }));
+
+    setLoading(false);
+    setShowSummaryModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowSummaryModal(false);
+    setLoading(true);
 
     const normalizedOrderItems = orderItems.map((item) => ({
       quantity: parseInt(item.quantity) || 0,
@@ -599,6 +720,7 @@ const AddDelivery = () => {
     formData.append("street_name", form.street_name);
     formData.append("barangay", form.barangay);
     formData.append("city", form.city);
+     formData.append("province", form.province);
     formData.append("customer_contact", form.customer_contact);
     formData.append("date_of_order", form.date_of_order);
     formData.append("target_date_delivery", form.target_date_delivery);
@@ -623,7 +745,8 @@ const AddDelivery = () => {
         form.street_name,
         form.barangay,
         form.city,
-        "Laguna",
+        form.province,
+       
         "Philippines",
       ]
         .filter(Boolean)
@@ -634,22 +757,64 @@ const AddDelivery = () => {
 
     try {
       const res = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/add_delivery.php",
+        "http://localhost/DeliveryTrackingSystem/add_delivery.php",
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         }
       );
+
       alert("Delivery added successfully!");
+      fetchProvinces(); 
+
+      const newTransactionId = res.data.transaction_id || transactionId;
+
+      const fetchAndStoreReceipt = async (id) => {
+        try {
+          const res = await axios.get(
+            `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${id}`
+          );
+          console.log("Receipt data fetched:", res.data);
+
+          const data = res.data;
+          if (!data || !data.form) {
+            console.error("Receipt fetch returned empty data", data);
+            return false;
+          }
+
+          setReceiptData(data.form);
+          setReceiptItems(
+            Array.isArray(data.order_items) ? data.order_items : []
+          );
+
+          return true;
+        } catch (err) {
+          console.error("Error fetching receipt data", err);
+          return false;
+        }
+      };
+
+      if (AUTO_DOWNLOAD_RECEIPT) {
+        const ok = await fetchAndStoreReceipt(newTransactionId);
+        if (ok) {
+          setShowReceiptModal(true);
+          setTimeout(() => window.print(), 1000);
+        } else {
+          setShowReceiptModal(true);
+        }
+      } else {
+        const ok = await fetchAndStoreReceipt(newTransactionId);
+        setShowReceiptModal(true);
+      }
+
       setForm({
         customer_name: "",
         house_no: "",
         street_name: "",
         barangay: "",
         city: "",
+        province:"",
         customer_contact: "",
         date_of_order: "",
         target_date_delivery: "",
@@ -672,11 +837,10 @@ const AddDelivery = () => {
         },
       ]);
 
-      // Clear proof-of-payment
       setProofFile(null);
       setSelectedFileName("");
       if (proofFileRef.current) {
-        proofFileRef.current.value = ""; // reset the actual file input
+        proofFileRef.current.value = "";
       }
 
       fetchLatestIDs();
@@ -687,7 +851,6 @@ const AddDelivery = () => {
       setLoading(false);
     }
   };
-
   return (
     <AdminLayout title="Add Delivery" showSearch={false}>
       <div className="d-flex justify-content-start mt-4 ms-4">
@@ -714,7 +877,6 @@ const AddDelivery = () => {
           onSubmit={handleSubmit}
         >
           <h4 className="mb-3">Customer Details</h4>
-
           <div className="row mb-3">
             <div className="col-md-6">
               <label htmlFor="customerName" className="form-label">
@@ -761,21 +923,28 @@ const AddDelivery = () => {
                     : ""
                 }
                 onChange={(e) => {
-                  handleChange(e);
-
                   const selectedDate = new Date(e.target.value + "T00:00:00");
                   const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
 
                   if (isNaN(selectedDate.getTime())) {
                     setOrderDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setOrderDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, date_of_order: "" }));
+                    return;
                   } else if (selectedDate > today) {
                     setOrderDateError("Date of order cannot be in the future.");
                   } else {
                     setOrderDateError("");
+                    handleChange(e);
                   }
                 }}
                 required
-                max={getLocalDate()} // ✅ today's date, adjusted to your timezone
+                max={getLocalDate()}
               />
 
               {orderDateError && (
@@ -783,18 +952,35 @@ const AddDelivery = () => {
               )}
             </div>
           </div>
+
           <div className="mb-3">
             <label className="form-label">Customer Address:</label>
             <div className="row g-2">
-              <div className="col-md-3">
-                <Select
-                  options={cityOptions}
+              {/* Province Dropdown with free input */}
+              <div className="col-md-4">
+                <CreatableSelect
+                  placeholder="Province"
+                  options={provinceOptions}
                   value={
-                    form.city ? { label: form.city, value: form.city } : null
+                    form.province
+                      ? { label: form.province, value: form.province }
+                      : null
                   }
-                  onChange={handleCityChange}
-                  placeholder="Select City"
-                  classNamePrefix="react-select"
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      province: selected?.value || "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, province: inputValue }));
+                    }
+                  }}
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -815,7 +1001,60 @@ const AddDelivery = () => {
                 />
               </div>
 
-              <div className="col-md-3">
+              {/* City Dropdown */}
+              <div className="col-md-4">
+                <Select
+                  options={cityOptions}
+                  value={
+                    form.city ? { label: form.city, value: form.city } : null
+                  }
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      city: selected?.value || "",
+                      barangay: "", // ✅ clear barangay when city changes
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, city: inputValue }));
+                    }
+                  }}
+                  placeholder={
+                    form.province ? "Select City" : "Select province first"
+                  }
+                  isDisabled={!form.province} 
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  filterOption={(option, inputValue) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-4">
                 <Select
                   options={barangayOptions}
                   value={
@@ -823,10 +1062,31 @@ const AddDelivery = () => {
                       ? { label: form.barangay, value: form.barangay }
                       : null
                   }
-                  onChange={handleBarangayChange}
-                  placeholder="Select Barangay"
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      barangay: selected?.value || "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, barangay: inputValue }));
+                    }
+                  }}
+                  placeholder={
+                    form.city ? "Select Barangay" : "Select city first"
+                  }
                   isDisabled={!form.city}
-                  classNamePrefix="react-select"
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  filterOption={(option, inputValue) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -847,24 +1107,26 @@ const AddDelivery = () => {
                 />
               </div>
 
-              <div className="col-md-3">
+              {/* STREET FIELD (Optional) */}
+              <div className="col-md-6">
                 <input
                   type="text"
                   className="form-control"
                   placeholder="House No./Street Name"
                   name="house_no"
-                  value={form.house_no ?? ""}
+                  value={form.house_no || ""}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="col-md-3">
+              {/* VILLAGE/SUBDIVISION FIELD (Optional) */}
+              <div className="col-md-6">
                 <input
                   type="text"
                   className="form-control"
                   placeholder="Village/Subdivision"
                   name="street_name"
-                  value={form.street_name ?? ""}
+                  value={form.street_name || ""}
                   onChange={handleChange}
                 />
               </div>
@@ -878,24 +1140,15 @@ const AddDelivery = () => {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                pattern="\d*"
                 className={`form-control ${contactError ? "is-invalid" : ""}`}
                 id="contactNumber"
                 name="customer_contact"
                 value={form.customer_contact}
                 placeholder="Client's Contact No."
                 onChange={handleContactChange}
-                onKeyDown={(e) => {
-                  // Prevent typing invalid characters (like e, +, -, ., spaces)
-                  if (
-                    ["e", "E", "+", "-", ".", " "].includes(e.key) ||
-                    (isNaN(e.key) && e.key !== "Backspace")
-                  ) {
-                    e.preventDefault();
-                    setContactError(
-                      "Contact number should contain numbers only."
-                    ); // show error instantly
-                  }
-                }}
                 maxLength={11}
                 required
               />
@@ -917,26 +1170,32 @@ const AddDelivery = () => {
                 } ${dateError ? "is-invalid" : ""}`}
                 value={form.target_date_delivery || ""}
                 onChange={(e) => {
-                  handleChange(e);
-
                   const selectedDate = new Date(e.target.value + "T00:00:00");
                   const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
 
                   if (isNaN(selectedDate.getTime())) {
                     setDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, target_date_delivery: "" }));
+                    return;
                   } else if (selectedDate < today) {
                     setDateError("Date of delivery cannot be in the past.");
                   } else {
                     setDateError("");
+                    handleChange(e);
                   }
                 }}
                 required
-                min={getLocalDate()} // Prevent past dates
+                min={getLocalDate()}
               />
               {dateError && <div className="invalid-feedback">{dateError}</div>}
             </div>
           </div>
-
           <div className="order-details mt-5">
             <h4 className="mb-4">Order Details</h4>
             <table className="order-table table">
@@ -964,7 +1223,6 @@ const AddDelivery = () => {
                         onChange={(e) => {
                           const value = e.target.value;
 
-                          // Allow only digits
                           if (/^\d*$/.test(value)) {
                             handleItemChange(index, {
                               target: { name: "quantity", value },
@@ -972,7 +1230,6 @@ const AddDelivery = () => {
                           }
                         }}
                         onKeyDown={(e) => {
-                          // Block non-digit keys immediately
                           if (
                             ["e", "E", "+", "-", ".", " "].includes(e.key) ||
                             (isNaN(e.key) &&
@@ -1021,7 +1278,7 @@ const AddDelivery = () => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "http://localhost/DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: newValue,
                                 description: "",
@@ -1137,7 +1394,7 @@ const AddDelivery = () => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "http://localhost/DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: item.type_of_product,
                                 description: newValue,
@@ -1216,7 +1473,7 @@ const AddDelivery = () => {
                     >
                       <Modal.Header closeButton>
                         <Modal.Title>
-                          Edit{" "}
+                          Edit
                           {editModal.type === "product"
                             ? "Product Type"
                             : "Item"}
@@ -1245,7 +1502,7 @@ const AddDelivery = () => {
                           onClick={async () => {
                             try {
                               await axios.post(
-                                "https://13.239.143.31/DeliveryTrackingSystem/update_product.php",
+                                "http://localhost/DeliveryTrackingSystem/update_product.php",
                                 {
                                   type_of_product_current:
                                     editModal.type === "product"
@@ -1362,6 +1619,21 @@ const AddDelivery = () => {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="fw-bold">
+                  <td colSpan="4" className="text-end">
+                    TOTAL:
+                  </td>
+                  <td className="text-end">
+                    {form.total !== "" && form.total !== null
+                      ? formatPeso(form.total)
+                      : "₱0.00"}
+                  </td>
+                  {orderItems.length > 1 && (
+                    <td style={{ border: "none" }}></td>
+                  )}
+                </tr>
+              </tfoot>
             </table>
 
             <div className="d-flex justify-content-end mt-2">
@@ -1435,7 +1707,17 @@ const AddDelivery = () => {
                         id={method.toLowerCase().replace(" ", "_")}
                         value={method}
                         checked={form.payment_option === method}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          handleChange(e);
+                          if (e.target.name === "payment_option") {
+                            setForm((prev) => ({
+                              ...prev,
+                              payment_option: e.target.value,
+                              dp_collection_date: prev.dp_collection_date || "",
+                              down_payment: prev.down_payment || "",
+                            }));
+                          }
+                        }}
                         required
                       />
                       <label
@@ -1452,27 +1734,6 @@ const AddDelivery = () => {
             </div>
 
             <div className="row mb-3">
-              <div className="col-md-6">
-                <label htmlFor="full_payment" className="form-label">
-                  Full Payment Amount:
-                </label>
-                <input
-                  type="text"
-                  name="full_payment"
-                  placeholder="₱0.00"
-                  value={formatPeso(form.full_payment)}
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "full_payment", value: parsedValue },
-                    });
-                  }}
-                  disabled={form.payment_option !== "Full Payment"}
-                  required={form.payment_option === "Full Payment"}
-                  className="form-control"
-                />
-              </div>
-
               <div className="col-md-6">
                 <label htmlFor="fpBillingDate" className="form-label">
                   Billing Date:
@@ -1493,26 +1754,94 @@ const AddDelivery = () => {
                       : ""
                   }
                   onChange={(e) => {
-                    handleChange(e);
-
                     const selectedDate = new Date(e.target.value + "T00:00:00");
                     const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
 
                     if (isNaN(selectedDate.getTime())) {
                       setFpBillingError("Please enter a valid date.");
+                    } else if (day === 0 || day === 6) {
+                      setFpBillingError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, fp_collection_date: "" }));
+                      return;
                     } else if (selectedDate > today) {
                       setFpBillingError(
                         "Billing date cannot be in the future."
                       );
                     } else {
                       setFpBillingError("");
+                      handleChange(e);
                     }
                   }}
                   required
-                  max={getLocalDate()} // ✅ allows today, blocks future (PH timezone)
+                  max={getLocalDate()}
                 />
                 {fpBillingError && (
                   <div className="invalid-feedback">{fpBillingError}</div>
+                )}
+              </div>
+
+              {/* ✅ Payment Due moved here to replace Full Payment Amount */}
+              <div className="col-md-6">
+                <label htmlFor="dpBillingDate" className="form-label">
+                  Payment Due:
+                </label>
+                <input
+                  type="date"
+                  id="dpBillingDate"
+                  name="dp_collection_date"
+                  value={form.dp_collection_date || ""}
+                  onChange={(e) => {
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
+
+                    if (isNaN(selectedDate.getTime())) {
+                      setDpDateError("Please enter a valid date.");
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                    } else if (day === 0 || day === 6) {
+                      setDpDateError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                      return;
+                    } else if (selectedDate < today) {
+                      setDpDateError("Payment due date cannot be in the past.");
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                    } else {
+                      setDpDateError("");
+                      handleChange(e);
+                    }
+                  }}
+                  disabled={form.payment_option !== "Down Payment"}
+                  required={form.payment_option === "Down Payment"}
+                  min={getLocalDate()}
+                  className={`form-control ${
+                    form.payment_option !== "Down Payment"
+                      ? "text-muted"
+                      : form.dp_collection_date
+                      ? "text-black"
+                      : "text-muted"
+                  } ${dpDateError ? "is-invalid" : ""}`}
+                  style={{
+                    backgroundColor:
+                      form.payment_option === "Down Payment"
+                        ? "white"
+                        : "#E9ECEF",
+                    cursor:
+                      form.payment_option === "Down Payment"
+                        ? "pointer"
+                        : "not-allowed",
+                  }}
+                />
+                {dpDateError && (
+                  <div className="invalid-feedback d-block">{dpDateError}</div>
                 )}
               </div>
             </div>
@@ -1543,65 +1872,20 @@ const AddDelivery = () => {
               </div>
 
               <div className="col-md-6">
-                <label htmlFor="dpBillingDate" className="form-label">
-                  Payment Due:
-                </label>
-                <input
-                  style={{ color: "gray" }}
-                  type="date"
-                  className={`form-control ${
-                    form.dp_collection_date || "" ? "text-black" : "text-muted"
-                  }`}
-                  id="dpBillingDate"
-                  name="dp_collection_date"
-                  onChange={handleChange}
-                  disabled={form.payment_option !== "Down Payment"}
-                  required={form.payment_option === "Down Payment"}
-                />
-              </div>
-            </div>
-
-            <div className="row mb-3">
-              <div className="col-md-6">
                 <label className="form-label">Balance:</label>
-                <input
-                  type="text"
-                  name="balance"
-                  placeholder="₱0.00"
-                  value={
-                    form.payment_option === "Down Payment"
-                      ? formatPeso(form.balance)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "balance", value: parsedValue },
-                    });
-                  }}
-                  disabled={form.payment_option !== "Down Payment"}
-                  required={form.payment_option === "Down Payment"}
-                  className="form-control"
-                />
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label">Total:</label>
-                <input
-                  type="text"
-                  name="total"
-                  placeholder="₱0.00"
-                  value={formatPeso(form.total)}
-                  onChange={(e) => {
-                    const parsedValue = parsePeso(e.target.value);
-                    handleChange({
-                      target: { name: "total", value: parsedValue },
-                    });
-                  }}
-                  disabled={!form.payment_option}
-                  required={!!form.payment_option}
-                  className="form-control"
-                />
+                <div className="input-group">
+                  <span className="input-group-text bg-secondary text-dark bg-opacity-25">
+                    ₱
+                  </span>
+                  <span className="form-control bg-white text-start fw-semibold fs-6 p-2">
+                    {form.payment_option === "Down Payment"
+                      ? Number(form.balance).toLocaleString("en-PH", {
+                          style: "currency",
+                          currency: "PHP",
+                        })
+                      : "₱0.00"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1656,13 +1940,367 @@ const AddDelivery = () => {
                       alt="Proof of Payment"
                       style={{
                         maxWidth: "100%",
-                        maxHeight: "500px",
+                        maxHeight: "700px",
                         objectFit: "contain",
                       }}
                       className="border border-secondary border-1"
                     />
                   )}
               </Modal.Body>
+            </Modal>
+            <Modal
+              show={showSummaryModal}
+              onHide={() => setShowSummaryModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header closeButton className="bg-success text-white">
+                <Modal.Title>Transaction Summary</Modal.Title>
+              </Modal.Header>
+              <Modal.Body className="bg-white">
+                <div className="summary-content">
+                  <p>
+                    <strong>Transaction No.:</strong> {transactionId}
+                  </p>
+                  <p className="mb-3">
+                    <strong>P.O. No.:</strong> {poId}
+                  </p>
+
+                  <p>
+                    <strong>Customer Name:</strong> {form.customer_name}
+                  </p>
+                  <p>
+                    <strong>Address: </strong>
+                    {[
+                      form.house_no,
+                      form.street_name,
+                      form.barangay,
+                      form.city,
+                      form.province,
+
+                      "Philippines",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>
+                    <strong>Contact:</strong> {form.customer_contact}
+                  </p>
+                  <p>
+                    <strong>Date of Order:</strong> {form.date_of_order}
+                  </p>
+                  <p>
+                    <strong>Delivery Date:</strong> {form.target_date_delivery}
+                  </p>
+                  <p>
+                    <strong>Payment Method:</strong> {form.payment_method}
+                  </p>
+                  <p>
+                    <strong>Payment Option:</strong> {form.payment_option}
+                  </p>
+                  {form.payment_option === "Full Payment" && (
+                    <>
+                      <p>
+                        <strong>Full Payment: </strong>
+                        {formatPeso(form.full_payment)}
+                      </p>
+                      <p>
+                        <strong>Billing Date: </strong>{" "}
+                        {form.fp_collection_date}
+                      </p>
+                    </>
+                  )}
+                  {form.payment_option === "Down Payment" && (
+                    <>
+                      <p>
+                        <strong>Down Payment:</strong>{" "}
+                        {formatPeso(form.down_payment)}
+                      </p>
+                      <p>
+                        <strong>Payment Due:</strong> {form.dp_collection_date}
+                      </p>
+                      <p>
+                        <strong>Balance:</strong> {formatPeso(form.balance)}
+                      </p>
+                    </>
+                  )}
+
+                  <strong className="fs-5">Order Items:</strong>
+                  <table className="table table-bordered table-sm mt-2">
+                    <thead className="table-success text-center align-middle">
+                      <tr>
+                        <th>Qty</th>
+                        <th>Item</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderItems.map((item, index) => (
+                        <tr key={index}>
+                          <td className="text-center">{item.quantity}</td>
+                          <td>
+                            {item.type_of_product} - {item.description}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(
+                              parseFloat(parsePeso(item.unit_cost)) || 0
+                            )}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(item.total_cost)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="3" className="text-end fw-bold">
+                          TOTAL:
+                        </td>
+                        <td className="text-end fw-bold">
+                          {formatPeso(form.total)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {proofFile ? (
+                    <div className="mt-3">
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => setShowImageViewer(true)}
+                      >
+                        View Proof of Payment
+                      </Button>
+                    </div>
+                  ) : (
+                    <p>
+                      <strong>Proof of Payment:</strong> Not uploaded
+                    </p>
+                  )}
+
+                  {showImageViewer && proofFile && (
+                    <div className="mt-3 border p-2 bg-success bg-opacity-10 rounded">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="text-center w-100 fs-5">
+                          Proof of Payment Preview
+                        </h6>
+                        <Button
+                          variant="close"
+                          onClick={() => setShowImageViewer(false)}
+                        />
+                      </div>
+                      <div className="text-center">
+                        {proofPreview && (
+                          <img
+                            src={proofPreview}
+                            alt="Proof of Payment"
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "400px",
+                              objectFit: "contain",
+                              border: "1px solid gray",
+                              borderRadius: "5px",
+                            }}
+                            className="img-fluid"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button
+                  className="cancel-btn px-3 py-2 fs-6 rounded-1"
+                  onClick={() => setShowSummaryModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="add-btn px-3 py-2 fs-6 rounded-1"
+                  onClick={handleConfirmSubmit}
+                >
+                  Confirm
+                </Button>
+              </Modal.Footer>
+            </Modal>
+            <Modal
+              show={showReceiptModal}
+              onHide={() => setShowReceiptModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header
+                closeButton
+                className="bg-light text-black no-print"
+              >
+                <Modal.Title></Modal.Title>
+              </Modal.Header>
+
+              <Modal.Body
+                id="receipt-section"
+                className="bg-white text-black p-4"
+              >
+                <div className="text-center mb-4 border-bottom pb-2">
+                  <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
+                  <p className="mb-0">Official Delivery Receipt</p>
+                  <small>Date Printed: {new Date().toLocaleString()}</small>
+                </div>
+
+                {/* Customer and order details */}
+                <div className="mb-3">
+                  <p>
+                    <b>Customer Name:</b> {receiptData?.customer_name || ""}
+                  </p>
+                  <p>
+                    <b>Address:</b>{" "}
+                    {[
+                      receiptData?.house_no,
+                      receiptData?.street_name,
+                      receiptData?.barangay,
+                      receiptData?.city,
+                      receiptData?.province,
+
+                      "Philippines",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>
+                    <b>Contact:</b> {receiptData?.customer_contact || ""}
+                  </p>
+                  <p>
+                    <b>Date of Order:</b> {receiptData?.date_of_order || ""}
+                  </p>
+                  <p>
+                    <b>Delivery Date:</b>{" "}
+                    {receiptData?.target_date_delivery || ""}
+                  </p>
+                </div>
+
+                {/* Payment details */}
+                <div className="mb-3">
+                  <p>
+                    <b>Payment Method:</b>{" "}
+                    {receiptData?.mode_of_payment ||
+                      receiptData?.payment_method ||
+                      ""}
+                  </p>
+                  <p>
+                    <b>Payment Option:</b> {receiptData?.payment_option || ""}
+                  </p>
+
+                  {receiptData?.payment_option === "Down Payment" && (
+                    <>
+                      <p>
+                        <b>Down Payment:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.down_payment || 0))}
+                      </p>
+                      <p>
+                        <b>Payment Due:</b>{" "}
+                        {receiptData?.dbilling_date ||
+                          receiptData?.dp_collection_date ||
+                          ""}
+                      </p>
+                      <p>
+                        <b>Balance:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.balance || 0))}
+                      </p>
+                    </>
+                  )}
+
+                  {receiptData?.payment_option === "Full Payment" && (
+                    <>
+                      <p>
+                        <b>Full Payment:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.full_payment || 0))}
+                      </p>
+                      <p>
+                        <b>Billing Date:</b>{" "}
+                        {receiptData?.fbilling_date ||
+                          receiptData?.fp_collection_date ||
+                          ""}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Order items */}
+                <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
+                <table className="table table-bordered table-sm">
+                  <thead className="table-light text-center">
+                    <tr>
+                      <th>Qty</th>
+                      <th>Item</th>
+                      <th>Unit Price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receiptItems.map((item, i) => (
+                      <tr key={i}>
+                        <td className="text-center">{item.quantity}</td>
+                        <td>
+                          {item.type_of_product} - {item.description}
+                        </td>
+                        <td className="text-end">
+                          {formatPeso(parseFloat(item.unit_cost || 0))}
+                        </td>
+                        <td className="text-end">
+                          {formatPeso(
+                            parseFloat(
+                              item.total_cost ||
+                                item.quantity * item.unit_cost ||
+                                0
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="3" className="text-end fw-bold">
+                        TOTAL:
+                      </td>
+                      <td className="text-end fw-bold">
+                        {formatPeso(parseFloat(receiptData?.total || 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Signature Section */}
+                <div className="signature-section mt-4">
+                  <div className="row">
+                    <div className="col-6 text-center">
+                      <p>________________________</p>
+                      <small>Prepared By</small>
+                    </div>
+                    <div className="col-6 text-center">
+                      <p>________________________</p>
+                      <small>Received By</small>
+                    </div>
+                  </div>
+                </div>
+              </Modal.Body>
+
+              <Modal.Footer className="no-print bg-light">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowReceiptModal(false)}
+                >
+                  Close
+                </Button>
+                <Button variant="success" onClick={handlePrintReceipt}>
+                  Print / Download
+                </Button>
+                {/* <Button variant="primary" onClick={handleDownloadPDF}>
+      Download PDF
+    </Button> */}
+              </Modal.Footer>
             </Modal>
           </div>
         </form>

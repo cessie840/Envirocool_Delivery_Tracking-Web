@@ -88,7 +88,7 @@ const CreatePersonnelAccount = () => {
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/create_delivery_personnel.php",
+        "http://localhost/DeliveryTrackingSystem/create_delivery_personnel.php",
         formData
       );
 
@@ -157,7 +157,7 @@ const CreatePersonnelAccount = () => {
 
               <div className="form-group">
                 <label htmlFor="gender">
-                  Sex <span className="required">*</span>
+                  Gender <span className="required">*</span>
                 </label>
                 <select
                   id="gender"
@@ -165,7 +165,7 @@ const CreatePersonnelAccount = () => {
                   value={formData.gender}
                   onChange={handleChange}
                 >
-                  <option value="">Select Sex</option>
+                  <option value="">Select Gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>

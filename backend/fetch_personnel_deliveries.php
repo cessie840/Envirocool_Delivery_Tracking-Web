@@ -31,6 +31,8 @@ SELECT
     t.customer_contact, 
     t.mode_of_payment,
     t.status AS delivery_status,
+    da.device_id,  -- ✅ include device ID here
+
     po.quantity, 
     po.type_of_product AS product_name,
     po.description, 
@@ -42,6 +44,7 @@ JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
 WHERE da.personnel_username = '$username'
 ORDER BY t.created_at ASC
 ";
+
 
 $result = $conn->query($sql);
 $deliveries = [];
@@ -59,6 +62,7 @@ if ($result && $result->num_rows > 0) {
                 'address' => $row['customer_address'],
                 'contact' => $row['customer_contact'],
                 'paymentMode' => $row['mode_of_payment'],
+                'device_id' => $row['device_id'],
                 'items' => [],
                 'totalCost' => 0,
                 'delivery_status' => $row['delivery_status']

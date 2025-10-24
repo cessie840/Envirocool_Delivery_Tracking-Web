@@ -1,29 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Select from "react-select";
-import CreatableSelect from "react-select/creatable";
 import axios from "axios";
-import { FaTrash, FaPlusCircle } from "react-icons/fa";
+import { FaPlusCircle } from "react-icons/fa";
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
-  { label: "GCASH", value: "GCASH" },
-  {
-    label: "Bank Transfer",
-    options: [
-      { label: "Bank 1", value: "Bank 1" },
-      { label: "Bank 2", value: "Bank 2" },
-      { label: "Bank 3", value: "Bank 3" },
-    ],
-  },
-  {
-    label: "Card",
-    options: [
-      { label: "Card 1", value: "Visa" },
-      { label: "Card 2", value: "Mastercard" },
-      { label: "Card 3", value: "AmEx" },
-    ],
-  },
+  { label: "BANK TRANSFER", value: "Bank Transfer" },
 ];
 
 const UpdateOrderModal = ({
@@ -43,16 +26,19 @@ const UpdateOrderModal = ({
   const [productOptions, setProductOptions] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
 
+  
+
+  // ✅ Fetch data from database
   useEffect(() => {
     const fetchOptions = async () => {
       try {
         const productsRes = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_products.php"
+          "http://localhost/DeliveryTrackingSystem/get_products.php"
         );
         setProductOptions(productsRes.data);
 
         const itemsRes = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_items.php"
+          "http://localhost/DeliveryTrackingSystem/get_items.php"
         );
         setItemOptions(itemsRes.data);
       } catch (err) {
@@ -63,48 +49,7 @@ const UpdateOrderModal = ({
     fetchOptions();
   }, []);
 
-  useEffect(() => {
-    if (editableItems.length > 0) {
-      setProductOptions((prev) => {
-        const updated = [...prev];
-        editableItems.forEach((item) => {
-          if (
-            item.type_of_product &&
-            !updated.some((opt) => opt.value === item.type_of_product)
-          ) {
-            updated.push({
-              label: item.type_of_product,
-              value: item.type_of_product,
-            });
-          }
-        });
-        return updated;
-      });
-
-      setItemOptions((prev) => {
-        const updated = { ...prev };
-        editableItems.forEach((item) => {
-          if (item.type_of_product) {
-            if (!updated[item.type_of_product])
-              updated[item.type_of_product] = [];
-            if (
-              item.description &&
-              !updated[item.type_of_product].some(
-                (opt) => opt.value === item.description
-              )
-            ) {
-              updated[item.type_of_product].push({
-                label: item.description,
-                value: item.description,
-              });
-            }
-          }
-        });
-        return updated;
-      });
-    }
-  }, [editableItems]);
-
+  // ✅ Currency helpers
   const formatCurrency = (value) => {
     if (value === null || value === undefined || value === "") return "";
     const num = parseFloat(value.toString().replace(/,/g, ""));
@@ -116,11 +61,6 @@ const UpdateOrderModal = ({
         maximumFractionDigits: 2,
       })
     );
-  };
-
-  const parseCurrency = (value) => {
-    if (!value) return 0;
-    return parseFloat(value.toString().replace(/[₱,]/g, "")) || 0;
   };
 
   const handleProductChange = (index, selected) => {
@@ -136,37 +76,16 @@ const UpdateOrderModal = ({
     setEditableItems(newItems);
   };
 
-  const handleDownPaymentChange = (e) => {
-    const down_payment = parseFloat(e.target.value) || 0;
-    const balance = total - down_payment;
-    setFormData({
-      ...formData,
-      down_payment,
-      balance: balance.toFixed(2),
-      total: total.toFixed(2),
-    });
-  };
-
-  const selectedPaymentOption = (() => {
-    for (const option of paymentOptions) {
-      if (option.options) {
-        const found = option.options.find(
-          (sub) => sub.value === formData.mode_of_payment
-        );
-        if (found) return found;
-      } else if (option.value === formData.mode_of_payment) {
-        return option;
-      }
-    }
-    return null;
-  })();
-
   const handleAddItem = () => {
     setEditableItems([
       ...editableItems,
       { quantity: 1, type_of_product: "", description: "", unit_cost: 0 },
     ]);
   };
+
+  const selectedPaymentOption = paymentOptions.find(
+    (opt) => opt.value === formData.mode_of_payment
+  );
 
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
@@ -180,6 +99,7 @@ const UpdateOrderModal = ({
 
       <Modal.Body className="bg-light">
         <Form>
+          {/* 🧾 Customer Info */}
           <Row className="p-3 bg-white rounded shadow-sm border mb-4">
             <Col md={6}>
               <h5 className="text-success fw-bold mb-3">
@@ -249,6 +169,7 @@ const UpdateOrderModal = ({
               </Form.Group>
             </Col>
 
+            {/* 💰 Payment Info */}
             <Col md={6}>
               <h5 className="text-success fw-bold mb-3">Payment Details</h5>
 
@@ -304,30 +225,13 @@ const UpdateOrderModal = ({
                       total: total.toFixed(2),
                     });
                   }}
-                  onBlur={(e) => {
-                    const rawValue = e.target.value.replace(/[₱,]/g, "");
-                    const numericValue = parseFloat(rawValue);
-                    if (!isNaN(numericValue)) {
-                      setFormData({
-                        ...formData,
-                        down_payment: numericValue.toFixed(2),
-                        balance: (total - numericValue).toFixed(2),
-                        total: total.toFixed(2),
-                      });
-                      e.target.value =
-                        "₱" +
-                        numericValue.toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        });
-                    }
-                  }}
                   disabled={formData.payment_option === "Full Payment"}
                 />
               </Form.Group>
             </Col>
           </Row>
 
+          {/* 📦 Items Ordered */}
           <div className="p-3 bg-white rounded shadow-sm border">
             <h5 className="text-success fw-bold mb-3 d-flex justify-content-between align-items-center">
               Items Ordered
@@ -339,10 +243,7 @@ const UpdateOrderModal = ({
             </h5>
 
             <table className="table table-bordered table-striped align-middle">
-              <thead
-                className="table-success text-center"
-                style={{ backgroundColor: "##d3eed3" }}
-              >
+              <thead className="table-success text-center">
                 <tr>
                   <th style={{ width: "20%" }}>Quantity</th>
                   <th style={{ width: "30%" }}>Type of Product</th>
@@ -367,19 +268,14 @@ const UpdateOrderModal = ({
                       />
                     </td>
 
+                    {/* ✅ Product dropdown (database only) */}
                     <td>
-                      <CreatableSelect
+                      <Select
                         options={productOptions}
                         value={
                           productOptions.find(
                             (opt) => opt.value === item.type_of_product
-                          ) ||
-                          (item.type_of_product
-                            ? {
-                                label: item.type_of_product,
-                                value: item.type_of_product,
-                              }
-                            : null)
+                          ) || null
                         }
                         onChange={(selected) =>
                           handleProductChange(index, selected)
@@ -389,25 +285,21 @@ const UpdateOrderModal = ({
                       />
                     </td>
 
+                    {/* ✅ Item dropdown (filtered by selected product) */}
                     <td>
-                      <CreatableSelect
+                      <Select
                         options={itemOptions[item.type_of_product] || []}
                         value={
                           (itemOptions[item.type_of_product] || []).find(
                             (opt) => opt.value === item.description
-                          ) ||
-                          (item.description
-                            ? {
-                                label: item.description,
-                                value: item.description,
-                              }
-                            : null)
+                          ) || null
                         }
                         onChange={(selected) =>
                           handleItemChange(index, selected)
                         }
                         placeholder="Select item"
                         isSearchable
+                        isDisabled={!item.type_of_product}
                       />
                     </td>
 
@@ -428,21 +320,6 @@ const UpdateOrderModal = ({
                             : numericValue;
                           setEditableItems(newItems);
                         }}
-                        onBlur={(e) => {
-                          const rawValue = e.target.value.replace(/[₱,]/g, "");
-                          const numericValue = parseFloat(rawValue);
-                          if (!isNaN(numericValue)) {
-                            const newItems = [...editableItems];
-                            newItems[index].unit_cost = numericValue.toFixed(2);
-                            setEditableItems(newItems);
-                            e.target.value =
-                              "₱" +
-                              numericValue.toLocaleString("en-PH", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              });
-                          }
-                        }}
                       />
                     </td>
                   </tr>
@@ -460,14 +337,11 @@ const UpdateOrderModal = ({
       </Modal.Body>
 
       <Modal.Footer className="bg-white">
-        <Button
-          className="cancel-btn btn btn- d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
-          onClick={handleClose}
-        >
+        <Button variant="secondary" onClick={handleClose}>
           Cancel
         </Button>
         <Button
-          className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+          className="btn-success"
           style={{ fontSize: "16px" }}
           onClick={handleSubmit}
         >

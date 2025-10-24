@@ -32,7 +32,7 @@ const DeliveryDetails = () => {
     return dateString.split("T")[0] || dateString.split(" ")[0];
   };
   const fetchDeliveries = () => {
-    fetch("https://13.239.143.31/DeliveryTrackingSystem/get_deliveries.php")
+    fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
       .then((data) => {
         setDeliveries(data);
@@ -49,7 +49,7 @@ const DeliveryDetails = () => {
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
-      `https://13.239.143.31//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}`
+      `http://localhost//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -95,7 +95,7 @@ const DeliveryDetails = () => {
     const down_payment = parseFloat(formData.down_payment) || 0;
     const balance = total - down_payment;
 
-    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
+    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -279,12 +279,24 @@ const DeliveryDetails = () => {
                     >
                       View
                     </button>
-                    <button
-                      className="btn upd-btn"
-                      onClick={() => handleUpdate(group.transaction_id)}
-                    >
-                      Update
-                    </button>
+                    {group.delivery_status === "Out for Delivery" ||
+                    group.delivery_status === "Delivered" ||
+                    group.delivery_status === "Cancelled" ? (
+                      <button
+                        className="btn upd-btn"
+                        disabled
+                        style={{ opacity: 0.5, cursor: "not-allowed" }}
+                      >
+                        Update
+                      </button>
+                    ) : (
+                      <button
+                        className="btn upd-btn"
+                        onClick={() => handleUpdate(group.transaction_id)}
+                      >
+                        Update
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

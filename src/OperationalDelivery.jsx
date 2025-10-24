@@ -17,8 +17,6 @@ const OperationalDelivery = () => {
   const [deviceId, setDeviceId] = useState("");
   const [deviceList, setDeviceList] = useState([]);
 
-
-
   useEffect(() => {
     document.title = "Operational Delivery";
     fetchOrders();
@@ -33,20 +31,17 @@ const OperationalDelivery = () => {
     }).format(value);
   };
 
- useEffect(() => {
-   if (showModal) {
-     fetchPersonnel();
-     fetchDevices();
-   }
- }, [showModal]);
-
-
-
+  useEffect(() => {
+    if (showModal) {
+      fetchPersonnel();
+      fetchDevices();
+    }
+  }, [showModal]);
 
   const fetchOrders = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_delivery_orders.php"
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_orders.php"
       );
       setOrders(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
@@ -58,7 +53,7 @@ const OperationalDelivery = () => {
   const fetchPersonnel = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_delivery_personnel.php"
+        "http://localhost/DeliveryTrackingSystem/fetch_delivery_personnel.php"
       );
       if (res.data.success && Array.isArray(res.data.data)) {
         setPersonnelList(res.data.data);
@@ -74,7 +69,7 @@ const OperationalDelivery = () => {
   const fetchDevices = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_device_ids.php"
+        "http://localhost/DeliveryTrackingSystem/fetch_device_ids.php"
       );
       if (Array.isArray(res.data)) {
         // remove duplicates
@@ -91,50 +86,47 @@ const OperationalDelivery = () => {
     }
   };
 
-
   const handleOpenAssignModal = () => {
     setSelectedPersonnel("");
     setShowModal(true);
   };
 
-const handleAssignPersonnel = async () => {
-  if (!selectedPersonnel) {
-    alert("Please select a delivery personnel.");
-    return;
-  }
-
-if (!deviceId) {
-  alert("Please select a device ID.");
-  return;
-}
-
-
-  try {
-    const res = await axios.post(
-      "https://13.239.143.31/DeliveryTrackingSystem/assign_personnel.php",
-      {
-        transaction_id: selectedOrder.transaction_id,
-        personnelUsername: selectedPersonnel,
-        device_id: deviceId.trim(),
-      }
-    );
-
-    if (res.data.success) {
-      alert("Personnel and device assigned successfully!");
-      setShowModal(false);
-      setShowDetailModal(false);
-      setSelectedOrder(null);
-      setDeviceId(""); // reset field
-      fetchOrders();
-    } else {
-      alert("Assignment failed: " + (res.data.message || "Unknown error"));
+  const handleAssignPersonnel = async () => {
+    if (!selectedPersonnel) {
+      alert("Please select a delivery personnel.");
+      return;
     }
-  } catch (error) {
-    console.error("Assignment failed:", error);
-    alert("Assignment failed. Please try again later.");
-  }
-};
 
+    if (!deviceId) {
+      alert("Please select a device ID.");
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        "http://localhost/DeliveryTrackingSystem/assign_personnel.php",
+        {
+          transaction_id: selectedOrder.transaction_id,
+          personnelUsername: selectedPersonnel,
+          device_id: deviceId.trim(),
+        }
+      );
+
+      if (res.data.success) {
+        alert("Personnel and device assigned successfully!");
+        setShowModal(false);
+        setShowDetailModal(false);
+        setSelectedOrder(null);
+        setDeviceId(""); // reset field
+        fetchOrders();
+      } else {
+        alert("Assignment failed: " + (res.data.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Assignment failed:", error);
+      alert("Assignment failed. Please try again later.");
+    }
+  };
 
   const openDetailModal = (order) => {
     setSelectedOrder(order);
@@ -482,7 +474,7 @@ if (!deviceId) {
                             selectedOrder?.personnel_image &&
                             selectedOrder.personnel_image.trim() !== ""
                               ? selectedOrder.personnel_image
-                              : "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                              : "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                           }
                           alt={
                             selectedOrder?.assigned_personnel ||
@@ -491,7 +483,7 @@ if (!deviceId) {
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
-                              "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+                              "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
                           }}
                           className="rounded-circle border border-2 border-dark"
                           style={{

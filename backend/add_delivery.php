@@ -56,6 +56,28 @@ function getCoordinatesFromAddress($address) {
     return [null, null];
 }
 
+// New function to always get coordinates with fallback hierarchy
+function getGeocodedCoordinates($customer_address, $customer_barangay, $customer_city) {
+    // 1️⃣ Full address
+    list($lat, $lng) = getCoordinatesFromAddress(trim($customer_address . ', Philippines'));
+    if ($lat !== null && $lng !== null) return [$lat, $lng];
+
+    // 2️⃣ Barangay + City
+    if (!empty($customer_barangay) && !empty($customer_city)) {
+        list($lat, $lng) = getCoordinatesFromAddress(trim("$customer_barangay, $customer_city, Philippines"));
+        if ($lat !== null && $lng !== null) return [$lat, $lng];
+    }
+
+    // 3️⃣ Just City
+    if (!empty($customer_city)) {
+        list($lat, $lng) = getCoordinatesFromAddress(trim("$customer_city, Philippines"));
+        if ($lat !== null && $lng !== null) return [$lat, $lng];
+    }
+
+    // 4️⃣ Default fallback
+    return [14.1640, 121.4360];
+}
+
 function nullIfEmpty($value) {
     return isset($value) && $value !== '' ? $value : null;
 }
@@ -64,6 +86,7 @@ try {
     // ---- POST Data ----
     $customer_name = $_POST['customer_name'] ?? '';
     $customer_address = $_POST['customer_address'] ?? '';
+    $customer_province = $_POST['province'] ?? '';  // ✅ added
     $customer_city = $_POST['city'] ?? '';
     $customer_barangay = $_POST['barangay'] ?? '';
     $customer_contact = $_POST['customer_contact'] ?? '';
@@ -86,10 +109,28 @@ try {
         throw new Exception("Invalid order_items JSON");
     }
 
+    // ✅ ---- SAVE PROVINCE + CITY + BARANGAY TO LOCATIONS TABLE ----
+    if (!empty($customer_province) && !empty($customer_city) && !empty($customer_barangay)) {
+        $checkQuery = "SELECT city_id FROM location WHERE province_name = ? AND city_name = ? AND barangay_name = ?";
+        $checkStmt = $conn->prepare($checkQuery);
+        $checkStmt->bind_param("sss", $customer_province, $customer_city, $customer_barangay);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+
+        if ($result->num_rows === 0) {
+            $insertQuery = "INSERT INTO location (province_name, city_name, barangay_name) VALUES (?, ?, ?)";
+            $insertStmt = $conn->prepare($insertQuery);
+            $insertStmt->bind_param("sss", $customer_province, $customer_city, $customer_barangay);
+            $insertStmt->execute();
+            $insertStmt->close();
+        }
+        $checkStmt->close();
+    }
+
     // ---- Proof of Payment Upload ----
     $proof_path = null;
     if (!empty($_FILES['proofOfPayment']['name'])) {
-        $uploadDir = __DIR__ . '/proofs/proof_of_payment/';
+        $uploadDir = __DIR__ . '/backend/uploads/proof_of_payment/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
         $fileTmpPath = $_FILES['proofOfPayment']['tmp_name'];
@@ -104,19 +145,11 @@ try {
         if (!move_uploaded_file($fileTmpPath, $filePath)) {
             throw new Exception("Failed to upload proof of payment image");
         }
-        $proof_path = 'proof_of_payment/' . $fileName;
+        $proof_path = 'uploads/proof_of_payment/' . $fileName;
     }
 
-    // ---- Geocode Address ----
-    list($latitude, $longitude) = getCoordinatesFromAddress($customer_address . ', Laguna, Philippines');
-    if ($latitude === null || $longitude === null) {
-        $simpleAddress = trim("$customer_barangay, $customer_city, Laguna, Philippines");
-        list($latitude, $longitude) = getCoordinatesFromAddress($simpleAddress);
-    }
-    if ($latitude === null || $longitude === null) {
-        $latitude = 14.1640;
-        $longitude = 121.4360;
-    }
+    // ---- Geocode Address with fallback ----
+    list($latitude, $longitude) = getGeocodedCoordinates($customer_address, $customer_barangay, $customer_city);
 
     // ---- Insert Transaction ----
     $tracking_number = generateTrackingNumber();

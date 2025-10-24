@@ -1,6 +1,10 @@
 <?php
 include 'database.php';
 
+// Enable error reporting (for debugging)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // --- CORS setup ---
 $allowed_origins = [
     'http://localhost:5173',
@@ -56,12 +60,20 @@ foreach ($tablesToCheck as $table => $columns) {
     if ($result->num_rows === 1) {
         $stmt->close();
 
-        $updateStmt = $conn->prepare("UPDATE $table SET $passwordCol = ? WHERE $emailCol = ?");
+        // ✅ Update password and unlock the account if locked
+        $updateStmt = $conn->prepare("
+          UPDATE $table 
+SET $passwordCol = ?, 
+    is_locked = 0,
+    login_attempts = 0
+WHERE $emailCol = ?
+
+        ");
         $updateStmt->bind_param("ss", $hashedPassword, $email);
         $updateStmt->execute();
         $updateStmt->close();
 
-        echo json_encode(["status" => "success", "message" => "Password has been updated."]);
+        echo json_encode(["status" => "success", "message" => "Password updated and account unlocked."]);
         $updated = true;
         break;
     }

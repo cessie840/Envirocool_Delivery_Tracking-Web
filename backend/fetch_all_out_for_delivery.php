@@ -32,14 +32,14 @@ SELECT
     t.customer_contact,
      po.type_of_product AS type_of_product,
         po.description AS description,
-    t.date_of_order,
+    t.created_at,
     t.shipout_at,
     t.tracking_number,
     t.status,
     t.assigned_device_id,
        t.latitude,              
     t.longitude,     
-    dp.pers_username AS driver
+     CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver
     FROM DeliveryAssignments da
     JOIN Transactions t ON da.transaction_id = t.transaction_id
     JOIN PurchaseOrder po ON po.transaction_id = t.transaction_id
@@ -59,7 +59,7 @@ $deliveries[] = [
     "customer_address" => $row['customer_address'],
     "type_of_product" => $row['type_of_product'],
      "description"    => $row['description'],
-    "time"             => $row['date_of_order'],
+    "time"             => $row['created_at'],
     "shipout_time"     => $row['shipout_at'],
     "driver"           => $row['driver'],
     "status"           => $row['status'],

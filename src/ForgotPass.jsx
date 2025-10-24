@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -11,6 +12,8 @@ const ForgotPassword = () => {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validation, setValidation] = useState({
     length: false,
     uppercase: false,
@@ -33,7 +36,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/forgot_password.php",
+        "http://localhost/DeliveryTrackingSystem/forgot_password.php",
         { email }
       );
 
@@ -78,7 +81,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/verify_reset_code.php",
+        "http://localhost/DeliveryTrackingSystem/verify_reset_code.php",
         { email, code }
       );
 
@@ -128,7 +131,7 @@ const ForgotPassword = () => {
       newPassword.length >= 6 &&
       /[A-Z]/.test(newPassword) &&
       /\d/.test(newPassword) &&
-      /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+      /[ !"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(newPassword);
 
     if (!valid) {
       setErrorMessage("Password does not meet strength requirements.");
@@ -137,7 +140,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/change_password.php",
+        "http://localhost/DeliveryTrackingSystem/change_password.php",
         { email, newPassword }
       );
 
@@ -168,7 +171,7 @@ const ForgotPassword = () => {
 
         <h4 className="mb-4">Reset Password</h4>
 
-        {/* Step 1: Enter Email */}
+        {/* STEP 1: EMAIL */}
         {step === 1 && (
           <form className="login-form text-start" onSubmit={handleEmail}>
             <div className="mb-3">
@@ -182,6 +185,7 @@ const ForgotPassword = () => {
                 placeholder="driver@envirocool.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 
@@ -200,7 +204,7 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        {/* Step 2: Verify Code */}
+        {/* STEP 2: VERIFY CODE */}
         {step === 2 && (
           <form className="login-form text-start" onSubmit={handleVerifyCode}>
             <div className="mb-3">
@@ -214,6 +218,7 @@ const ForgotPassword = () => {
                 maxLength={6}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                required
               />
             </div>
 
@@ -232,53 +237,88 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        {/* Step 3: Reset Password */}
+        {/* STEP 3: RESET PASSWORD */}
         {step === 3 && (
           <form
             className="login-form text-start"
             onSubmit={handleChangePassword}
           >
-            <div className="mb-3">
+            {/* NEW PASSWORD */}
+            <div className="mb-3 position-relative">
               <label htmlFor="newPassword" className="form-label">
                 New Password:
               </label>
-              <input
-                type="password"
-                id="newPassword"
-                className="form-control"
-                name="newPassword"
-                value={newPassword}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setNewPassword(value);
-                  setValidation({
-                    length: value.length >= 6,
-                    uppercase: /[A-Z]/.test(value),
-                    number: /\d/.test(value),
-                    special: /[!@#$%^&*(),.?":{}|<>]/.test(value),
-                  });
-                }}
-                required
-              />
+              <div className="position-relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  id="newPassword"
+                  className="form-control pe-5"
+                  value={newPassword}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewPassword(value);
+                    setValidation({
+                      length: value.length >= 6,
+                      uppercase: /[A-Z]/.test(value),
+                      number: /\d/.test(value),
+                      special: /[ !"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(
+                        value
+                      ),
+                    });
+                  }}
+                  required
+                />
+                <span
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "15px",
+                    top: "49%",
+                    transform: "translateY(-50%)",
+                    cursor: "pointer",
+                    color: "#1E1F1FFF",
+                  }}
+                >
+                  {showNewPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+                </span>
+              </div>
             </div>
 
-            <div className="mb-3">
+            {/* CONFIRM PASSWORD */}
+            <div className="mb-3 position-relative">
               <label htmlFor="confirmPassword" className="form-label">
                 Confirm New Password:
               </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                className="form-control"
-                name="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <div className="position-relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  className="form-control pe-5"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+                <span
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "15px",
+                    top: "49%",
+                    transform: "translateY(-50%)",
+                    cursor: "pointer",
+                    color: "#1E1F1FFF",
+                  }}
+                >
+                  {showConfirmPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+                </span>
+              </div>
             </div>
 
-            {/* ✅ Password requirements moved below confirm password */}
-        <div className="mt-2" style={{ fontSize: "0.45rem", marginBottom: "8px" }}>
+            {/* PASSWORD REQUIREMENTS */}
+            <div
+              className="mt-2"
+              style={{ fontSize: "0.8rem", marginBottom: "8px" }}
+            >
               <p
                 style={{
                   color: validation.length ? "green" : "#8B0000",
@@ -309,8 +349,12 @@ const ForgotPassword = () => {
                   margin: 0,
                 }}
               >
-                • Contains at least one special character (! @ # $ % ^ & * ( ) ,
-                . ? " : {"{"} {"}"} | &lt; &gt;)
+                • Contains at least one special character:
+                <br />
+                <span style={{ fontWeight: "bold" }}>
+                  ! " # $ % & ' ( ) * + , - . / : ; &lt; = &gt; ? @ [ \ ] ^ _ `
+                  {`{ | } ~`}
+                </span>
               </p>
             </div>
 

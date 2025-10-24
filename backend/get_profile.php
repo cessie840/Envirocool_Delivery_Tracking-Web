@@ -1,7 +1,6 @@
 <?php
 include 'database.php';
 
-// --- CORS ---
 $allowed_origins = [
     "https://cessie840.github.io",
     "http://localhost:5173",
@@ -17,33 +16,32 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 // --- SESSION ---
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
-    'domain' => '13.239.143.31', // must match your server IP or domain
-    'secure' => true,             // HTTPS required
+    'domain' => '13.239.143.31',
+    'secure' => true,         
     'httponly' => true,
     'samesite' => 'None'
 ]);
 session_start();
 
-// Check sessions
-if (isset($_SESSION['ad_username'])) { /* fetch admin */ }
-elseif (isset($_SESSION['manager_username'])) { /* fetch manager */ }
-elseif (isset($_SESSION['pers_username'])) { /* fetch personnel */ }
-else {
+if (isset($_SESSION['ad_username'])) { /* fetch admin */
+} elseif (isset($_SESSION['manager_username'])) {
+} elseif (isset($_SESSION['pers_username'])) { 
+} else {
     http_response_code(401);
     echo json_encode(["error" => "Unauthorized"]);
     exit();
 }
 
 
-// ----------------------------
-// Fetch profile
-// ----------------------------
 if (isset($_SESSION['ad_username'])) {
     $username = $_SESSION['ad_username'];
     $stmt = $conn->prepare("SELECT ad_username, ad_fname, ad_lname, ad_email, ad_phone FROM Admin WHERE ad_username = ?");

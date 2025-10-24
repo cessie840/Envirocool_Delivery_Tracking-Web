@@ -11,13 +11,13 @@ import {
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate } from "react-router-dom";
-import { FaEdit } from "react-icons/fa";
+import { FaEdit, FaEye, FaEyeSlash } from "react-icons/fa";
 import axios from "axios";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
   const navigate = useNavigate();
+
   const [profile, setProfile] = useState({
     Name: "",
     username: "",
@@ -36,7 +36,6 @@ function DriverProfileSettings() {
     new: "",
     confirm: "",
   });
-
   const [showPassword, setShowPassword] = useState({
     old: false,
     new: false,
@@ -52,18 +51,15 @@ function DriverProfileSettings() {
 
       axios
         .post(
-          "https://13.239.143.31/DeliveryTrackingSystem/check_delivery_personnel.php",
-          {
-            pers_username: parsed.pers_username,
-          }
+          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
+          { pers_username: parsed.pers_username }
         )
         .then((res) => {
           if (res.data.success) {
             const u = res.data.user;
-
             const profilePicUrl = u.pers_profile_pic
-              ? `https://13.239.143.31//DeliveryTrackingSystem/uploads/personnel_profile_pic/${u.pers_profile_pic}`
-              : `https://13.239.143.31//DeliveryTrackingSystem/default-profile-pic.png`;
+              ? `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${u.pers_profile_pic}`
+              : `http://localhost/DeliveryTrackingSystem/default-profile-pic.png`;
 
             setProfile({
               Name: `${u.pers_fname} ${u.pers_lname}`,
@@ -117,21 +113,18 @@ function DriverProfileSettings() {
       formData.append("pers_lname", lname || "");
     } else {
       const mappedField = fieldMapping[modalField];
-      if (mappedField) {
-        formData.append(mappedField, fieldValue);
-      }
+      if (mappedField) formData.append(mappedField, fieldValue);
     }
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/update_delivery_personnel.php",
+        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       )
       .then((res) => {
         if (res.data.success) {
           alert("Profile updated successfully!");
-
           localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
         } else {
           alert("Update failed: " + res.data.message);
@@ -154,18 +147,14 @@ function DriverProfileSettings() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/update_delivery_personnel.php",
+        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
         formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       )
       .then((res) => {
         if (res.data.success) {
           alert("Password successfully changed!");
-
           localStorage.setItem("userPassword", passwordForm.new);
-
           setPasswordForm({ old: passwordForm.new, new: "", confirm: "" });
           setModalField(null);
         } else {
@@ -175,48 +164,49 @@ function DriverProfileSettings() {
       .catch((err) => console.error(err));
   };
 
+  // ✅ Preview selected image before upload
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const updatedProfile = { ...profile, profilePic: reader.result };
-        setProfile(updatedProfile);
-        localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
-      };
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      setProfile((prev) => ({
+        ...prev,
+        profilePic: previewUrl,
+        newProfileFile: file,
+      }));
     }
   };
 
+  // ✅ Upload selected image
   const handleProfilePicSave = () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (!profile.profilePic || !profile.profilePic.startsWith("data:image")) {
+    if (!profile.newProfileFile) {
       alert("Please select a new image first.");
       return;
     }
 
     const formData = new FormData();
     formData.append("pers_username", storedUser.pers_username);
-    formData.append("profile_pic", profile.profilePic);
+    formData.append("profile_pic", profile.newProfileFile);
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/upload_profile_pic.php",
+        "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       )
       .then((res) => {
         if (res.data.success) {
           alert("Profile picture updated successfully!");
-
           const filename = res.data.filename;
-          const updatedUser = { ...storedUser, pers_profile_pic: filename };
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-
+          const newUrl = `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${filename}`;
           setProfile((prev) => ({
             ...prev,
-            profilePic: `https://13.239.143.31//DeliveryTrackingSystem/uploads/personnel_profile_pic/${filename}`,
+            profilePic: newUrl,
+            newProfileFile: null,
           }));
+          const updatedUser = { ...storedUser, pers_profile_pic: filename };
+          localStorage.setItem("user", JSON.stringify(updatedUser));
         } else {
           alert("Upload failed: " + res.data.message);
         }
@@ -249,7 +239,7 @@ function DriverProfileSettings() {
               backgroundColor: "#E8F8F5",
             }}
           >
-            {/* PROFILE PICTURE WITH MOBILE PREVIEW AND SAVE */}
+            {/* ✅ PROFILE PICTURE SECTION */}
             <div className="text-center">
               <label htmlFor="profilePicInput" style={{ cursor: "pointer" }}>
                 <div
@@ -263,14 +253,12 @@ function DriverProfileSettings() {
                 >
                   <Image
                     src={
-                      profile.profilePic?.startsWith("data:image")
-                        ? profile.profilePic
-                        : profile.profilePic ||
-                          "https://13.239.143.31/DeliveryTrackingSystem/default-profile-pic.png"
+                      profile.profilePic ||
+                      "http://localhost/DeliveryTrackingSystem/default-profile-pic.png"
                     }
                     onError={(e) =>
                       (e.target.src =
-                        "https://13.239.143.31/DeliveryTrackingSystem/default-profile-pic.png")
+                        "http://localhost/DeliveryTrackingSystem/default-profile-pic.png")
                     }
                     alt="Profile"
                     style={{
@@ -290,8 +278,7 @@ function DriverProfileSettings() {
                 />
               </label>
 
-              {/* Show preview & save after selecting image */}
-              {profile.profilePic?.startsWith("data:image") && (
+              {profile.newProfileFile && (
                 <div className="mt-3">
                   <Button
                     variant="success"
@@ -317,6 +304,7 @@ function DriverProfileSettings() {
             </p>
           </div>
 
+          {/* Profile Details */}
           <div
             className="px-4 pb-4"
             style={{
@@ -326,6 +314,7 @@ function DriverProfileSettings() {
             }}
           >
             {[
+              // editable fields
               { label: "Full Name", key: "Name" },
               { label: "Email", key: "Email" },
               { label: "Contact Number", key: "Contact" },
@@ -353,21 +342,19 @@ function DriverProfileSettings() {
                       borderColor: "#116B8A",
                       color: "#116B8A",
                       backgroundColor: "#E8F8F5",
-                      padding: "6px 10px",
-                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
                     }}
                     onClick={() => {
                       setModalField(key);
                       setFieldValue(profile[key]);
                     }}
                   >
-                    <FaEdit style={{ fontSize: "1rem" }} />
+                    <FaEdit />
                   </Button>
                 </InputGroup>
               </div>
             ))}
 
-            {/* Password */}
+            {/* Password Section */}
             <div className="mt-3">
               <label className="text-secondary small fw-semibold">
                 Password
@@ -388,8 +375,6 @@ function DriverProfileSettings() {
                     borderColor: "#116B8A",
                     color: "#116B8A",
                     backgroundColor: "#E8F8F5",
-                    padding: "6px 10px",
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
                   }}
                   onClick={() => setModalField("password")}
                 >
@@ -407,7 +392,7 @@ function DriverProfileSettings() {
         </Card>
       </Container>
 
-      {/* MODAL FOR EDITING DETAILS */}
+      {/* Edit modals */}
       <Modal
         show={modalField && modalField !== "password"}
         onHide={() => setModalField(null)}
@@ -419,8 +404,6 @@ function DriverProfileSettings() {
         <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
           <Form.Group>
             <Form.Label>Enter new {modalField}</Form.Label>
-
-            {/* If editing Gender, show dropdown */}
             {modalField === "Gender" ? (
               <Form.Select
                 value={fieldValue}
@@ -448,6 +431,7 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
+      {/* Password Modal */}
       <Modal
         show={modalField === "password"}
         onHide={() => setModalField(null)}
@@ -478,7 +462,6 @@ function DriverProfileSettings() {
             </InputGroup>
           </Form.Group>
 
-          {/* Confirm Password */}
           <Form.Group>
             <Form.Label>Confirm Password</Form.Label>
             <InputGroup>
