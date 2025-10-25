@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaUserEdit, FaCheckCircle } from "react-icons/fa";
+import { FaUserEdit } from "react-icons/fa";
 import Swal from "sweetalert2";
+import { Toaster, toast } from "sonner"; 
 
 const EditProfileTab = () => {
   const [userData, setUserData] = useState(null);
@@ -18,7 +19,6 @@ const EditProfileTab = () => {
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [updateLoading, setUpdateLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -193,11 +193,6 @@ const EditProfileTab = () => {
 
     setErrors((prev) => ({ ...prev, general: "" }));
 
-    const isChanged = Object.keys(formData).some(
-      (key) =>
-        formData[key].trim() !== (userData?.[`${role}_${key}`] || "").trim()
-    );
-
     const { newErrors, newValid } = validateAllSync(formData);
     setErrors((prev) => ({ ...prev, ...newErrors }));
     setValid((prev) => ({ ...prev, ...newValid }));
@@ -258,28 +253,22 @@ const EditProfileTab = () => {
       });
 
       if (res.data.success) {
-        setSuccessMsg(
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center", 
-              alignItems: "center", 
-              gap: "6px",
-              padding: "3px",
-              color: "#2e7d32", 
-              borderRadius: "6px",
-              fontWeight: "600",
-              fontSize: "18px",
-
-            }}
-          >
-            <FaCheckCircle color="#2e7d32" />
-            Profile updated successfully!
-          </div>
-        );
+        toast.success("Profile updated successfully!", {
+          duration: 2500,
+          style: {
+            background: "#DEF1E0FF",
+            border: "1px solid #77BB79FF",
+            color: "#2E7D32",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+          },
+        });
         setIsEditing(false);
-
-        setTimeout(() => setSuccessMsg(""), 3000);
       } else {
         setErrors((prev) => ({
           ...prev,
@@ -310,21 +299,7 @@ const EditProfileTab = () => {
 
   return (
     <div className="p-4 rounded position-relative">
-      {successMsg && (
-        <div
-          className="alert alert-success text-center position-fixed top-0 start-50 translate-middle-x shadow"
-          style={{
-            zIndex: 1050,
-            width: "100%",
-            maxWidth: "600px",
-            borderRadius: "0 0 8px 8px",
-            animation: "fadeInOut 3s ease-in-out",
-            border: "1px solid #698F6BFF",
-          }}
-        >
-          {successMsg}
-        </div>
-      )}
+      <Toaster position="top-center" richColors />
 
       <h4 className="title mb-1">
         <FaUserEdit size={40} className="me-2" /> Edit Profile
@@ -333,12 +308,16 @@ const EditProfileTab = () => {
       <hr />
 
       {errors.general && (
-        <div className="alert alert-danger mb-3"
+        <div
+          className="alert alert-danger mb-3"
           style={{
             fontSize: "1rem",
             padding: "10px 12px",
             borderRadius: "6px",
-          }}>{errors.general}</div>
+          }}
+        >
+          {errors.general}
+        </div>
       )}
 
       {!isEditing ? (
@@ -400,16 +379,6 @@ const EditProfileTab = () => {
           </button>
         </>
       )}
-
-      <style>
-        {`
-          @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px); }
-            10%, 90% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-          }
-        `}
-      </style>
     </div>
   );
 };

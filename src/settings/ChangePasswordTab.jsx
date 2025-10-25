@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaLock, FaRegEye, FaRegEyeSlash, FaCheckCircle } from "react-icons/fa";
+import { FaLock, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import { Toaster, toast } from "sonner";
 
 const ChangePasswordTab = ({ role }) => {
   const [formData, setFormData] = useState({
@@ -25,7 +26,6 @@ const ChangePasswordTab = ({ role }) => {
   });
 
   const [message, setMessage] = useState({ text: "", type: "" });
-  const [successMsg, setSuccessMsg] = useState("");
 
   const validatePassword = (password) => {
     const rules = {
@@ -41,7 +41,6 @@ const ChangePasswordTab = ({ role }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
     if (name === "newPassword") validatePassword(value);
   };
 
@@ -99,24 +98,21 @@ const ChangePasswordTab = ({ role }) => {
       );
 
       if (res.data.success) {
-        setSuccessMsg(
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "6px",
-              padding: "3px",
-              color: "#2e7d32",
-              borderRadius: "6px",
-              fontWeight: "600",
-              fontSize: "18px",
-            }}
-          >
-            <FaCheckCircle color="#2e7d32" />
-            Password changed successfully!
-          </div>
-        );
+        toast.success("Password changed successfully!", {
+          duration: 2500,
+          style: {
+            background: "#DEF1E0FF",
+            border: "1px solid #77BB79FF",
+            color: "#2E7D32",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+          },
+        });
 
         setFormData({
           currentPassword: "",
@@ -129,8 +125,6 @@ const ChangePasswordTab = ({ role }) => {
           number: false,
           special: false,
         });
-
-        setTimeout(() => setSuccessMsg(""), 3000);
       } else {
         setMessage({
           text: res.data.error || "Password change failed.",
@@ -178,21 +172,7 @@ const ChangePasswordTab = ({ role }) => {
 
   return (
     <div className="settings p-4 rounded position-relative">
-      {successMsg && (
-        <div
-          className="alert alert-success text-center position-fixed top-0 start-50 translate-middle-x shadow"
-          style={{
-            zIndex: 1050,
-            width: "100%",
-            maxWidth: "600px",
-            borderRadius: "0 0 8px 8px",
-            animation: "fadeInOut 3s ease-in-out",
-            border: "1px solid #698F6BFF",
-          }}
-        >
-          {successMsg}
-        </div>
-      )}
+      <Toaster position="top-center" richColors />
 
       <h4 className="title mb-3">
         <FaLock /> Change Password
@@ -218,9 +198,7 @@ const ChangePasswordTab = ({ role }) => {
       {renderPasswordInput("New Password", "newPassword")}
 
       <div className="mt-2" style={{ fontSize: "0.95rem" }}>
-        <p
-          style={{ color: validation.length ? "green" : "#8B0000", margin: 0 }}
-        >
+        <p style={{ color: validation.length ? "green" : "#8B0000", margin: 0 }}>
           • At least 6 characters
         </p>
         <p
@@ -231,9 +209,7 @@ const ChangePasswordTab = ({ role }) => {
         >
           • Contains at least one uppercase letter
         </p>
-        <p
-          style={{ color: validation.number ? "green" : "#8B0000", margin: 0 }}
-        >
+        <p style={{ color: validation.number ? "green" : "#8B0000", margin: 0 }}>
           • Contains at least one number
         </p>
         <p
@@ -252,16 +228,6 @@ const ChangePasswordTab = ({ role }) => {
       >
         Change Password
       </button>
-
-      <style>
-        {`
-          @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px); }
-            10%, 90% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-          }
-        `}
-      </style>
     </div>
   );
 };

@@ -10,12 +10,12 @@ import {
   FaExclamationTriangle,
   FaDatabase,
 } from "react-icons/fa";
+import { Toaster, toast } from "sonner"; // ✅ Added Sonner toaster
 
 const BackupRestoreTab = () => {
   const [backupStatus, setBackupStatus] = useState("");
   const [restoreStatus, setRestoreStatus] = useState("");
   const [restoreFile, setRestoreFile] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(""); 
 
   const handleBackupClick = async () => {
     try {
@@ -28,7 +28,6 @@ const BackupRestoreTab = () => {
       );
 
       const blob = new Blob([response.data], { type: "application/sql" });
-
       const dbName =
         response.headers["x-database-name"] || "DeliveryTrackingSystem";
 
@@ -48,9 +47,42 @@ const BackupRestoreTab = () => {
       link.click();
 
       setBackupStatus("Backup downloaded successfully.");
+
+      // ✅ Success toaster for backup
+      toast.success("Backup downloaded successfully!", {
+        duration: 2500,
+        style: {
+          background: "#E8F5E9",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
     } catch (error) {
       console.error("Backup failed:", error);
       setBackupStatus("Backup failed. Please try again.");
+
+      toast.error("Backup failed. Please try again.", {
+        duration: 2500,
+        style: {
+          background: "#FCE8E8",
+          border: "1px solid #E57373",
+          color: "#B71C1C",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
     }
   };
 
@@ -63,6 +95,21 @@ const BackupRestoreTab = () => {
 
     if (!restoreFile) {
       setRestoreStatus("No file selected.");
+      toast.error("Please select a backup file before restoring.", {
+        duration: 2500,
+        style: {
+          background: "#FCE8E8",
+          border: "1px solid #E57373",
+          color: "#B71C1C",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
       return;
     }
 
@@ -95,53 +142,65 @@ const BackupRestoreTab = () => {
       );
 
       if (res.data.success) {
-        setSuccessMsg(
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "8px",
-              padding: "3px",
-              color: "#2e7d32",
-              borderRadius: "6px",
-              fontWeight: "600",
-              fontSize: "18px",
-            }}
-          >
-            <FaCheckCircle color="#2e7d32" />
-            Database restored successfully!
-          </div>
-        );
-
         setRestoreStatus("Restore completed successfully.");
 
-        setTimeout(() => setSuccessMsg(""), 3000);
+        // ✅ Success toaster for restore
+        toast.success("Database restored successfully!", {
+          duration: 2500,
+          style: {
+            background: "#DEF1E0FF",
+            border: "1px solid #77BB79FF",
+            color: "#2E7D32",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+          },
+        });
       } else {
         setRestoreStatus("Restore failed: " + res.data.message);
+        toast.error("Restore failed. Please check your SQL file.", {
+          duration: 2500,
+          style: {
+            background: "#FCE8E8",
+            border: "1px solid #E57373",
+            color: "#B71C1C",
+            fontWeight: 600,
+            fontSize: "1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+          },
+        });
       }
     } catch (err) {
       setRestoreStatus("Restore error: " + err.message);
+      toast.error("An error occurred during restore.", {
+        duration: 2500,
+        style: {
+          background: "#FCE8E8",
+          border: "1px solid #E57373",
+          color: "#B71C1C",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
     }
   };
 
   return (
     <div className="p-3 position-relative">
-      {successMsg && (
-        <div
-          className="alert alert-success text-center position-fixed top-0 start-50 translate-middle-x shadow"
-          style={{
-            zIndex: 1050,
-            width: "100%",
-            maxWidth: "600px",
-            borderRadius: "0 0 8px 8px",
-            animation: "fadeInOut 3s ease-in-out",
-            border: "1px solid #698F6BFF",
-          }}
-        >
-          {successMsg}
-        </div>
-      )}
+      <Toaster position="top-center" richColors /> {/* ✅ Sonner toaster added */}
 
       <h4 className="title mb-1">
         <FaDatabase /> Backup & Restore
@@ -161,6 +220,7 @@ const BackupRestoreTab = () => {
 
       <hr />
 
+      {/* 🔹 Backup Section */}
       <section className="mb-5">
         <h5>Backup Data</h5>
         <button
@@ -170,26 +230,11 @@ const BackupRestoreTab = () => {
           <FaDownload className="me-2" />
           Download Backup
         </button>
-        {backupStatus && (
-          <p
-            className={
-              backupStatus.includes("successfully")
-                ? "text-success"
-                : "text-danger"
-            }
-          >
-            {backupStatus.includes("successfully") ? (
-              <FaCheckCircle className="me-2" />
-            ) : (
-              <FaTimesCircle className="me-2" />
-            )}
-            {backupStatus}
-          </p>
-        )}
       </section>
 
       <hr />
 
+      {/* 🔹 Restore Section */}
       <section>
         <h5>Restore Options</h5>
         <form onSubmit={handleRestoreSubmit}>
@@ -212,23 +257,6 @@ const BackupRestoreTab = () => {
           </button>
         </form>
 
-        {restoreStatus && (
-          <p
-            className={
-              restoreStatus.includes("successfully")
-                ? "text-success mt-3"
-                : "text-danger mt-3"
-            }
-          >
-            {restoreStatus.includes("successfully") ? (
-              <FaCheckCircle className="me-2" />
-            ) : (
-              <FaTimesCircle className="me-2" />
-            )}
-            {restoreStatus}
-          </p>
-        )}
-
         {!restoreStatus && (
           <div className="alert alert-warning mt-3" role="alert">
             <FaExclamationTriangle className="me-2 text-danger" />
@@ -238,16 +266,6 @@ const BackupRestoreTab = () => {
           </div>
         )}
       </section>
-
-      <style>
-        {`
-          @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px); }
-            10%, 90% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-          }
-        `}
-      </style>
     </div>
   );
 };
