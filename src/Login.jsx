@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -53,22 +53,25 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(user));
       sessionStorage.setItem("showLoginNotif", "true");
 
-      alert("Login successful!");
+     
 
-      switch (user.role) {
-        case "admin":
-          navigate("/admin-dashboard");
-          break;
-        case "operationalmanager":
-          navigate("/operational-delivery-details");
-          break;
-        case "deliverypersonnel":
-          navigate("/driver-dashboard");
-          break;
-        default:
-          navigate("/");
-          break;
-      }
+      setTimeout(() => {
+        switch (user.role) {
+          case "admin":
+            navigate("/admin-dashboard");
+            break;
+          case "operationalmanager":
+            navigate("/operational-delivery-details");
+            break;
+          case "deliverypersonnel":
+            navigate("/driver-dashboard");
+            break;
+          default:
+            navigate("/");
+            break;
+        }
+        setLoading(false); 
+      }, 1500);
     } catch (error) {
       const errMsg = error?.response?.data?.error;
 
@@ -91,8 +94,7 @@ const Login = () => {
         default:
           setErrorMessage("Login failed. Please try again.");
       }
-    } finally {
-      setLoading(false);
+      setLoading(false); 
     }
   };
 
@@ -189,13 +191,15 @@ const Login = () => {
             </div>
           )}
 
-          {loading ? (
+          {loading && (
             <div className="loading-overlay">
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
             </div>
-          ) : (
+          )}
+
+          {!loading && (
             <button
               type="submit"
               className="btn login-btn w-100 rounded-3 fs-5 p-2"
@@ -277,26 +281,16 @@ const Login = () => {
                   <b>Data Privacy Act of 2012 (Republic Act No. 10173).</b>
                 </p>
                 <ul>
-                  <li>
-                    Only authorized users may access customer and transaction
-                    data.
-                  </li>
-                  <li>
-                    Personal information is used solely for transactions and
-                    services.
-                  </li>
-                  <li>Users may not share, disclose, or misuse data.</li>
-                  <li>
-                    Breaches of customer information may lead to disciplinary or
-                    legal action.
-                  </li>
+                  <li>Only authorized users may access data.</li>
+                  <li>Personal information is for transactions only.</li>
+                  <li>Misuse of data may lead to legal action.</li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">4. Security of Accounts</h6>
                 <ul>
-                  <li>Users must keep account credentials confidential.</li>
-                  <li>Sharing of usernames and passwords is prohibited.</li>
-                  <li>Report suspected unauthorized access immediately.</li>
+                  <li>Keep account credentials confidential.</li>
+                  <li>Sharing usernames or passwords is prohibited.</li>
+                  <li>Report unauthorized access immediately.</li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">5. Acceptable Use</h6>
@@ -310,35 +304,25 @@ const Login = () => {
                 <h6 className="fw-bold mt-3">6. Reports and Monitoring</h6>
                 <ul>
                   <li>Reports are for internal use only.</li>
-                  <li>
-                    Data visualizations must not be altered or misrepresented.
-                  </li>
-                  <li>Only management may use reports for decision-making.</li>
+                  <li>Data visualizations must not be altered.</li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">7. Limitation of Liability</h6>
                 <ul>
-                  <li>
-                    Not liable for user errors in data or delivery handling.
-                  </li>
-                  <li>Not liable for delays due to incorrect data.</li>
-                  <li>
-                    Not liable for unauthorized use due to user negligence.
-                  </li>
+                  <li>Not liable for user data or delay errors.</li>
+                  <li>Not liable for unauthorized use due to negligence.</li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">8. Amendments to Terms</h6>
                 <p>
-                  Envirocool Company may update these Terms anytime. Updates
-                  will be posted in the System. Continued use means acceptance
-                  of the revised Terms.
+                  Envirocool may update these Terms anytime. Continued use means
+                  acceptance of the new Terms.
                 </p>
 
                 <h6 className="fw-bold mt-3">9. Acknowledgment</h6>
                 <p>
-                  By using the Envirocool Delivery & Monitoring System, you
-                  acknowledge that you have read, understood, and agreed to
-                  these Terms and Conditions.
+                  By using the Envirocool System, you agree to these Terms and
+                  Conditions.
                 </p>
               </div>
               <div className="modal-footer bg-light">

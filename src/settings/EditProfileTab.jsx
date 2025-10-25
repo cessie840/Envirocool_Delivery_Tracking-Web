@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaUserEdit } from "react-icons/fa";
 import Swal from "sweetalert2";
-import { Toaster, toast } from "sonner"; 
+import { Toaster, toast } from "sonner";
 
 const EditProfileTab = () => {
   const [userData, setUserData] = useState(null);
@@ -247,7 +247,7 @@ const EditProfileTab = () => {
     }
 
     try {
-      const res = await axios.post(updateUrl, payload, {
+      const res = await axios.post(updateUrl, JSON.stringify(payload), {
         withCredentials: true,
         headers: { "Content-Type": "application/json" },
       });

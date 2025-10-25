@@ -4,6 +4,7 @@ import axios from "axios";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Toaster, toast } from "sonner";
 
 function DriverDashboard() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -13,12 +14,33 @@ function DriverDashboard() {
   const [newDeliveriesCount, setNewDeliveriesCount] = useState(0);
   const [showNewDeliveryPopup, setShowNewDeliveryPopup] = useState(false);
   const [newDeliveries, setNewDeliveries] = useState([]);
+  const [highlightedTxn, setHighlightedTxn] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const [highlightedTxn, setHighlightedTxn] = useState(null);
 
   const formatCurrency = (amount) =>
     `₱${Number(amount).toLocaleString("en-PH")}`;
+
+  useEffect(() => {
+    if (sessionStorage.getItem("showLoginNotif") === "true") {
+      toast.success("Login successful!", {
+        duration: 2500,
+        style: {
+          background: "#E2F7E3FF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "300px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
+      sessionStorage.removeItem("showLoginNotif");
+    }
+  }, []);
 
   const fetchAssignedDeliveries = () => {
     const storedProfile = localStorage.getItem("user");
@@ -61,7 +83,6 @@ function DriverDashboard() {
           setNewDeliveriesCount(freshOnes.length);
           setShowNewDeliveryPopup(true);
 
-        
           const newNotifs = freshOnes.map((d) => ({
             transactionNo: d.transactionNo,
             message: `You have a new assigned delivery for Transaction No. ${d.transactionNo}`,
@@ -80,7 +101,6 @@ function DriverDashboard() {
       .catch((err) => console.error("Error fetching deliveries:", err));
   };
 
- 
   useEffect(() => {
     fetchAssignedDeliveries();
     const interval = setInterval(fetchAssignedDeliveries, 10000);
@@ -162,6 +182,8 @@ function DriverDashboard() {
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
+      <Toaster position="top-center" richColors />
+
       <HeaderAndNav
         onSidebarToggle={() => setShowSidebar(true)}
         newDeliveries={newDeliveries}

@@ -5,10 +5,8 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaClock,
-  FaListAlt,
-  FaEquals,
-  FaSearch,
   FaFileInvoice,
+  FaSearch,
 } from "react-icons/fa";
 import { Row, Col, Card } from "react-bootstrap";
 import axios from "axios";
@@ -17,14 +15,15 @@ import {
   Pie,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
   CartesianGrid,
   XAxis,
   YAxis,
+  Legend,
 } from "recharts";
+import { Toaster, toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -36,7 +35,6 @@ const AdminDashboard = () => {
     cancelled: 0,
     pending: 0,
   });
-
   const [yearlyData, setYearlyData] = useState({ total: 0, distribution: [] });
   const [transactionStatusData, setTransactionStatusData] = useState([]);
 
@@ -48,6 +46,29 @@ const AdminDashboard = () => {
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
   };
+
+  useEffect(() => {
+    if (sessionStorage.getItem("showLoginNotif") === "true") {
+      toast.success("Login successful!", {
+        duration: 2500,
+        style: {
+          background: "#EBFAECFF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+
+      sessionStorage.removeItem("showLoginNotif");
+    }
+  }, []);
 
   useEffect(() => {
     document.title = "Admin Dashboard";
@@ -147,8 +168,9 @@ const AdminDashboard = () => {
       showSearch={false}
       onAddClick={handleAddDelivery}
     >
+      <Toaster position="top-center" richColors />
+
       <div className="container-fluid">
-        {/* Top 4 Cards */}
         <Row className="mb-4 g-3">
           <Col xl={3} lg={6} md={6} sm={12}>
             <Card className="p-3 h-100 dashboard-panel">
@@ -215,9 +237,7 @@ const AdminDashboard = () => {
           </Col>
         </Row>
 
-        {/* Bottom Panels */}
         <Row className="g-3">
-          {/* Recent Transactions */}
           <Col lg={7} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -248,45 +268,31 @@ const AdminDashboard = () => {
                           <td>{tx.customer_name}</td>
                           <td>{formatDate(tx.date_ordered)}</td>
                           <td>
-                            {[
-                              "Delivered",
-                              "Cancelled",
-                              "Out for Delivery",
-                            ].includes(tx.status) && (
-                              <span
-                                style={{
-                                  backgroundColor:
-                                    tx.status === "Delivered"
-                                      ? "#C6FCD3"
-                                      : tx.status === "Cancelled"
-                                      ? "#FDE0E0"
-                                      : tx.status === "Out for Delivery"
-                                      ? "#d2e6f5ff"
-                                      : "transparent",
-                                  color:
-                                    tx.status === "Delivered"
-                                      ? "#3E5F44"
-                                      : tx.status === "Cancelled"
-                                      ? "red"
-                                      : tx.status === "Out for Delivery"
-                                      ? "#1762b1ff"
-                                      : "black",
-                                  padding: "5px",
-                                  borderRadius: "8px",
-                                  display: "inline-block",
-                                  minWidth: "80px",
-                                  textAlign: "center",
-                                  fontSize: "0.85rem",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                {tx.status === "Delivered"
-                                  ? "Delivered"
-                                  : tx.status === "Cancelled"
-                                  ? "Cancelled"
-                                  : "Out for Delivery"}
-                              </span>
-                            )}
+                            <span
+                              style={{
+                                backgroundColor:
+                                  tx.status === "Delivered"
+                                    ? "#C6FCD3"
+                                    : tx.status === "Cancelled"
+                                    ? "#FDE0E0"
+                                    : "#d2e6f5ff",
+                                color:
+                                  tx.status === "Delivered"
+                                    ? "#3E5F44"
+                                    : tx.status === "Cancelled"
+                                    ? "red"
+                                    : "#1762b1ff",
+                                padding: "5px",
+                                borderRadius: "8px",
+                                display: "inline-block",
+                                minWidth: "80px",
+                                textAlign: "center",
+                                fontSize: "0.85rem",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {tx.status}
+                            </span>
                           </td>
                         </tr>
                       ))
@@ -308,14 +314,11 @@ const AdminDashboard = () => {
             </div>
           </Col>
 
-          {/* Pending Transactions (no Status column) */}
           <Col lg={5} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="m-0 fw-bold">Pending Transactions</h5>
-                <div className="d-flex gap-3">
-                  <FaSearch className="text-secondary cursor-pointer" />
-                </div>
+                <FaSearch className="text-secondary cursor-pointer" />
               </div>
 
               <div className="table-responsive">
@@ -359,7 +362,6 @@ const AdminDashboard = () => {
         </Row>
 
         <Row className="mt-4 g-3">
-          {/* Left: Monthly Bar Chart */}
           <Col xs={12} lg={8}>
             <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
               <h5 className="fw-bold mb-3 text-center text-lg-start">
@@ -376,7 +378,6 @@ const AdminDashboard = () => {
                     <YAxis allowDecimals={false} />
                     <Tooltip formatter={(value) => `${value} transactions`} />
                     <Legend />
-                    {/* Order: Total first, then Successful, then Cancelled */}
                     <Bar
                       dataKey="total"
                       fill="#2196F3"
@@ -398,14 +399,12 @@ const AdminDashboard = () => {
             </div>
           </Col>
 
-          {/* Right: Yearly Distribution Pie Chart */}
           <Col xs={12} lg={4}>
             <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
               <h5 className="fw-bold mb-3 text-center text-lg-start">
                 Successful vs Cancelled (Year {yearlyData.year})
               </h5>
 
-              {/* Pie Chart */}
               <div style={{ width: "100%", height: "300px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -444,12 +443,12 @@ const AdminDashboard = () => {
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "8px",
-                  fontSize: "clamp(13px, 1.4vw, 16px)", 
-                  fontWeight: "600", 
+                  fontSize: "clamp(13px, 1.4vw, 16px)",
+                  fontWeight: "600",
                 }}
               >
                 {yearlyData.distribution
-                  .sort((a, b) => (a.name === "Successful" ? -1 : 1)) 
+                  .sort((a, b) => (a.name === "Successful" ? -1 : 1))
                   .map((entry, index) => (
                     <div
                       key={index}
@@ -461,7 +460,6 @@ const AdminDashboard = () => {
                         justifyContent: "center",
                       }}
                     >
-                      {/* Color indicator */}
                       <span
                         style={{
                           display: "inline-block",
@@ -471,8 +469,6 @@ const AdminDashboard = () => {
                           backgroundColor: COLORS[index % COLORS.length],
                         }}
                       ></span>
-
-                      {/* Text label */}
                       <span>
                         {entry.name}: {entry.value} (
                         {((entry.value / yearlyData.total) * 100).toFixed(1)}%)
@@ -481,7 +477,6 @@ const AdminDashboard = () => {
                   ))}
               </div>
 
-              {/* Total */}
               <div
                 className="text-muted small mt-2 fw-bold text-center"
                 style={{ fontSize: "clamp(11px, 1.1vw, 15px)" }}
