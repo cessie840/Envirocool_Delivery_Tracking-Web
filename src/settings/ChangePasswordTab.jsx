@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { FaLock, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import Swal from "sweetalert2";
+import { FaLock, FaRegEye, FaRegEyeSlash, FaCheckCircle } from "react-icons/fa";
 
 const ChangePasswordTab = ({ role }) => {
   const [formData, setFormData] = useState({
@@ -15,8 +16,7 @@ const ChangePasswordTab = ({ role }) => {
     confirmPassword: false,
   });
 
-  const [focusedField, setFocusedField] = useState(""); // track focused field
-
+  const [focusedField, setFocusedField] = useState("");
   const [validation, setValidation] = useState({
     length: false,
     uppercase: false,
@@ -25,6 +25,7 @@ const ChangePasswordTab = ({ role }) => {
   });
 
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [successMsg, setSuccessMsg] = useState("");
 
   const validatePassword = (password) => {
     const rules = {
@@ -76,12 +77,20 @@ const ChangePasswordTab = ({ role }) => {
       return;
     }
 
-    const url =
-      "http://localhost/DeliveryTrackingSystem/change_adops_password.php";
+    const confirm = await Swal.fire({
+      text: "Do you want to change your password?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#288B44FF",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, change it",
+    });
+
+    if (!confirm.isConfirmed) return;
 
     try {
-      const response = await axios.post(
-        url,
+      const res = await axios.post(
+        "http://localhost/DeliveryTrackingSystem/change_adops_password.php",
         { currentPassword, newPassword },
         {
           withCredentials: true,
@@ -89,8 +98,26 @@ const ChangePasswordTab = ({ role }) => {
         }
       );
 
-      if (response.data.success) {
-        alert("Password changed successfully!");
+      if (res.data.success) {
+        setSuccessMsg(
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "6px",
+              padding: "3px",
+              color: "#2e7d32",
+              borderRadius: "6px",
+              fontWeight: "600",
+              fontSize: "18px",
+            }}
+          >
+            <FaCheckCircle color="#2e7d32" />
+            Password changed successfully!
+          </div>
+        );
+
         setFormData({
           currentPassword: "",
           newPassword: "",
@@ -102,10 +129,11 @@ const ChangePasswordTab = ({ role }) => {
           number: false,
           special: false,
         });
-        setMessage({ text: "", type: "" });
+
+        setTimeout(() => setSuccessMsg(""), 3000);
       } else {
         setMessage({
-          text: response.data.error || "Password change failed.",
+          text: res.data.error || "Password change failed.",
           type: "error",
         });
       }
@@ -118,67 +146,104 @@ const ChangePasswordTab = ({ role }) => {
     }
   };
 
-  // Reusable password input
-const renderPasswordInput = (label, name) => (
-  <div className="form-group mb-3 position-relative">
-    <label>{label}</label>
-    <div className="position-relative">
-      <input
-        type={showPassword[name] ? "text" : "password"}
-        name={name}
-        className="settings form-control pe-5"
-        value={formData[name]}
-        onChange={handleChange}
-        onFocus={() => handleFocus(name)}
-        onBlur={handleBlur}
-        autoComplete="off"
-      />
-      {focusedField === name && (
-        <span
-          onMouseDown={(e) => {
-            e.preventDefault(); // keeps input focused
-            togglePassword(name);
-          }}
-          className="position-absolute end-0 top-50 translate-middle-y me-3"
-          style={{ cursor: "pointer", color: "#555" }}
-        >
-          {showPassword[name] ? <FaRegEyeSlash /> : <FaRegEye />}
-        </span>
-      )}
+  const renderPasswordInput = (label, name) => (
+    <div className="form-group mb-3 position-relative">
+      <label>{label}</label>
+      <div className="position-relative">
+        <input
+          type={showPassword[name] ? "text" : "password"}
+          name={name}
+          className="settings form-control pe-5"
+          value={formData[name]}
+          onChange={handleChange}
+          onFocus={() => handleFocus(name)}
+          onBlur={handleBlur}
+          autoComplete="off"
+        />
+        {focusedField === name && (
+          <span
+            onMouseDown={(e) => {
+              e.preventDefault();
+              togglePassword(name);
+            }}
+            className="position-absolute end-0 top-50 translate-middle-y me-3"
+            style={{ cursor: "pointer", color: "#555" }}
+          >
+            {showPassword[name] ? <FaRegEyeSlash /> : <FaRegEye />}
+          </span>
+        )}
+      </div>
     </div>
-  </div>
-);
-
+  );
 
   return (
-    <div className="settings p-4 rounded">
+    <div className="settings p-4 rounded position-relative">
+      {successMsg && (
+        <div
+          className="alert alert-success text-center position-fixed top-0 start-50 translate-middle-x shadow"
+          style={{
+            zIndex: 1050,
+            width: "100%",
+            maxWidth: "600px",
+            borderRadius: "0 0 8px 8px",
+            animation: "fadeInOut 3s ease-in-out",
+            border: "1px solid #698F6BFF",
+          }}
+        >
+          {successMsg}
+        </div>
+      )}
+
       <h4 className="title mb-3">
         <FaLock /> Change Password
       </h4>
       <p>Change your password here.</p>
       <hr />
 
+      {message.text && message.type === "error" && (
+        <div
+          className="alert alert-danger mb-3"
+          role="alert"
+          style={{
+            fontSize: "1rem",
+            padding: "10px 12px",
+            borderRadius: "6px",
+          }}
+        >
+          {message.text}
+        </div>
+      )}
+
       {renderPasswordInput("Current Password", "currentPassword")}
       {renderPasswordInput("New Password", "newPassword")}
 
-      {/* Always show password requirements */}
       <div className="mt-2" style={{ fontSize: "0.95rem" }}>
-        <p style={{ color: validation.length ? "green" : "#8B0000", margin: 0 }}>
+        <p
+          style={{ color: validation.length ? "green" : "#8B0000", margin: 0 }}
+        >
           • At least 6 characters
         </p>
-        <p style={{ color: validation.uppercase ? "green" : "#8B0000", margin: 0 }}>
+        <p
+          style={{
+            color: validation.uppercase ? "green" : "#8B0000",
+            margin: 0,
+          }}
+        >
           • Contains at least one uppercase letter
         </p>
-        <p style={{ color: validation.number ? "green" : "#8B0000", margin: 0 }}>
+        <p
+          style={{ color: validation.number ? "green" : "#8B0000", margin: 0 }}
+        >
           • Contains at least one number
         </p>
-        <p style={{ color: validation.special ? "green" : "#8B0000", margin: 0 }}>
-          • Contains at least one special character (! @ # $ % ^ & * ( ) , . ? " : {'{'} {'}'} | &lt; &gt;)
+        <p
+          style={{ color: validation.special ? "green" : "#8B0000", margin: 0 }}
+        >
+          • Contains at least one special character (! @ # $ % ^ & * ...)
         </p>
       </div>
 
       {renderPasswordInput("Confirm New Password", "confirmPassword")}
-
       <hr />
 
       <button
@@ -188,20 +253,15 @@ const renderPasswordInput = (label, name) => (
         Change Password
       </button>
 
-      {message.text && message.type === "error" && (
-        <div
-          className="alert alert-danger mt-3"
-          role="alert"
-          style={{
-            fontSize: "0.9rem",
-            padding: "10px 12px",
-            borderRadius: "6px",
-            fontWeight: 500,
-          }}
-        >
-          {message.text}
-        </div>
-      )}
+      <style>
+        {`
+          @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+          }
+        `}
+      </style>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
 import {
   FaDownload,
   FaUpload,
@@ -7,13 +8,14 @@ import {
   FaTimesCircle,
   FaInfoCircle,
   FaExclamationTriangle,
-  FaDatabase
+  FaDatabase,
 } from "react-icons/fa";
 
 const BackupRestoreTab = () => {
   const [backupStatus, setBackupStatus] = useState("");
   const [restoreStatus, setRestoreStatus] = useState("");
   const [restoreFile, setRestoreFile] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(""); 
 
   const handleBackupClick = async () => {
     try {
@@ -27,9 +29,9 @@ const BackupRestoreTab = () => {
 
       const blob = new Blob([response.data], { type: "application/sql" });
 
-      const dbName = response.headers["x-database-name"] || "DeliveryTrackingSystem";
+      const dbName =
+        response.headers["x-database-name"] || "DeliveryTrackingSystem";
 
-      // Generate filename: backup_DBNAME_YYYY-MM-DD_HH-MM.sql
       const now = new Date();
       const pad = (n) => n.toString().padStart(2, "0");
       const filename = `backup_${dbName}_${now.getFullYear()}-${pad(
@@ -64,10 +66,17 @@ const BackupRestoreTab = () => {
       return;
     }
 
-    const confirmRestore = window.confirm(
-      "Restoring will overwrite your current database data.\n\nDo you want to continue?"
-    );
-    if (!confirmRestore) {
+    const confirmRestore = await Swal.fire({
+      title: "Confirm Restore",
+      text: "Restoring will overwrite your current database data. Do you want to continue?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#288B44FF",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, restore it",
+    });
+
+    if (!confirmRestore.isConfirmed) {
       setRestoreStatus("Restore cancelled.");
       return;
     }
@@ -86,7 +95,28 @@ const BackupRestoreTab = () => {
       );
 
       if (res.data.success) {
+        setSuccessMsg(
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "8px",
+              padding: "3px",
+              color: "#2e7d32",
+              borderRadius: "6px",
+              fontWeight: "600",
+              fontSize: "18px",
+            }}
+          >
+            <FaCheckCircle color="#2e7d32" />
+            Database restored successfully!
+          </div>
+        );
+
         setRestoreStatus("Restore completed successfully.");
+
+        setTimeout(() => setSuccessMsg(""), 3000);
       } else {
         setRestoreStatus("Restore failed: " + res.data.message);
       }
@@ -96,12 +126,30 @@ const BackupRestoreTab = () => {
   };
 
   return (
-    <div className="p-3">
+    <div className="p-3 position-relative">
+      {successMsg && (
+        <div
+          className="alert alert-success text-center position-fixed top-0 start-50 translate-middle-x shadow"
+          style={{
+            zIndex: 1050,
+            width: "100%",
+            maxWidth: "600px",
+            borderRadius: "0 0 8px 8px",
+            animation: "fadeInOut 3s ease-in-out",
+            border: "1px solid #698F6BFF",
+          }}
+        >
+          {successMsg}
+        </div>
+      )}
+
       <h4 className="title mb-1">
-        <FaDatabase /> Backup & Restore</h4>
-       <p className="text-dark">
+        <FaDatabase /> Backup & Restore
+      </h4>
+      <p className="text-dark">
         Manage your database backups and restore options below.
       </p>
+
       <div className="alert alert-info d-flex align-items-center" role="alert">
         <FaInfoCircle className="me-2" />
         <span>
@@ -111,10 +159,8 @@ const BackupRestoreTab = () => {
         </span>
       </div>
 
-     
       <hr />
 
-      {/* Backup Section */}
       <section className="mb-5">
         <h5>Backup Data</h5>
         <button
@@ -144,7 +190,6 @@ const BackupRestoreTab = () => {
 
       <hr />
 
-      {/* Restore Section */}
       <section>
         <h5>Restore Options</h5>
         <form onSubmit={handleRestoreSubmit}>
@@ -158,7 +203,10 @@ const BackupRestoreTab = () => {
               onChange={handleFileChange}
             />
           </div>
-          <button type="submit" className="btn btn-view px-4 py-2 fs-6 rounded-2 ">
+          <button
+            type="submit"
+            className="btn btn-view px-4 py-2 fs-6 rounded-2"
+          >
             <FaUpload className="me-2" />
             Restore Database
           </button>
@@ -184,12 +232,22 @@ const BackupRestoreTab = () => {
         {!restoreStatus && (
           <div className="alert alert-warning mt-3" role="alert">
             <FaExclamationTriangle className="me-2 text-danger" />
-            <b className="text-danger">Warning:</b> Restoring a backup will permanently
-            replace all current data in your database. Make sure you have the
-            correct file before proceeding.
+            <b className="text-danger">Warning:</b> Restoring a backup will
+            permanently replace all current data in your database. Make sure you
+            have the correct file before proceeding.
           </div>
         )}
       </section>
+
+      <style>
+        {`
+          @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+          }
+        `}
+      </style>
     </div>
   );
 };

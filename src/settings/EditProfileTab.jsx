@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaUserEdit } from "react-icons/fa";
+import { FaUserEdit, FaCheckCircle } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 const EditProfileTab = () => {
   const [userData, setUserData] = useState(null);
@@ -12,18 +13,23 @@ const EditProfileTab = () => {
     email: "",
     phone: "",
   });
+  const [errors, setErrors] = useState({});
+  const [valid, setValid] = useState({});
   const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
-    axios
-      .get("http://localhost/DeliveryTrackingSystem/get_profile.php", {
-        withCredentials: true, // ✅ send PHP session
-      })
-      .then((res) => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost/DeliveryTrackingSystem/get_profile.php",
+          { withCredentials: true }
+        );
         const data = res.data;
         setUserData(data);
 
-        // Determine role and set formData accordingly
         if (data.ad_username) {
           setRole("admin");
           setFormData({
@@ -54,126 +60,356 @@ const EditProfileTab = () => {
         } else {
           throw new Error("No valid session found");
         }
-      })
-      .catch((err) => {
-        console.error("Error fetching profile:", err);
-        alert("Unable to load profile. Please login again.");
-      });
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        setErrors({
+          general:
+            "Unable to load profile. Please check your connection and try logging in again.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
+
+  const validateFieldSync = (name, value) => {
+    const trimmedValue = (value || "").trim();
+    let message = "";
+    let isValid = false;
+
+    switch (name) {
+      case "username":
+        if (!trimmedValue) message = "Username is required.";
+        else isValid = true;
+        break;
+      case "fname":
+        if (!trimmedValue) message = "First name is required.";
+        else if (!/^[A-Za-zñÑ\s]+$/.test(trimmedValue))
+          message = "Only letters and spaces are allowed.";
+        else isValid = true;
+        break;
+      case "lname":
+        if (!trimmedValue) message = "Last name is required.";
+        else if (!/^[A-Za-zñÑ\s]+$/.test(trimmedValue))
+          message = "Only letters and spaces are allowed.";
+        else isValid = true;
+        break;
+      case "email":
+        if (!trimmedValue) message = "Email is required.";
+        else if (
+          !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(com|net|org|edu|gov|ph|io)$/.test(
+            trimmedValue
+          )
+        )
+          message = "Invalid email format. Example: user@example.com";
+        else isValid = true;
+        break;
+      case "phone":
+        if (!trimmedValue) {
+          message = "Phone number is required.";
+        } else if (!/^09\d{9}$/.test(trimmedValue)) {
+          if (!/^09/.test(trimmedValue)) {
+            message = "Phone number must start with 09.";
+          } else if (trimmedValue.length !== 11) {
+            message = "Phone number must be exactly 11 digits long.";
+          } else {
+            message = "Invalid phone number format.";
+          }
+        } else {
+          isValid = true;
+        }
+        break;
+    }
+
+    return { message, isValid };
+  };
+
+  const validateAllSync = (data) => {
+    const newErrors = {};
+    const newValid = {};
+    Object.keys(data).forEach((key) => {
+      const { message, isValid } = validateFieldSync(key, data[key]);
+      if (message) newErrors[key] = message;
+      newValid[key] = isValid;
+    });
+    return { newErrors, newValid };
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    let cleanValue = value;
+
+    if (name === "fname" || name === "lname") {
+      cleanValue = value.replace(/[^A-Za-zñÑ\s]/g, "");
+      if (value !== cleanValue) {
+        setErrors((prev) => ({
+          ...prev,
+          [name]: "Only letters and spaces are allowed.",
+        }));
+        setValid((prev) => ({ ...prev, [name]: false }));
+      } else {
+        const { message, isValid } = validateFieldSync(name, cleanValue);
+        setErrors((prev) => ({ ...prev, [name]: message }));
+        setValid((prev) => ({ ...prev, [name]: isValid }));
+      }
+    } else if (name === "phone") {
+      cleanValue = value.replace(/[^0-9]/g, "");
+      if (value !== cleanValue) {
+        setErrors((prev) => ({ ...prev, [name]: "Only numbers are allowed." }));
+        setValid((prev) => ({ ...prev, [name]: false }));
+      } else {
+        const { message, isValid } = validateFieldSync(name, cleanValue);
+        setErrors((prev) => ({ ...prev, [name]: message }));
+        setValid((prev) => ({ ...prev, [name]: isValid }));
+      }
+    } else if (name === "email") {
+      cleanValue = value.replace(/[^A-Za-z0-9@._%+-]/g, "");
+      const { message, isValid } = validateFieldSync(name, cleanValue);
+      setErrors((prev) => ({ ...prev, [name]: message }));
+      setValid((prev) => ({ ...prev, [name]: isValid }));
+    } else {
+      const { message, isValid } = validateFieldSync(name, cleanValue);
+      setErrors((prev) => ({ ...prev, [name]: message }));
+      setValid((prev) => ({ ...prev, [name]: isValid }));
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: cleanValue }));
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
+    const confirm = await Swal.fire({
+      title: "Save Changes?",
+      text: "Do you want to save the changes to your profile?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#288B44FF",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, save it",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    setErrors((prev) => ({ ...prev, general: "" }));
+
+    const isChanged = Object.keys(formData).some(
+      (key) =>
+        formData[key].trim() !== (userData?.[`${role}_${key}`] || "").trim()
+    );
+
+    const { newErrors, newValid } = validateAllSync(formData);
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+    setValid((prev) => ({ ...prev, ...newValid }));
+
+    const hasError = Object.values(newValid).some((v) => v !== true);
+    if (hasError) {
+      setErrors((prev) => ({
+        ...prev,
+        general: "Ensure all fields are valid before saving.",
+      }));
+      return;
+    }
+
+    setUpdateLoading(true);
     let updateUrl = "";
     let payload = {};
 
     switch (role) {
       case "admin":
-        updateUrl = "http://localhost/DeliveryTrackingSystem/update_admin_profile.php";
+        updateUrl =
+          "http://localhost/DeliveryTrackingSystem/update_admin_profile.php";
         payload = {
-          ad_username: formData.username,
-          ad_fname: formData.fname,
-          ad_lname: formData.lname,
-          ad_email: formData.email,
-          ad_phone: formData.phone,
+          ad_username: formData.username.trim(),
+          ad_fname: formData.fname.trim(),
+          ad_lname: formData.lname.trim(),
+          ad_email: formData.email.trim(),
+          ad_phone: formData.phone.trim(),
         };
         break;
       case "manager":
-        updateUrl = "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
+        updateUrl =
+          "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
         payload = {
-          manager_username: formData.username,
-          manager_fname: formData.fname,
-          manager_lname: formData.lname,
-          manager_email: formData.email,
-          manager_phone: formData.phone,
+          manager_username: formData.username.trim(),
+          manager_fname: formData.fname.trim(),
+          manager_lname: formData.lname.trim(),
+          manager_email: formData.email.trim(),
+          manager_phone: formData.phone.trim(),
         };
         break;
       case "personnel":
-        updateUrl = "http://localhost/DeliveryTrackingSystem/update_personnel_profile.php";
+        updateUrl =
+          "http://localhost/DeliveryTrackingSystem/update_personnel_profile.php";
         payload = {
-          pers_username: formData.username,
-          pers_fname: formData.fname,
-          pers_lname: formData.lname,
-          pers_email: formData.email,
-          pers_phone: formData.phone,
+          pers_username: formData.username.trim(),
+          pers_fname: formData.fname.trim(),
+          pers_lname: formData.lname.trim(),
+          pers_email: formData.email.trim(),
+          pers_phone: formData.phone.trim(),
         };
         break;
-      default:
-        alert("Unknown role. Cannot update profile.");
-        return;
     }
 
-    axios
-      .post(updateUrl, payload, {
-        withCredentials: true, // ✅ send PHP session
+    try {
+      const res = await axios.post(updateUrl, payload, {
+        withCredentials: true,
         headers: { "Content-Type": "application/json" },
-      })
-      .then(() => {
-        alert("Profile updated successfully.");
-        setIsEditing(false);
-        window.location.reload(); // optional
-      })
-      .catch((err) => {
-        console.error("Update failed:", err);
-        alert("Profile update failed.");
       });
+
+      if (res.data.success) {
+        setSuccessMsg(
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center", 
+              alignItems: "center", 
+              gap: "6px",
+              padding: "3px",
+              color: "#2e7d32", 
+              borderRadius: "6px",
+              fontWeight: "600",
+              fontSize: "18px",
+
+            }}
+          >
+            <FaCheckCircle color="#2e7d32" />
+            Profile updated successfully!
+          </div>
+        );
+        setIsEditing(false);
+
+        setTimeout(() => setSuccessMsg(""), 3000);
+      } else {
+        setErrors((prev) => ({
+          ...prev,
+          general: res.data.message || "Update failed. Please try again.",
+        }));
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      setErrors((prev) => ({
+        ...prev,
+        general:
+          "Server or network error. Please check your connection and try again.",
+      }));
+    } finally {
+      setUpdateLoading(false);
+    }
   };
 
-  if (!userData) return <p>Loading profile...</p>;
+  if (loading) return <p>Loading profile...</p>;
+
+  const labels = {
+    username: "Username",
+    fname: "First Name",
+    lname: "Last Name",
+    email: "Email",
+    phone: "Phone",
+  };
 
   return (
-    <div className="p-4 rounded">
-      <h4 className="title">
+    <div className="p-4 rounded position-relative">
+      {successMsg && (
+        <div
+          className="alert alert-success text-center position-fixed top-0 start-50 translate-middle-x shadow"
+          style={{
+            zIndex: 1050,
+            width: "100%",
+            maxWidth: "600px",
+            borderRadius: "0 0 8px 8px",
+            animation: "fadeInOut 3s ease-in-out",
+            border: "1px solid #698F6BFF",
+          }}
+        >
+          {successMsg}
+        </div>
+      )}
+
+      <h4 className="title mb-1">
         <FaUserEdit size={40} className="me-2" /> Edit Profile
       </h4>
       <p>Update your profile here.</p>
       <hr />
+
+      {errors.general && (
+        <div className="alert alert-danger mb-3"
+          style={{
+            fontSize: "1rem",
+            padding: "10px 12px",
+            borderRadius: "6px",
+          }}>{errors.general}</div>
+      )}
+
       {!isEditing ? (
         <>
-          <p><strong>Username:</strong> {formData.username}</p>
-          <p><strong>First Name:</strong> {formData.fname}</p>
-          <p><strong>Last Name:</strong> {formData.lname}</p>
-          <p><strong>Email:</strong> {formData.email}</p>
-          <p><strong>Phone:</strong> {formData.phone}</p>
+          {Object.keys(labels).map((field) => (
+            <p key={field}>
+              <strong>{labels[field]}:</strong> {formData[field]}
+            </p>
+          ))}
           <hr />
           <button
             className="btn btn-view mt-2 px-5 py-2 fs-6 rounded-2"
             onClick={() => setIsEditing(true)}
+            disabled={updateLoading}
           >
             Edit
           </button>
         </>
       ) : (
         <>
-          {["username", "fname", "lname", "email", "phone"].map((field) => (
+          {Object.keys(labels).map((field) => (
             <div className="form-group mb-3" key={field}>
-              <label className="text-capitalize">{field}</label>
+              <label>
+                {labels[field]} <span className="text-danger">*</span>
+              </label>
               <input
                 type={field === "email" ? "email" : "text"}
                 name={field}
-                className="form-control"
+                className={`form-control ${
+                  errors[field]
+                    ? "is-invalid border-danger"
+                    : valid[field]
+                    ? "is-valid border-success"
+                    : ""
+                }`}
                 value={formData[field]}
                 onChange={handleChange}
+                disabled={updateLoading}
               />
+              {errors[field] && (
+                <div className="text-danger small mt-1">{errors[field]}</div>
+              )}
             </div>
           ))}
+
           <button
             className="btn add-btn px-4 py-2 fs-6 rounded-2 me-4"
             onClick={handleUpdate}
+            disabled={updateLoading}
           >
-            Save
+            {updateLoading ? "Saving..." : "Save"}
           </button>
           <button
             className="btn cancel-btn px-4 py-2 fs-6 rounded-2 bg-secondary"
             onClick={() => setIsEditing(false)}
+            disabled={updateLoading}
           >
             Cancel
           </button>
         </>
       )}
+
+      <style>
+        {`
+          @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+          }
+        `}
+      </style>
     </div>
   );
 };

@@ -67,7 +67,6 @@ const GenerateReport = () => {
   const navigate = useNavigate();
   const reportRef = useRef(null);
 
-  // Filter modal state
   const [showFilter, setShowFilter] = useState(false);
   const [period, setPeriod] = useState(() => {
     return localStorage.getItem("reportPeriod") || "monthly";
@@ -89,7 +88,6 @@ const GenerateReport = () => {
     return localStorage.getItem("reportActiveTab") || "overall";
   });
 
-  // Data states
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({});
   const [salesData, setSalesData] = useState([]);
@@ -119,7 +117,6 @@ const GenerateReport = () => {
 
   const [failedReasons, setFailedReasons] = useState({});
 
-  // Fetch data based on filters
   useEffect(() => {
     fetchData();
   }, [
@@ -187,7 +184,6 @@ const GenerateReport = () => {
     return `${reportLabel} for the ${periodLabel} Period`;
   };
 
-  // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
@@ -329,7 +325,6 @@ const GenerateReport = () => {
         if (!res.ok) throw new Error("get_sales_report failed");
         const data = await safeJson(res);
         let normalizedSales = normalizeSales(data.sales ?? []);
-        // Filter to only delivered sales
         normalizedSales = normalizedSales.filter(
           (sale) => sale.delivery_status.toLowerCase() === "delivered"
         );
@@ -358,7 +353,6 @@ const GenerateReport = () => {
             : prev
         );
 
-        // Extract unique delivery personnel for dropdown
         const personnelSet = new Set();
         normalizedTransactions.forEach((t) => {
           if (t.delivery_personnel && t.delivery_personnel !== "-") {
@@ -387,7 +381,6 @@ const GenerateReport = () => {
         );
         setServiceData(normalizedService);
 
-        // ⬇️ new: store failedReasons from PHP response
         if (data.failedReasons) {
           setFailedReasons(data.failedReasons);
         }
@@ -400,7 +393,6 @@ const GenerateReport = () => {
             : prev
         );
 
-        // Extract unique Reason for Cancellations for dropdown
         setCancellationReasonOptions([
           "Vehicle-related Issue",
           "Location Inaccessible",
@@ -444,20 +436,19 @@ const GenerateReport = () => {
     }
   };
 
-  // Helper: format date for display
   const formatDate = (d) => {
     if (!d) return "";
     const dateObj = new Date(d);
     if (isNaN(dateObj)) return "";
 
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0"); // month first
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
     const day = String(dateObj.getDate()).padStart(2, "0");
     const year = dateObj.getFullYear();
 
     return `${month}/${day}/${year}`;
   };
 
-  // Helper: format date for period filtering (used in totals)
+
   const isDateInPeriod = (dateStr) => {
     if (!dateStr) return false;
     const date = new Date(dateStr);
@@ -502,10 +493,8 @@ const GenerateReport = () => {
     }
   };
 
-  // Calculate totals based on period filtering for Sales and Transaction reports
   const isValidDate = (d) => d instanceof Date && !isNaN(d);
 
-  // Utility: group transactions into single rows
   const groupTransactions = (data) => {
     return Object.values(
       data.reduce((acc, row) => {
@@ -520,7 +509,6 @@ const GenerateReport = () => {
           };
         }
 
-        // combine product_name + item_name
         const fullItemName = `${row.product_name || ""} ${
           row.item_name || ""
         }`.trim();
@@ -540,10 +528,8 @@ const GenerateReport = () => {
     }));
   };
 
-  // add new state
   const [searchQuery, setSearchQuery] = useState("");
 
-  // helper function
   const matchesSearch = (row) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -666,7 +652,6 @@ const GenerateReport = () => {
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
-          // ✅ Delivery Status filter
           if (
             deliveryStatus &&
             row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
@@ -687,7 +672,6 @@ const GenerateReport = () => {
           return true;
         })
       : serviceData.filter((row) => {
-          // ✅ Delivery Status filter
           if (
             deliveryStatus &&
             row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
@@ -731,7 +715,6 @@ const GenerateReport = () => {
     transactionData.map((row) => row.customer_name)
   ).size;
 
-  // Totals for Sales report
   const totalSalesAmount = filteredSalesData.reduce(
     (acc, cur) => acc + (Number(cur.total_cost) || 0),
     0
@@ -740,7 +723,6 @@ const GenerateReport = () => {
     filteredSalesData.map((row) => row.customer_name)
   ).size;
 
-  // Totals for Transaction report
   const totalTransactions = new Set(
     filteredTransactionData.map((row) => row.transaction_id)
   ).size;
@@ -792,7 +774,6 @@ const GenerateReport = () => {
     }
   });
 
-  // Customer satisfaction rating distribution chart
   const ratingDistribution = filteredCustomerData.reduce((acc, cur) => {
     const rating = cur.customer_rating ?? "No Rating";
     const found = acc.find((a) => String(a.name) === String(rating));
@@ -804,7 +785,6 @@ const GenerateReport = () => {
     return acc;
   }, []);
 
-  // Sales growth line chart data (group sales by date)
   const salesGrowthData = filteredSalesData.reduce((acc, cur) => {
     const date = cur.date ?? "";
     const found = acc.find((a) => a.date === date);
@@ -817,7 +797,6 @@ const GenerateReport = () => {
     return acc;
   }, []);
 
-  // Transaction status data (Delivered vs Cancelled)
   const transactionStatusData = [
     {
       name: "Delivered",
@@ -848,7 +827,6 @@ const GenerateReport = () => {
       return `${year}-${month}-${day}`;
     };
 
-    // ✅ Format numbers with commas
     const formatNumber = (num, decimals = 2, stripDecimals = true) => {
       if (num == null || isNaN(num)) return "0.00";
       let fixed = Number(num).toFixed(decimals);
@@ -901,10 +879,10 @@ const GenerateReport = () => {
       const month = start.getMonth();
       let quarterMonths = [];
 
-      if (month <= 2) quarterMonths = [0, 1, 2]; // Jan-Mar
-      else if (month <= 5) quarterMonths = [3, 4, 5]; // Apr-Jun
-      else if (month <= 8) quarterMonths = [6, 7, 8]; // Jul-Sep
-      else quarterMonths = [9, 10, 11]; // Oct-Dec
+      if (month <= 2) quarterMonths = [0, 1, 2]; 
+      else if (month <= 5) quarterMonths = [3, 4, 5]; 
+      else if (month <= 8) quarterMonths = [6, 7, 8]; 
+      else quarterMonths = [9, 10, 11];
 
       quarterMonths.forEach((m) => {
         const monthSales = salesData.filter(
@@ -930,17 +908,14 @@ const GenerateReport = () => {
     } else if (period === "monthly") {
       const base = new Date(startDate || new Date());
 
-      // ✅ Force start at the 1st of the month
       const start = new Date(base.getFullYear(), base.getMonth(), 1);
 
-      // ✅ Get the last day of the same month
       const daysInMonth = new Date(
         base.getFullYear(),
         base.getMonth() + 1,
         0
       ).getDate();
 
-      // ✅ Loop through the whole month (always 1 → last day)
       for (let d = 1; d <= daysInMonth; d++) {
         const dObj = new Date(start.getFullYear(), start.getMonth(), d);
         const dateStr = formatDate(dObj);
@@ -969,7 +944,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
@@ -1083,7 +1058,6 @@ const GenerateReport = () => {
       ]);
     };
 
-    // === PERIOD LOGIC ===
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = transactionData.filter(
@@ -1167,7 +1141,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
@@ -1195,8 +1169,6 @@ const GenerateReport = () => {
       }
     }
 
-    // === TOTAL ROW (MODIFIED to depend on selected period) ===
-    // ✅ Added: compute totals based on period
     const relevantTxs =
       period === "daily"
         ? transactionData.filter(
@@ -1213,9 +1185,8 @@ const GenerateReport = () => {
       { qty: 0, subtotal: 0 }
     );
 
-    // ✅ Added: dynamic TOTAL row per period
     rows.push([
-      `TOTAL (${period.toUpperCase()})`, // ✅ Added: dynamic label
+      `TOTAL (${period.toUpperCase()})`, 
       "-",
       "-",
       "-",
@@ -1232,8 +1203,6 @@ const GenerateReport = () => {
 
     return rows;
   };
-
-  // ============================================
 
   const generateServicePeriodRows = (
     serviceData,
@@ -1277,7 +1246,6 @@ const GenerateReport = () => {
       date_of_order: formatDate(s.date_of_order),
     }));
 
-    // --- (Period logic unchanged) ---
 
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
@@ -1365,7 +1333,6 @@ const GenerateReport = () => {
       }
     }
 
-    // ✅ Added: compute total dynamically
     const relevantData =
       period === "daily"
         ? normalizedData.filter(
@@ -1383,7 +1350,6 @@ const GenerateReport = () => {
       { total: 0, cancelled: 0, completed: 0 }
     );
 
-    // ✅ Added: label and totals
     rows.push([
       `TOTAL (${period.toUpperCase()})`,
       "-",
@@ -1398,7 +1364,6 @@ const GenerateReport = () => {
     return rows;
   };
 
-  // ✅ Generate rows (WITH Item column, no double formatting)
   const generateCustomerSatisfactionRows = (
     satisfactionData,
     period,
@@ -1407,7 +1372,6 @@ const GenerateReport = () => {
   ) => {
     const rows = [];
 
-    // Helper to get month name
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
@@ -1420,7 +1384,6 @@ const GenerateReport = () => {
       return d.toISOString().split("T")[0];
     };
 
-    // --- Row builders ---
     const pushCustomerRow = (label, c) => {
       rows.push([
         label || "",
@@ -1437,13 +1400,11 @@ const GenerateReport = () => {
       rows.push([label, "-", "-", "-", "-", "-", "-"]);
     };
 
-    // --- Normalize Data ---
     const normalizedData = satisfactionData.map((c) => ({
       ...c,
       date_of_order: formatDate(c.date_of_order),
     }));
 
-    // --- Period Logic ---
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = normalizedData.filter(
@@ -1501,7 +1462,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); 
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
@@ -1519,7 +1480,7 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
+      const todayStr = formatDate(new Date()); 
       const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
 
       if (dayTxs.length > 0) {
@@ -1530,7 +1491,6 @@ const GenerateReport = () => {
       }
     }
 
-    // === ✅ Fixed: compute total dynamically based on period ===
     const relevantData =
       period === "daily"
         ? normalizedData.filter(
@@ -1548,7 +1508,6 @@ const GenerateReport = () => {
       { total: 0, cancelled: 0, completed: 0 }
     );
 
-    // ✅ Fixed TOTAL label and count display
     rows.push([
       `TOTAL (${period.toUpperCase()})`,
       "-",
@@ -1566,7 +1525,7 @@ const GenerateReport = () => {
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "mm",
-      format: [330.2, 215.9], // long bond paper
+      format: [330.2, 215.9], 
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1598,7 +1557,7 @@ const GenerateReport = () => {
       }
       if (period === "quarterly") {
         const start = new Date(startDate || getTodayDate());
-        const monthNumber = start.toISOString().slice(5, 7); // "01" to "12"
+        const monthNumber = start.toISOString().slice(5, 7); 
         let quarterMonths = [];
 
         if (monthNumber >= "01" && monthNumber <= "03")
@@ -1628,9 +1587,7 @@ const GenerateReport = () => {
         return ` (${formatDate(start)} - ${formatDate(end)})`;
       }
       if (period === "daily") {
-        // Use startDate if provided, otherwise today
         const today = startDate ? new Date(startDate) : new Date();
-        // Format as MM/DD/YYYY for display
         const formattedDay = `${String(today.getMonth() + 1).padStart(
           2,
           "0"
@@ -1705,7 +1662,6 @@ const GenerateReport = () => {
       doc.line(15, yPos, pageWidth - 15, yPos);
       yPos += 6;
 
-      // Only print title on the first page of each report
       if (withTitle) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
@@ -1732,7 +1688,6 @@ const GenerateReport = () => {
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
 
-        // Show title only on the first page of each report
         if (i === reports[reportIndex].startPage) {
           renderHeader(true, reports[reportIndex].title);
         } else {
@@ -1741,7 +1696,6 @@ const GenerateReport = () => {
 
         addFooter(i, totalPages);
 
-        // Move to next report if needed
         if (
           reportIndex < reports.length - 1 &&
           i === reports[reportIndex + 1].startPage
@@ -1751,47 +1705,40 @@ const GenerateReport = () => {
       }
     };
 
-    // Signature section – shown only at the end of each report
     const addSignatureSection = (doc, pageWidth, pageHeight) => {
-      const lineY = pageHeight - 25; // position above footer
+      const lineY = pageHeight - 25; 
       const nameY = lineY + 6;
       const titleY = lineY + 10;
 
       doc.setFont("helvetica", "normal");
       doc.setLineWidth(0.2);
 
-      // Draw signature line (centered)
       const lineWidth = 60;
       const lineX = (pageWidth - lineWidth) / 2;
       doc.line(lineX, lineY, lineX + lineWidth, lineY);
 
-      // Name (normal)
-      doc.setFontSize(10);
-      doc.text(
-        "Ms. Janine Sarah Marie De Guzman Bacuyag",
-        pageWidth / 2,
-        nameY,
-        {
-          align: "center",
-        }
-      );
+      // doc.setFontSize(10);
+      // doc.text(
+      //   "Prepared By:",
+      //   pageWidth / 2,
+      //   nameY,
+      //   {
+      //     align: "center",
+      //   }
+      // );
 
-      // Title (bold)
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text("Sales Manager", pageWidth / 2, titleY, { align: "center" });
+      doc.text("Prepared by ", pageWidth / 2, titleY, { align: "center" });
 
-      // Reset to normal font afterward (for safety)
       doc.setFont("helvetica", "normal");
     };
 
     const addFooter = (pageNum, totalPages) => {
-      // Draw a clear separator line above the footer
-      doc.setDrawColor(50, 50, 50); // darker gray for visibility
+      doc.setDrawColor(50, 50, 50); 
       doc.setLineWidth(0.3);
       doc.line(15, pageHeight - 12, pageWidth - 15, pageHeight - 12);
 
-      // Add company name (italic)
       doc.setFont("helvetica", "italic");
       doc.setFontSize(8);
       doc.setTextColor(0, 0, 0);
@@ -1799,7 +1746,6 @@ const GenerateReport = () => {
         align: "center",
       });
 
-      // Add page numbering (bold for clarity)
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.text(
@@ -1811,7 +1757,6 @@ const GenerateReport = () => {
         }
       );
 
-      // Reset styles (to avoid affecting next elements)
       doc.setFont("helvetica", "normal");
       doc.setTextColor(0, 0, 0);
     };
@@ -1855,7 +1800,6 @@ const GenerateReport = () => {
           data.transactions ?? []
         );
 
-        // Generate rows based on period (daily, weekly, monthly, annually)
         const transactionRows = generateTransactionPeriodRows(
           normalizedTransactions,
           period,
@@ -1920,7 +1864,6 @@ const GenerateReport = () => {
       }
     };
 
-    // Main report logic
     const type = (
       typeof reportType === "string" ? reportType : ""
     ).toLowerCase();
@@ -1938,7 +1881,6 @@ const GenerateReport = () => {
           const r = reports[idx];
           if (idx > 0) doc.addPage();
 
-          // record where this report starts
           r.startPage = doc.internal.getCurrentPageInfo().pageNumber;
 
           let headerY = renderHeader(true, r.title);
@@ -1946,9 +1888,8 @@ const GenerateReport = () => {
           if (r.type === "sales") {
             let salesData = await fetchSalesData();
             if (period === "daily") {
-              // Replace salesData with today's date row
               salesData = salesData.map((row) => [
-                new Date().toLocaleDateString("en-US"), // Current day
+                new Date().toLocaleDateString("en-US"), 
                 row.quoteAmount || "0.00",
                 row.awardedAmount || "0.00",
                 row.actualCollection || "0.00",
@@ -2007,7 +1948,6 @@ const GenerateReport = () => {
           addFooter(idx + 1, reports.length);
         }
 
-        // ✅ Now apply headers & footers correctly
         applyHeaderFooterToAllPages(reports);
         doc.save("envirocool-overall-report.pdf");
         alert(
@@ -2040,9 +1980,8 @@ const GenerateReport = () => {
         if (type === "sales") {
           let salesData = await fetchSalesData();
           if (period === "daily") {
-            // Replace salesData with today's date row
             salesData = salesData.map((row) => [
-              new Date().toLocaleDateString("en-US"), // Current day
+              new Date().toLocaleDateString("en-US"), 
               row.quoteAmount || "0.00",
               row.awardedAmount || "0.00",
               row.actualCollection || "0.00",
@@ -2098,15 +2037,14 @@ const GenerateReport = () => {
           );
         }
 
-        // Apply headers/footers to all pages
         const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
           doc.setPage(i);
 
           if (i === 1) {
-            renderHeader(true, title); // first page → with title
+            renderHeader(true, title); 
           } else {
-            renderHeader(false); // overflow → no title
+            renderHeader(false); 
           }
           addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(i, totalPages);
@@ -2135,9 +2073,8 @@ const GenerateReport = () => {
     period
   ) => {
     let yPosition = yStartPosition;
-    const headerTopMargin = yStartPosition; // safe top for subsequent pages
+    const headerTopMargin = yStartPosition; 
 
-    // Config
     const tableConfig = {
       marginLeft: 15,
       marginRight: 15,
@@ -2148,7 +2085,6 @@ const GenerateReport = () => {
       cellFontSize: 8,
     };
 
-    // Width setup (5 columns)
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
     const colWidths = [
@@ -2172,7 +2108,6 @@ const GenerateReport = () => {
 
       const awardedX = tableConfig.marginLeft + colWidths[0];
 
-      // Sales Opportunity
       doc.setFillColor(173, 216, 230);
       doc.setTextColor(0, 0, 0);
       doc.rect(
@@ -2190,7 +2125,6 @@ const GenerateReport = () => {
         tableConfig.headerFontSize
       );
 
-      // Awarded Sales
       doc.setFillColor(221, 160, 221);
       doc.rect(
         awardedX,
@@ -2209,7 +2143,6 @@ const GenerateReport = () => {
 
       currentY += tableConfig.headerHeight;
 
-      // Second Header Row
       doc.setFont("helvetica", "bold");
       doc.setFontSize(tableConfig.subHeaderFontSize);
 
@@ -2247,7 +2180,6 @@ const GenerateReport = () => {
 
       currentY += tableConfig.rowHeight;
 
-      // Column Headers
       let periodLabel = "MONTHS";
       if (period === "monthly") periodLabel = "DAYS";
       else if (period === "weekly") periodLabel = "WEEKDAYS";
@@ -2280,12 +2212,10 @@ const GenerateReport = () => {
       yPosition = currentY;
     };
 
-    // Draw headers initially
     drawHeaders();
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(tableConfig.cellFontSize);
-    // ✅ Added: Helper function to format numbers with commas
     const formatNumber = (num) => {
       if (num == null || isNaN(num)) return "0.00";
       return Number(num).toLocaleString(undefined, {
@@ -2294,7 +2224,6 @@ const GenerateReport = () => {
       });
     };
 
-    // ✅ Added: Variables to store totals for each numeric column
     let totalQuote = 0;
     let totalAwarded = 0;
     let totalActual = 0;
@@ -2302,19 +2231,16 @@ const GenerateReport = () => {
 
     if (Array.isArray(aggregatedData)) {
       aggregatedData.forEach((row, rowIndex) => {
-        // For sales each row uses the fixed rowHeight:
         const rowHeight = tableConfig.rowHeight;
 
-        // Page break check BEFORE drawing row (use headerTopMargin)
         if (yPosition + rowHeight > pageHeight - 20) {
           doc.addPage();
-          yPosition = headerTopMargin; // start below the page header
+          yPosition = headerTopMargin; 
           drawHeaders();
         }
 
         let x = tableConfig.marginLeft;
 
-        // ✅ Added: Accumulate totals (skip first column which is label)
         totalQuote += parseFloat(row[1]?.replace(/,/g, "")) || 0;
         totalAwarded += parseFloat(row[2]?.replace(/,/g, "")) || 0;
         totalActual += parseFloat(row[3]?.replace(/,/g, "")) || 0;
@@ -2328,7 +2254,6 @@ const GenerateReport = () => {
 
           let displayText = cell || "";
 
-          // Red text if Balance = 0
           if (i === 4 && parseFloat(cell) === 0) {
             doc.setTextColor(255, 0, 0);
           } else {
@@ -2351,19 +2276,17 @@ const GenerateReport = () => {
       });
     }
 
-    // ✅ Added: Add TOTAL ROW (after looping all rows)
     if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
       doc.addPage();
       yPosition = headerTopMargin;
       drawHeaders();
     }
 
-    // ✅ Added: Total row styling
-    doc.setFont("helvetica", "bolditalic"); // italicized + bold
+    doc.setFont("helvetica", "bolditalic"); 
     doc.setTextColor(0, 0, 0);
 
     const totalsRow = [
-      "TOTAL", // italicized label
+      "TOTAL",
       formatNumber(totalQuote),
       formatNumber(totalAwarded),
       formatNumber(totalActual),
@@ -2372,13 +2295,12 @@ const GenerateReport = () => {
 
     let x = tableConfig.marginLeft;
     totalsRow.forEach((cell, i) => {
-      doc.setFillColor(255, 255, 204); // ✅ light yellow for total row
+      doc.setFillColor(255, 255, 204); 
       doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
       doc.setDrawColor(0, 0, 0);
       doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
 
       if (i === 0) {
-        // ✅ Align TOTAL text to the right for better visual balance
         doc.text(cell, x + colWidths[i] - 4, yPosition + 6, {
           align: "right",
         });
@@ -2410,7 +2332,7 @@ const GenerateReport = () => {
     pageHeight,
     yStartPosition,
     transactionData,
-    period // ✅ Added as parameter
+    period 
   ) => {
     let yPosition = yStartPosition;
 
@@ -2422,16 +2344,15 @@ const GenerateReport = () => {
       headerFontSize: 10,
       subHeaderFontSize: 9,
       cellFontSize: 10,
-      lineSpacing: 1.2, // spacing multiplier for wrapped text
+      lineSpacing: 1.2, 
     };
 
-    // ✅ Dynamic Filter Column Label
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
     else if (period === "weekly") periodLabel = "WEEKDAYS";
     else if (period === "daily") periodLabel = "DATE";
     else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS"; // fallback
+    else if (period === "annually") periodLabel = "MONTHS"; 
 
     const headers = [
       periodLabel,
@@ -2449,7 +2370,6 @@ const GenerateReport = () => {
       "Completed At",
     ];
 
-    // ===== Column Config =====
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
@@ -2461,7 +2381,6 @@ const GenerateReport = () => {
 
     const tableStartX = tableConfig.marginLeft;
 
-    // Helper: draw centered text
     const drawCenteredText = (text, x, y, width, fontSize) => {
       doc.setFontSize(fontSize);
       const textWidth = doc.getTextWidth(text);
@@ -2469,7 +2388,6 @@ const GenerateReport = () => {
       doc.text(text, textX, y, { maxWidth: width - 4 });
     };
 
-    // ✅ Different background colors per header
     const headerColors = [
       [173, 216, 230], // Filter
       [221, 160, 221], // Transaction No
@@ -2486,7 +2404,6 @@ const GenerateReport = () => {
       [255, 182, 193], // Completed At
     ];
 
-    // ✅ Function to draw headers (for first page + repeated on new pages)
     const drawHeaders = () => {
       let xPos = tableStartX;
       doc.setFont("helvetica", "bold");
@@ -2507,10 +2424,8 @@ const GenerateReport = () => {
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
     drawHeaders();
 
-    // ===== Rows =====
     transactionData.forEach((row, rowIndex) => {
       let xPos = tableStartX;
       let maxLines = 1;
@@ -2522,11 +2437,9 @@ const GenerateReport = () => {
         return lines;
       });
 
-      // ✅ Adjust row height
       const rowHeight =
         tableConfig.cellFontSize * 0.5 * maxLines * tableConfig.lineSpacing + 2;
 
-      // Alternate row colors
       const isEvenRow = rowIndex % 2 === 0;
       const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
@@ -2546,11 +2459,9 @@ const GenerateReport = () => {
 
       yPosition += rowHeight;
 
-      // ✅ Page break + redraw headers
-      // ✅ Page break check BEFORE drawing row
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; // 👈 margin-top to push table under the header
+        const topMargin = 50; 
         yPosition = topMargin;
         drawHeaders();
       }
@@ -2565,7 +2476,7 @@ const GenerateReport = () => {
     pageHeight,
     yStartPosition,
     serviceData,
-    period // ✅ Added as parameter
+    period 
   ) => {
     let yPosition = yStartPosition;
 
@@ -2577,10 +2488,9 @@ const GenerateReport = () => {
       headerFontSize: 11,
       subHeaderFontSize: 10,
       cellFontSize: 10,
-      lineSpacing: 1.2, // spacing multiplier for wrapped text
+      lineSpacing: 1.2, 
     };
 
-    // ✅ Dynamic Filter Column Label
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
     else if (period === "weekly") periodLabel = "WEEKDAYS";
@@ -2588,7 +2498,6 @@ const GenerateReport = () => {
     else if (period === "quarterly") periodLabel = "QUARTERS";
     else if (period === "annually") periodLabel = "MONTHS"; // fallback
 
-    // ✅ Headers (new structure)
     const headers = [
       periodLabel,
       "Transaction No.",
@@ -2600,11 +2509,9 @@ const GenerateReport = () => {
       "Reason for Cancellation",
     ];
 
-    // ===== Column Config =====
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
-    // ✅ Adjusted widths for 8 columns (must match headers length)
     const originalWidths = [25, 28, 30, 28, 32, 32, 32, 40];
     const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
     const colWidths = originalWidths.map(
@@ -2613,7 +2520,6 @@ const GenerateReport = () => {
 
     const tableStartX = tableConfig.marginLeft;
 
-    // Helper: draw centered text
     const drawCenteredText = (text, x, y, width, fontSize) => {
       doc.setFontSize(fontSize);
       const textWidth = doc.getTextWidth(text);
@@ -2621,7 +2527,6 @@ const GenerateReport = () => {
       doc.text(text, textX, y, { maxWidth: width - 4 });
     };
 
-    // ✅ Different background colors per header (8 colors)
     const headerColors = [
       [173, 216, 230], // Filter (periodLabel)
       [221, 160, 221], // Transaction No.
@@ -2633,7 +2538,6 @@ const GenerateReport = () => {
       [255, 182, 193], // Reason for Cancellation
     ];
 
-    // ✅ Function to draw headers (first page + repeated on new pages)
     const drawHeaders = () => {
       let xPos = tableStartX;
       doc.setFont("helvetica", "bold");
@@ -2654,14 +2558,12 @@ const GenerateReport = () => {
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
     drawHeaders();
 
     serviceData.forEach((row, rowIndex) => {
       let xPos = tableStartX;
       let maxLines = 1;
 
-      // Split text into lines per cell
       const cellLinesArray = row.map((cell, i) => {
         const text = cell !== null && cell !== undefined ? cell.toString() : "";
         const lines = doc.splitTextToSize(text, colWidths[i] - 2);
@@ -2669,23 +2571,19 @@ const GenerateReport = () => {
         return lines;
       });
 
-      // ✅ Calculate row height first
       const rowHeight =
         maxLines * tableConfig.cellFontSize * tableConfig.lineSpacing * 0.5 + 4;
 
-      // ✅ Page break check BEFORE drawing
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; // 👈 margin-top to push table under header
+        const topMargin = 50; 
         yPosition = topMargin;
         drawHeaders();
       }
 
-      // Alternate row colors
       const isEvenRow = rowIndex % 2 === 0;
       const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
-      // Draw row
       row.forEach((cell, i) => {
         doc.setFillColor(...bgColor);
         doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
@@ -2702,7 +2600,6 @@ const GenerateReport = () => {
     return yPosition;
   };
 
-  // ================== CUSTOMER SATISFACTION REPORT TABLE ==================
   const createCustomerSatisfactionReportTable = async (
     doc,
     pageWidth,
@@ -2724,7 +2621,6 @@ const GenerateReport = () => {
       lineSpacing: 1.2,
     };
 
-    // ✅ Dynamic Filter Column Label
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
     else if (period === "weekly") periodLabel = "WEEKDAYS";
@@ -2742,7 +2638,6 @@ const GenerateReport = () => {
       "Delivery Status",
     ];
 
-    // ===== Column Config =====
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
@@ -2791,10 +2686,8 @@ const GenerateReport = () => {
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
     drawHeaders();
 
-    // ===== Rows =====
     satisfactionRows.forEach((row, rowIndex) => {
       let xPos = tableStartX;
       let maxLines = 1;
@@ -2812,10 +2705,9 @@ const GenerateReport = () => {
       const isEvenRow = rowIndex % 2 === 0;
       const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
-      // ✅ Page break check BEFORE drawing row
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; // 👈 margin-top to push table under the header
+        const topMargin = 50; 
         yPosition = topMargin;
         drawHeaders();
       }
@@ -2979,7 +2871,6 @@ const GenerateReport = () => {
       );
     };
 
-    // Render rows for current report
     return Array.isArray(cardGroups[0])
       ? cardGroups.map((row, idx) => <div key={idx}>{renderRow(row)}</div>)
       : renderRow(cardGroups);
@@ -3008,7 +2899,6 @@ const GenerateReport = () => {
     </ResponsiveContainer>
   );
 
-  // Render top selling bar chart (Sales)
   const renderTopSellingChart = () => (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart
@@ -3025,7 +2915,6 @@ const GenerateReport = () => {
     </ResponsiveContainer>
   );
 
-  // Render transaction bar chart for successful & failed deliveries
   const renderTransactionStatusChart = () => (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart
@@ -3049,9 +2938,7 @@ const GenerateReport = () => {
     </ResponsiveContainer>
   );
 
-  // Render service delivery failed reasons bar chart
   const renderServiceFailedReasonsChart = () => {
-    // Ensure chart always renders
     const data =
       failedReasons && Object.keys(failedReasons).length > 0
         ? Object.entries(failedReasons).map(([reason, count]) => ({
@@ -3077,9 +2964,7 @@ const GenerateReport = () => {
     );
   };
 
-  // Render customer satisfaction pie chart for rating percentages
   const renderCustomerRatingPieChart = () => {
-    // Calculate total ratings count for percentages
     const totalRatings =
       ratingDistribution.reduce((acc, cur) => acc + cur.value, 0) || 0;
     const dataWithPercent =
@@ -3117,7 +3002,6 @@ const GenerateReport = () => {
     );
   };
 
-  // PAGINATION FOR EVERY TABLE
   useEffect(() => {
     setActiveTab("overall");
   }, [reportType]);
@@ -3135,7 +3019,6 @@ const GenerateReport = () => {
   const renderSalesTable = () => {
     const itemsPerPage = getItemsPerPage();
 
-    // Group by transaction_id
     const groupedData = Object.values(
       filteredSalesData.reduce((acc, row) => {
         const id = row.transaction_id;
@@ -3194,12 +3077,10 @@ const GenerateReport = () => {
               </tr>
             ) : (
               paginatedData.map((row, i) => {
-                // compute subtotals per item
                 const subtotals = row.items.map(
                   (item) => item.qty * item.unit_cost
                 );
 
-                // compute total cost
                 const totalCost = subtotals.reduce((a, b) => a + b, 0);
 
                 return (
@@ -3361,12 +3242,10 @@ const GenerateReport = () => {
               </tr>
             ) : (
               paginatedData.map((row, i) => {
-                // compute subtotals per item
                 const subtotals = row.items.map(
                   (item) => item.qty * item.unit_cost
                 );
 
-                // compute total cost
                 const totalCost = subtotals.reduce((a, b) => a + b, 0);
 
                 return (
