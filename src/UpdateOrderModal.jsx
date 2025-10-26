@@ -3,7 +3,7 @@ import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import axios from "axios";
-import { FaTrash, FaPlusCircle } from "react-icons/fa";
+import { FaRegTrashAlt, FaPlusCircle } from "react-icons/fa";
 import Swal from "sweetalert2";
 
 const paymentOptions = [
@@ -463,13 +463,15 @@ const UpdateOrderModal = ({
                 style={{ backgroundColor: "##d3eed3" }}
               >
                 <tr>
-                  <th style={{ width: "20%" }}>Quantity</th>
-                  <th style={{ width: "30%" }}>Type of Product</th>
-                  <th style={{ width: "30%" }}>Item Name</th>
+                  <th style={{ width: "10%" }}>Quantity</th>
+                  <th style={{ width: "25%" }}>Type of Product</th>
+                  <th style={{ width: "25%" }}>Item Name</th>
                   <th style={{ width: "20%" }}>Unit Cost</th>
+                  <th style={{ width: "10%" }}>Action</th>
                 </tr>
               </thead>
-              <tbody className="text-center">
+
+              <tbody className="text-center table-white">
                 {editableItems.map((item, index) => (
                   <tr key={index}>
                     <td>
@@ -561,6 +563,35 @@ const UpdateOrderModal = ({
                                 maximumFractionDigits: 2,
                               });
                           }
+                        }}
+                      />
+                    </td>
+
+                    <td>
+                      <FaRegTrashAlt
+                        style={{
+                          color: "#dc3545",
+                          cursor: "pointer",
+                          fontSize: "18px",
+                        }}
+                        title="Remove this item"
+                        onClick={() => {
+                          Swal.fire({
+                            title: "Remove this item?",
+                            text: "This action cannot be undone.",
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonColor: "#dc3545",
+                            cancelButtonColor: "#6c757d",
+                            confirmButtonText: "Yes, remove it!",
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              const newItems = editableItems.filter(
+                                (_, i) => i !== index
+                              );
+                              setEditableItems(newItems);
+                            }
+                          });
                         }}
                       />
                     </td>
