@@ -379,9 +379,7 @@ const ViewOrder = () => {
                           )
                         }
                       >
-                        View Proof of Payment (
-                        {orderDetails.proof_of_payment.length} image
-                        {orderDetails.proof_of_payment.length > 1 ? "s" : ""})
+                        View Proof of Payment 
                       </button>
                     </div>
                   )}
