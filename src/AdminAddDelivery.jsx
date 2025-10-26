@@ -9,6 +9,7 @@ import CreatableSelect from "react-select/creatable";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
+import { Toaster, toast } from "sonner";
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
@@ -140,59 +141,55 @@ const AddDelivery = () => {
   const [lagunaData, setLagunaData] = useState({});
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
-  
 
-useEffect(() => {
-  axios
-    .get("http://localhost/DeliveryTrackingSystem/get_provinces.php")
-    .then((res) => setProvinceOptions(res.data))
-    .catch((err) => console.error(err));
-}, []);
-
-useEffect(() => {
-  if (form.province) {
+  useEffect(() => {
     axios
-      .get(
-        `http://localhost/DeliveryTrackingSystem/get_city.php?province=${form.province}`
-      )
-      .then((res) => setCityOptions(res.data))
+      .get("http://localhost/DeliveryTrackingSystem/get_provinces.php")
+      .then((res) => setProvinceOptions(res.data))
       .catch((err) => console.error(err));
-  } else {
-    setCityOptions([]);
-  }
-}, [form.province]);
+  }, []);
 
-useEffect(() => {
-  if (form.city && form.province) {
-    axios
-      .get(
-        `http://localhost/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
-      )
-      .then((res) => setBarangayOptions(res.data))
-      .catch((err) => console.error(err));
-  } else {
-    setBarangayOptions([]);
-  }
-}, [form.city]);
+  useEffect(() => {
+    if (form.province) {
+      axios
+        .get(
+          `http://localhost/DeliveryTrackingSystem/get_city.php?province=${form.province}`
+        )
+        .then((res) => setCityOptions(res.data))
+        .catch((err) => console.error(err));
+    } else {
+      setCityOptions([]);
+    }
+  }, [form.province]);
 
+  useEffect(() => {
+    if (form.city && form.province) {
+      axios
+        .get(
+          `http://localhost/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
+        )
+        .then((res) => setBarangayOptions(res.data))
+        .catch((err) => console.error(err));
+    } else {
+      setBarangayOptions([]);
+    }
+  }, [form.city]);
 
+  useEffect(() => {
+    fetchProvinces();
+  }, []);
 
-useEffect(() => {
-  fetchProvinces();
-}, []);
-
-const fetchProvinces = async () => {
-  try {
-    const response = await axios.get(
-      "http://localhost/DeliveryTrackingSystem/get_provinces.php"
-    );
-    const data = response.data;
-    setProvinceOptions(data);
-  } catch (error) {
-    console.error("Error fetching provinces:", error);
-  }
-};
-
+  const fetchProvinces = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/get_provinces.php"
+      );
+      const data = response.data;
+      setProvinceOptions(data);
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+    }
+  };
 
   const handleCityChange = (selected) => {
     const city = selected.value;
@@ -717,7 +714,7 @@ const fetchProvinces = async () => {
     formData.append("street_name", form.street_name);
     formData.append("barangay", form.barangay);
     formData.append("city", form.city);
-     formData.append("province", form.province);
+    formData.append("province", form.province);
     formData.append("customer_contact", form.customer_contact);
     formData.append("date_of_order", form.date_of_order);
     formData.append("target_date_delivery", form.target_date_delivery);
@@ -743,7 +740,7 @@ const fetchProvinces = async () => {
         form.barangay,
         form.city,
         form.province,
-       
+
         "Philippines",
       ]
         .filter(Boolean)
@@ -762,8 +759,23 @@ const fetchProvinces = async () => {
         }
       );
 
-      alert("Delivery added successfully!");
-      fetchProvinces(); 
+      toast.success("Delivery added successfully!", {
+        duration: 2500,
+        style: {
+          background: "#EBFAECFF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+      fetchProvinces();
 
       const newTransactionId = res.data.transaction_id || transactionId;
 
@@ -811,7 +823,7 @@ const fetchProvinces = async () => {
         street_name: "",
         barangay: "",
         city: "",
-        province:"",
+        province: "",
         customer_contact: "",
         date_of_order: "",
         target_date_delivery: "",
@@ -843,7 +855,22 @@ const fetchProvinces = async () => {
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
-      alert("Error saving delivery.");
+      toast.error("Error saving delivery.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -1020,7 +1047,7 @@ const fetchProvinces = async () => {
                   placeholder={
                     form.province ? "Select City" : "Select province first"
                   }
-                  isDisabled={!form.province} 
+                  isDisabled={!form.province}
                   isClearable
                   isSearchable
                   openMenuOnClick
@@ -1030,7 +1057,6 @@ const fetchProvinces = async () => {
                       .toLowerCase()
                       .includes(inputValue.toLowerCase())
                   }
-                
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -1083,7 +1109,6 @@ const fetchProvinces = async () => {
                       .toLowerCase()
                       .includes(inputValue.toLowerCase())
                   }
-                
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -2356,6 +2381,7 @@ const fetchProvinces = async () => {
           )}
         </div>
       </div>
+      <Toaster richColors position="top-center" />
     </AdminLayout>
   );
 };
