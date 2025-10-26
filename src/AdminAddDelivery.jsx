@@ -184,7 +184,7 @@ useEffect(() => {
 const fetchProvinces = async () => {
   try {
     const response = await axios.get(
-      "http://localhost/backend/get_provinces.php"
+      "http://localhost/DeliveryTrackingSystem/get_provinces.php"
     );
     const data = response.data;
     const formatted = data.map((item) => ({
