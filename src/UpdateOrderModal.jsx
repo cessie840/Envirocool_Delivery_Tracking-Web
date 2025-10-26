@@ -4,7 +4,7 @@ import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import axios from "axios";
 import { FaTrash, FaPlusCircle } from "react-icons/fa";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
 const paymentOptions = [
   { label: "Cash", value: "Cash" },
@@ -27,6 +27,7 @@ const UpdateOrderModal = ({
 
   const [productOptions, setProductOptions] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
+  const [showPaymentUpdate, setShowPaymentUpdate] = useState(false);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -123,7 +124,8 @@ const UpdateOrderModal = ({
 
   const handleDownPaymentChange = (e) => {
     const down_payment = parseFloat(e.target.value) || 0;
-    const balance = total - down_payment;
+    const balance =
+      total - down_payment - (parseFloat(formData.full_payment) || 0);
     setFormData({
       ...formData,
       down_payment,
@@ -155,19 +157,33 @@ const UpdateOrderModal = ({
 
   const handleSaveChanges = () => {
     Swal.fire({
-      title: 'Are you sure?',
-      text: 'Do you want to update this order?',
-      icon: 'warning',
+      title: "Are you sure?",
+      text: "Do you want to update this order?",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, update it!'
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, update it!",
     }).then((result) => {
       if (result.isConfirmed) {
+        const cleanFormData = {
+          ...formData,
+          down_payment: parseFloat(formData.down_payment) || 0,
+          full_payment: parseFloat(formData.full_payment) || 0,
+          balance: parseFloat(formData.balance) || 0,
+          total: parseFloat(formData.total) || 0,
+        };
+
+        setFormData(cleanFormData);
         handleSubmit();
       }
     });
   };
+
+  const remainingBalance =
+    total -
+    (parseFloat(formData.down_payment) || 0) -
+    (parseFloat(formData.full_payment) || 0);
 
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
@@ -296,7 +312,9 @@ const UpdateOrderModal = ({
                     const numericValue =
                       rawValue === "" ? "" : parseFloat(rawValue);
                     const balance =
-                      total - (isNaN(numericValue) ? 0 : numericValue);
+                      total -
+                      (isNaN(numericValue) ? 0 : numericValue) -
+                      (parseFloat(formData.full_payment) || 0);
 
                     setFormData({
                       ...formData,
@@ -312,7 +330,11 @@ const UpdateOrderModal = ({
                       setFormData({
                         ...formData,
                         down_payment: numericValue.toFixed(2),
-                        balance: (total - numericValue).toFixed(2),
+                        balance: (
+                          total -
+                          numericValue -
+                          (parseFloat(formData.full_payment) || 0)
+                        ).toFixed(2),
                         total: total.toFixed(2),
                       });
                       e.target.value =
@@ -326,6 +348,102 @@ const UpdateOrderModal = ({
                   disabled={formData.payment_option === "Full Payment"}
                 />
               </Form.Group>
+
+              {formData.payment_option === "Down Payment" && (
+                <Form.Group className="mb-3">
+                  <Form.Label>Remaining Balance</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={`₱${remainingBalance.toLocaleString()}`}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                    style={{
+                      cursor: "not-allowed",
+                      opacity: 0.9,
+                    }}
+                  />
+                </Form.Group>
+              )}
+
+              {formData.payment_option === "Down Payment" && (
+                <div className="mb-3">
+                  <Button
+                    variant="success"
+                    onClick={() => setShowPaymentUpdate(!showPaymentUpdate)}
+                  >
+                    {showPaymentUpdate
+                      ? "Hide Payment Update"
+                      : "Update Payment"}
+                  </Button>
+                </div>
+              )}
+
+              {showPaymentUpdate && (
+                <>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Final Payment (Balance Paid)</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={
+                        formData.full_payment !== ""
+                          ? `₱${formData.full_payment}`
+                          : "₱0"
+                      }
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/[₱,]/g, "");
+                        const numericValue =
+                          rawValue === "" ? "" : parseFloat(rawValue);
+                        const balance =
+                          total -
+                          (parseFloat(formData.down_payment) || 0) -
+                          (isNaN(numericValue) ? 0 : numericValue);
+
+                        setFormData({
+                          ...formData,
+                          full_payment: isNaN(numericValue) ? "" : numericValue,
+                          balance: balance.toFixed(2),
+                        });
+                      }}
+                      onBlur={(e) => {
+                        const rawValue = e.target.value.replace(/[₱,]/g, "");
+                        const numericValue = parseFloat(rawValue);
+                        if (!isNaN(numericValue)) {
+                          setFormData({
+                            ...formData,
+                            full_payment: numericValue.toFixed(2),
+                            balance: (
+                              total -
+                              (parseFloat(formData.down_payment) || 0) -
+                              numericValue
+                            ).toFixed(2),
+                          });
+                          e.target.value =
+                            "₱" +
+                            numericValue.toLocaleString("en-PH", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            });
+                        }
+                      }}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>Date of Final Payment</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={formData.fbilling_date || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          fbilling_date: e.target.value,
+                        })
+                      }
+                    />
+                  </Form.Group>
+                </>
+              )}
             </Col>
           </Row>
 

@@ -5,7 +5,7 @@ import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
 import { Button, Modal, Form } from "react-bootstrap";
-import { Toaster, toast } from 'sonner';
+import { Toaster, toast } from "sonner";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ const ViewOrder = () => {
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
+  const [refetchTrigger, setRefetchTrigger] = useState(0); 
   const [formData, setFormData] = useState({
     tracking_number: "",
     customer_name: "",
@@ -27,6 +28,8 @@ const ViewOrder = () => {
     balance: "",
     total: "",
     proof_of_delivery: "",
+    full_payment: "0",
+    fbilling_date: "",
   });
 
   const [showProofViewModal, setShowProofViewModal] = useState(false);
@@ -41,13 +44,19 @@ const ViewOrder = () => {
     return `${mm}/${dd}/${yyyy}`;
   };
 
-  useEffect(() => {
-    document.title = "View Order Details";
+  const fetchOrderDetails = () => {
     fetch(
-      `http://localhost//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}&_=${Date.now()}`,
+      {
+        method: "GET",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      }
     )
       .then((res) => res.json())
       .then((data) => {
+        console.log("Fetched data:", data); 
         setOrderDetails(data);
         setFormData({
           tracking_number: data.tracking_number,
@@ -62,12 +71,19 @@ const ViewOrder = () => {
           total: data.total,
           target_date_delivery: formatDate(data.target_date_delivery),
           proof_of_delivery: data.proof_of_delivery,
+          full_payment: data.full_payment || "0",
+          fbilling_date: data.fbilling_date || "", 
         });
       })
       .catch((err) => {
         console.error("Failed to fetch order:", err);
       });
-  }, [transaction_id]);
+  };
+
+  useEffect(() => {
+    document.title = "View Order Details";
+    fetchOrderDetails();
+  }, [transaction_id, refetchTrigger]);
 
   const handleUpdate = () => {
     const fixedItems = orderDetails.items.map((item) => ({
@@ -119,6 +135,7 @@ const ViewOrder = () => {
       ...formData,
       date_of_order: formatDateForDB(formData.date_of_order),
       target_date_delivery: formatDateForDB(formData.target_date_delivery),
+      fbilling_date: formData.fbilling_date, 
       items: editableItems,
     };
 
@@ -151,7 +168,16 @@ const ViewOrder = () => {
             ...formData,
             items: editableItems,
           }));
-          setShowModal(false);
+          setOrderDetails((prev) => ({
+            ...prev,
+            ...formData,
+            items: editableItems,
+          }));
+
+
+          setTimeout(() => {
+            setRefetchTrigger((prev) => prev + 1);
+          }, 500);
         } else {
           console.error("Update failed:", response.message);
           alert("Update failed: " + (response.message || "Unknown error"));
@@ -169,6 +195,13 @@ const ViewOrder = () => {
     (sum, item) => sum + item.quantity * item.unit_cost,
     0
   );
+
+
+  const calculatedBalance =
+    parseFloat(orderDetails?.balance) ??
+    totalCost -
+      (parseFloat(orderDetails?.down_payment) || 0) -
+      (parseFloat(orderDetails?.full_payment) || 0);
 
   const renderStatusBadge = (status) => {
     switch (status) {
@@ -254,24 +287,67 @@ const ViewOrder = () => {
 
                 <div className="col-md-6 order-2 order-md-2">
                   <h5 className="text-success fw-bold">Payment Details</h5>
+
                   <p>
-                    <span>Payment Method:</span> {orderDetails.mode_of_payment}
+                    <span>Payment Method:</span>{" "}
+                    {orderDetails.mode_of_payment || "—"}
                   </p>
                   <p>
-                    <span>Payment Option:</span> {orderDetails.payment_option}
+                    <span>Payment Option:</span>{" "}
+                    {orderDetails.payment_option || "—"}
                   </p>
                   <p>
                     <span>Total:</span> ₱
                     {Number(orderDetails?.total || 0).toLocaleString()}
                   </p>
-                  <p>
-                    <span>Down Payment:</span> ₱
-                    {Number(orderDetails?.down_payment || 0).toLocaleString()}
-                  </p>
-                  <p>
-                    <span>Balance:</span> ₱
-                    {Number(orderDetails?.balance || 0).toLocaleString()}
-                  </p>
+
+                  {orderDetails.payment_option !== "Full Payment" && (
+                    <>
+                      {orderDetails.down_payment &&
+                        parseFloat(orderDetails.down_payment) > 0 && (
+                          <p>
+                            <span>Initial Payment (Down Payment):</span> ₱
+                            {Number(orderDetails.down_payment).toLocaleString()}
+                          </p>
+                        )}
+
+                      {orderDetails.full_payment &&
+                        parseFloat(orderDetails.full_payment) > 0 && (
+                          <>
+                            <p>
+                              <span>Final Payment (Balance Paid):</span> ₱
+                              {Number(
+                                orderDetails.full_payment
+                              ).toLocaleString()}
+                            </p>
+
+                            {calculatedBalance > 0 && (
+                              <p>
+                                <span>Remaining Balance:</span> ₱
+                                {calculatedBalance.toLocaleString()}
+                              </p>
+                            )}
+
+                            {orderDetails.fbilling_date &&
+                              orderDetails.fbilling_date !== "0000-00-00" && (
+                                <p>
+                                  <span>Date of Final Payment:</span>{" "}
+                                  {formatDate(orderDetails.fbilling_date)}
+                                </p>
+                              )}
+                          </>
+                        )}
+
+                      {orderDetails.payment_option === "Down Payment" &&
+                        (!orderDetails.full_payment ||
+                          parseFloat(orderDetails.full_payment) === 0) && (
+                          <p>
+                            <span>Remaining Balance:</span> ₱
+                            {calculatedBalance.toLocaleString()}
+                          </p>
+                        )}
+                    </>
+                  )}
                 </div>
 
                 <div className="col-md-12 order-3 order-md-3 mt-4">
@@ -331,11 +407,12 @@ const ViewOrder = () => {
                 ))}
               </ul>
               <div className="d-flex justify-content-between align-items-center mt-4 px-3">
-                <h4 className="fw-bold text-danger">
-                  Balance: ₱
-                  {Number(orderDetails?.balance || 0).toLocaleString()}
-                </h4>
-                <h4 className="fw-bold text-success">
+                {orderDetails.payment_option === "Down Payment" && (
+                  <h4 className="fw-bold text-danger">
+                    Remaining Balance: ₱{calculatedBalance.toLocaleString()}
+                  </h4>
+                )}
+                <h4 className="fw-bold text-success text-right">
                   Total Cost: ₱{totalCost.toLocaleString()}
                 </h4>
               </div>
