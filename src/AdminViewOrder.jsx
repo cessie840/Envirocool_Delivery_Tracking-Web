@@ -14,7 +14,7 @@ const ViewOrder = () => {
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
-  const [refetchTrigger, setRefetchTrigger] = useState(0); 
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [formData, setFormData] = useState({
     tracking_number: "",
     customer_name: "",
@@ -56,7 +56,7 @@ const ViewOrder = () => {
     )
       .then((res) => res.json())
       .then((data) => {
-        console.log("Fetched data:", data); 
+        console.log("Fetched data:", data);
         setOrderDetails(data);
         setFormData({
           tracking_number: data.tracking_number,
@@ -72,7 +72,7 @@ const ViewOrder = () => {
           target_date_delivery: formatDate(data.target_date_delivery),
           proof_of_delivery: data.proof_of_delivery,
           full_payment: data.full_payment || "0",
-          fbilling_date: data.fbilling_date || "", 
+          fbilling_date: data.fbilling_date || "",
         });
       })
       .catch((err) => {
@@ -135,7 +135,7 @@ const ViewOrder = () => {
       ...formData,
       date_of_order: formatDateForDB(formData.date_of_order),
       target_date_delivery: formatDateForDB(formData.target_date_delivery),
-      fbilling_date: formData.fbilling_date, 
+      fbilling_date: formData.fbilling_date,
       items: editableItems,
     };
 
@@ -174,7 +174,6 @@ const ViewOrder = () => {
             items: editableItems,
           }));
 
-
           setTimeout(() => {
             setRefetchTrigger((prev) => prev + 1);
           }, 500);
@@ -195,7 +194,6 @@ const ViewOrder = () => {
     (sum, item) => sum + item.quantity * item.unit_cost,
     0
   );
-
 
   const calculatedBalance =
     parseFloat(orderDetails?.balance) ??
@@ -407,14 +405,19 @@ const ViewOrder = () => {
                 ))}
               </ul>
               <div className="d-flex justify-content-between align-items-center mt-4 px-3">
-                {orderDetails.payment_option === "Down Payment" && (
-                  <h4 className="fw-bold text-danger">
-                    Remaining Balance: ₱{calculatedBalance.toLocaleString()}
+                <div>
+                  {orderDetails.payment_option === "Down Payment" && (
+                    <h4 className="fw-bold text-danger mb-0">
+                      Remaining Balance: ₱{calculatedBalance.toLocaleString()}
+                    </h4>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="fw-bold text-success text-end mb-0">
+                    Total Cost: ₱{totalCost.toLocaleString()}
                   </h4>
-                )}
-                <h4 className="fw-bold text-success text-right">
-                  Total Cost: ₱{totalCost.toLocaleString()}
-                </h4>
+                </div>
               </div>
             </div>
 
