@@ -4,26 +4,11 @@ import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import axios from "axios";
 import { FaTrash, FaPlusCircle } from "react-icons/fa";
+import Swal from 'sweetalert2';
 
 const paymentOptions = [
-  { label: "CASH", value: "Cash" },
-  { label: "GCASH", value: "GCASH" },
-  {
-    label: "Bank Transfer",
-    options: [
-      { label: "Bank 1", value: "Bank 1" },
-      { label: "Bank 2", value: "Bank 2" },
-      { label: "Bank 3", value: "Bank 3" },
-    ],
-  },
-  {
-    label: "Card",
-    options: [
-      { label: "Card 1", value: "Visa" },
-      { label: "Card 2", value: "Mastercard" },
-      { label: "Card 3", value: "AmEx" },
-    ],
-  },
+  { label: "Cash", value: "Cash" },
+  { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
 const UpdateOrderModal = ({
@@ -166,6 +151,22 @@ const UpdateOrderModal = ({
       ...editableItems,
       { quantity: 1, type_of_product: "", description: "", unit_cost: 0 },
     ]);
+  };
+
+  const handleSaveChanges = () => {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you want to update this order?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, update it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleSubmit();
+      }
+    });
   };
 
   return (
@@ -469,7 +470,7 @@ const UpdateOrderModal = ({
         <Button
           className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
           style={{ fontSize: "16px" }}
-          onClick={handleSubmit}
+          onClick={handleSaveChanges}
         >
           Save Changes
         </Button>

@@ -113,6 +113,8 @@ const AddDelivery = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
+  const [provinceOptions, setProvinceOptions] = useState([]);
+
   const AUTO_DOWNLOAD_RECEIPT = false;
 
   const [form, setForm] = useState({
@@ -121,6 +123,7 @@ const AddDelivery = () => {
     street_name: "",
     barangay: "",
     city: "",
+    province: "",
     customer_contact: "",
     date_of_order: "",
     target_date_delivery: "",
@@ -137,27 +140,59 @@ const AddDelivery = () => {
   const [lagunaData, setLagunaData] = useState({});
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
+  
 
-  useEffect(() => {
-    const fetchLagunaData = async () => {
-      try {
-        const res = await axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_barangay.php"
-        );
-        setLagunaData(res.data);
+useEffect(() => {
+  axios
+    .get("http://localhost/DeliveryTrackingSystem/get_provinces.php")
+    .then((res) => setProvinceOptions(res.data))
+    .catch((err) => console.error(err));
+}, []);
 
-        const cities = Object.keys(res.data).map((city) => ({
-          label: city,
-          value: city,
-        }));
-        setCityOptions(cities);
-      } catch (err) {
-        console.error("Error fetching Laguna data", err);
-      }
-    };
+useEffect(() => {
+  if (form.province) {
+    axios
+      .get(
+        `http://localhost/DeliveryTrackingSystem/get_city.php?province=${form.province}`
+      )
+      .then((res) => setCityOptions(res.data))
+      .catch((err) => console.error(err));
+  } else {
+    setCityOptions([]);
+  }
+}, [form.province]);
 
-    fetchLagunaData();
-  }, []);
+useEffect(() => {
+  if (form.city && form.province) {
+    axios
+      .get(
+        `http://localhost/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
+      )
+      .then((res) => setBarangayOptions(res.data))
+      .catch((err) => console.error(err));
+  } else {
+    setBarangayOptions([]);
+  }
+}, [form.city]);
+
+
+
+useEffect(() => {
+  fetchProvinces();
+}, []);
+
+const fetchProvinces = async () => {
+  try {
+    const response = await axios.get(
+      "http://localhost/DeliveryTrackingSystem/get_provinces.php"
+    );
+    const data = response.data;
+    setProvinceOptions(data);
+  } catch (error) {
+    console.error("Error fetching provinces:", error);
+  }
+};
+
 
   const handleCityChange = (selected) => {
     const city = selected.value;
@@ -682,6 +717,7 @@ const AddDelivery = () => {
     formData.append("street_name", form.street_name);
     formData.append("barangay", form.barangay);
     formData.append("city", form.city);
+     formData.append("province", form.province);
     formData.append("customer_contact", form.customer_contact);
     formData.append("date_of_order", form.date_of_order);
     formData.append("target_date_delivery", form.target_date_delivery);
@@ -706,7 +742,8 @@ const AddDelivery = () => {
         form.street_name,
         form.barangay,
         form.city,
-        "Laguna",
+        form.province,
+       
         "Philippines",
       ]
         .filter(Boolean)
@@ -726,6 +763,7 @@ const AddDelivery = () => {
       );
 
       alert("Delivery added successfully!");
+      fetchProvinces(); 
 
       const newTransactionId = res.data.transaction_id || transactionId;
 
@@ -773,6 +811,7 @@ const AddDelivery = () => {
         street_name: "",
         barangay: "",
         city: "",
+        province:"",
         customer_contact: "",
         date_of_order: "",
         target_date_delivery: "",
@@ -835,7 +874,6 @@ const AddDelivery = () => {
           onSubmit={handleSubmit}
         >
           <h4 className="mb-3">Customer Details</h4>
-
           <div className="row mb-3">
             <div className="col-md-6">
               <label htmlFor="customerName" className="form-label">
@@ -911,18 +949,35 @@ const AddDelivery = () => {
               )}
             </div>
           </div>
+
           <div className="mb-3">
             <label className="form-label">Customer Address:</label>
             <div className="row g-2">
-              <div className="col-md-3">
-                <Select
-                  options={cityOptions}
+              {/* Province Dropdown with free input */}
+              <div className="col-md-4">
+                <CreatableSelect
+                  placeholder="Province"
+                  options={provinceOptions}
                   value={
-                    form.city ? { label: form.city, value: form.city } : null
+                    form.province
+                      ? { label: form.province, value: form.province }
+                      : null
                   }
-                  onChange={handleCityChange}
-                  placeholder="Select City"
-                  classNamePrefix="react-select"
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      province: selected?.value || "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, province: inputValue }));
+                    }
+                  }}
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -943,7 +998,60 @@ const AddDelivery = () => {
                 />
               </div>
 
-              <div className="col-md-3">
+              {/* City Dropdown */}
+              <div className="col-md-4">
+                <Select
+                  options={cityOptions}
+                  value={
+                    form.city ? { label: form.city, value: form.city } : null
+                  }
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      city: selected?.value || "",
+                      barangay: "", // ✅ clear barangay when city changes
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, city: inputValue }));
+                    }
+                  }}
+                  placeholder={
+                    form.province ? "Select City" : "Select province first"
+                  }
+                  isDisabled={!form.province} 
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  filterOption={(option, inputValue) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-4">
                 <Select
                   options={barangayOptions}
                   value={
@@ -951,10 +1059,31 @@ const AddDelivery = () => {
                       ? { label: form.barangay, value: form.barangay }
                       : null
                   }
-                  onChange={handleBarangayChange}
-                  placeholder="Select Barangay"
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      barangay: selected?.value || "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, barangay: inputValue }));
+                    }
+                  }}
+                  placeholder={
+                    form.city ? "Select Barangay" : "Select city first"
+                  }
                   isDisabled={!form.city}
-                  classNamePrefix="react-select"
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  filterOption={(option, inputValue) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -975,24 +1104,26 @@ const AddDelivery = () => {
                 />
               </div>
 
-              <div className="col-md-3">
+              {/* STREET FIELD (Optional) */}
+              <div className="col-md-6">
                 <input
                   type="text"
                   className="form-control"
                   placeholder="House No./Street Name"
                   name="house_no"
-                  value={form.house_no ?? ""}
+                  value={form.house_no || ""}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="col-md-3">
+              {/* VILLAGE/SUBDIVISION FIELD (Optional) */}
+              <div className="col-md-6">
                 <input
                   type="text"
                   className="form-control"
                   placeholder="Village/Subdivision"
                   name="street_name"
-                  value={form.street_name ?? ""}
+                  value={form.street_name || ""}
                   onChange={handleChange}
                 />
               </div>
@@ -1062,7 +1193,6 @@ const AddDelivery = () => {
               {dateError && <div className="invalid-feedback">{dateError}</div>}
             </div>
           </div>
-
           <div className="order-details mt-5">
             <h4 className="mb-4">Order Details</h4>
             <table className="order-table table">
@@ -1843,7 +1973,8 @@ const AddDelivery = () => {
                       form.street_name,
                       form.barangay,
                       form.city,
-                      "Laguna",
+                      form.province,
+
                       "Philippines",
                     ]
                       .filter(Boolean)
@@ -2027,7 +2158,8 @@ const AddDelivery = () => {
                       receiptData?.street_name,
                       receiptData?.barangay,
                       receiptData?.city,
-                      "Laguna",
+                      receiptData?.province,
+
                       "Philippines",
                     ]
                       .filter(Boolean)

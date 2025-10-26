@@ -5,6 +5,7 @@ import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
 import { Button, Modal, Form } from "react-bootstrap";
+import { Toaster, toast } from 'sonner';
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -129,7 +130,22 @@ const ViewOrder = () => {
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          alert("Update successful!");
+          toast.success("Update successful!", {
+            duration: 2500,
+            style: {
+              background: "#EBFAECFF",
+              border: "1px solid #91C793FF",
+              color: "#2E7D32",
+              fontWeight: 600,
+              fontSize: "1.1rem",
+              textAlign: "center",
+              width: "100%",
+              maxWidth: "600px",
+              margin: "0 auto",
+              justifyContent: "center",
+              borderRadius: "8px",
+            },
+          });
           setOrderDetails((prev) => ({
             ...prev,
             ...formData,
@@ -408,6 +424,7 @@ const ViewOrder = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+      <Toaster richColors position="top-center" />
     </AdminLayout>
   );
 };

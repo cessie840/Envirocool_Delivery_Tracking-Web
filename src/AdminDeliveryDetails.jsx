@@ -279,12 +279,24 @@ const DeliveryDetails = () => {
                     >
                       View
                     </button>
-                    <button
-                      className="btn upd-btn"
-                      onClick={() => handleUpdate(group.transaction_id)}
-                    >
-                      Update
-                    </button>
+                    {group.delivery_status === "Out for Delivery" ||
+                    group.delivery_status === "Delivered" ||
+                    group.delivery_status === "Cancelled" ? (
+                      <button
+                        className="btn upd-btn"
+                        disabled
+                        style={{ opacity: 0.5, cursor: "not-allowed" }}
+                      >
+                        Update
+                      </button>
+                    ) : (
+                      <button
+                        className="btn upd-btn"
+                        onClick={() => handleUpdate(group.transaction_id)}
+                      >
+                        Update
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
