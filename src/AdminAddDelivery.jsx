@@ -99,9 +99,10 @@ const AddDelivery = () => {
   });
   const [newValue, setNewValue] = useState("");
 
-  const [proofFile, setProofFile] = useState(null);
-  const [proofPreview, setProofPreview] = useState("");
-  const [selectedFileName, setSelectedFileName] = useState("");
+  const [proofFiles, setProofFiles] = useState([]);
+  const [proofPreviews, setProofPreviews] = useState([]);
+  const [selectedFileNames, setSelectedFileNames] = useState([]);
+
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [dateError, setDateError] = useState("");
   const [orderDateError, setOrderDateError] = useState("");
@@ -282,16 +283,29 @@ const AddDelivery = () => {
   };
 
   const handleProofFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProofFile(file);
-      setSelectedFileName(file.name);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const validPreviews = [];
+    const validNames = [];
+
+    files.forEach((file) => {
+      if (file.type === "image/jpeg" || file.type === "image/png") {
+        validFiles.push(file);
+        validNames.push(file.name);
+        const previewUrl = URL.createObjectURL(file);
+        validPreviews.push(previewUrl);
+      } else {
+        toast.error(`File "${file.name}" is not a valid JPEG or PNG image.`, {
+          className: "toast-error",
+        });
+      }
+    });
+
+    proofPreviews.forEach((url) => URL.revokeObjectURL(url));
+
+    setProofFiles(validFiles);
+    setProofPreviews(validPreviews);
+    setSelectedFileNames(validNames);
   };
 
   const handleUnitCostChange = (index, e) => {
@@ -588,23 +602,23 @@ const AddDelivery = () => {
       <head>
         <title>Delivery Receipt</title>
         <style>
-          @page { size: auto; margin: 0; } /* Auto size for height, no margins */
+          @page { size: auto; margin: 0; } 
           body { 
             margin: 0; 
             padding: 0; 
             font-family: Arial, sans-serif; 
-            font-size: 11px; /* Standard font size for body */
+            font-size: 11px; 
             line-height: 1.4; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            height: 100vh; /* Center vertically */
+            height: 100vh;
           }
           .receipt { 
-            width: 80mm; /* Standard receipt width */
+            width: 80mm; /
             margin: 0; 
             padding: 10px; 
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Optional shadow for aesthetics */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
           }
           table { 
             width: 100%; 
@@ -614,7 +628,7 @@ const AddDelivery = () => {
             border: 1px solid #000; 
             padding: 2px; 
             text-align: left; 
-            font-size: 10px; /* Smaller font size for table cells */
+            font-size: 10px; 
           }
           .text-center { text-align: center; }
           .fw-bold { font-weight: bold; }
@@ -639,19 +653,39 @@ const AddDelivery = () => {
     setLoading(true);
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
+      toast.error(
+        "Contact number must start with '09' and be exactly 11 digits.",
+        {
+          className: "toast-error",
+        }
+      );
       setLoading(false);
       return;
     }
+
+    const fullAddress =
+      `${form.street}, ${form.barangay}, ${form.city}, ${form.province}`.trim();
+    if (!fullAddress.replace(/[, ]/g, "")) {
+      toast.error("Please complete the customer's address before proceeding.", {
+        className: "toast-error",
+      });
+      setLoading(false);
+      return;
+    }
+    form.customer_address = fullAddress;
 
     if (!form.payment_method) {
-      alert("Please select a payment method.");
+      toast.error("Please select a payment method.", {
+        className: "toast-error",
+      });
       setLoading(false);
       return;
     }
 
-    if (form.payment_method && !proofFile) {
-      alert("Please upload proof of payment.");
+    if (form.payment_method && !proofFiles.length === 0) {
+      toast.error("Please upload proof of payment.", {
+        className: "toast-error",
+      });
       setLoading(false);
       return;
     }
@@ -663,25 +697,36 @@ const AddDelivery = () => {
       const description = item.description?.trim();
 
       if (!typeOfProduct) {
-        alert(`Please select a type of product for item #${index + 1}`);
+        toast.error(`Please select a type of product for item #${index + 1}`, {
+          className: "toast-error",
+        });
         setLoading(false);
         return;
       }
 
       if (!description) {
-        alert(`Please select an item name for item #${index + 1}`);
+        toast.error(`Please select an item name for item #${index + 1}`, {
+          className: "toast-error",
+        });
         setLoading(false);
         return;
       }
 
       if (isNaN(quantity) || quantity < 1) {
-        alert(`Quantity for item #${index + 1} must be at least 1`);
+        toast.error(`Quantity for item #${index + 1} must be at least 1`, {
+          className: "toast-error",
+        });
         setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
-        alert(`Unit cost for item #${index + 1} must be a non-negative number`);
+        toast.error(
+          `Unit cost for item #${index + 1} must be a non-negative number`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
@@ -747,7 +792,9 @@ const AddDelivery = () => {
         .join(", ")
     );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
-    formData.append("proofOfPayment", proofFile);
+    proofFiles.forEach((file, index) => {
+      formData.append(`proofOfPayment[${index}]`, file);
+    });
 
     try {
       const res = await axios.post(
@@ -777,44 +824,37 @@ const AddDelivery = () => {
       });
       fetchProvinces();
 
-      const newTransactionId = res.data.transaction_id || transactionId;
-
-      const fetchAndStoreReceipt = async (id) => {
-        try {
-          const res = await axios.get(
-            `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${id}`
-          );
-          console.log("Receipt data fetched:", res.data);
-
-          const data = res.data;
-          if (!data || !data.form) {
-            console.error("Receipt fetch returned empty data", data);
-            return false;
-          }
-
-          setReceiptData(data.form);
-          setReceiptItems(
-            Array.isArray(data.order_items) ? data.order_items : []
-          );
-
-          return true;
-        } catch (err) {
-          console.error("Error fetching receipt data", err);
-          return false;
-        }
-      };
-
+      setReceiptData({
+        customer_name: form.customer_name,
+        house_no: form.house_no,
+        street_name: form.street_name,
+        barangay: form.barangay,
+        city: form.city,
+        province: form.province,
+        customer_contact: form.customer_contact,
+        date_of_order: form.date_of_order,
+        target_date_delivery: form.target_date_delivery,
+        payment_method: form.payment_method,
+        payment_option: form.payment_option,
+        full_payment: form.full_payment,
+        fp_collection_date: form.fp_collection_date,
+        down_payment: form.down_payment,
+        dp_collection_date: form.dp_collection_date,
+        balance: form.balance,
+        total: form.total,
+      });
+      setReceiptItems(
+        orderItems.map((item) => ({
+          quantity: item.quantity,
+          type_of_product: item.type_of_product,
+          description: item.description,
+          unit_cost: item.unit_cost,
+          total_cost: item.total_cost,
+        }))
+      );
+      setShowReceiptModal(true);
       if (AUTO_DOWNLOAD_RECEIPT) {
-        const ok = await fetchAndStoreReceipt(newTransactionId);
-        if (ok) {
-          setShowReceiptModal(true);
-          setTimeout(() => window.print(), 1000);
-        } else {
-          setShowReceiptModal(true);
-        }
-      } else {
-        const ok = await fetchAndStoreReceipt(newTransactionId);
-        setShowReceiptModal(true);
+        setTimeout(() => window.print(), 1000);
       }
 
       setForm({
@@ -846,8 +886,11 @@ const AddDelivery = () => {
         },
       ]);
 
-      setProofFile(null);
-      setSelectedFileName("");
+      setProofFiles([]);
+      setProofPreviews([]);
+      setSelectedFileNames([]);
+      proofPreviews.forEach((url) => URL.revokeObjectURL(url));
+
       if (proofFileRef.current) {
         proofFileRef.current.value = "";
       }
@@ -1036,7 +1079,7 @@ const AddDelivery = () => {
                     setForm((prev) => ({
                       ...prev,
                       city: selected?.value || "",
-                      barangay: "", // ✅ clear barangay when city changes
+                      barangay: "",
                     }))
                   }
                   onInputChange={(inputValue, { action }) => {
@@ -1806,7 +1849,6 @@ const AddDelivery = () => {
                 )}
               </div>
 
-              {/* ✅ Payment Due moved here to replace Full Payment Amount */}
               <div className="col-md-6">
                 <label htmlFor="dpBillingDate" className="form-label">
                   Payment Due:
@@ -1914,8 +1956,15 @@ const AddDelivery = () => {
             <h4 className="mt-5">PROOF OF PAYMENT</h4>
             <div className="row mb-3">
               <div className="col-md-6">
-                <label htmlFor="proofOfPayment" className="form-label">
+                <label
+                  htmlFor="proofOfPayment"
+                  className="form-label"
+                  style={{ whiteSpace: "nowrap" }}
+                >
                   Upload Proof of Payment:
+                  <p className="text-secondary fs-6">
+                    (JPEG/PNG only, multiple allowed)
+                  </p>
                 </label>
                 <div className="d-flex align-items-center">
                   <input
@@ -1923,18 +1972,19 @@ const AddDelivery = () => {
                     className="form-control"
                     id="proofOfPayment"
                     name="proofOfPayment"
-                    accept="image/*"
+                    accept="image/jpeg,image/png"
+                    multiple
                     onChange={handleProofFileChange}
                     ref={proofFileRef}
                   />
-
-                  {selectedFileName && (
+                  {selectedFileNames.length > 0 && (
                     <button
                       type="button"
-                      className="btn add-item px-3 py-1 btn-sm ms-2 fs-6"
+                      className="btn add-item px-3 py-2 btn-sm ms-2 fs-6"
+                      style={{ whiteSpace: "nowrap" }}
                       onClick={() => setShowPreviewModal(true)}
                     >
-                      View
+                      View ({selectedFileNames.length})
                     </button>
                   )}
                 </div>
@@ -1954,20 +2004,70 @@ const AddDelivery = () => {
                 <Modal.Title>Proof of Payment Preview</Modal.Title>
               </Modal.Header>
               <Modal.Body className="text-center bg-light">
-                {proofPreview &&
-                  typeof proofPreview === "string" &&
-                  proofPreview.startsWith("data:") && (
-                    <img
-                      src={proofPreview}
-                      alt="Proof of Payment"
+                {proofPreviews.length > 0 ? (
+                  <div className="d-flex align-items-center justify-content-center">
+                    {proofPreviews.length > 1 && (
+                      <button
+                        className="btn btn-secondary me-2"
+                        onClick={() => {
+                          const container = document.getElementById(
+                            "preview-scroll-container"
+                          );
+                          container.scrollBy({
+                            left: -320,
+                            behavior: "smooth",
+                          });
+                        }}
+                      >
+                        ‹
+                      </button>
+                    )}
+                    <div
+                      id="preview-scroll-container"
                       style={{
-                        maxWidth: "100%",
-                        maxHeight: "700px",
-                        objectFit: "contain",
+                        display: "flex",
+                        overflowX: "auto",
+                        scrollBehavior: "smooth",
+                        width: "700px",
+                        height: "700px",
+                        gap: "10px",
+                        padding: "5px",
+                        border: "2px solid #ccc",
+                        borderRadius: "10px",
                       }}
-                      className="border border-secondary border-1"
-                    />
-                  )}
+                    >
+                      {proofPreviews.map((preview, index) => (
+                        <img
+                          key={index}
+                          src={preview}
+                          alt={`Proof of Payment ${index + 1}`}
+                          style={{
+                            width: "700px",
+                            height: "700px",
+                            objectFit: "contain",
+                            flexShrink: 0,
+                          }}
+                          className="border border-secondary border-1"
+                        />
+                      ))}
+                    </div>
+                    {proofPreviews.length > 1 && (
+                      <button
+                        className="btn btn-secondary ms-2"
+                        onClick={() => {
+                          const container = document.getElementById(
+                            "preview-scroll-container"
+                          );
+                          container.scrollBy({ left: 320, behavior: "smooth" });
+                        }}
+                      >
+                        ›
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p>No images to preview.</p>
+                )}
               </Modal.Body>
             </Modal>
             <Modal
@@ -1987,7 +2087,6 @@ const AddDelivery = () => {
                   <p className="mb-3">
                     <strong>P.O. No.:</strong> {poId}
                   </p>
-
                   <p>
                     <strong>Customer Name:</strong> {form.customer_name}
                   </p>
@@ -2046,7 +2145,6 @@ const AddDelivery = () => {
                       </p>
                     </>
                   )}
-
                   <strong className="fs-5">Order Items:</strong>
                   <table className="table table-bordered table-sm mt-2">
                     <thead className="table-success text-center align-middle">
@@ -2086,14 +2184,14 @@ const AddDelivery = () => {
                       </tr>
                     </tfoot>
                   </table>
-                  {proofFile ? (
+                  {proofFiles.length > 0 ? (
                     <div className="mt-3">
                       <Button
                         variant="success"
                         size="sm"
                         onClick={() => setShowImageViewer(true)}
                       >
-                        View Proof of Payment
+                        View Proof of Payment ({proofFiles.length} images)
                       </Button>
                     </div>
                   ) : (
@@ -2101,32 +2199,78 @@ const AddDelivery = () => {
                       <strong>Proof of Payment:</strong> Not uploaded
                     </p>
                   )}
-
-                  {showImageViewer && proofFile && (
+                  {showImageViewer && proofFiles.length > 0 && (
                     <div className="mt-3 border p-2 bg-success bg-opacity-10 rounded">
                       <div className="d-flex justify-content-between align-items-center mb-2">
                         <h6 className="text-center w-100 fs-5">
-                          Proof of Payment Preview
+                          Proof of Payment Preview ({proofFiles.length} images)
                         </h6>
                         <Button
                           variant="close"
                           onClick={() => setShowImageViewer(false)}
                         />
                       </div>
-                      <div className="text-center">
-                        {proofPreview && (
-                          <img
-                            src={proofPreview}
-                            alt="Proof of Payment"
-                            style={{
-                              maxWidth: "100%",
-                              maxHeight: "400px",
-                              objectFit: "contain",
-                              border: "1px solid gray",
-                              borderRadius: "5px",
+                      <div className="d-flex align-items-center justify-content-center">
+                        {proofPreviews.length > 1 && (
+                          <button
+                            className="btn btn-secondary me-2"
+                            onClick={() => {
+                              const container = document.getElementById(
+                                "summary-scroll-container"
+                              );
+                              container.scrollBy({
+                                left: -320,
+                                behavior: "smooth",
+                              });
                             }}
-                            className="img-fluid"
-                          />
+                          >
+                            ‹
+                          </button>
+                        )}
+                        <div
+                          id="summary-scroll-container"
+                          style={{
+                            display: "flex",
+                            overflowX: "auto",
+                            scrollBehavior: "smooth",
+                            width: "600px",
+                            height: "320px",
+                            gap: "10px",
+                            padding: "10px",
+                            border: "1px solid #ccc",
+                            borderRadius: "5px",
+                          }}
+                        >
+                          {proofPreviews.map((preview, index) => (
+                            <img
+                              key={index}
+                              src={preview}
+                              alt={`Proof of Payment ${index + 1}`}
+                              style={{
+                                width: "300px",
+                                height: "300px",
+                                objectFit: "contain",
+                                flexShrink: 0,
+                              }}
+                              className="img-fluid"
+                            />
+                          ))}
+                        </div>
+                        {proofPreviews.length > 1 && (
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={() => {
+                              const container = document.getElementById(
+                                "summary-scroll-container"
+                              );
+                              container.scrollBy({
+                                left: 320,
+                                behavior: "smooth",
+                              });
+                            }}
+                          >
+                            ›
+                          </button>
                         )}
                       </div>
                     </div>
@@ -2171,7 +2315,6 @@ const AddDelivery = () => {
                   <small>Date Printed: {new Date().toLocaleString()}</small>
                 </div>
 
-                {/* Customer and order details */}
                 <div className="mb-3">
                   <p>
                     <b>Customer Name:</b> {receiptData?.customer_name || ""}
@@ -2294,7 +2437,6 @@ const AddDelivery = () => {
                   </tfoot>
                 </table>
 
-                {/* Signature Section */}
                 <div className="signature-section mt-4">
                   <div className="row">
                     <div className="col-6 text-center">

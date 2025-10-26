@@ -1,5 +1,4 @@
 <?php
-// CORS headers
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type, Cache-Control, Pragma, Expires");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -9,7 +8,6 @@ header("Pragma: no-cache");
 header("Expires: 0");
 header("Content-Type: application/json");
 
-// Handle preflight OPTIONS
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -23,15 +21,16 @@ if ($transaction_id <= 0) {
     exit;
 }
 
-// Base URL for file paths
-$baseUrl = "http://localhost/DeliveryTrackingSystem/";
+// Base URL for file paths (no trailing slash)
+$baseUrl = rtrim("http://localhost/DeliveryTrackingSystem", '/');
+
 function buildFileUrl($baseUrl, $path) {
     if (!$path) return null;
-    $path = ltrim($path, '/');
+    // remove any leading slash/backslash on the stored path, then combine
+    $path = ltrim($path, '/\\');
     return $baseUrl . '/' . str_replace('\\', '/', $path);
 }
 
-// 🧩 Fetch transaction details — include full_payment and fbilling_date
 $sql_customer = "
     SELECT tracking_number, customer_name, customer_address, customer_contact, 
            date_of_order, target_date_delivery, rescheduled_date, 
@@ -50,11 +49,48 @@ $result_customer = $stmt->get_result();
 if ($result_customer->num_rows > 0) {
     $customer = $result_customer->fetch_assoc();
 
-    // Build proof URLs
-    $proofOfDeliveryUrl = buildFileUrl($baseUrl, $customer['proof_of_delivery']);
-    $proofOfPaymentUrl  = buildFileUrl($baseUrl, $customer['proof_of_payment']);
+    $proofOfDeliveryUrl = $customer['proof_of_delivery'] ? buildFileUrl($baseUrl, $customer['proof_of_delivery']) : null;
 
-    // 🧠 Return all payment fields, including final payment and date
+    // Decode proof_of_payment robustly
+   // ✅ Robust decoder for proof_of_payment
+$proofOfPaymentUrls = [];
+
+if (!empty($customer['proof_of_payment'])) {
+    $raw = trim($customer['proof_of_payment']);
+
+    // Try JSON decode first
+    $decoded = json_decode($raw, true);
+
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        foreach ($decoded as $path) {
+            if (!empty($path)) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
+            }
+        }
+    } else {
+        // Try extracting paths with regex (handles double-encoded or malformed strings)
+        preg_match_all(
+            '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
+            $raw,
+            $matches
+        );
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $relativePath) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $relativePath);
+            }
+        } else {
+            // As a last resort, treat as single path if it contains uploads/
+            if (str_contains($raw, 'uploads/')) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
+            }
+        }
+    }
+}
+
+// Always ensure it’s an array, even if empty
+$proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
+
+
     $response = [
         'tracking_number' => $customer['tracking_number'],
         'customer_name' => $customer['customer_name'],
@@ -66,17 +102,16 @@ if ($result_customer->num_rows > 0) {
         'mode_of_payment' => $customer['mode_of_payment'],
         'payment_option' => $customer['payment_option'],
         'down_payment' => $customer['down_payment'],
-        'full_payment' => $customer['full_payment'],       // ✅ added
-        'fbilling_date' => $customer['fbilling_date'],     // ✅ added
+        'full_payment' => $customer['full_payment'],
+        'fbilling_date' => $customer['fbilling_date'],
         'balance' => $customer['balance'],
         'total' => $customer['total'],
         'status' => $customer['status'],
         'cancelled_reason' => $customer['cancelled_reason'],
         'proof_of_delivery' => $proofOfDeliveryUrl,
-        'proof_of_payment' => $proofOfPaymentUrl,
+        'proof_of_payment' => $proofOfPaymentUrls
     ];
 
-    // Fetch order items
     $sql_items = "
         SELECT type_of_product, description, quantity, unit_cost 
         FROM PurchaseOrder 

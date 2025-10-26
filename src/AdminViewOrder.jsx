@@ -34,6 +34,23 @@ const ViewOrder = () => {
 
   const [showProofViewModal, setShowProofViewModal] = useState(false);
   const [proofUrl, setProofUrl] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
+
+  const openProofModal = (url, title) => {
+    let normalized = url;
+    if (typeof url === "string" && url.startsWith("[")) {
+      try {
+        normalized = JSON.parse(url);
+      } catch {
+        normalized = [url];
+      }
+    } else if (!Array.isArray(url)) {
+      normalized = [url];
+    }
+    setProofUrl(normalized);
+    setModalTitle(title);
+    setShowProofViewModal(true);
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
@@ -355,12 +372,16 @@ const ViewOrder = () => {
                     <div className="mb-2">
                       <button
                         className="btn btn-view py-2 px-3 fs-6 rounded-2"
-                        onClick={() => {
-                          setProofUrl(orderDetails.proof_of_payment);
-                          setShowProofViewModal(true);
-                        }}
+                        onClick={() =>
+                          openProofModal(
+                            orderDetails.proof_of_payment,
+                            "Proof of Payment"
+                          )
+                        }
                       >
-                        View Proof of Payment
+                        View Proof of Payment (
+                        {orderDetails.proof_of_payment.length} image
+                        {orderDetails.proof_of_payment.length > 1 ? "s" : ""})
                       </button>
                     </div>
                   )}
@@ -370,10 +391,12 @@ const ViewOrder = () => {
                       <div>
                         <button
                           className="btn add-btn py-2 px-3 fs-6 rounded-2"
-                          onClick={() => {
-                            setProofUrl(orderDetails.proof_of_delivery);
-                            setShowProofViewModal(true);
-                          }}
+                          onClick={() =>
+                            openProofModal(
+                              orderDetails.proof_of_delivery,
+                              "Proof of Delivery"
+                            )
+                          }
                         >
                           View Proof of Delivery
                         </button>
@@ -473,24 +496,84 @@ const ViewOrder = () => {
           closeButton
           className="bg-primary bg-opacity-75 text-white"
         >
-          <Modal.Title>Proof of Delivery</Modal.Title>
+          <Modal.Title>{modalTitle}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="d-flex justify-content-center bg-light">
-          {proofUrl ? (
+          {Array.isArray(proofUrl) ||
+          (typeof proofUrl === "string" && proofUrl.startsWith("[")) ? (
+            <div className="d-flex align-items-center justify-content-center">
+              {proofUrl.length > 1 && (
+                <button
+                  className="btn btn-secondary me-2"
+                  onClick={() => {
+                    const container = document.getElementById(
+                      "proof-scroll-container"
+                    );
+                    container.scrollBy({ left: -320, behavior: "smooth" });
+                  }}
+                >
+                  ‹
+                </button>
+              )}
+              <div
+                id="proof-scroll-container"
+                style={{
+                  display: "flex",
+                  overflowX: "auto",
+                  scrollBehavior: "smooth",
+                  width: "700px",
+                  height: "700px",
+                  gap: "10px",
+                  padding: "5px",
+                  border: "2px solid #ccc",
+                  borderRadius: "10px",
+                }}
+              >
+                {proofUrl.map((url, index) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`${modalTitle} ${index + 1}`}
+                    style={{
+                      width: "700px",
+                      height: "700px",
+                      objectFit: "contain",
+                      flexShrink: 0,
+                    }}
+                    className="border border-secondary border-1"
+                  />
+                ))}
+              </div>
+              {proofUrl.length > 1 && (
+                <button
+                  className="btn btn-secondary ms-2"
+                  onClick={() => {
+                    const container = document.getElementById(
+                      "proof-scroll-container"
+                    );
+                    container.scrollBy({ left: 320, behavior: "smooth" });
+                  }}
+                >
+                  ›
+                </button>
+              )}
+            </div>
+          ) : proofUrl ? (
             <img
               src={proofUrl}
-              alt="Proof of Delivery"
+              alt={modalTitle}
               className="w-100 h-auto"
               style={{
                 maxHeight: "75vh",
                 maxWidth: "35rem",
                 objectFit: "fill",
-                // borderRadius: "10px",
                 border: "1px solid #9E9E9EFF",
               }}
             />
           ) : (
-            <p className="text-muted">No proof of delivery available.</p>
+            <p className="text-muted">
+              No {modalTitle.toLowerCase()} available.
+            </p>
           )}
         </Modal.Body>
 

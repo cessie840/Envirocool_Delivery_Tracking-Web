@@ -42,6 +42,7 @@ import {
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import html2canvas from "html2canvas";
+import { Toaster, toast } from "sonner";
 
 import logo from "./assets/envirocool-logo.png";
 
@@ -311,9 +312,9 @@ const GenerateReport = () => {
 
   const fetchData = async () => {
     setLoading(true);
-     let normalizedTransactions = [];
-     let deliveredTransactionIds = [];
-     let normalizedSales = [];
+    let normalizedTransactions = [];
+    let deliveredTransactionIds = [];
+    let normalizedSales = [];
 
     try {
       if (reportType === "sales" || reportType === "all") {
@@ -447,7 +448,6 @@ const GenerateReport = () => {
 
     return `${month}/${day}/${year}`;
   };
-
 
   const isDateInPeriod = (dateStr) => {
     if (!dateStr) return false;
@@ -879,9 +879,9 @@ const GenerateReport = () => {
       const month = start.getMonth();
       let quarterMonths = [];
 
-      if (month <= 2) quarterMonths = [0, 1, 2]; 
-      else if (month <= 5) quarterMonths = [3, 4, 5]; 
-      else if (month <= 8) quarterMonths = [6, 7, 8]; 
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
       else quarterMonths = [9, 10, 11];
 
       quarterMonths.forEach((m) => {
@@ -1141,7 +1141,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); 
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
@@ -1186,7 +1186,7 @@ const GenerateReport = () => {
     );
 
     rows.push([
-      `TOTAL (${period.toUpperCase()})`, 
+      `TOTAL (${period.toUpperCase()})`,
       "-",
       "-",
       "-",
@@ -1245,7 +1245,6 @@ const GenerateReport = () => {
       ...s,
       date_of_order: formatDate(s.date_of_order),
     }));
-
 
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
@@ -1462,7 +1461,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); 
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
@@ -1480,7 +1479,7 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); 
+      const todayStr = formatDate(new Date());
       const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
 
       if (dayTxs.length > 0) {
@@ -1525,7 +1524,7 @@ const GenerateReport = () => {
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "mm",
-      format: [330.2, 215.9], 
+      format: [330.2, 215.9],
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1557,7 +1556,7 @@ const GenerateReport = () => {
       }
       if (period === "quarterly") {
         const start = new Date(startDate || getTodayDate());
-        const monthNumber = start.toISOString().slice(5, 7); 
+        const monthNumber = start.toISOString().slice(5, 7);
         let quarterMonths = [];
 
         if (monthNumber >= "01" && monthNumber <= "03")
@@ -1706,7 +1705,7 @@ const GenerateReport = () => {
     };
 
     const addSignatureSection = (doc, pageWidth, pageHeight) => {
-      const lineY = pageHeight - 25; 
+      const lineY = pageHeight - 25;
       const nameY = lineY + 6;
       const titleY = lineY + 10;
 
@@ -1735,7 +1734,7 @@ const GenerateReport = () => {
     };
 
     const addFooter = (pageNum, totalPages) => {
-      doc.setDrawColor(50, 50, 50); 
+      doc.setDrawColor(50, 50, 50);
       doc.setLineWidth(0.3);
       doc.line(15, pageHeight - 12, pageWidth - 15, pageHeight - 12);
 
@@ -1889,7 +1888,7 @@ const GenerateReport = () => {
             let salesData = await fetchSalesData();
             if (period === "daily") {
               salesData = salesData.map((row) => [
-                new Date().toLocaleDateString("en-US"), 
+                new Date().toLocaleDateString("en-US"),
                 row.quoteAmount || "0.00",
                 row.awardedAmount || "0.00",
                 row.actualCollection || "0.00",
@@ -1950,10 +1949,15 @@ const GenerateReport = () => {
 
         applyHeaderFooterToAllPages(reports);
         doc.save("envirocool-overall-report.pdf");
-        alert(
-          `Overall Report PDF (${getPeriodLabel(
-            period
-          )}) has been generated and downloaded successfully!`
+        toast(
+          <div className="custom-banner-toast">
+            Overall Report PDF (Annual) has been generated and downloaded
+            successfully!
+          </div>,
+          {
+            className: "report-toast",
+            duration: 2500,
+          }
         );
       } else {
         let title;
@@ -1981,7 +1985,7 @@ const GenerateReport = () => {
           let salesData = await fetchSalesData();
           if (period === "daily") {
             salesData = salesData.map((row) => [
-              new Date().toLocaleDateString("en-US"), 
+              new Date().toLocaleDateString("en-US"),
               row.quoteAmount || "0.00",
               row.awardedAmount || "0.00",
               row.actualCollection || "0.00",
@@ -2042,9 +2046,9 @@ const GenerateReport = () => {
           doc.setPage(i);
 
           if (i === 1) {
-            renderHeader(true, title); 
+            renderHeader(true, title);
           } else {
-            renderHeader(false); 
+            renderHeader(false);
           }
           addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(i, totalPages);
@@ -2073,7 +2077,7 @@ const GenerateReport = () => {
     period
   ) => {
     let yPosition = yStartPosition;
-    const headerTopMargin = yStartPosition; 
+    const headerTopMargin = yStartPosition;
 
     const tableConfig = {
       marginLeft: 15,
@@ -2235,7 +2239,7 @@ const GenerateReport = () => {
 
         if (yPosition + rowHeight > pageHeight - 20) {
           doc.addPage();
-          yPosition = headerTopMargin; 
+          yPosition = headerTopMargin;
           drawHeaders();
         }
 
@@ -2282,7 +2286,7 @@ const GenerateReport = () => {
       drawHeaders();
     }
 
-    doc.setFont("helvetica", "bolditalic"); 
+    doc.setFont("helvetica", "bolditalic");
     doc.setTextColor(0, 0, 0);
 
     const totalsRow = [
@@ -2295,7 +2299,7 @@ const GenerateReport = () => {
 
     let x = tableConfig.marginLeft;
     totalsRow.forEach((cell, i) => {
-      doc.setFillColor(255, 255, 204); 
+      doc.setFillColor(255, 255, 204);
       doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
       doc.setDrawColor(0, 0, 0);
       doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
@@ -2332,7 +2336,7 @@ const GenerateReport = () => {
     pageHeight,
     yStartPosition,
     transactionData,
-    period 
+    period
   ) => {
     let yPosition = yStartPosition;
 
@@ -2344,7 +2348,7 @@ const GenerateReport = () => {
       headerFontSize: 10,
       subHeaderFontSize: 9,
       cellFontSize: 10,
-      lineSpacing: 1.2, 
+      lineSpacing: 1.2,
     };
 
     let periodLabel = "MONTHS";
@@ -2352,7 +2356,7 @@ const GenerateReport = () => {
     else if (period === "weekly") periodLabel = "WEEKDAYS";
     else if (period === "daily") periodLabel = "DATE";
     else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS"; 
+    else if (period === "annually") periodLabel = "MONTHS";
 
     const headers = [
       periodLabel,
@@ -2461,7 +2465,7 @@ const GenerateReport = () => {
 
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; 
+        const topMargin = 50;
         yPosition = topMargin;
         drawHeaders();
       }
@@ -2476,7 +2480,7 @@ const GenerateReport = () => {
     pageHeight,
     yStartPosition,
     serviceData,
-    period 
+    period
   ) => {
     let yPosition = yStartPosition;
 
@@ -2488,7 +2492,7 @@ const GenerateReport = () => {
       headerFontSize: 11,
       subHeaderFontSize: 10,
       cellFontSize: 10,
-      lineSpacing: 1.2, 
+      lineSpacing: 1.2,
     };
 
     let periodLabel = "MONTHS";
@@ -2576,7 +2580,7 @@ const GenerateReport = () => {
 
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; 
+        const topMargin = 50;
         yPosition = topMargin;
         drawHeaders();
       }
@@ -2707,7 +2711,7 @@ const GenerateReport = () => {
 
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; 
+        const topMargin = 50;
         yPosition = topMargin;
         drawHeaders();
       }
@@ -3480,7 +3484,7 @@ const GenerateReport = () => {
     const groupedData = Object.values(
       filteredCustomerData.reduce((acc, row) => {
         if (!acc[row.transaction_id]) {
-          acc[row.transaction_id] = row; 
+          acc[row.transaction_id] = row;
         }
         return acc;
       }, {})
@@ -3851,6 +3855,7 @@ const GenerateReport = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+      <Toaster position="top-center" />
     </AdminLayout>
   );
 };
