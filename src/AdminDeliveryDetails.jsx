@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Table, Form } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
+import { Toaster, toast } from "sonner";
 
 const DeliveryDetails = () => {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ const DeliveryDetails = () => {
     down_payment: "",
     balance: "",
     total: "",
+    full_payment: "0",  // Added to match ViewOrder
+    fbilling_date: "",   // Added to match ViewOrder
   });
   const [transactionId, setTransactionId] = useState(null);
 
@@ -49,7 +52,13 @@ const DeliveryDetails = () => {
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
-      `http://localhost//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}`
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,  // Added cache-busting
+      {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      }
     )
       .then((res) => res.json())
       .then((data) => {
@@ -74,6 +83,8 @@ const DeliveryDetails = () => {
           down_payment: parseFloat(data.down_payment) || 0,
           balance: parseFloat(data.balance) || 0,
           total: parseFloat(data.total) || 0,
+          full_payment: parseFloat(data.full_payment) || 0,  // Added
+          fbilling_date: data.fbilling_date || "",           // Added
         });
 
         setShowModal(true);
@@ -82,8 +93,67 @@ const DeliveryDetails = () => {
   };
 
   const handleSubmit = () => {
+    const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
+    if (hasInvalidQuantity) {
+      toast.error("One or more items have invalid quantity.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+      return;
+    }
+
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
+      toast.error(
+        "Contact number must start with '09' and be exactly 11 digits.",
+        {
+          duration: 2500,
+          style: {
+            background: "#FFEAEA",
+            border: "1px solid #E57373",
+            color: "#C62828",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+            borderRadius: "8px",
+          },
+        }
+      );
+      return;
+    }
+
+    if (!transactionId) {
+      toast.error("Transaction ID is missing — please try again.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+            color: "#C62828",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+            borderRadius: "8px",
+          },
+        });
       return;
     }
 
@@ -93,33 +163,86 @@ const DeliveryDetails = () => {
     );
 
     const down_payment = parseFloat(formData.down_payment) || 0;
-    const balance = total - down_payment;
+    const full_payment = parseFloat(formData.full_payment) || 0;  // Added
+    const balance = total - down_payment - full_payment;  // Fixed: Now includes full_payment
+
+    const payload = {
+      transaction_id: transactionId,
+      ...formData,
+      total,
+      balance,  // Now correct
+      items: editableItems,
+    };
 
     fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        transaction_id: transactionId,
-        ...formData,
-        total,
-        balance,
-        items: editableItems,
-      }),
+      body: JSON.stringify(payload),
     })
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          alert("Update successful!");
+          toast.success("Transaction updated successfully!", {
+            duration: 2500,
+            style: {
+              background: "#EBFAECFF",
+              border: "1px solid #91C793FF",
+              color: "#2E7D32",
+              fontWeight: 600,
+              fontSize: "1.1rem",
+              textAlign: "center",
+              width: "100%",
+              maxWidth: "600px",
+              margin: "0 auto",
+              justifyContent: "center",
+              borderRadius: "8px",
+            },
+          });
+
+          // Refresh deliveries list
           fetchDeliveries();
           setShowModal(false);
         } else {
-          console.error("Update response:", response);
-          alert("Update failed.");
+          console.error("Update failed:", response.message);
+          toast.error(
+            "Update failed: " + (response.message || "Unknown error"),
+            {
+              duration: 2500,
+              style: {
+                background: "#FFEAEA",
+                border: "1px solid #E57373",
+                color: "#C62828",
+                fontWeight: 600,
+                fontSize: "1.1rem",
+                textAlign: "center",
+                width: "100%",
+                maxWidth: "600px",
+                margin: "0 auto",
+                justifyContent: "center",
+                borderRadius: "8px",
+              },
+            }
+          );
         }
       })
       .catch((err) => {
         console.error("Update error:", err);
-        alert("An error occurred.");
+        toast.error("An unexpected error occurred.", {
+          duration: 2500,
+          style: {
+            background: "#FFEAEA",
+            border: "1px solid #E57373",
+            color: "#C62828",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+            borderRadius: "8px",
+          },
+        });
       });
   };
 
@@ -340,6 +463,7 @@ const DeliveryDetails = () => {
         editableItems={editableItems}
         setEditableItems={setEditableItems}
       />
+      <Toaster richColors position="top-center" />
     </AdminLayout>
   );
 };
