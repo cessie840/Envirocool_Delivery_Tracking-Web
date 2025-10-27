@@ -20,57 +20,78 @@ const EditProfileTab = () => {
   const [loading, setLoading] = useState(true);
   const [updateLoading, setUpdateLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_profile.php",
-          { withCredentials: true }
-        );
-        const data = res.data;
-        setUserData(data);
+  const fetchProfile = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const res = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/get_profile.php",
+        { withCredentials: true }
+      );
+      const data = res.data;
+      setUserData(data);
 
-        if (data.ad_username) {
-          setRole("admin");
-          setFormData({
-            username: data.ad_username,
-            fname: data.ad_fname,
-            lname: data.ad_lname,
-            email: data.ad_email,
-            phone: data.ad_phone,
-          });
-        } else if (data.manager_username) {
-          setRole("manager");
-          setFormData({
-            username: data.manager_username,
-            fname: data.manager_fname,
-            lname: data.manager_lname,
-            email: data.manager_email,
-            phone: data.manager_phone,
-          });
-        } else if (data.pers_username) {
-          setRole("personnel");
-          setFormData({
-            username: data.pers_username,
-            fname: data.pers_fname,
-            lname: data.pers_lname,
-            email: data.pers_email,
-            phone: data.pers_phone,
-          });
-        } else {
-          throw new Error("No valid session found");
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        setErrors({
-          general:
-            "Unable to load profile. Please check your connection and try logging in again.",
-        });
-      } finally {
-        setLoading(false);
+      let newForm = {
+        username: "",
+        fname: "",
+        lname: "",
+        email: "",
+        phone: "",
+      };
+
+      if (data.ad_username) {
+        setRole("admin");
+        newForm = {
+          username: data.ad_username || "",
+          fname: data.ad_fname || "",
+          lname: data.ad_lname || "",
+          email: data.ad_email || "",
+          phone: data.ad_phone || "",
+        };
+      } else if (data.manager_username) {
+        setRole("manager");
+        newForm = {
+          username: data.manager_username || "",
+          fname: data.manager_fname || "",
+          lname: data.manager_lname || "",
+          email: data.manager_email || "",
+          phone: data.manager_phone || "",
+        };
+      } else if (data.pers_username) {
+        setRole("personnel");
+        newForm = {
+          username: data.pers_username || "",
+          fname: data.pers_fname || "",
+          lname: data.pers_lname || "",
+          email: data.pers_email || "",
+          phone: data.pers_phone || "",
+        };
+      } else {
+        throw new Error("No valid session found");
       }
-    };
 
+      setFormData(newForm);
+
+      const { newErrors, newValid } = validateAllSync(newForm);
+      setErrors(newErrors); 
+      setValid(newValid); 
+
+      setErrors((prev) => ({ ...prev, general: "" }));
+
+      return true;
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      setErrors((prev) => ({
+        ...prev,
+        general:
+          "Unable to load profile. Please check your connection and try logging in again.",
+      }));
+      return false;
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, []);
 
@@ -140,42 +161,33 @@ const EditProfileTab = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let cleanValue = value;
+    let errorMessage = "";
+    let isValid = false;
 
     if (name === "fname" || name === "lname") {
       cleanValue = value.replace(/[^A-Za-zñÑ\s]/g, "");
       if (value !== cleanValue) {
-        setErrors((prev) => ({
-          ...prev,
-          [name]: "Only letters and spaces are allowed.",
-        }));
-        setValid((prev) => ({ ...prev, [name]: false }));
-      } else {
-        const { message, isValid } = validateFieldSync(name, cleanValue);
-        setErrors((prev) => ({ ...prev, [name]: message }));
-        setValid((prev) => ({ ...prev, [name]: isValid }));
+        errorMessage = "Only letters and spaces are allowed.";
       }
     } else if (name === "phone") {
       cleanValue = value.replace(/[^0-9]/g, "");
       if (value !== cleanValue) {
-        setErrors((prev) => ({ ...prev, [name]: "Only numbers are allowed." }));
-        setValid((prev) => ({ ...prev, [name]: false }));
-      } else {
-        const { message, isValid } = validateFieldSync(name, cleanValue);
-        setErrors((prev) => ({ ...prev, [name]: message }));
-        setValid((prev) => ({ ...prev, [name]: isValid }));
+        errorMessage = "Only numbers are allowed.";
       }
     } else if (name === "email") {
       cleanValue = value.replace(/[^A-Za-z0-9@._%+-]/g, "");
-      const { message, isValid } = validateFieldSync(name, cleanValue);
-      setErrors((prev) => ({ ...prev, [name]: message }));
-      setValid((prev) => ({ ...prev, [name]: isValid }));
-    } else {
-      const { message, isValid } = validateFieldSync(name, cleanValue);
-      setErrors((prev) => ({ ...prev, [name]: message }));
-      setValid((prev) => ({ ...prev, [name]: isValid }));
+    }
+
+    const validation = validateFieldSync(name, cleanValue);
+
+    if (errorMessage) {
+      validation.message = errorMessage;
+      validation.isValid = false;
     }
 
     setFormData((prev) => ({ ...prev, [name]: cleanValue }));
+    setErrors((prev) => ({ ...prev, [name]: validation.message }));
+    setValid((prev) => ({ ...prev, [name]: validation.isValid }));
   };
 
   const handleUpdate = async () => {
@@ -269,6 +281,7 @@ const EditProfileTab = () => {
           },
         });
         setIsEditing(false);
+        fetchProfile();
       } else {
         setErrors((prev) => ({
           ...prev,
@@ -355,6 +368,14 @@ const EditProfileTab = () => {
                 }`}
                 value={formData[field]}
                 onChange={handleChange}
+                onBlur={(e) => {
+                  const { message, isValid } = validateFieldSync(
+                    e.target.name,
+                    e.target.value
+                  );
+                  setErrors((prev) => ({ ...prev, [e.target.name]: message }));
+                  setValid((prev) => ({ ...prev, [e.target.name]: isValid }));
+                }}
                 disabled={updateLoading}
               />
               {errors[field] && (
@@ -372,7 +393,12 @@ const EditProfileTab = () => {
           </button>
           <button
             className="btn cancel-btn px-4 py-2 fs-6 rounded-2 bg-secondary"
-            onClick={() => setIsEditing(false)}
+            onClick={async () => {
+              setUpdateLoading(true);
+              const ok = await fetchProfile(true);
+              if (ok) setIsEditing(false);
+              setUpdateLoading(false);
+            }}
             disabled={updateLoading}
           >
             Cancel
