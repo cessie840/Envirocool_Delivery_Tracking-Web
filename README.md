@@ -21,7 +21,10 @@ CREATE TABLE Admin (
     reset_expire DATETIME,
     reset_requested_at DATETIME,
     attempts INT DEFAULT 0,
-    lock_until DATETIME DEFAULT NULL
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+    lock_until DATETIME DEFAULT NULL,
+    is_locked TINYINT(1) DEFAULT 0
 );
 
 CREATE TABLE OperationalManager (
@@ -35,6 +38,9 @@ CREATE TABLE OperationalManager (
     reset_expire DATETIME,
     reset_requested_at DATETIME,
     attempts INT DEFAULT 0,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+    is_locked TINYINT(1) DEFAULT 0,
     lock_until DATETIME DEFAULT NULL
 );
 
@@ -56,13 +62,19 @@ CREATE TABLE DeliveryPersonnel (
     pers_profile_pic VARCHAR(255) DEFAULT 'default-profile-pic.png',
     pers_email VARCHAR(255),
     attempts INT DEFAULT 0,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+    is_locked TINYINT(1) DEFAULT 0,
     lock_until DATETIME DEFAULT NULL
+	
 );
 
 CREATE TABLE Transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_name VARCHAR(255),
     customer_address TEXT,
+    latitude DOUBLE DEFAULT 0,
+    longitude DOUBLE DEFAULT 0,
     customer_contact VARCHAR(20),
     date_of_order DATE,
     target_date_delivery DATE,
@@ -74,22 +86,23 @@ CREATE TABLE Transactions (
     down_payment DECIMAL(10,2),
     balance DECIMAL(10,2),
     total DECIMAL(10,2),
+	proof_of_payment TEXT,
     tracking_number VARCHAR(20),
     status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     completed_at DATETIME NULL,
     proof_of_delivery VARCHAR(255) NULL,
+    assigned_device_id VARCHAR(50) DEFAULT NULL,
     shipout_at DATETIME NULL,
     cancelled_reason TEXT NULL,
     cancelled_at DATETIME NULL,
     rescheduled_date DATE NULL,
     customer_rating DECIMAL(3,1) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    customer_feedback VARCHAR(500) NULL,
-    proof_of_payment TEXT,
-    assigned_device_id VARCHAR(50) DEFAULT NULL,
-    latitude DOUBLE DEFAULT 0,
-    longitude DOUBLE DEFAULT 0
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    customer_feedback VARCHAR(500) NULL
 ) AUTO_INCREMENT = 4001;
+
+
+
 
 CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -117,9 +130,8 @@ CREATE TABLE DeliveryAssignments (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
     transaction_id INT,
     personnel_username VARCHAR(100),
-    device_id VARCHAR(50) NULL,
-    notified TINYINT(1) DEFAULT 0,
     assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    device_id VARCHAR(50) NULL,
     FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_username) REFERENCES DeliveryPersonnel(pers_username) ON DELETE SET NULL
 );
@@ -165,6 +177,7 @@ CREATE TABLE DeliverySummary (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
 CREATE TABLE TopSellingItems (
     top_item_id INT AUTO_INCREMENT PRIMARY KEY,
     month VARCHAR(7),
@@ -172,6 +185,7 @@ CREATE TABLE TopSellingItems (
     quantity_sold INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE DeliveryHistory (
     history_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -183,12 +197,14 @@ CREATE TABLE DeliveryHistory (
 );
 
 CREATE TABLE location (
-    city_id INT AUTO_INCREMENT PRIMARY KEY,
-    province_name VARCHAR(50),
-    city_name VARCHAR(50),
-    barangay_name VARCHAR(50)
+city_id INT AUTO_INCREMENT PRIMARY KEY,
+province_name VARCHAR(50),
+city_name VARCHAR (50),
+barangay_name varchar (50)
 );
 
+
+select*from DeliveryPersonnel;
 INSERT INTO Admin (ad_username, ad_password, ad_fname, ad_lname, ad_email, ad_phone) 
 VALUES (
     'admin101',
@@ -232,25 +248,30 @@ VALUES
 ("AIRCON", "FLOOR MOUNTED TYPE 3TR", NULL),
 ("AIRCON", "FLOOR MOUNTED TYPE 5TR", NULL);
 
-INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
-('DEVICE_01', 14.2091835, 121.1368418, NOW()),
-('DEVICE_01', 14.2092500, 121.1369000, NOW() + INTERVAL 1 MINUTE),
-('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE),
-('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE),
-('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE),
-('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE),
-('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
-('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
-('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
-('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE),
-('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE),
-('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
-('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
-('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
-('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
-('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
 
--- Laguna barangays
+INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
+--  ('DEVICE_01', 14.2091835, 121.1368418, NOW() );            
+-- ('DEVICE_01', 14.2092500, 121.1369000, NOW() ); 
+('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE), 
+('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE),
+('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE), 
+('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE);
+-- ('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
+-- ('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
+-- ('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
+-- ('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE);
+-- ('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE)
+-- ('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
+-- ('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
+-- ('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
+-- ('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
+-- ('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
+
+-- ('DEVICE_01', 14.2676156, 121.1112100, NOW()),
+-- ('DEVICE_01', 14.2790196, 121.14540180524608, NOW());
+-- ('DEVICE_01', 14.2754855, 121.1446400, NOW()+ INTERVAL 5 MINUTE),
+-- ('DEVICE_01', 14.2742996, 121.1475564, NOW()+ INTERVAL 5 MINUTE);
+
 INSERT INTO location (province_name, city_name, barangay_name) VALUES
 -- Santa Rosa
 ('Laguna', 'Santa Rosa', 'Aplaya'),
@@ -260,16 +281,16 @@ INSERT INTO location (province_name, city_name, barangay_name) VALUES
 ('Laguna', 'Santa Rosa', 'Dita'),
 ('Laguna', 'Santa Rosa', 'Don Jose'),
 ('Laguna', 'Santa Rosa', 'Ibaba'),
-('Laguna', 'Santa Rosa', 'Kanluran (Poblacion 1)'),
+('Laguna', 'Santa Rosa', 'Kanluran'),
 ('Laguna', 'Santa Rosa', 'Labas'),
 ('Laguna', 'Santa Rosa', 'Macabling'),
 ('Laguna', 'Santa Rosa', 'Malitlit'),
-('Laguna', 'Santa Rosa', 'Malusak (Poblacion 2)'),
-('Laguna', 'Santa Rosa', 'Market Area (Poblacion 3)'),
+('Laguna', 'Santa Rosa', 'Malusak'),
+('Laguna', 'Santa Rosa', 'Market'),
 ('Laguna', 'Santa Rosa', 'Pooc'),
 ('Laguna', 'Santa Rosa', 'Pulong Santa Cruz'),
-('Laguna', 'Santa Rosa', 'Santo Domingo'),
 ('Laguna', 'Santa Rosa', 'Sinalhan'),
+('Laguna', 'Santa Rosa', 'Sto Domingo'),
 ('Laguna', 'Santa Rosa', 'Tagapo'),
 
 -- Calamba
@@ -330,8 +351,11 @@ INSERT INTO location (province_name, city_name, barangay_name) VALUES
 
 -- Cabuyao
 ('Laguna', 'Cabuyao', 'Baclaran'),
-('Laguna', 'Cabuyao', 'Banay-Banay'),
+('Laguna', 'Cabuyao', 'Banaybanay'),
 ('Laguna', 'Cabuyao', 'Banlic'),
+('Laguna', 'Cabuyao', 'Barangay Dos'),
+('Laguna', 'Cabuyao', 'Barangay Tres'),
+('Laguna', 'Cabuyao', 'Barangay Uno'),
 ('Laguna', 'Cabuyao', 'Bigaa'),
 ('Laguna', 'Cabuyao', 'Butong'),
 ('Laguna', 'Cabuyao', 'Casile'),
@@ -344,9 +368,6 @@ INSERT INTO location (province_name, city_name, barangay_name) VALUES
 ('Laguna', 'Cabuyao', 'Pulo'),
 ('Laguna', 'Cabuyao', 'Sala'),
 ('Laguna', 'Cabuyao', 'San Isidro'),
-('Laguna', 'Cabuyao', 'Barangay Uno (Poblacion 1)'),
-('Laguna', 'Cabuyao', 'Barangay Dos (Poblacion 2)'),
-('Laguna', 'Cabuyao', 'Barangay Tres (Poblacion 3)'),
 
 -- San Pedro
 ('Laguna', 'San Pedro', 'Bagong Silang'),
@@ -372,69 +393,41 @@ INSERT INTO location (province_name, city_name, barangay_name) VALUES
 ('Laguna', 'San Pedro', 'San Antonio'),
 ('Laguna', 'San Pedro', 'San Lorenzo Ruiz'),
 ('Laguna', 'San Pedro', 'San Roque'),
-('Laguna', 'San Pedro', 'San Vicente'),
 ('Laguna', 'San Pedro', 'Santo Niño'),
+('Laguna', 'San Pedro', 'San Vicente'),
 ('Laguna', 'San Pedro', 'United Bayanihan'),
 ('Laguna', 'San Pedro', 'United Better Living'),
 
 -- Biñan
-('Laguna', 'Biñan', 'Biñan (Poblacion)'),
-('Laguna', 'Biñan', 'Bungahan'),
-('Laguna', 'Biñan', 'Canlalay'),
-('Laguna', 'Biñan', 'Casile'),
-('Laguna', 'Biñan', 'De La Paz'),
-('Laguna', 'Biñan', 'Ganado'),
-('Laguna', 'Biñan', 'Langkiwa'),
-('Laguna', 'Biñan', 'Loma'),
-('Laguna', 'Biñan', 'Malaban'),
+('Laguna', 'Biñan', 'Bagong Silang'),
+('Laguna', 'Biñan', 'Banlic'),
+('Laguna', 'Biñan', 'Langgam'),
 ('Laguna', 'Biñan', 'Malamig'),
-('Laguna', 'Biñan', 'Mampalasan'),
-('Laguna', 'Biñan', 'Platero'),
+('Laguna', 'Biñan', 'Niugan'),
 ('Laguna', 'Biñan', 'San Antonio'),
-('Laguna', 'Biñan', 'San Jose'),
-('Laguna', 'Biñan', 'San Vicente'),
-('Laguna', 'Biñan', 'Soro-Soro'),
-('Laguna', 'Biñan', 'Santo Niño'),
-('Laguna', 'Biñan', 'Santo Tomas (Calabuso)'),
-('Laguna', 'Biñan', 'Timbao'),
-('Laguna', 'Biñan', 'Tubigan'),
-('Laguna', 'Biñan', 'Zapote'),
 ('Laguna', 'Biñan', 'San Cristobal'),
+('Laguna', 'Biñan', 'San Isidro'),
+('Laguna', 'Biñan', 'Sto. Niño'),
+('Laguna', 'Biñan', 'Tabing Ilog'),
 
 -- Los Baños
-('Laguna', 'Los Baños', 'Anos'),
 ('Laguna', 'Los Baños', 'Bagong Silang'),
-('Laguna', 'Los Baños', 'Bambang'),
-('Laguna', 'Los Baños', 'Batong Malake'),
 ('Laguna', 'Los Baños', 'Baybayin'),
+('Laguna', 'Los Baños', 'Bucal'),
+('Laguna', 'Los Baños', 'Canlubang'),
 ('Laguna', 'Los Baños', 'Bayog'),
-('Laguna', 'Los Baños', 'Lalakay'),
 ('Laguna', 'Los Baños', 'Maahas'),
-('Laguna', 'Los Baños', 'Malinta'),
-('Laguna', 'Los Baños', 'Mayondon'),
-('Laguna', 'Los Baños', 'Putho-Tuntungin'),
-('Laguna', 'Los Baños', 'San Antonio'),
-('Laguna', 'Los Baños', 'Tadlac'),
 ('Laguna', 'Los Baños', 'Timugan'),
+('Laguna', 'Los Baños', 'Putho-Tuntungin'),
 
 -- Calauan
-('Laguna', 'Calauan', 'Balayhangin'),
-('Laguna', 'Calauan', 'Bangyas'),
-('Laguna', 'Calauan', 'Dayap'),
-('Laguna', 'Calauan', 'Hanggan'),
-('Laguna', 'Calauan', 'Imok'),
-('Laguna', 'Calauan', 'Lamot 1'),
-('Laguna', 'Calauan', 'Lamot 2'),
-('Laguna', 'Calauan', 'Limao'),
-('Laguna', 'Calauan', 'Mabacan'),
-('Laguna', 'Calauan', 'Masiit'),
-('Laguna', 'Calauan', 'Paliparan'),
-('Laguna', 'Calauan', 'Perez'),
-('Laguna', 'Calauan', 'Kanluran (Poblacion)'),
-('Laguna', 'Calauan', 'Silangan (Poblacion)'),
-('Laguna', 'Calauan', 'Prinza'),
-('Laguna', 'Calauan', 'San Isidro'),
-('Laguna', 'Calauan', 'Santo Tomas');
+('Laguna', 'Calauan', 'Bagumbayan'),
+('Laguna', 'Calauan', 'Caloocan'),
+('Laguna', 'Calauan', 'Malabanan'),
+('Laguna', 'Calauan', 'San Juan'),
+('Laguna', 'Calauan', 'San Antonio'),
+('Laguna', 'Calauan', 'Santo Niño'),
+('Laguna', 'Calauan', 'Mayamot');
 
 
 
