@@ -12,7 +12,6 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
   const [showTerms, setShowTerms] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -24,79 +23,66 @@ const Login = () => {
     }
   }, [errorMessage]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setErrorMessage("");
 
-    setLoading(true);
-    setErrorMessage("");
+  if (!agreed) {
+    setErrorMessage("You must agree to the Terms and Conditions before logging in.");
+    return;
+  }
 
-    try {
-      const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/login.php",
-        { username, password },
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
+  setLoading(true);
 
-      const user = response.data.user;
-
-      if (!agreed) {
-        setErrorMessage(
-          "You must agree to the Terms and Conditions before logging in."
-        );
-        setLoading(false);
-        return;
+  try {
+    const response = await axios.post(
+      "http://localhost/DeliveryTrackingSystem/login.php",
+      { username, password },
+      {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+        validateStatus: () => true, // ✅ prevents Axios from throwing on 4xx/5xx
       }
+    );
 
-      localStorage.setItem("user", JSON.stringify(user));
-      sessionStorage.setItem("showLoginNotif", "true");
+    const data = response.data;
 
-     
-
-      setTimeout(() => {
-        switch (user.role) {
-          case "admin":
-            navigate("/admin-dashboard");
-            break;
-          case "operationalmanager":
-            navigate("/operational-delivery-details");
-            break;
-          case "deliverypersonnel":
-            navigate("/driver-dashboard");
-            break;
-          default:
-            navigate("/");
-            break;
-        }
-        setLoading(false); 
-      }, 1500);
-    } catch (error) {
-      const errMsg = error?.response?.data?.error;
-
-      switch (errMsg) {
-        case "Missing username or password":
-          setErrorMessage("Please enter both username and password.");
-          break;
-        case "Invalid password":
-          setErrorMessage("The password you entered is incorrect. Try again.");
-          break;
-        case "Invalid username":
-          setErrorMessage("Username not found. Please check and try again.");
-          break;
-        case "db_error":
-          setErrorMessage("A database error occurred. Try again later.");
-          break;
-        case "server_error":
-          setErrorMessage("Server error. Please contact support.");
-          break;
-        default:
-          setErrorMessage("Login failed. Please try again.");
-      }
-      setLoading(false); 
+    // ✅ If backend indicates failure
+    if (!data.success) {
+      setErrorMessage(data.message || "Login failed. Please try again.");
+      return; // 🚫 Stop here, don’t proceed to login success
     }
-  };
+
+    // ✅ If success
+    const user = data.user;
+    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("showLoginNotif", "true");
+
+    alert("Login successful!");
+
+    switch (user.role) {
+      case "admin":
+        navigate("/admin-dashboard");
+        break;
+      case "operationalmanager":
+        navigate("/operational-delivery-details");
+        break;
+      case "deliverypersonnel":
+        navigate("/driver-dashboard");
+        break;
+      default:
+        navigate("/");
+        break;
+    }
+  } catch (networkError) {
+    // ✅ This runs ONLY if the server is unreachable (no connection)
+    console.warn("Network error occurred:", networkError.message);
+    setErrorMessage("Unable to reach the server. Please check your connection.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="login-container container-fluid">
@@ -109,6 +95,7 @@ const Login = () => {
         />
 
         <form className="login-form text-start" onSubmit={handleLogin}>
+          {/* Username */}
           <div className="mb-3">
             <label htmlFor="username" className="login form-label">
               Username:
@@ -123,6 +110,7 @@ const Login = () => {
             />
           </div>
 
+          {/* Password */}
           <div className="mb-1 position-relative">
             <label htmlFor="password" className="login form-label">
               Password:
@@ -152,6 +140,7 @@ const Login = () => {
             </div>
           </div>
 
+          {/* Terms + Forgot Password */}
           <div className="d-flex justify-content-between align-items-center mt-3 mb-4 fs-6">
             <div className="d-flex align-items-center justify-content-center">
               <input
@@ -185,21 +174,21 @@ const Login = () => {
             </span>
           </div>
 
+          {/* Error Message */}
           {errorMessage && (
             <div className="text-danger mb-3 text-center fw-bold">
               {errorMessage}
             </div>
           )}
 
-          {loading && (
+          {/* Loading / Button */}
+          {loading ? (
             <div className="loading-overlay">
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
             </div>
-          )}
-
-          {!loading && (
+          ) : (
             <button
               type="submit"
               className="btn login-btn w-100 rounded-3 fs-5 p-2"
@@ -210,6 +199,7 @@ const Login = () => {
         </form>
       </div>
 
+      {/* Terms Modal */}
       {showTerms && (
         <div className="modal d-block" tabIndex="-1">
           <div className="modal-dialog modal-md modal-dialog-centered">
@@ -281,16 +271,26 @@ const Login = () => {
                   <b>Data Privacy Act of 2012 (Republic Act No. 10173).</b>
                 </p>
                 <ul>
-                  <li>Only authorized users may access data.</li>
-                  <li>Personal information is for transactions only.</li>
-                  <li>Misuse of data may lead to legal action.</li>
+                  <li>
+                    Only authorized users may access customer and transaction
+                    data.
+                  </li>
+                  <li>
+                    Personal information is used solely for transactions and
+                    services.
+                  </li>
+                  <li>Users may not share, disclose, or misuse data.</li>
+                  <li>
+                    Breaches of customer information may lead to disciplinary or
+                    legal action.
+                  </li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">4. Security of Accounts</h6>
                 <ul>
-                  <li>Keep account credentials confidential.</li>
-                  <li>Sharing usernames or passwords is prohibited.</li>
-                  <li>Report unauthorized access immediately.</li>
+                  <li>Users must keep account credentials confidential.</li>
+                  <li>Sharing of usernames and passwords is prohibited.</li>
+                  <li>Report suspected unauthorized access immediately.</li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">5. Acceptable Use</h6>
@@ -304,25 +304,35 @@ const Login = () => {
                 <h6 className="fw-bold mt-3">6. Reports and Monitoring</h6>
                 <ul>
                   <li>Reports are for internal use only.</li>
-                  <li>Data visualizations must not be altered.</li>
+                  <li>
+                    Data visualizations must not be altered or misrepresented.
+                  </li>
+                  <li>Only management may use reports for decision-making.</li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">7. Limitation of Liability</h6>
                 <ul>
-                  <li>Not liable for user data or delay errors.</li>
-                  <li>Not liable for unauthorized use due to negligence.</li>
+                  <li>
+                    Not liable for user errors in data or delivery handling.
+                  </li>
+                  <li>Not liable for delays due to incorrect data.</li>
+                  <li>
+                    Not liable for unauthorized use due to user negligence.
+                  </li>
                 </ul>
 
                 <h6 className="fw-bold mt-3">8. Amendments to Terms</h6>
                 <p>
-                  Envirocool may update these Terms anytime. Continued use means
-                  acceptance of the new Terms.
+                  Envirocool Company may update these Terms anytime. Updates
+                  will be posted in the System. Continued use means acceptance
+                  of the revised Terms.
                 </p>
 
                 <h6 className="fw-bold mt-3">9. Acknowledgment</h6>
                 <p>
-                  By using the Envirocool System, you agree to these Terms and
-                  Conditions.
+                  By using the Envirocool Delivery & Monitoring System, you
+                  acknowledge that you have read, understood, and agreed to
+                  these Terms and Conditions.
                 </p>
               </div>
               <div className="modal-footer bg-light">
