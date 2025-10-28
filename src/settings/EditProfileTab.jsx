@@ -70,13 +70,10 @@ const EditProfileTab = () => {
       }
 
       setFormData(newForm);
-
       const { newErrors, newValid } = validateAllSync(newForm);
-      setErrors(newErrors); 
-      setValid(newValid); 
-
+      setErrors(newErrors);
+      setValid(newValid);
       setErrors((prev) => ({ ...prev, general: "" }));
-
       return true;
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -128,9 +125,8 @@ const EditProfileTab = () => {
         else isValid = true;
         break;
       case "phone":
-        if (!trimmedValue) {
-          message = "Phone number is required.";
-        } else if (!/^09\d{9}$/.test(trimmedValue)) {
+        if (!trimmedValue) message = "Phone number is required.";
+        else if (!/^09\d{9}$/.test(trimmedValue)) {
           if (!/^09/.test(trimmedValue)) {
             message = "Phone number must start with 09.";
           } else if (trimmedValue.length !== 11) {
@@ -179,7 +175,6 @@ const EditProfileTab = () => {
     }
 
     const validation = validateFieldSync(name, cleanValue);
-
     if (errorMessage) {
       validation.message = errorMessage;
       validation.isValid = false;
@@ -191,6 +186,19 @@ const EditProfileTab = () => {
   };
 
   const handleUpdate = async () => {
+    const { newErrors, newValid } = validateAllSync(formData);
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+    setValid((prev) => ({ ...prev, ...newValid }));
+
+    const hasError = Object.values(newValid).some((v) => v !== true);
+    if (hasError) {
+      setErrors((prev) => ({
+        ...prev,
+        general: "Ensure all fields are filled out and valid before saving.",
+      }));
+      return;
+    }
+
     const confirm = await Swal.fire({
       title: "Save Changes?",
       text: "Do you want to save the changes to your profile?",
@@ -202,21 +210,6 @@ const EditProfileTab = () => {
     });
 
     if (!confirm.isConfirmed) return;
-
-    setErrors((prev) => ({ ...prev, general: "" }));
-
-    const { newErrors, newValid } = validateAllSync(formData);
-    setErrors((prev) => ({ ...prev, ...newErrors }));
-    setValid((prev) => ({ ...prev, ...newValid }));
-
-    const hasError = Object.values(newValid).some((v) => v !== true);
-    if (hasError) {
-      setErrors((prev) => ({
-        ...prev,
-        general: "Ensure all fields are valid before saving.",
-      }));
-      return;
-    }
 
     setUpdateLoading(true);
     let updateUrl = "";
@@ -280,8 +273,11 @@ const EditProfileTab = () => {
             justifyContent: "center",
           },
         });
+
         setIsEditing(false);
-        fetchProfile();
+        setTimeout(() => {
+          fetchProfile();
+        }, 800);
       } else {
         setErrors((prev) => ({
           ...prev,

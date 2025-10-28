@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { Toaster } from "sonner";
 
 // Public pages
 import Login from "./Login";
@@ -52,24 +53,68 @@ function App() {
     { path: "/admin-dashboard", element: <AdminDashboard />, role: "admin" },
     { path: "/add-delivery", element: <AddDelivery />, role: "admin" },
     { path: "/delivery-details", element: <DeliveryDetails />, role: "admin" },
-    { path: "/view-delivery/:transaction_id", element: <ViewDelivery />, role: "admin" },
+    {
+      path: "/view-delivery/:transaction_id",
+      element: <ViewDelivery />,
+      role: "admin",
+    },
     { path: "/monitor-delivery", element: <MonitorDelivery />, role: "admin" },
     { path: "/generate-report", element: <GenerateReport />, role: "admin" },
     { path: "/admin-settings", element: <AdminSettings />, role: "admin" },
 
     // OPERATIONAL
-    { path: "/operational-delivery-details", element: <OperationalDelivery />, role: "operationalmanager" },
-    { path: "/operational-settings", element: <OperationalSettings />, role: "operationalmanager" },
-    { path: "/register-account", element: <RegisterAccount />, role: "operationalmanager" },
-    { path: "/personnel-accounts", element: <PersonnelAccounts />, role: "operationalmanager" },
-    { path: "/create-personnel-account", element: <CreatePersonnelAccount />, role: "operationalmanager" },
+    {
+      path: "/operational-delivery-details",
+      element: <OperationalDelivery />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/operational-settings",
+      element: <OperationalSettings />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/register-account",
+      element: <RegisterAccount />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/personnel-accounts",
+      element: <PersonnelAccounts />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/create-personnel-account",
+      element: <CreatePersonnelAccount />,
+      role: "operationalmanager",
+    },
 
     // DRIVER
-    { path: "/driver-dashboard", element: <DriverDashboard />, role: "deliverypersonnel" },
-    { path: "/out-for-delivery", element: <OutForDelivery />, role: "deliverypersonnel" },
-    { path: "/successful-delivery", element: <SuccessfulDelivery />, role: "deliverypersonnel" },
-    { path: "/failed-delivery", element: <FailedDeliveries />, role: "deliverypersonnel" },
-    { path: "/driver-profile-settings", element: <DriverProfileSettings />, role: "deliverypersonnel" },
+    {
+      path: "/driver-dashboard",
+      element: <DriverDashboard />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/out-for-delivery",
+      element: <OutForDelivery />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/successful-delivery",
+      element: <SuccessfulDelivery />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/failed-delivery",
+      element: <FailedDeliveries />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/driver-profile-settings",
+      element: <DriverProfileSettings />,
+      role: "deliverypersonnel",
+    },
 
     // SETTINGS
     { path: "/settings/edit-profile", element: <EditProfileTab /> },
@@ -81,6 +126,8 @@ function App() {
 
   return (
     <Router>
+      <Toaster position="top-center" richColors />
+
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Login />} />
@@ -92,11 +139,7 @@ function App() {
           <Route
             key={path}
             path={path}
-            element={
-              <ProtectedRoute role={role}>
-                {element}
-              </ProtectedRoute>
-            }
+            element={<ProtectedRoute role={role}>{element}</ProtectedRoute>}
           />
         ))}
       </Routes>

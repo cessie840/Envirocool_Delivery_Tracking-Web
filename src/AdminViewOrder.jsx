@@ -5,7 +5,7 @@ import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
 import { Button, Modal, Form } from "react-bootstrap";
-import { Toaster, toast } from "sonner";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -132,12 +132,12 @@ const ViewOrder = () => {
   const handleSubmit = () => {
     const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
     if (hasInvalidQuantity) {
-      alert("One or more items have invalid quantity.");
+      ToastHelper.error("One or more items have invalid quantity.");
       return;
     }
 
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
+      ToastHelper.error("Contact number must start with '09' and be exactly 11 digits.");
       return;
     }
 
@@ -164,7 +164,7 @@ const ViewOrder = () => {
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          toast.success("Update successful!", {
+          ToastHelper.success("Update successful!", {
             duration: 2500,
             style: {
               background: "#EBFAECFF",
@@ -196,12 +196,12 @@ const ViewOrder = () => {
           }, 500);
         } else {
           console.error("Update failed:", response.message);
-          alert("Update failed: " + (response.message || "Unknown error"));
+          ToastHelper.error("Update failed: " + (response.message || "Unknown error"));
         }
       })
       .catch((err) => {
         console.error("Update error:", err);
-        alert("An error occurred.");
+        ToastHelper.error("An error occurred.");
       });
   };
 
@@ -585,7 +585,6 @@ const ViewOrder = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-      <Toaster richColors position="top-center" />
     </AdminLayout>
   );
 };

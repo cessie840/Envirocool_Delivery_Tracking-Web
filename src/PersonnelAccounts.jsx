@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaUserPlus, FaCheck, FaTimes } from "react-icons/fa";
 import { Table } from "react-bootstrap";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const PersonnelAccounts = () => {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ const PersonnelAccounts = () => {
   const handleToggleStatus = (username, currentStatus, assignmentStatus) => {
     // 🚫 Restrict toggling if Out for Delivery
     if (assignmentStatus === "Out for Delivery") {
-      alert("Cannot set personnel to Inactive while on delivery.");
+      ToastHelper.error("Cannot set personnel to Inactive while on delivery.");
       return;
     }
 
@@ -104,14 +105,13 @@ const PersonnelAccounts = () => {
             )
           );
 
-          // ✅ Alert after successful update
-          alert(
+          ToastHelper.success(
             `${username} is now ${
               newStatus === "Active" ? "ACTIVE" : "INACTIVE"
             }.`
           );
         } else {
-          alert(response.data.message);
+          ToastHelper.error(response.data.message);
           fetchPersonnel(); // refresh if backend rejected toggle
         }
       })
@@ -195,7 +195,7 @@ const PersonnelAccounts = () => {
                             person.assignment_status?.trim().toLowerCase() ===
                             "out for delivery"
                           ) {
-                            alert(
+                            ToastHelper.error(
                               "Cannot change the account status while personnel is on delivery."
                             );
                             return;
@@ -287,6 +287,7 @@ const PersonnelAccounts = () => {
         onHide={() => setShowModal(false)}
         username={selectedUser }
       />
+      
     </OperationalLayout>
   );
 };

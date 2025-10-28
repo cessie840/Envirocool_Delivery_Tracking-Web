@@ -41,7 +41,7 @@ const Login = () => {
       {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
-        validateStatus: () => true, // ✅ prevents Axios from throwing on 4xx/5xx
+        validateStatus: () => true, 
       }
     );
 
@@ -58,7 +58,6 @@ const Login = () => {
     localStorage.setItem("user", JSON.stringify(user));
     sessionStorage.setItem("showLoginNotif", "true");
 
-    alert("Login successful!");
 
     switch (user.role) {
       case "admin":

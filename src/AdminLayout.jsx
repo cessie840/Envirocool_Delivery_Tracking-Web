@@ -159,7 +159,7 @@ useEffect(() => {
           >
             <FaChartBar className="icon" />
             <span className="nav-text"> DATA ANALYTICS & REPORT</span>
-            <span className="tooltip-text">Generate Report</span>
+            <span className="tooltip-text">Data Analytics & Report</span>
           </button>
 
           <button

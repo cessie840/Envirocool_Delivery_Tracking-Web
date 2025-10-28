@@ -13,6 +13,7 @@ import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaEye, FaEyeSlash } from "react-icons/fa";
 import axios from "axios";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -124,10 +125,10 @@ function DriverProfileSettings() {
       )
       .then((res) => {
         if (res.data.success) {
-          alert("Profile updated successfully!");
+          ToastHelper.success("Profile updated successfully!");
           localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
         } else {
-          alert("Update failed: " + res.data.message);
+          ToastHelper.error("Update failed: " + res.data.message);
         }
       })
       .catch((err) => console.error(err));
@@ -137,7 +138,7 @@ function DriverProfileSettings() {
 
   const handlePasswordSave = () => {
     if (passwordForm.new !== passwordForm.confirm) {
-      alert("New password and confirm password do not match.");
+      ToastHelper.error("New password and confirm password do not match.");
       return;
     }
 
@@ -153,12 +154,12 @@ function DriverProfileSettings() {
       )
       .then((res) => {
         if (res.data.success) {
-          alert("Password successfully changed!");
+          ToastHelper.success("Password successfully changed!");
           localStorage.setItem("userPassword", passwordForm.new);
           setPasswordForm({ old: passwordForm.new, new: "", confirm: "" });
           setModalField(null);
         } else {
-          alert("Update failed: " + res.data.message);
+          ToastHelper.error("Update failed: " + res.data.message);
         }
       })
       .catch((err) => console.error(err));
@@ -181,7 +182,7 @@ function DriverProfileSettings() {
   const handleProfilePicSave = () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!profile.newProfileFile) {
-      alert("Please select a new image first.");
+      ToastHelper.success("Please select a new image first.");
       return;
     }
 
@@ -197,7 +198,7 @@ function DriverProfileSettings() {
       )
       .then((res) => {
         if (res.data.success) {
-          alert("Profile picture updated successfully!");
+          ToastHelper.success("Profile picture updated successfully!");
           const filename = res.data.filename;
           const newUrl = `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${filename}`;
           setProfile((prev) => ({
@@ -208,12 +209,12 @@ function DriverProfileSettings() {
           const updatedUser = { ...storedUser, pers_profile_pic: filename };
           localStorage.setItem("user", JSON.stringify(updatedUser));
         } else {
-          alert("Upload failed: " + res.data.message);
+          ToastHelper.error("Upload failed: " + res.data.message);
         }
       })
       .catch((err) => {
         console.error("Upload error:", err);
-        alert("An error occurred while uploading the picture.");
+        ToastHelper.error("An error occurred while uploading the picture.");
       });
   };
 

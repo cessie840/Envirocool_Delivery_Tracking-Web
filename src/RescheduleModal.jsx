@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
+import { ToastHelper } from "./helpers/ToastHelper";
+
 
 const RescheduleModal = ({
   show,
@@ -11,7 +13,7 @@ const RescheduleModal = ({
 
   const handleSubmit = () => {
     if (!newDate) {
-      alert("Please select a new delivery date.");
+      ToastHelper.error("Please select a new delivery date.");
       return;
     }
 
@@ -26,7 +28,7 @@ const RescheduleModal = ({
       .then((res) => res.json())
       .then((response) => {
         if (response.success) {
-          alert("Reschedule successful!");
+          ToastHelper.success("Reschedule successful!");
           onReschedule({
             delivery_status: "Pending",
             target_date_delivery: response.new_date,
@@ -37,13 +39,13 @@ const RescheduleModal = ({
           handleClose();
           setNewDate("");
         } else {
-          alert("Failed to reschedule delivery.");
+          ToastHelper.error("Failed to reschedule delivery.");
           console.error("Reschedule failed:", response.message, response.error);
         }
       })
       .catch((err) => {
         console.error("Reschedule error:", err);
-        alert("An error occurred.");
+        ToastHelper.error("An error occurred.");
       });
   };
 

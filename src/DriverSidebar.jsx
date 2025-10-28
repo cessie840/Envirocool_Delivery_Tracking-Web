@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Offcanvas, ListGroup, Modal, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import "./loading-overlay.css"; // ✅ overlay CSS
+import "./loading-overlay.css"; 
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const Sidebar = ({ show, onHide }) => {
   const navigate = useNavigate();
@@ -95,13 +96,13 @@ const Sidebar = ({ show, onHide }) => {
         const updatedUser = { ...storedUser, pers_profile_pic: newPicUrl };
         localStorage.setItem("user", JSON.stringify(updatedUser));
 
-        alert("Profile picture updated successfully!");
+        ToastHelper.success("Profile picture updated successfully!");
       } else {
-        alert("Upload failed: " + response.data.message);
+        ToastHelper.error("Upload failed: " + response.data.message);
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("An error occurred while uploading the picture.");
+      ToastHelper.error("An error occurred while uploading the picture.");
     }
   };
 

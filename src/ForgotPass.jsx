@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -42,7 +43,7 @@ const ForgotPassword = () => {
 
       switch (data.status) {
         case "success":
-          alert("Reset code has been sent to your email.");
+          ToastHelper.info("Reset code has been sent to your email.");
           setStep(2);
           break;
         case "user_not_found":
@@ -59,10 +60,10 @@ const ForgotPassword = () => {
           setTimeout(() => navigate("/"), 3000);
           break;
         case "db_error":
-          alert("Something went wrong. Try again later.");
+          ToastHelper.error("Something went wrong. Try again later.");
           break;
         default:
-          alert("Unexpected error occurred.");
+          ToastHelper.error("Unexpected error occurred.");
           console.warn("Unhandled status:", data.status);
           break;
       }
@@ -110,7 +111,7 @@ const ForgotPassword = () => {
       }
     } catch (error) {
       console.error("Verification error:", error);
-      alert("Failed to verify code. Please try again.");
+      ToastHelper.error("Failed to verify code. Please try again.");
     }
   };
 
@@ -145,14 +146,14 @@ const ForgotPassword = () => {
       console.log("Reset response:", data);
 
       if (data.status === "success") {
-        alert("Password has been changed successfully.");
+        ToastHelper.success("Password has been changed successfully.");
         navigate("/");
       } else {
         setErrorMessage(data.message || "Failed to reset password.");
       }
     } catch (error) {
       console.error("Reset error:", error);
-      alert("Server error. Try again later.");
+      ToastHelper.error("Server error. Try again later.");
     }
   };
 

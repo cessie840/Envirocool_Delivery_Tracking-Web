@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import OperationalLayout from "./OperationalLayout";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const RegisterAccount = () => {
   const { state } = useLocation();
@@ -70,7 +71,7 @@ const RegisterAccount = () => {
 
       const data = res.data;
       if (data.status === "success") {
-        alert("Delivery Personnel Account created successfully!");
+        ToastHelper.success("Delivery Personnel Account created successfully!");
         navigate("/operational-delivery-details");
       } else {
         setErrorMessage(data.message || "An error occurred.");

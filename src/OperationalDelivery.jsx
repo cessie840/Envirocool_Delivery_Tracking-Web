@@ -4,6 +4,7 @@ import OperationalLayout from "./OperationalLayout";
 import axios from "axios";
 import { BsExclamationCircleFill, BsCheckCircleFill } from "react-icons/bs";
 import { Toaster, toast } from "sonner";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const OperationalDelivery = () => {
   const [showModal, setShowModal] = useState(false);
@@ -116,12 +117,12 @@ const OperationalDelivery = () => {
 
   const handleAssignPersonnel = async () => {
     if (!selectedPersonnel) {
-      alert("Please select a delivery personnel.");
+      ToastHelper.error("Please select a delivery personnel.");
       return;
     }
 
     if (!deviceId) {
-      alert("Please select a device ID.");
+      ToastHelper.error("Please select a device ID.");
       return;
     }
 
@@ -136,18 +137,18 @@ const OperationalDelivery = () => {
       );
 
       if (res.data.success) {
-        alert("Personnel and device assigned successfully!");
+        ToastHelper.success("Personnel and device assigned successfully!");
         setShowModal(false);
         setShowDetailModal(false);
         setSelectedOrder(null);
         setDeviceId("");
         fetchOrders();
       } else {
-        alert("Assignment failed: " + (res.data.message || "Unknown error"));
+        ToastHelper.error("Assignment failed: " + (res.data.message || "Unknown error"));
       }
     } catch (error) {
       console.error("Assignment failed:", error);
-      alert("Assignment failed. Please try again later.");
+      ToastHelper.error("Assignment failed. Please try again later.");
     }
   };
 

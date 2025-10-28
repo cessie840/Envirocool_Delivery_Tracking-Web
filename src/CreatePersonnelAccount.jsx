@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import OperationalLayout from "./OperationalLayout";
 import { FaArrowLeft } from "react-icons/fa";
+import { ToastHelper } from "./helpers/ToastHelper";
+
 
 const CreatePersonnelAccount = () => {
   const navigate = useNavigate();
@@ -95,7 +97,7 @@ const CreatePersonnelAccount = () => {
       console.log(response.data);
 
       if (response.data.status === "success") {
-        alert(`Account created!`);
+        ToastHelper.success(`Account created!`);
         navigate("/personnel-accounts");
       } else if (response.data.status === "existing_account") {
         setErrorMessage(response.data.message);

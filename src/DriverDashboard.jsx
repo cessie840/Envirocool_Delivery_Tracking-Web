@@ -135,7 +135,7 @@ function DriverDashboard() {
       (d) => d.transactionNo === transactionNo
     );
     if (!delivery) {
-      alert("Delivery not found.");
+      ToastHelper.error("Delivery not found.");
       return;
     }
 
@@ -147,16 +147,16 @@ function DriverDashboard() {
       .then((res) => {
         const { success, message } = res.data;
         if (success) {
-          alert("Order is now marked as 'Out for Delivery'.");
+          ToastHelper.success("Order is now marked as 'Out for Delivery'.");
           fetchAssignedDeliveries();
           navigate("/out-for-delivery");
         } else {
-          alert(`Error: ${message}`);
+          ToastHelper.error(`Error: ${message}`);
         }
       })
       .catch((err) => {
         console.error("API error:", err);
-        alert("Failed to update delivery status. Please try again later.");
+        ToastHelper.error("Failed to update delivery status. Please try again later.");
       });
   };
 

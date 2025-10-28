@@ -157,7 +157,7 @@ label.tnc, span.tnc{
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  background-color: #303030a6;
+  background-color: #707070e3;
   color: #fff;
   padding: 6px;
   border-radius: 3px;
@@ -811,11 +811,11 @@ input::placeholder {
   --bs-list-group-bg: #f8f8f8 !important;
 }
 
-.btn-danger:hover {
+/* .btn-danger:hover {
   background-color: white;
   border: 1px solid red;
   color: red;
-}
+} */
 
 #personnel-view,
 #personnel-cancel {
@@ -1136,7 +1136,17 @@ h5{
   border-radius: 8px !important;
 }
 
+.logout-btn:hover {
+  background-color: #f7c6c6 !important;
+  color: #bd0000 !important;
+  border: 1px solid #cc3636 !important;
+}
 
+.cancel-logout:hover {
+  background-color: #c7c7c7 !important;
+  color: #6e6e6e !important;
+  border: 1px solid #868686 !important;
+}
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {

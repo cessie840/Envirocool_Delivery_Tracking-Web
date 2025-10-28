@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Table, Form } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
-import { Toaster, toast } from "sonner";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const DeliveryDetails = () => {
   const navigate = useNavigate();
@@ -95,7 +95,7 @@ const DeliveryDetails = () => {
   const handleSubmit = () => {
     const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
     if (hasInvalidQuantity) {
-      toast.error("One or more items have invalid quantity.", {
+      ToastHelper.error("One or more items have invalid quantity.", {
         duration: 2500,
         style: {
           background: "#FFEAEA",
@@ -115,7 +115,7 @@ const DeliveryDetails = () => {
     }
 
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      toast.error(
+      ToastHelper.error(
         "Contact number must start with '09' and be exactly 11 digits.",
         {
           duration: 2500,
@@ -138,7 +138,7 @@ const DeliveryDetails = () => {
     }
 
     if (!transactionId) {
-      toast.error("Transaction ID is missing — please try again.", {
+      ToastHelper.error("Transaction ID is missing — please try again.", {
         duration: 2500,
         style: {
           background: "#FFEAEA",
@@ -182,7 +182,7 @@ const DeliveryDetails = () => {
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          toast.success("Transaction updated successfully!", {
+          ToastHelper.success("Transaction updated successfully!", {
             duration: 2500,
             style: {
               background: "#EBFAECFF",
@@ -204,7 +204,7 @@ const DeliveryDetails = () => {
           setShowModal(false);
         } else {
           console.error("Update failed:", response.message);
-          toast.error(
+          ToastHelper.error(
             "Update failed: " + (response.message || "Unknown error"),
             {
               duration: 2500,
@@ -227,7 +227,7 @@ const DeliveryDetails = () => {
       })
       .catch((err) => {
         console.error("Update error:", err);
-        toast.error("An unexpected error occurred.", {
+        ToastHelper.error("An unexpected error occurred.", {
           duration: 2500,
           style: {
             background: "#FFEAEA",

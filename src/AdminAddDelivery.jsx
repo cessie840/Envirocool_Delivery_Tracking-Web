@@ -9,7 +9,7 @@ import CreatableSelect from "react-select/creatable";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
-import { Toaster, toast } from "sonner";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
@@ -246,10 +246,10 @@ const AddDelivery = () => {
         );
       }
 
-      alert("Deleted successfully!");
+      ToastHelper.success("Deleted successfully!");
     } catch (err) {
       console.error(err);
-      alert("Error deleting item");
+      ToastHelper.error("Error deleting item");
     }
   };
 
@@ -295,9 +295,12 @@ const AddDelivery = () => {
         const previewUrl = URL.createObjectURL(file);
         validPreviews.push(previewUrl);
       } else {
-        toast.error(`File "${file.name}" is not a valid JPEG or PNG image.`, {
-          className: "toast-error",
-        });
+        ToastHelper.error(
+          `File "${file.name}" is not a valid JPEG or PNG image.`,
+          {
+            className: "toast-error",
+          }
+        );
       }
     });
 
@@ -653,11 +656,9 @@ const AddDelivery = () => {
     setLoading(true);
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
-      toast.error(
+      ToastHelper.error(
         "Contact number must start with '09' and be exactly 11 digits.",
-        {
-          className: "toast-error",
-        }
+        { className: "toast-error" }
       );
       setLoading(false);
       return;
@@ -666,30 +667,35 @@ const AddDelivery = () => {
     const fullAddress =
       `${form.street}, ${form.barangay}, ${form.city}, ${form.province}`.trim();
     if (!fullAddress.replace(/[, ]/g, "")) {
-      toast.error("Please complete the customer's address before proceeding.", {
-        className: "toast-error",
-      });
+      ToastHelper.error(
+        "Please complete the customer's address before proceeding.",
+        {
+          className: "toast-error",
+        }
+      );
       setLoading(false);
       return;
     }
     form.customer_address = fullAddress;
 
     if (!form.payment_method) {
-      toast.error("Please select a payment method.", {
+      ToastHelper.error("Please select a payment method.", {
         className: "toast-error",
       });
       setLoading(false);
       return;
     }
 
-    if (form.payment_method && !proofFiles.length === 0) {
-      toast.error("Please upload proof of payment.", {
+    // ✅ Fixed proof of payment validation
+    if (form.payment_method && proofFiles.length === 0) {
+      ToastHelper.error("Please upload proof of payment.", {
         className: "toast-error",
       });
       setLoading(false);
       return;
     }
 
+    // ✅ Validate each order item
     for (const [index, item] of orderItems.entries()) {
       const quantity = parseInt(item.quantity);
       const unitCost = parseFloat(parsePeso(item.unit_cost));
@@ -697,15 +703,18 @@ const AddDelivery = () => {
       const description = item.description?.trim();
 
       if (!typeOfProduct) {
-        toast.error(`Please select a type of product for item #${index + 1}`, {
-          className: "toast-error",
-        });
+        ToastHelper.error(
+          `Please select a type of product for item #${index + 1}`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
 
       if (!description) {
-        toast.error(`Please select an item name for item #${index + 1}`, {
+        ToastHelper.error(`Please select an item name for item #${index + 1}`, {
           className: "toast-error",
         });
         setLoading(false);
@@ -713,15 +722,18 @@ const AddDelivery = () => {
       }
 
       if (isNaN(quantity) || quantity < 1) {
-        toast.error(`Quantity for item #${index + 1} must be at least 1`, {
-          className: "toast-error",
-        });
+        ToastHelper.error(
+          `Quantity for item #${index + 1} must be at least 1`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
-        toast.error(
+        ToastHelper.error(
           `Unit cost for item #${index + 1} must be a non-negative number`,
           {
             className: "toast-error",
@@ -806,7 +818,7 @@ const AddDelivery = () => {
         }
       );
 
-      toast.success("Delivery added successfully!", {
+      ToastHelper.success("Delivery added successfully!", {
         duration: 2500,
         style: {
           background: "#EBFAECFF",
@@ -898,7 +910,7 @@ const AddDelivery = () => {
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
-      toast.error("Error saving delivery.", {
+      ToastHelper.error("Error saving delivery.", {
         duration: 2500,
         style: {
           background: "#FFEAEA",
@@ -1617,10 +1629,10 @@ const AddDelivery = () => {
                               }
 
                               setEditModal({ ...editModal, show: false });
-                              alert("Updated successfully!");
+                              ToastHelper.success("Updated successfully!");
                             } catch (err) {
                               console.error(err);
-                              alert("Error updating!");
+                              ToastHelper.error("Error updating!");
                             }
                           }}
                         >
@@ -2187,11 +2199,13 @@ const AddDelivery = () => {
                   {proofFiles.length > 0 ? (
                     <div className="mt-3">
                       <Button
-                        variant="success"
+                        variant={showImageViewer ? "success" : "success"}
                         size="sm"
-                        onClick={() => setShowImageViewer(true)}
+                        onClick={() => setShowImageViewer((prev) => !prev)}
                       >
-                        View Proof of Payment ({proofFiles.length} images)
+                        {showImageViewer
+                          ? "Hide Proof of Payment"
+                          : `View Proof of Payment`}
                       </Button>
                     </div>
                   ) : (
@@ -2210,6 +2224,7 @@ const AddDelivery = () => {
                           onClick={() => setShowImageViewer(false)}
                         />
                       </div>
+
                       <div className="d-flex align-items-center justify-content-center">
                         {proofPreviews.length > 1 && (
                           <button
@@ -2227,11 +2242,17 @@ const AddDelivery = () => {
                             ‹
                           </button>
                         )}
+
                         <div
                           id="summary-scroll-container"
                           style={{
                             display: "flex",
-                            overflowX: "auto",
+                            justifyContent:
+                              proofPreviews.length === 1
+                                ? "center"
+                                : "flex-start", // ✅ Center if 1 image
+                            overflowX:
+                              proofPreviews.length > 1 ? "auto" : "hidden",
                             scrollBehavior: "smooth",
                             width: "600px",
                             height: "320px",
@@ -2256,6 +2277,8 @@ const AddDelivery = () => {
                             />
                           ))}
                         </div>
+
+                        {/* Right scroll button (only if multiple images) */}
                         {proofPreviews.length > 1 && (
                           <button
                             className="btn btn-secondary ms-2"
@@ -2523,7 +2546,6 @@ const AddDelivery = () => {
           )}
         </div>
       </div>
-      <Toaster richColors position="top-center" />
     </AdminLayout>
   );
 };

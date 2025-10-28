@@ -1975,7 +1975,21 @@ const GenerateReport = () => {
             title = "Client Satisfaction";
             break;
           default:
-            alert("Please select a report type.");
+            toast.error("Please select a report type.", {
+              duration: 2500,
+              style: {
+                background: "#FDECEA",
+                border: "1px solid #F5C6CB",
+                color: "#A94442",
+                fontWeight: 600,
+                fontSize: "1rem",
+                textAlign: "center",
+                width: "100%",
+                maxWidth: "500px",
+                margin: "0 auto",
+                justifyContent: "center",
+              },
+            });
             return;
         }
 
@@ -2056,15 +2070,35 @@ const GenerateReport = () => {
 
         const fileName = `envirocool-${type}-report-${period}-${getTodayDate()}.pdf`;
         doc.save(fileName);
-        alert(
-          `${title} Report PDF (${getPeriodLabel(
-            period
-          )}) has been generated and downloaded successfully!`
+        toast(
+          <div className="custom-banner-toast">
+            {`${title} Report PDF (${getPeriodLabel(
+              period
+            )}) has been generated and downloaded successfully!`}
+          </div>,
+          {
+            className: "report-toast",
+            duration: 2500,
+          }
         );
       }
     } catch (error) {
       console.error("PDF generation error:", error);
-      alert("Error generating PDF. Please try again.");
+      toast.error("Error generating PDF. Please try again.", {
+        duration: 2500,
+        style: {
+          background: "#FDECEA",
+          border: "1px solid #F5C6CB",
+          color: "#A94442",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "500px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
     }
   };
 

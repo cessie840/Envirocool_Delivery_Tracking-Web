@@ -3,6 +3,8 @@ import { Container, Card } from "react-bootstrap";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
 import axios from "axios";
+import { ToastHelper } from "./helpers/ToastHelper";
+
 
 function SuccessfulDelivery() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -28,7 +30,7 @@ function SuccessfulDelivery() {
       })
       .catch((err) => {
         console.error("Error fetching deliveries:", err);
-        alert("Failed to fetch deliveries. Please try again later.");
+        ToastHelper.error("Failed to fetch deliveries. Please try again later.");
       });
   }, []);
 
