@@ -55,23 +55,22 @@ const AdminLayout = ({
     if (onSearch) onSearch(value);
   };
 
-const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-  return window.innerWidth > 991; // open if desktop, closed if mobile
-});
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    return window.innerWidth > 991; // open if desktop, closed if mobile
+  });
 
-useEffect(() => {
-  const handleResize = () => {
-    if (window.innerWidth <= 991) {
-      setIsSidebarOpen(false);
-    } else {
-      setIsSidebarOpen(true);
-    }
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 991) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
 
-  window.addEventListener("resize", handleResize);
-  return () => window.removeEventListener("resize", handleResize);
-}, []);
-
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
@@ -228,14 +227,23 @@ useEffect(() => {
         centered
       >
         <Modal.Header closeButton className="bg-light">
-          <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="bg-white">Are you sure you want to logout?</Modal.Body>
+        <Modal.Body className="bg-white">
+          Are you sure you want to logout?
+        </Modal.Body>
         <Modal.Footer className="bg-light">
-          <Button className="close-btn p-2 fs-6" variant="secondary" onClick={() => setShowLogoutModal(false)}>
+          <Button
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
+            // variant="secondary"
+            onClick={() => setShowLogoutModal(false)}
+          >
             Cancel
           </Button>
-          <Button className="cancel-btn p-2 fs-6" onClick={confirmLogout}>
+          <Button
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
+            onClick={confirmLogout}
+          >
             Logout
           </Button>
         </Modal.Footer>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Offcanvas, ListGroup, Modal, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import "./loading-overlay.css"; 
+import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 
 const Sidebar = ({ show, onHide }) => {
@@ -291,22 +291,21 @@ const Sidebar = ({ show, onHide }) => {
         centered
       >
         <Modal.Header className="bg-light" closeButton>
-          <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-white">
           Are you sure you want to logout?
         </Modal.Body>
         <Modal.Footer className="bg-light">
           <Button
-            className="close-btn px-2 py-2 fs-6"
-            variant="secondary"
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
+            // variant="secondary"
             onClick={() => setShowLogoutModal(false)}
           >
             Cancel
           </Button>
           <Button
-            className="cancel-btn px-2 py-2 fs-6"
-            variant="danger"
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
             onClick={confirmLogout}
           >
             Logout

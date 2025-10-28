@@ -19,6 +19,8 @@ function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
   const navigate = useNavigate();
 
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
   const [profile, setProfile] = useState({
     Name: "",
     username: "",
@@ -165,7 +167,6 @@ function DriverProfileSettings() {
       .catch((err) => console.error(err));
   };
 
-  // ✅ Preview selected image before upload
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -178,17 +179,16 @@ function DriverProfileSettings() {
     }
   };
 
-  // ✅ Upload selected image
   const handleProfilePicSave = () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!profile.newProfileFile) {
-      ToastHelper.success("Please select a new image first.");
+      ToastHelper.error("Please select a new image first.");
       return;
     }
 
     const formData = new FormData();
     formData.append("pers_username", storedUser.pers_username);
-    formData.append("profile_pic", profile.newProfileFile); // ✅ aligns with backend
+    formData.append("profile_pic", profile.newProfileFile);
 
     axios
       .post(
@@ -218,6 +218,12 @@ function DriverProfileSettings() {
       });
   };
 
+  const confirmLogout = () => {
+    localStorage.clear();
+    setShowLogoutModal(false);
+    navigate("/");
+  };
+
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav onSidebarToggle={() => setShowSidebar(true)} />
@@ -240,7 +246,6 @@ function DriverProfileSettings() {
               backgroundColor: "#E8F8F5",
             }}
           >
-            {/* ✅ PROFILE PICTURE SECTION */}
             <div className="text-center">
               <label htmlFor="profilePicInput" style={{ cursor: "pointer" }}>
                 <div
@@ -305,7 +310,6 @@ function DriverProfileSettings() {
             </p>
           </div>
 
-          {/* Profile Details */}
           <div
             className="px-4 pb-4"
             style={{
@@ -384,7 +388,10 @@ function DriverProfileSettings() {
             </div>
 
             <div className="mt-4 d-grid">
-              <Button variant="success" onClick={() => navigate("/")}>
+              <Button
+                variant="success"
+                onClick={() => setShowLogoutModal(true)}
+              >
                 Logout
               </Button>
             </div>
@@ -392,7 +399,7 @@ function DriverProfileSettings() {
         </Card>
       </Container>
 
-      {/* Edit Field Modal */}
+      {/* 🟢 Edit Field Modal */}
       <Modal
         show={modalField && modalField !== "password"}
         onHide={() => setModalField(null)}
@@ -431,7 +438,7 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
-      {/* Password Modal */}
+      {/* 🟢 Password Modal */}
       <Modal
         show={modalField === "password"}
         onHide={() => setModalField(null)}
@@ -495,6 +502,34 @@ function DriverProfileSettings() {
           </Button>
           <Button variant="success" onClick={handlePasswordSave}>
             Save Password
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* 🔒 Logout Confirmation Modal */}
+      <Modal
+        show={showLogoutModal}
+        onHide={() => setShowLogoutModal(false)}
+        centered
+      >
+        <Modal.Header className="bg-light" closeButton>
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-white">
+          Are you sure you want to logout?
+        </Modal.Body>
+        <Modal.Footer className="bg-light">
+          <Button
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
+            onClick={() => setShowLogoutModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
+            onClick={confirmLogout}
+          >
+            Logout
           </Button>
         </Modal.Footer>
       </Modal>
