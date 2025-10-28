@@ -137,7 +137,9 @@ const ViewOrder = () => {
     }
 
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      ToastHelper.error("Contact number must start with '09' and be exactly 11 digits.");
+      ToastHelper.error(
+        "Contact number must start with '09' and be exactly 11 digits."
+      );
       return;
     }
 
@@ -196,7 +198,9 @@ const ViewOrder = () => {
           }, 500);
         } else {
           console.error("Update failed:", response.message);
-          ToastHelper.error("Update failed: " + (response.message || "Unknown error"));
+          ToastHelper.error(
+            "Update failed: " + (response.message || "Unknown error")
+          );
         }
       })
       .catch((err) => {
@@ -379,7 +383,7 @@ const ViewOrder = () => {
                           )
                         }
                       >
-                        View Proof of Payment 
+                        View Proof of Payment
                       </button>
                     </div>
                   )}
@@ -443,12 +447,16 @@ const ViewOrder = () => {
             </div>
 
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
-              <button
-                className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                onClick={handleUpdate}
-              >
-                Update
-              </button>
+              {!["Delivered", "Out for Delivery", "Cancelled"].includes(
+                orderDetails.status
+              ) && (
+                <button
+                  className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                  onClick={handleUpdate}
+                >
+                  Update
+                </button>
+              )}
 
               {orderDetails.status === "Cancelled" && (
                 <button
