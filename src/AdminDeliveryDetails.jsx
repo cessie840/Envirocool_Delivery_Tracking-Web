@@ -463,7 +463,6 @@ const DeliveryDetails = () => {
         editableItems={editableItems}
         setEditableItems={setEditableItems}
       />
-      <Toaster richColors position="top-center" />
     </AdminLayout>
   );
 };
