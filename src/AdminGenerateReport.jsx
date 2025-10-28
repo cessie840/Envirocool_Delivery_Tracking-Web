@@ -2928,6 +2928,7 @@ const GenerateReport = () => {
         <Line
           type="monotone"
           dataKey="total_cost"
+          name="Total Cost"
           stroke="#4CAF50"
           strokeWidth={3}
           dot={{ r: 4 }}
@@ -2936,22 +2937,27 @@ const GenerateReport = () => {
       </LineChart>
     </ResponsiveContainer>
   );
+  const renderTopSellingChart = () => {
+    const top3Items = [...topSelling]
+      .sort((a, b) => b.quantity_sold - a.quantity_sold)
+      .slice(0, 3);
 
-  const renderTopSellingChart = () => (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart
-        data={topSelling}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="item_name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="quantity_sold" fill="#4CAF50" radius={[5, 5, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart
+          data={top3Items}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="item_name" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="quantity_sold" fill="#4CAF50" radius={[5, 5, 0, 0]} name="Items Sold" />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
 
   const renderTransactionStatusChart = () => (
     <ResponsiveContainer width="100%" height={300}>
@@ -2964,7 +2970,7 @@ const GenerateReport = () => {
         <YAxis allowDecimals={false} />
         <Tooltip />
         <Legend />
-        <Bar dataKey="count">
+        <Bar dataKey="count" radius={[5, 5, 0, 0]} name="Number of Transactions" fill="darkblue">
           {transactionStatusData.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
@@ -2996,7 +3002,7 @@ const GenerateReport = () => {
           <YAxis allowDecimals={false} />
           <Tooltip />
           <Legend />
-          <Bar dataKey="count" fill="#E57373" radius={[5, 5, 0, 0]} />
+          <Bar dataKey="count" fill="#E6A152FF" radius={[5, 5, 0, 0]} name="Number of Transactions" />
         </BarChart>
       </ResponsiveContainer>
     );
