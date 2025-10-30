@@ -7,23 +7,26 @@ import {
   FaClock,
   FaFileInvoice,
   FaSearch,
+  FaQuestionCircle,
 } from "react-icons/fa";
-import { Row, Col, Card } from "react-bootstrap";
+import { Row, Col, Card, Modal, Collapse } from "react-bootstrap";
 import axios from "axios";
 import {
   PieChart,
   Pie,
   Cell,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
   CartesianGrid,
   XAxis,
   YAxis,
-  Legend,
 } from "recharts";
-import { Toaster, toast } from "sonner";
+
+
+import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -35,8 +38,44 @@ const AdminDashboard = () => {
     cancelled: 0,
     pending: 0,
   });
+
   const [yearlyData, setYearlyData] = useState({ total: 0, distribution: [] });
   const [transactionStatusData, setTransactionStatusData] = useState([]);
+  const [showFAQ, setShowFAQ] = useState(false);
+
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I add a new delivery?",
+      answer:
+        "Click the 'Add Delivery' button at the top right or navigate to the Add Delivery page to input transaction details.",
+    },
+    {
+      question: "Where can I view all the transaction records?",
+      answer:
+        "On the right side, you can see the sidebar. Click 'Delivery Details' to view all transaction records.",
+    },
+    {
+      question: "Where can I track the deliveries?",
+      answer:
+        "On the right side, you can see the sidebar. Click 'Monitor Delivery' in the navigation drawer to track deliveries.",
+    },
+    {
+      question: "Where can I find the delivery analytics?",
+      answer:
+        "On the right side, you can see the sidebar. Click 'Data Analytics & Reports' to access delivery analytics.",
+    },
+    {
+      question: "What does the Monthly Transaction graph show?",
+      answer: "It represents all the transaction records for each month.",
+    },
+    {
+      question: "What is the pie chart for?",
+      answer:
+        "It represents the percentage of successful and cancelled deliveries.",
+    },
+  ];
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -48,29 +87,6 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (sessionStorage.getItem("showLoginNotif") === "true") {
-      toast.success("Login successful!", {
-        duration: 2500,
-        style: {
-          background: "#EBFAECFF",
-          border: "1px solid #91C793FF",
-          color: "#2E7D32",
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "0 auto",
-          justifyContent: "center",
-          borderRadius: "8px",
-        },
-      });
-
-      sessionStorage.removeItem("showLoginNotif");
-    }
-  }, []);
-
-  useEffect(() => {
     document.title = "Admin Dashboard";
 
     axios
@@ -78,9 +94,7 @@ const AdminDashboard = () => {
         withCredentials: true,
       })
       .then((res) => {
-        if (res.data.success) {
-          setDashboardCounts(res.data);
-        }
+        if (res.data.success) setDashboardCounts(res.data);
       })
       .catch((err) => console.error("Error fetching dashboard data:", err));
 
@@ -92,9 +106,7 @@ const AdminDashboard = () => {
         }
       )
       .then((res) => {
-        if (res.data.success) {
-          setRecentTransactions(res.data.transactions);
-        }
+        if (res.data.success) setRecentTransactions(res.data.transactions);
       })
       .catch((err) =>
         console.error("Error fetching recent transactions:", err)
@@ -108,9 +120,7 @@ const AdminDashboard = () => {
         }
       )
       .then((res) => {
-        if (res.data.success) {
-          setPendingTransactions(res.data.transactions);
-        }
+        if (res.data.success) setPendingTransactions(res.data.transactions);
       })
       .catch((err) =>
         console.error("Error fetching pending transactions:", err)
@@ -119,7 +129,9 @@ const AdminDashboard = () => {
     axios
       .get(
         "http://localhost/DeliveryTrackingSystem/get_yearly_distribution.php",
-        { withCredentials: true }
+        {
+          withCredentials: true,
+        }
       )
       .then((res) => {
         if (res.data.success) setYearlyData(res.data);
@@ -136,9 +148,7 @@ const AdminDashboard = () => {
         }
       )
       .then((res) => {
-        if (res.data.success) {
-          setTransactionStatusData(res.data.monthly);
-        }
+        if (res.data.success) setTransactionStatusData(res.data.monthly);
       })
       .catch((err) =>
         console.error("Error fetching monthly transactions:", err)
@@ -164,13 +174,25 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout
-      title="Dashboard"
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Dashboard</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
       showSearch={false}
       onAddClick={handleAddDelivery}
     >
-      <Toaster position="top-center" richColors />
-
       <div className="container-fluid">
+        {/* ===================== TOP 4 CARDS ===================== */}
         <Row className="mb-4 g-3">
           <Col xl={3} lg={6} md={6} sm={12}>
             <Card className="p-3 h-100 dashboard-panel">
@@ -237,21 +259,18 @@ const AdminDashboard = () => {
           </Col>
         </Row>
 
+        {/* ===================== RECENT + PENDING TABLES ===================== */}
         <Row className="g-3">
+          {/* Recent Transactions */}
           <Col lg={7} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="m-0 fw-bold">Recent Transactions</h5>
-                <div className="d-flex gap-3">
-                  <FaSearch className="text-secondary cursor-pointer" />
-                </div>
+                <FaSearch className="text-secondary cursor-pointer" />
               </div>
 
               <div className="table-responsive">
-                <table
-                  className="table table-bordered table-hover responsive shadow-sm text-center mb-0"
-                  style={{ cursor: "default" }}
-                >
+                <table className="table table-bordered table-hover text-center mb-0">
                   <thead className="table-success">
                     <tr>
                       <th>Transaction No.</th>
@@ -263,7 +282,7 @@ const AdminDashboard = () => {
                   <tbody>
                     {recentTransactions.length > 0 ? (
                       recentTransactions.map((tx) => (
-                        <tr key={tx.transaction_id} className="table-row-hover">
+                        <tr key={tx.transaction_id}>
                           <td>{tx.transaction_id}</td>
                           <td>{tx.customer_name}</td>
                           <td>{formatDate(tx.date_ordered)}</td>
@@ -275,18 +294,17 @@ const AdminDashboard = () => {
                                     ? "#C6FCD3"
                                     : tx.status === "Cancelled"
                                     ? "#FDE0E0"
-                                    : "#d2e6f5ff",
+                                    : tx.status === "Out for Delivery"
+                                    ? "#D2E6F5"
+                                    : "transparent",
                                 color:
                                   tx.status === "Delivered"
                                     ? "#3E5F44"
                                     : tx.status === "Cancelled"
                                     ? "red"
-                                    : "#1762b1ff",
-                                padding: "5px",
+                                    : "#1762B1",
+                                padding: "5px 8px",
                                 borderRadius: "8px",
-                                display: "inline-block",
-                                minWidth: "80px",
-                                textAlign: "center",
                                 fontSize: "0.85rem",
                                 fontWeight: "600",
                               }}
@@ -298,7 +316,7 @@ const AdminDashboard = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="text-center text-muted">
+                        <td colSpan="4" className="text-muted text-center">
                           No recent transactions found
                         </td>
                       </tr>
@@ -306,14 +324,10 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               </div>
-
-              <div className="text-muted small mt-2">
-                Showing {recentTransactions.length} recent transactions out of{" "}
-                {dashboardCounts.total}
-              </div>
             </div>
           </Col>
 
+          {/* Pending Transactions */}
           <Col lg={5} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -322,10 +336,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="table-responsive">
-                <table
-                  className="table table-bordered table-hover responsive shadow-sm text-center mb-0"
-                  style={{ cursor: "default" }}
-                >
+                <table className="table table-bordered table-hover text-center mb-0">
                   <thead className="table-success">
                     <tr>
                       <th>Transaction No.</th>
@@ -336,7 +347,7 @@ const AdminDashboard = () => {
                   <tbody>
                     {pendingTransactions.length > 0 ? (
                       pendingTransactions.map((tx) => (
-                        <tr key={tx.transaction_id} className="table-row-hover">
+                        <tr key={tx.transaction_id}>
                           <td>{tx.transaction_id}</td>
                           <td>{tx.customer_name}</td>
                           <td>{formatDate(tx.date_ordered)}</td>
@@ -344,7 +355,7 @@ const AdminDashboard = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="3" className="text-center text-muted">
+                        <td colSpan="3" className="text-muted text-center">
                           No pending transactions found
                         </td>
                       </tr>
@@ -352,141 +363,160 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               </div>
-
-              <div className="text-muted small mt-2">
-                Showing {pendingTransactions.length} pending transactions out of{" "}
-                {dashboardCounts.pending}
-              </div>
             </div>
           </Col>
         </Row>
 
+        {/* ===================== CHARTS ===================== */}
         <Row className="mt-4 g-3">
+          {/* Monthly Bar Chart */}
           <Col xs={12} lg={8}>
-            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
-              <h5 className="fw-bold mb-3 text-center text-lg-start">
+            <div className="dashboard-panel bg-white p-4 shadow-sm h-100 border border-light">
+              <h5 className="fw-bold mb-3">
                 Monthly Transactions (Year {yearlyData.year})
               </h5>
-              <div style={{ width: "100%", height: "300px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={transactionStatusData}
-                    margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip formatter={(value) => `${value} transactions`} />
-                    <Legend />
-                    <Bar
-                      dataKey="total"
-                      fill="#2196F3"
-                      name="Total Transactions"
-                    />
-                    <Bar
-                      dataKey="successful"
-                      fill="#4CAF50"
-                      name="Successful Deliveries"
-                    />
-                    <Bar
-                      dataKey="cancelled"
-                      fill="#E57373"
-                      name="Rescheduled Deliveries"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={transactionStatusData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar
+                    dataKey="total"
+                    fill="#2196F3"
+                    name="Total Transactions"
+                  />
+                  <Bar
+                    dataKey="successful"
+                    fill="#4CAF50"
+                    name="Successful Deliveries"
+                  />
+                  <Bar
+                    dataKey="cancelled"
+                    fill="#E57373"
+                    name="Rescheduled Deliveries"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Col>
 
+          {/* Pie Chart */}
           <Col xs={12} lg={4}>
-            <div className="dashboard-panel bg-white p-3 p-md-4 shadow-sm h-100 w-100 border border-light">
-              <h5 className="fw-bold mb-3 text-center text-lg-start">
+            <div className="dashboard-panel bg-white p-4 shadow-sm h-100 border border-light">
+              <h5 className="fw-bold mb-3">
                 Successful vs Cancelled (Year {yearlyData.year})
               </h5>
-
-              <div style={{ width: "100%", height: "300px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={yearlyData.distribution}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius="70%"
-                      labelLine={false}
-                    >
-                      {yearlyData.distribution.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => `${value} transactions`}
-                      contentStyle={{
-                        fontSize: "clamp(11px, 1.3vw, 15px)",
-                        borderRadius: "8px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div
-                style={{
-                  textAlign: "center",
-                  marginTop: "5px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "clamp(13px, 1.4vw, 16px)",
-                  fontWeight: "600",
-                }}
-              >
-                {yearlyData.distribution
-                  .sort((a, b) => (a.name === "Successful" ? -1 : 1))
-                  .map((entry, index) => (
-                    <div
-                      key={index}
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={yearlyData.distribution}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius="70%"
+                    labelLine={false}
+                  >
+                    {yearlyData.distribution.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="text-center mt-2">
+                {yearlyData.distribution.map((entry, i) => (
+                  <div key={i}>
+                    <span
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        flexWrap: "wrap",
-                        justifyContent: "center",
+                        display: "inline-block",
+                        width: 15,
+                        height: 15,
+                        backgroundColor: COLORS[i % COLORS.length],
+                        marginRight: 8,
                       }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: "15px",
-                          height: "15px",
-                          borderRadius: "3px",
-                          backgroundColor: COLORS[index % COLORS.length],
-                        }}
-                      ></span>
-                      <span>
-                        {entry.name}: {entry.value} (
-                        {((entry.value / yearlyData.total) * 100).toFixed(1)}%)
-                      </span>
-                    </div>
-                  ))}
+                    ></span>
+                    {entry.name}: {entry.value} (
+                    {((entry.value / yearlyData.total) * 100).toFixed(1)}%)
+                  </div>
+                ))}
               </div>
-
-              <div
-                className="text-muted small mt-2 fw-bold text-center"
-                style={{ fontSize: "clamp(11px, 1.1vw, 15px)" }}
-              >
+              <div className="text-muted small mt-2 fw-bold text-center">
                 Total: {yearlyData.total} transactions
               </div>
             </div>
           </Col>
         </Row>
       </div>
+
+      {/* ===================== FAQ MODAL ===================== */}
+      {/* FAQ MODAL */}
+      <Modal
+        show={showFAQ}
+        onHide={() => {
+          setShowFAQ(false);
+          setActiveFAQIndex(null);
+        }}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Guide for Dashboard</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          <p className="px-3 text-justify">
+            The Dashboard provides a quick overview of the transactions. You can
+            see the total transactions, successful deliveries, rescheduled
+            deliveries, and outgoing deliveries at a glance. The charts below
+            help visualize monthly trends and compare successful vs cancelled
+            deliveries.
+          </p>
+
+          <div className="px-3 mb-3">
+            {guideqst.map((faq, index) => (
+              <div key={index} className="mb-2">
+                <button
+                  className={`faq-btn w-100 text-start ${
+                    activeFAQIndex === index ? "active" : ""
+                  }`}
+                  onClick={() =>
+                    setActiveFAQIndex(activeFAQIndex === index ? null : index)
+                  }
+                >
+                  {faq.question}
+                </button>
+                <Collapse in={activeFAQIndex === index}>
+                  <div
+                    className={`faq-answer ${
+                      activeFAQIndex === index ? "" : "collapsing"
+                    }`}
+                  >
+                    <strong>Answer:</strong>
+                    <p className="mt-2 mb-0">{faq.answer}</p>
+                  </div>
+                </Collapse>
+              </div>
+            ))}
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer>
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+          >
+            Close
+          </button>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

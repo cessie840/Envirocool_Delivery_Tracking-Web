@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
 import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
-import { Button, Modal } from "react-bootstrap";
+import { Button, Modal, Collapse } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
+import { HiQuestionMarkCircle } from "react-icons/hi";
+
 
 const paymentOptions = [
   { label: "CASH", value: "Cash" },
@@ -295,12 +297,12 @@ const AddDelivery = () => {
         const previewUrl = URL.createObjectURL(file);
         validPreviews.push(previewUrl);
       } else {
-        ToastHelper.error(
-          `File "${file.name}" is not a valid JPEG or PNG image.`,
-          {
-            className: "toast-error",
-          }
-        );
+         ToastHelper.error(
+           `File "${file.name}" is not a valid JPEG or PNG image.`,
+           {
+             className: "toast-error",
+           }
+         );
       }
     });
 
@@ -656,10 +658,10 @@ const AddDelivery = () => {
     setLoading(true);
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
-      ToastHelper.error(
-        "Contact number must start with '09' and be exactly 11 digits.",
-        { className: "toast-error" }
-      );
+     ToastHelper.error(
+       "Contact number must start with '09' and be exactly 11 digits.",
+       { className: "toast-error" }
+     );
       setLoading(false);
       return;
     }
@@ -679,14 +681,13 @@ const AddDelivery = () => {
     form.customer_address = fullAddress;
 
     if (!form.payment_method) {
-      ToastHelper.error("Please select a payment method.", {
-        className: "toast-error",
-      });
+        ToastHelper.error("Please select a payment method.", {
+          className: "toast-error",
+        });
       setLoading(false);
       return;
     }
 
-    // ✅ Fixed proof of payment validation
     if (form.payment_method && proofFiles.length === 0) {
       ToastHelper.error("Please upload proof of payment.", {
         className: "toast-error",
@@ -695,7 +696,6 @@ const AddDelivery = () => {
       return;
     }
 
-    // ✅ Validate each order item
     for (const [index, item] of orderItems.entries()) {
       const quantity = parseInt(item.quantity);
       const unitCost = parseFloat(parsePeso(item.unit_cost));
@@ -714,31 +714,34 @@ const AddDelivery = () => {
       }
 
       if (!description) {
-        ToastHelper.error(`Please select an item name for item #${index + 1}`, {
-          className: "toast-error",
-        });
+            ToastHelper.error(
+              `Please select an item name for item #${index + 1}`,
+              {
+                className: "toast-error",
+              }
+            );
         setLoading(false);
         return;
       }
 
       if (isNaN(quantity) || quantity < 1) {
-        ToastHelper.error(
-          `Quantity for item #${index + 1} must be at least 1`,
-          {
-            className: "toast-error",
-          }
-        );
+         ToastHelper.error(
+           `Quantity for item #${index + 1} must be at least 1`,
+           {
+             className: "toast-error",
+           }
+         );
         setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
-        ToastHelper.error(
-          `Unit cost for item #${index + 1} must be a non-negative number`,
-          {
-            className: "toast-error",
-          }
-        );
+  ToastHelper.error(
+    `Unit cost for item #${index + 1} must be a non-negative number`,
+    {
+      className: "toast-error",
+    }
+  );
         setLoading(false);
         return;
       }
@@ -792,12 +795,13 @@ const AddDelivery = () => {
     formData.append(
       "customer_address",
       [
+     
+        form.province,
+        form.city,
+        form.barangay,
         form.house_no,
         form.street_name,
         form.barangay,
-        form.city,
-        form.province,
-
         "Philippines",
       ]
         .filter(Boolean)
@@ -818,22 +822,22 @@ const AddDelivery = () => {
         }
       );
 
-      ToastHelper.success("Delivery added successfully!", {
-        duration: 2500,
-        style: {
-          background: "#EBFAECFF",
-          border: "1px solid #91C793FF",
-          color: "#2E7D32",
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "0 auto",
-          justifyContent: "center",
-          borderRadius: "8px",
-        },
-      });
+    ToastHelper.success("Delivery added successfully!", {
+      duration: 2500,
+      style: {
+        background: "#EBFAECFF",
+        border: "1px solid #91C793FF",
+        color: "#2E7D32",
+        fontWeight: 600,
+        fontSize: "1.1rem",
+        textAlign: "center",
+        width: "100%",
+        maxWidth: "600px",
+        margin: "0 auto",
+        justifyContent: "center",
+        borderRadius: "8px",
+      },
+    });
       fetchProvinces();
 
       setReceiptData({
@@ -910,28 +914,71 @@ const AddDelivery = () => {
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
-      ToastHelper.error("Error saving delivery.", {
-        duration: 2500,
-        style: {
-          background: "#FFEAEA",
-          border: "1px solid #E57373",
-          color: "#C62828",
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "0 auto",
-          justifyContent: "center",
-          borderRadius: "8px",
-        },
-      });
+       ToastHelper.error("Error saving delivery.", {
+         duration: 2500,
+         style: {
+           background: "#FFEAEA",
+           border: "1px solid #E57373",
+           color: "#C62828",
+           fontWeight: 600,
+           fontSize: "1.1rem",
+           textAlign: "center",
+           width: "100%",
+           maxWidth: "600px",
+           margin: "0 auto",
+           justifyContent: "center",
+           borderRadius: "8px",
+         },
+       });
     } finally {
       setLoading(false);
     }
   };
+   const [showFAQ, setShowFAQ] = useState(false);
+   
+   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+const guideqst = [
+  {
+    question: "How can I add a delivery?",
+    answer:
+      "Complete all the required fields, then click the 'Add' button below to create a delivery transaction.",
+  },
+  {
+    question: "I want to add a new type of product.",
+    answer:
+      "In the 'Order Details' section, under 'Type of Product', type the new product name. An option to create it will appear—click it, and it will automatically be added to the product selection.",
+  },
+  {
+    question: "I want to add a new item to our product.",
+    answer:
+      "In the 'Order Details' section, first select the product you want to add an item to. Then, type the new item name in the item selection field. An option to create it will appear—click it, and it will automatically be saved under that product.",
+  },
+  {
+    question: "The customer wants multiple orders in one transaction.",
+    answer:
+      "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
+  },
+];
+
   return (
-    <AdminLayout title="Add Delivery" showSearch={false}>
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Add Delivery</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+    >
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
           className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
@@ -2224,7 +2271,6 @@ const AddDelivery = () => {
                           onClick={() => setShowImageViewer(false)}
                         />
                       </div>
-
                       <div className="d-flex align-items-center justify-content-center">
                         {proofPreviews.length > 1 && (
                           <button
@@ -2242,7 +2288,6 @@ const AddDelivery = () => {
                             ‹
                           </button>
                         )}
-
                         <div
                           id="summary-scroll-container"
                           style={{
@@ -2277,8 +2322,6 @@ const AddDelivery = () => {
                             />
                           ))}
                         </div>
-
-                        {/* Right scroll button (only if multiple images) */}
                         {proofPreviews.length > 1 && (
                           <button
                             className="btn btn-secondary ms-2"
@@ -2546,6 +2589,69 @@ const AddDelivery = () => {
           )}
         </div>
       </div>
+    
+
+      <Modal
+        show={showFAQ}
+        onHide={() => {
+          setShowFAQ(false);
+          setActiveFAQIndex(null);
+        }}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Guide for Adding A Delivery</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          <p className="px-3 text-justify">
+            This page allows you to add a new delivery. Fill in the required
+            details such as customer details, order detailes, and payment. Once
+            submitted, the delivery will be recorded and tracked in the system.
+          </p>
+
+          <div className="px-3 mb-3">
+            {guideqst.map((faq, index) => (
+              <div key={index} className="mb-2">
+                <button
+                  className={`faq-btn w-100 text-start ${
+                    activeFAQIndex === index ? "active" : ""
+                  }`}
+                  onClick={() =>
+                    setActiveFAQIndex(activeFAQIndex === index ? null : index)
+                  }
+                >
+                  {faq.question}
+                </button>
+                <Collapse in={activeFAQIndex === index}>
+                  <div
+                    className={`faq-answer ${
+                      activeFAQIndex === index ? "" : "collapsing"
+                    }`}
+                  >
+                    <strong>Answer:</strong>
+                    <p className="mt-2 mb-0">{faq.answer}</p>
+                  </div>
+                </Collapse>
+              </div>
+            ))}
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer>
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+          >
+            Close
+          </button>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

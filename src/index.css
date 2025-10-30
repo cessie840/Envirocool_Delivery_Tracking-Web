@@ -810,8 +810,8 @@ input::placeholder {
 .modal-content .list-group-item {
   --bs-list-group-bg: #f8f8f8 !important;
 }
-
-/* .btn-danger:hover {
+/* 
+.btn-danger:hover {
   background-color: white;
   border: 1px solid red;
   color: red;
@@ -821,6 +821,18 @@ input::placeholder {
 #personnel-cancel {
   font-size: 0.9rem;
   padding: 3px 15px;
+}
+
+.logout-btn:hover {
+  background-color: #f7c6c6 !important;
+  color: #bd0000 !important;
+  border: 1px solid #cc3636 !important;
+}
+
+.cancel-logout:hover {
+  background-color: #c7c7c7 !important;
+  color: #6e6e6e !important;
+  border: 1px solid #868686 !important;
 }
 
 .custom-nav-item {
@@ -1136,18 +1148,6 @@ h5{
   border-radius: 8px !important;
 }
 
-.logout-btn:hover {
-  background-color: #f7c6c6 !important;
-  color: #bd0000 !important;
-  border: 1px solid #cc3636 !important;
-}
-
-.cancel-logout:hover {
-  background-color: #c7c7c7 !important;
-  color: #6e6e6e !important;
-  border: 1px solid #868686 !important;
-}
-
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {
@@ -1387,3 +1387,76 @@ h5{
   height: 70vh;
   width: 100%;
 }
+
+.toast-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3); /* semi-transparent black */
+  z-index: 999; /* appear behind toast */
+  backdrop-filter: blur(1px); /* optional soft blur */
+  transition: opacity 0.3s ease;
+}
+/* in AdminDashboard.css */
+.faq-icon {
+  font-size: 2rem;
+  color: #4caf50;
+  cursor: pointer;
+  
+  transition: transform 0.2s, color 0.2s;
+}
+
+
+.faq-modal-dialog {
+  max-width: 600px;
+  width: 100%;
+}
+
+
+.faq-btn {
+  background-color: #ccd6de69;
+  color: rgb(13, 18, 98);
+  border: 1px solid #0d4f65;
+  transition: background-color 0.2s;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+}
+
+.faq-btn:hover {
+  background-color: #4174a4e6;
+  color: white;
+}
+
+.faq-btn.active {
+   background-color: #4174a4e6;
+  color: white;
+  margin-bottom: 5px;
+}
+
+.faq-answer {
+  border: 1px solid  #4174a4e6;
+  border-radius: 5px;
+  max-height: 500px; /* max possible height */
+  overflow: hidden;
+  transition: max-height 0.2s ease, padding 0.1s ease, opacity 0.3s ease;
+  opacity: 1;
+  padding: 1rem;
+}
+
+.faq-answer.collapsing {
+  max-height: 0;
+  padding: 0;
+  opacity: 0;
+}
+
+
+/* Optional: style the scrollbar if content is long */
+.faq-modal-dialog .modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+
+
