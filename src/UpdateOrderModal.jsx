@@ -25,9 +25,9 @@ const UpdateOrderModal = ({
     0
   );
 
+  const [showPaymentUpdate, setShowPaymentUpdate] = useState(false);
   const [productOptions, setProductOptions] = useState([]);
   const [itemOptions, setItemOptions] = useState({});
-  const [showPaymentUpdate, setShowPaymentUpdate] = useState(false);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -49,66 +49,6 @@ const UpdateOrderModal = ({
     fetchOptions();
   }, []);
 
-  useEffect(() => {
-    if (editableItems.length > 0) {
-      setProductOptions((prev) => {
-        const updated = [...prev];
-        editableItems.forEach((item) => {
-          if (
-            item.type_of_product &&
-            !updated.some((opt) => opt.value === item.type_of_product)
-          ) {
-            updated.push({
-              label: item.type_of_product,
-              value: item.type_of_product,
-            });
-          }
-        });
-        return updated;
-      });
-
-      setItemOptions((prev) => {
-        const updated = { ...prev };
-        editableItems.forEach((item) => {
-          if (item.type_of_product) {
-            if (!updated[item.type_of_product])
-              updated[item.type_of_product] = [];
-            if (
-              item.description &&
-              !updated[item.type_of_product].some(
-                (opt) => opt.value === item.description
-              )
-            ) {
-              updated[item.type_of_product].push({
-                label: item.description,
-                value: item.description,
-              });
-            }
-          }
-        });
-        return updated;
-      });
-    }
-  }, [editableItems]);
-
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined || value === "") return "";
-    const num = parseFloat(value.toString().replace(/,/g, ""));
-    if (isNaN(num)) return "";
-    return (
-      "₱" +
-      num.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
-    );
-  };
-
-  const parseCurrency = (value) => {
-    if (!value) return 0;
-    return parseFloat(value.toString().replace(/[₱,]/g, "")) || 0;
-  };
-
   const handleProductChange = (index, selected) => {
     const newItems = [...editableItems];
     newItems[index].type_of_product = selected?.value || "";
@@ -122,36 +62,14 @@ const UpdateOrderModal = ({
     setEditableItems(newItems);
   };
 
-  const handleDownPaymentChange = (e) => {
-    const down_payment = parseFloat(e.target.value) || 0;
-    const balance =
-      total - down_payment - (parseFloat(formData.full_payment) || 0);
-    setFormData({
-      ...formData,
-      down_payment,
-      balance: balance.toFixed(2),
-      total: total.toFixed(2),
-    });
-  };
-
-  const selectedPaymentOption = (() => {
-    for (const option of paymentOptions) {
-      if (option.options) {
-        const found = option.options.find(
-          (sub) => sub.value === formData.mode_of_payment
-        );
-        if (found) return found;
-      } else if (option.value === formData.mode_of_payment) {
-        return option;
-      }
-    }
-    return null;
-  })();
+  const selectedPaymentOption = paymentOptions.find(
+    (option) => option.value === formData.mode_of_payment
+  );
 
   const handleAddItem = () => {
     setEditableItems([
       ...editableItems,
-      { quantity: 1, type_of_product: "", description: "", unit_cost: 0 },
+      { quantity: "", type_of_product: "", description: "", unit_cost: "" },
     ]);
   };
 
@@ -198,6 +116,7 @@ const UpdateOrderModal = ({
       <Modal.Body className="bg-light">
         <Form>
           <Row className="p-3 bg-white rounded shadow-sm border mb-4">
+            {/* Left Column */}
             <Col md={6}>
               <h5 className="text-success fw-bold mb-3">
                 Customer Information
@@ -266,6 +185,7 @@ const UpdateOrderModal = ({
               </Form.Group>
             </Col>
 
+            {/* Right Column */}
             <Col md={6}>
               <h5 className="text-success fw-bold mb-3">Payment Details</h5>
 
@@ -298,155 +218,162 @@ const UpdateOrderModal = ({
                 </Form.Select>
               </Form.Group>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Down Payment</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={
-                    formData.down_payment !== ""
-                      ? `₱${formData.down_payment}`
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const rawValue = e.target.value.replace(/[₱,]/g, "");
-                    const numericValue =
-                      rawValue === "" ? "" : parseFloat(rawValue);
-                    const balance =
-                      total -
-                      (isNaN(numericValue) ? 0 : numericValue) -
-                      (parseFloat(formData.full_payment) || 0);
-
-                    setFormData({
-                      ...formData,
-                      down_payment: isNaN(numericValue) ? "" : numericValue,
-                      balance: balance.toFixed(2),
-                      total: total.toFixed(2),
-                    });
-                  }}
-                  onBlur={(e) => {
-                    const rawValue = e.target.value.replace(/[₱,]/g, "");
-                    const numericValue = parseFloat(rawValue);
-                    if (!isNaN(numericValue)) {
-                      setFormData({
-                        ...formData,
-                        down_payment: numericValue.toFixed(2),
-                        balance: (
-                          total -
-                          numericValue -
-                          (parseFloat(formData.full_payment) || 0)
-                        ).toFixed(2),
-                        total: total.toFixed(2),
-                      });
-                      e.target.value =
-                        "₱" +
-                        numericValue.toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        });
-                    }
-                  }}
-                  disabled={formData.payment_option === "Full Payment"}
-                />
-              </Form.Group>
-
-              {formData.payment_option === "Down Payment" && (
+              {/* Hide Down Payment for Full Payment */}
+              {formData.payment_option !== "Full Payment" && (
                 <Form.Group className="mb-3">
-                  <Form.Label>Remaining Balance</Form.Label>
+                  <Form.Label>Down Payment</Form.Label>
                   <Form.Control
                     type="text"
-                    value={`₱${remainingBalance.toLocaleString()}`}
-                    readOnly
-                    disabled
-                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
-                    style={{
-                      cursor: "not-allowed",
-                      opacity: 0.9,
+                    value={
+                      formData.down_payment !== ""
+                        ? `₱${formData.down_payment}`
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/[₱,]/g, "");
+                      const numericValue =
+                        rawValue === "" ? "" : parseFloat(rawValue);
+                      const balance =
+                        total -
+                        (isNaN(numericValue) ? 0 : numericValue) -
+                        (parseFloat(formData.full_payment) || 0);
+
+                      setFormData({
+                        ...formData,
+                        down_payment: isNaN(numericValue)
+                          ? ""
+                          : numericValue,
+                        balance: balance.toFixed(2),
+                        total: total.toFixed(2),
+                      });
+                    }}
+                    onBlur={(e) => {
+                      const rawValue = e.target.value.replace(/[₱,]/g, "");
+                      const numericValue = parseFloat(rawValue);
+                      if (!isNaN(numericValue)) {
+                        setFormData({
+                          ...formData,
+                          down_payment: numericValue.toFixed(2),
+                          balance: (
+                            total -
+                            numericValue -
+                            (parseFloat(formData.full_payment) || 0)
+                          ).toFixed(2),
+                          total: total.toFixed(2),
+                        });
+                        e.target.value =
+                          "₱" +
+                          numericValue.toLocaleString("en-PH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          });
+                      }
                     }}
                   />
                 </Form.Group>
               )}
 
+              {/* Remaining Balance and Payment Update visible only for Down Payment */}
               {formData.payment_option === "Down Payment" && (
-                <div className="mb-3">
-                  <Button
-                    variant="success"
-                    onClick={() => setShowPaymentUpdate(!showPaymentUpdate)}
-                  >
-                    {showPaymentUpdate
-                      ? "Hide Payment Update"
-                      : "Update Payment"}
-                  </Button>
-                </div>
-              )}
-
-              {showPaymentUpdate && (
                 <>
                   <Form.Group className="mb-3">
-                    <Form.Label>Final Payment (Balance Paid)</Form.Label>
+                    <Form.Label>Remaining Balance</Form.Label>
                     <Form.Control
                       type="text"
-                      value={
-                        formData.full_payment !== ""
-                          ? `₱${formData.full_payment}`
-                          : "₱0"
-                      }
-                      onChange={(e) => {
-                        const rawValue = e.target.value.replace(/[₱,]/g, "");
-                        const numericValue =
-                          rawValue === "" ? "" : parseFloat(rawValue);
-                        const balance =
-                          total -
-                          (parseFloat(formData.down_payment) || 0) -
-                          (isNaN(numericValue) ? 0 : numericValue);
+                      value={`₱${remainingBalance.toLocaleString()}`}
+                      readOnly
+                      disabled
+                      className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                      style={{ cursor: "not-allowed", opacity: 0.9 }}
+                    />
+                  </Form.Group>
 
-                        setFormData({
-                          ...formData,
-                          full_payment: isNaN(numericValue) ? "" : numericValue,
-                          balance: balance.toFixed(2),
-                        });
-                      }}
-                      onBlur={(e) => {
-                        const rawValue = e.target.value.replace(/[₱,]/g, "");
-                        const numericValue = parseFloat(rawValue);
-                        if (!isNaN(numericValue)) {
-                          setFormData({
-                            ...formData,
-                            full_payment: numericValue.toFixed(2),
-                            balance: (
+                  <div className="mb-3">
+                    <Button
+                      variant="success"
+                      onClick={() =>
+                        setShowPaymentUpdate(!showPaymentUpdate)
+                      }
+                    >
+                      {showPaymentUpdate
+                        ? "Hide Payment Update"
+                        : "Update Payment"}
+                    </Button>
+                  </div>
+
+                  {showPaymentUpdate && (
+                    <>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Final Payment (Balance Paid)</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={
+                            formData.full_payment !== ""
+                              ? `₱${formData.full_payment}`
+                              : "₱0"
+                          }
+                          onChange={(e) => {
+                            const rawValue = e.target.value.replace(/[₱,]/g, "");
+                            const numericValue =
+                              rawValue === "" ? "" : parseFloat(rawValue);
+                            const balance =
                               total -
                               (parseFloat(formData.down_payment) || 0) -
-                              numericValue
-                            ).toFixed(2),
-                          });
-                          e.target.value =
-                            "₱" +
-                            numericValue.toLocaleString("en-PH", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            });
-                        }
-                      }}
-                    />
-                  </Form.Group>
+                              (isNaN(numericValue) ? 0 : numericValue);
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>Date of Final Payment</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={formData.fbilling_date || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          fbilling_date: e.target.value,
-                        })
-                      }
-                    />
-                  </Form.Group>
+                            setFormData({
+                              ...formData,
+                              full_payment: isNaN(numericValue)
+                                ? ""
+                                : numericValue,
+                              balance: balance.toFixed(2),
+                            });
+                          }}
+                          onBlur={(e) => {
+                            const rawValue = e.target.value.replace(/[₱,]/g, "");
+                            const numericValue = parseFloat(rawValue);
+                            if (!isNaN(numericValue)) {
+                              setFormData({
+                                ...formData,
+                                full_payment: numericValue.toFixed(2),
+                                balance: (
+                                  total -
+                                  (parseFloat(formData.down_payment) || 0) -
+                                  numericValue
+                                ).toFixed(2),
+                              });
+                              e.target.value =
+                                "₱" +
+                                numericValue.toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                });
+                            }
+                          }}
+                        />
+                      </Form.Group>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label>Date of Final Payment</Form.Label>
+                        <Form.Control
+                          type="date"
+                          value={formData.fbilling_date || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              fbilling_date: e.target.value,
+                            })
+                          }
+                        />
+                      </Form.Group>
+                    </>
+                  )}
                 </>
               )}
             </Col>
           </Row>
 
+          {/* Items Ordered Section */}
           <div className="p-3 bg-white rounded shadow-sm border">
             <h5 className="text-success fw-bold mb-3 d-flex justify-content-between align-items-center">
               Items Ordered
@@ -476,13 +403,22 @@ const UpdateOrderModal = ({
                   <tr key={index}>
                     <td>
                       <Form.Control
-                        type="number"
-                        min={1}
-                        value={item.quantity}
+                        type="text"
+                        value={item.quantity ?? ""}
+                        placeholder="Qty"
                         onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*$/.test(value)) {
+                            const newItems = [...editableItems];
+                            newItems[index].quantity = value;
+                            setEditableItems(newItems);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value.trim();
                           const newItems = [...editableItems];
                           newItems[index].quantity =
-                            parseInt(e.target.value) || 1;
+                            value === "" ? "" : parseInt(value, 10);
                           setEditableItems(newItems);
                         }}
                       />
@@ -505,7 +441,7 @@ const UpdateOrderModal = ({
                         onChange={(selected) =>
                           handleProductChange(index, selected)
                         }
-                        placeholder="Select type"
+                        placeholder="Select product"
                         isSearchable
                       />
                     </td>
@@ -535,33 +471,57 @@ const UpdateOrderModal = ({
                     <td>
                       <Form.Control
                         type="text"
+                        inputMode="decimal"
                         value={
-                          item.unit_cost !== "" ? `₱${item.unit_cost}` : ""
+                          item.isEditing
+                            ? item.unit_cost
+                            : item.unit_cost
+                            ? "₱" +
+                              parseFloat(item.unit_cost).toLocaleString(
+                                "en-PH",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )
+                            : ""
                         }
-                        onChange={(e) => {
-                          const rawValue = e.target.value.replace(/[₱,]/g, "");
-                          const numericValue =
-                            rawValue === "" ? "" : parseFloat(rawValue);
-
+                        placeholder="₱0.00"
+                        onFocus={(e) => {
                           const newItems = [...editableItems];
-                          newItems[index].unit_cost = isNaN(numericValue)
-                            ? ""
-                            : numericValue;
+                          newItems[index].isEditing = true;
                           setEditableItems(newItems);
+                          e.target.value =
+                            item.unit_cost?.toString().replace(/[₱,]/g, "") ||
+                            "";
+                        }}
+                        onChange={(e) => {
+                          let raw = e.target.value.replace(/[₱,]/g, "");
+                          if (/^[0-9]*\.?[0-9]*$/.test(raw)) {
+                            const newItems = [...editableItems];
+                            newItems[index].unit_cost = raw;
+                            setEditableItems(newItems);
+                          }
                         }}
                         onBlur={(e) => {
-                          const rawValue = e.target.value.replace(/[₱,]/g, "");
-                          const numericValue = parseFloat(rawValue);
-                          if (!isNaN(numericValue)) {
-                            const newItems = [...editableItems];
-                            newItems[index].unit_cost = numericValue.toFixed(2);
+                          let raw = e.target.value.replace(/[₱,]/g, "");
+                          const num = parseFloat(raw);
+                          const newItems = [...editableItems];
+                          newItems[index].isEditing = false;
+
+                          if (!isNaN(num)) {
+                            newItems[index].unit_cost = num.toFixed(2);
                             setEditableItems(newItems);
                             e.target.value =
                               "₱" +
-                              numericValue.toLocaleString("en-PH", {
+                              num.toLocaleString("en-PH", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               });
+                          } else {
+                            newItems[index].unit_cost = "";
+                            setEditableItems(newItems);
+                            e.target.value = "";
                           }
                         }}
                       />

@@ -11,11 +11,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
-
+import html2pdf from "html2pdf.js";
 
 const paymentOptions = [
-  { label: "CASH", value: "Cash" },
-  { label: "BANK TRANSFER", value: "Bank Transfer" },
+  { label: "Cash", value: "Cash" },
+  { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
 import { components } from "react-select";
@@ -297,12 +297,12 @@ const AddDelivery = () => {
         const previewUrl = URL.createObjectURL(file);
         validPreviews.push(previewUrl);
       } else {
-         ToastHelper.error(
-           `File "${file.name}" is not a valid JPEG or PNG image.`,
-           {
-             className: "toast-error",
-           }
-         );
+        ToastHelper.error(
+          `File "${file.name}" is not a valid JPEG or PNG image.`,
+          {
+            className: "toast-error",
+          }
+        );
       }
     });
 
@@ -601,56 +601,116 @@ const AddDelivery = () => {
   };
 
   const handlePrintReceipt = () => {
+    const element = document.getElementById("receipt-section");
+    if (!element) {
+      console.error("Receipt section not found!");
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `ENV-Receipt_TN${transactionId}_${today}`;
+
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
     <html>
       <head>
-        <title>Delivery Receipt</title>
+        <title>${filename}</title>
         <style>
-          @page { size: auto; margin: 0; } 
-          body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: Arial, sans-serif; 
-            font-size: 11px; 
-            line-height: 1.4; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh;
+          @page {
+            size: auto;
+            margin: 10mm;
           }
-          .receipt { 
-            width: 80mm; /
-            margin: 0; 
-            padding: 10px; 
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #000;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
           }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
+          .receipt {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
           }
-          th, td { 
-            border: 1px solid #000; 
-            padding: 2px; 
-            text-align: left; 
-            font-size: 10px; 
+          .receipt p {
+            margin: 3px 0;
+          }
+
+          h3 {
+            font-size: 15px;
+            margin-bottom: 3px;
+          }
+          p, th {
+            font-size: 11px;
+          }
+          table, td {
+            font-size: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            text-align: left;
+          }
+          th {
+            background-color: #f5f5f5;
+            font-weight: bold;
           }
           .text-center { text-align: center; }
-          .fw-bold { font-weight: bold; }
           .text-end { text-align: right; }
+
+          small:contains("Date Generated"),
+          p:has(small:contains("Date Generated")) {
+            display: block;
+            margin-bottom: 5px;
+          }
+
+          .signature-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 60px;
+          }
+          .signature {
+            text-align: center;
+            width: 40%;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            font-size: 11px;
+          }
         </style>
       </head>
       <body>
-        <div class="receipt">${
-          document.getElementById("receipt-section").innerHTML
-        }</div>
+        <div class="receipt">
+         ${
+           element.innerHTML
+             .replace("Date Printed:", "Date Generated:")
+             .replace(/(<hr>|_{3,}|Prepared By[\s\S]*?Received By)/gi, "") +
+           `
+            <div class='signature-container'>
+              <div class='signature'>Prepared By</div>
+              <div class='signature'>Received By</div>
+            </div>
+          `
+         }
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            // Uncomment to auto-close the print window after printing
+            // window.onafterprint = () => window.close();
+          };
+        </script>
       </body>
     </html>
   `);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
   };
 
   const handleSubmit = async (e) => {
@@ -658,10 +718,10 @@ const AddDelivery = () => {
     setLoading(true);
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
-     ToastHelper.error(
-       "Contact number must start with '09' and be exactly 11 digits.",
-       { className: "toast-error" }
-     );
+      ToastHelper.error(
+        "Contact number must start with '09' and be exactly 11 digits.",
+        { className: "toast-error" }
+      );
       setLoading(false);
       return;
     }
@@ -681,9 +741,9 @@ const AddDelivery = () => {
     form.customer_address = fullAddress;
 
     if (!form.payment_method) {
-        ToastHelper.error("Please select a payment method.", {
-          className: "toast-error",
-        });
+      ToastHelper.error("Please select a payment method.", {
+        className: "toast-error",
+      });
       setLoading(false);
       return;
     }
@@ -714,34 +774,31 @@ const AddDelivery = () => {
       }
 
       if (!description) {
-            ToastHelper.error(
-              `Please select an item name for item #${index + 1}`,
-              {
-                className: "toast-error",
-              }
-            );
+        ToastHelper.error(`Please select an item name for item #${index + 1}`, {
+          className: "toast-error",
+        });
         setLoading(false);
         return;
       }
 
       if (isNaN(quantity) || quantity < 1) {
-         ToastHelper.error(
-           `Quantity for item #${index + 1} must be at least 1`,
-           {
-             className: "toast-error",
-           }
-         );
+        ToastHelper.error(
+          `Quantity for item #${index + 1} must be at least 1`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
-  ToastHelper.error(
-    `Unit cost for item #${index + 1} must be a non-negative number`,
-    {
-      className: "toast-error",
-    }
-  );
+        ToastHelper.error(
+          `Unit cost for item #${index + 1} must be a non-negative number`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
@@ -795,7 +852,6 @@ const AddDelivery = () => {
     formData.append(
       "customer_address",
       [
-     
         form.province,
         form.city,
         form.barangay,
@@ -822,22 +878,22 @@ const AddDelivery = () => {
         }
       );
 
-    ToastHelper.success("Delivery added successfully!", {
-      duration: 2500,
-      style: {
-        background: "#EBFAECFF",
-        border: "1px solid #91C793FF",
-        color: "#2E7D32",
-        fontWeight: 600,
-        fontSize: "1.1rem",
-        textAlign: "center",
-        width: "100%",
-        maxWidth: "600px",
-        margin: "0 auto",
-        justifyContent: "center",
-        borderRadius: "8px",
-      },
-    });
+      ToastHelper.success("Delivery added successfully!", {
+        duration: 2500,
+        style: {
+          background: "#EBFAECFF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
       fetchProvinces();
 
       setReceiptData({
@@ -914,52 +970,52 @@ const AddDelivery = () => {
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
-       ToastHelper.error("Error saving delivery.", {
-         duration: 2500,
-         style: {
-           background: "#FFEAEA",
-           border: "1px solid #E57373",
-           color: "#C62828",
-           fontWeight: 600,
-           fontSize: "1.1rem",
-           textAlign: "center",
-           width: "100%",
-           maxWidth: "600px",
-           margin: "0 auto",
-           justifyContent: "center",
-           borderRadius: "8px",
-         },
-       });
+      ToastHelper.error("Error saving delivery.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
     } finally {
       setLoading(false);
     }
   };
-   const [showFAQ, setShowFAQ] = useState(false);
-   
-   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+  const [showFAQ, setShowFAQ] = useState(false);
 
-const guideqst = [
-  {
-    question: "How can I add a delivery?",
-    answer:
-      "Complete all the required fields, then click the 'Add' button below to create a delivery transaction.",
-  },
-  {
-    question: "I want to add a new type of product.",
-    answer:
-      "In the 'Order Details' section, under 'Type of Product', type the new product name. An option to create it will appear—click it, and it will automatically be added to the product selection.",
-  },
-  {
-    question: "I want to add a new item to our product.",
-    answer:
-      "In the 'Order Details' section, first select the product you want to add an item to. Then, type the new item name in the item selection field. An option to create it will appear—click it, and it will automatically be saved under that product.",
-  },
-  {
-    question: "The customer wants multiple orders in one transaction.",
-    answer:
-      "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
-  },
-];
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I add a delivery?",
+      answer:
+        "Complete all the required fields, then click the 'Add' button below to create a delivery transaction.",
+    },
+    {
+      question: "I want to add a new type of product.",
+      answer:
+        "In the 'Order Details' section, under 'Type of Product', type the new product name. An option to create it will appear—click it, and it will automatically be added to the product selection.",
+    },
+    {
+      question: "I want to add a new item to our product.",
+      answer:
+        "In the 'Order Details' section, first select the product you want to add an item to. Then, type the new item name in the item selection field. An option to create it will appear—click it, and it will automatically be saved under that product.",
+    },
+    {
+      question: "The customer wants multiple orders in one transaction.",
+      answer:
+        "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
+    },
+  ];
 
   return (
     <AdminLayout
@@ -1413,7 +1469,7 @@ const guideqst = [
                             console.error("Error saving product type", err);
                           }
                         }}
-                        placeholder="Select type"
+                        placeholder="SELECT PRODUCT"
                         isSearchable
                         components={{ MenuList: CustomMenuList }}
                         onEdit={() =>
@@ -1847,7 +1903,7 @@ const guideqst = [
                       <label
                         className="form-check-label"
                         htmlFor={method.toLowerCase().replace(" ", "_")}
-                        style={{ fontSize: "18px", fontWeight: "normal" }}
+                        style={{ fontSize: "17px", fontWeight: "normal" }}
                       >
                         {method}
                       </label>
@@ -2062,6 +2118,7 @@ const guideqst = [
               >
                 <Modal.Title>Proof of Payment Preview</Modal.Title>
               </Modal.Header>
+
               <Modal.Body className="text-center bg-light">
                 {proofPreviews.length > 0 ? (
                   <div className="d-flex align-items-center justify-content-center">
@@ -2072,8 +2129,9 @@ const guideqst = [
                           const container = document.getElementById(
                             "preview-scroll-container"
                           );
+                          const imageWidth = container.offsetWidth;
                           container.scrollBy({
-                            left: -320,
+                            left: -imageWidth,
                             behavior: "smooth",
                           });
                         }}
@@ -2081,18 +2139,22 @@ const guideqst = [
                         ‹
                       </button>
                     )}
+
                     <div
                       id="preview-scroll-container"
                       style={{
                         display: "flex",
                         overflowX: "auto",
+                        scrollSnapType: "x mandatory",
                         scrollBehavior: "smooth",
                         width: "700px",
-                        height: "700px",
+                        height: "720px",
                         gap: "10px",
                         padding: "5px",
                         border: "2px solid #ccc",
                         borderRadius: "10px",
+                        justifyContent:
+                          proofPreviews.length === 1 ? "center" : "flex-start",
                       }}
                     >
                       {proofPreviews.map((preview, index) => (
@@ -2102,14 +2164,15 @@ const guideqst = [
                           alt={`Proof of Payment ${index + 1}`}
                           style={{
                             width: "700px",
-                            height: "700px",
+                            height: "680px",
                             objectFit: "contain",
                             flexShrink: 0,
+                            scrollSnapAlign: "center",
                           }}
-                          className="border border-secondary border-1"
                         />
                       ))}
                     </div>
+
                     {proofPreviews.length > 1 && (
                       <button
                         className="btn btn-secondary ms-2"
@@ -2117,7 +2180,11 @@ const guideqst = [
                           const container = document.getElementById(
                             "preview-scroll-container"
                           );
-                          container.scrollBy({ left: 320, behavior: "smooth" });
+                          const imageWidth = container.offsetWidth;
+                          container.scrollBy({
+                            left: imageWidth,
+                            behavior: "smooth",
+                          });
                         }}
                       >
                         ›
@@ -2129,6 +2196,7 @@ const guideqst = [
                 )}
               </Modal.Body>
             </Modal>
+
             <Modal
               show={showSummaryModal}
               onHide={() => setShowSummaryModal(false)}
@@ -2204,7 +2272,7 @@ const guideqst = [
                       </p>
                     </>
                   )}
-                  <strong className="fs-5">Order Items:</strong>
+                  {/* <strong className="fs-5">Order Items:</strong> */}
                   <table className="table table-bordered table-sm mt-2">
                     <thead className="table-success text-center align-middle">
                       <tr>
@@ -2279,8 +2347,9 @@ const guideqst = [
                               const container = document.getElementById(
                                 "summary-scroll-container"
                               );
+                              const imageWidth = container.offsetWidth;
                               container.scrollBy({
-                                left: -320,
+                                left: -imageWidth,
                                 behavior: "smooth",
                               });
                             }}
@@ -2292,19 +2361,21 @@ const guideqst = [
                           id="summary-scroll-container"
                           style={{
                             display: "flex",
-                            justifyContent:
-                              proofPreviews.length === 1
-                                ? "center"
-                                : "flex-start", // ✅ Center if 1 image
                             overflowX:
                               proofPreviews.length > 1 ? "auto" : "hidden",
+                            scrollSnapType: "x mandatory",
                             scrollBehavior: "smooth",
                             width: "600px",
-                            height: "320px",
+                            height: "450px",
                             gap: "10px",
                             padding: "10px",
                             border: "1px solid #ccc",
                             borderRadius: "5px",
+                            justifyContent:
+                              proofPreviews.length === 1
+                                ? "center"
+                                : "flex-start",
+                            backgroundColor: "white",
                           }}
                         >
                           {proofPreviews.map((preview, index) => (
@@ -2313,15 +2384,18 @@ const guideqst = [
                               src={preview}
                               alt={`Proof of Payment ${index + 1}`}
                               style={{
-                                width: "300px",
-                                height: "300px",
+                                width: "600px",
+                                height: "400px",
                                 objectFit: "contain",
                                 flexShrink: 0,
+                                scrollSnapAlign: "center",
+                                border: "1px solid #aaa",
                               }}
                               className="img-fluid"
                             />
                           ))}
                         </div>
+
                         {proofPreviews.length > 1 && (
                           <button
                             className="btn btn-secondary ms-2"
@@ -2329,8 +2403,9 @@ const guideqst = [
                               const container = document.getElementById(
                                 "summary-scroll-container"
                               );
+                              const imageWidth = container.offsetWidth;
                               container.scrollBy({
-                                left: 320,
+                                left: imageWidth,
                                 behavior: "smooth",
                               });
                             }}
@@ -2477,8 +2552,15 @@ const guideqst = [
                           {item.type_of_product} - {item.description}
                         </td>
                         <td className="text-end">
-                          {formatPeso(parseFloat(item.unit_cost || 0))}
+                          {formatPeso(
+                            parseFloat(
+                              (item.unit_cost || "0")
+                                .toString()
+                                .replace(/[^0-9.]/g, "")
+                            )
+                          )}
                         </td>
+
                         <td className="text-end">
                           {formatPeso(
                             parseFloat(
@@ -2589,7 +2671,6 @@ const guideqst = [
           )}
         </div>
       </div>
-    
 
       <Modal
         show={showFAQ}

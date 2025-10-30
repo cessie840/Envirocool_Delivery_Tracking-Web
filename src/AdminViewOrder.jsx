@@ -515,12 +515,17 @@ const ViewOrder = () => {
                     const container = document.getElementById(
                       "proof-scroll-container"
                     );
-                    container.scrollBy({ left: -320, behavior: "smooth" });
+                    const imageWidth = container.clientWidth;
+                    container.scrollBy({
+                      left: -imageWidth,
+                      behavior: "smooth",
+                    });
                   }}
                 >
                   ‹
                 </button>
               )}
+
               <div
                 id="proof-scroll-container"
                 style={{
@@ -528,11 +533,12 @@ const ViewOrder = () => {
                   overflowX: "auto",
                   scrollBehavior: "smooth",
                   width: "700px",
-                  height: "700px",
+                  height: "720px",
                   gap: "10px",
                   padding: "5px",
                   border: "2px solid #ccc",
                   borderRadius: "10px",
+                  scrollSnapType: "x mandatory",
                 }}
               >
                 {proofUrl.map((url, index) => (
@@ -542,14 +548,15 @@ const ViewOrder = () => {
                     alt={`${modalTitle} ${index + 1}`}
                     style={{
                       width: "700px",
-                      height: "700px",
+                      height: "680px",
                       objectFit: "contain",
                       flexShrink: 0,
+                      scrollSnapAlign: "center",
                     }}
-                    className="border border-secondary border-1"
                   />
                 ))}
               </div>
+
               {proofUrl.length > 1 && (
                 <button
                   className="btn btn-secondary ms-2"
@@ -557,7 +564,11 @@ const ViewOrder = () => {
                     const container = document.getElementById(
                       "proof-scroll-container"
                     );
-                    container.scrollBy({ left: 320, behavior: "smooth" });
+                    const imageWidth = container.clientWidth;
+                    container.scrollBy({
+                      left: imageWidth,
+                      behavior: "smooth",
+                    });
                   }}
                 >
                   ›

@@ -338,7 +338,7 @@ input::placeholder {
 .MOP {
   border: 1px solid #ccc;
   border-radius: 5px;
-  padding: 0.28rem;
+  padding: 0.37rem;
 }
 
 .MOP label {
@@ -357,6 +357,11 @@ input::placeholder {
   padding: 12px;
   text-align: center;
   text-transform: uppercase;
+}
+.order-table td {
+  font-size: 0.9rem;
+  vertical-align: middle;
+  font-weight: 500;
 }
 
 .order-table th {
