@@ -87,6 +87,7 @@ CREATE TABLE Transactions (
     balance DECIMAL(10,2),
     total DECIMAL(10,2),
 	proof_of_payment TEXT,
+	 payment_status ENUM('Fully Paid', 'Partially Paid'),
     tracking_number VARCHAR(20),
     status ENUM('Pending', 'To Ship', 'Out for Delivery', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     completed_at DATETIME NULL,
