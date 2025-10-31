@@ -20,8 +20,8 @@ const DeliveryDetails = () => {
     down_payment: "",
     balance: "",
     total: "",
-    full_payment: "0",  // Added to match ViewOrder
-    fbilling_date: "",   // Added to match ViewOrder
+    full_payment: "0",
+    fbilling_date: "",
   });
   const [transactionId, setTransactionId] = useState(null);
 
@@ -34,6 +34,7 @@ const DeliveryDetails = () => {
     if (!dateString) return "";
     return dateString.split("T")[0] || dateString.split(" ")[0];
   };
+
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
@@ -52,11 +53,11 @@ const DeliveryDetails = () => {
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
-      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,  // Added cache-busting
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,
       {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Cache-Control': 'no-cache',
+          "Cache-Control": "no-cache",
         },
       }
     )
@@ -83,8 +84,8 @@ const DeliveryDetails = () => {
           down_payment: parseFloat(data.down_payment) || 0,
           balance: parseFloat(data.balance) || 0,
           total: parseFloat(data.total) || 0,
-          full_payment: parseFloat(data.full_payment) || 0,  // Added
-          fbilling_date: data.fbilling_date || "",           // Added
+          full_payment: parseFloat(data.full_payment) || 0,
+          fbilling_date: data.fbilling_date || "",
         });
 
         setShowModal(true);
@@ -95,65 +96,19 @@ const DeliveryDetails = () => {
   const handleSubmit = () => {
     const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
     if (hasInvalidQuantity) {
-      ToastHelper.error("One or more items have invalid quantity.", {
-        duration: 2500,
-        style: {
-          background: "#FFEAEA",
-          border: "1px solid #E57373",
-          color: "#C62828",
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "0 auto",
-          justifyContent: "center",
-          borderRadius: "8px",
-        },
-      });
+      ToastHelper.error("One or more items have invalid quantity.");
       return;
     }
 
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
       ToastHelper.error(
-        "Contact number must start with '09' and be exactly 11 digits.",
-        {
-          duration: 2500,
-          style: {
-            background: "#FFEAEA",
-            border: "1px solid #E57373",
-            color: "#C62828",
-            fontWeight: 600,
-            fontSize: "1.1rem",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "600px",
-            margin: "0 auto",
-            justifyContent: "center",
-            borderRadius: "8px",
-          },
-        }
+        "Contact number must start with '09' and be exactly 11 digits."
       );
       return;
     }
 
     if (!transactionId) {
-      ToastHelper.error("Transaction ID is missing — please try again.", {
-        duration: 2500,
-        style: {
-          background: "#FFEAEA",
-          border: "1px solid #E57373",
-            color: "#C62828",
-            fontWeight: 600,
-            fontSize: "1.1rem",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "600px",
-            margin: "0 auto",
-            justifyContent: "center",
-            borderRadius: "8px",
-          },
-        });
+      ToastHelper.error("Transaction ID is missing — please try again.");
       return;
     }
 
@@ -163,14 +118,14 @@ const DeliveryDetails = () => {
     );
 
     const down_payment = parseFloat(formData.down_payment) || 0;
-    const full_payment = parseFloat(formData.full_payment) || 0;  // Added
-    const balance = total - down_payment - full_payment;  // Fixed: Now includes full_payment
+    const full_payment = parseFloat(formData.full_payment) || 0;
+    const balance = total - down_payment - full_payment;
 
     const payload = {
       transaction_id: transactionId,
       ...formData,
       total,
-      balance,  // Now correct
+      balance,
       items: editableItems,
     };
 
@@ -182,67 +137,16 @@ const DeliveryDetails = () => {
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          ToastHelper.success("Transaction updated successfully!", {
-            duration: 2500,
-            style: {
-              background: "#EBFAECFF",
-              border: "1px solid #91C793FF",
-              color: "#2E7D32",
-              fontWeight: 600,
-              fontSize: "1.1rem",
-              textAlign: "center",
-              width: "100%",
-              maxWidth: "600px",
-              margin: "0 auto",
-              justifyContent: "center",
-              borderRadius: "8px",
-            },
-          });
-
-          // Refresh deliveries list
+          ToastHelper.success("Transaction updated successfully!");
           fetchDeliveries();
           setShowModal(false);
         } else {
-          console.error("Update failed:", response.message);
-          ToastHelper.error(
-            "Update failed: " + (response.message || "Unknown error"),
-            {
-              duration: 2500,
-              style: {
-                background: "#FFEAEA",
-                border: "1px solid #E57373",
-                color: "#C62828",
-                fontWeight: 600,
-                fontSize: "1.1rem",
-                textAlign: "center",
-                width: "100%",
-                maxWidth: "600px",
-                margin: "0 auto",
-                justifyContent: "center",
-                borderRadius: "8px",
-              },
-            }
-          );
+          ToastHelper.error("Update failed: " + response.message);
         }
       })
       .catch((err) => {
         console.error("Update error:", err);
-        ToastHelper.error("An unexpected error occurred.", {
-          duration: 2500,
-          style: {
-            background: "#FFEAEA",
-            border: "1px solid #E57373",
-            color: "#C62828",
-            fontWeight: 600,
-            fontSize: "1.1rem",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "600px",
-            margin: "0 auto",
-            justifyContent: "center",
-            borderRadius: "8px",
-          },
-        });
+        ToastHelper.error("An unexpected error occurred.");
       });
   };
 
@@ -285,6 +189,8 @@ const DeliveryDetails = () => {
         customer_name: item.customer_name,
         tracking_number: item.tracking_number,
         total: item.total,
+        balance:
+          parseFloat(String(item.balance || "0").replace(/,/g, "")) || 0,
         delivery_status: item.delivery_status,
         items: [],
       };
@@ -351,79 +257,84 @@ const DeliveryDetails = () => {
         </thead>
         <tbody>
           {paginatedDeliveries.length > 0 ? (
-            paginatedDeliveries.map((group, index) => (
-              <tr key={index} className="delivery-table-hover">
-                <td>{group.transaction_id}</td>
-                <td>{group.tracking_number}</td>
-                <td>{group.customer_name}</td>
+            paginatedDeliveries.map((group, index) => {
+              const numericBalance =
+                parseFloat(String(group.balance || "0").replace(/,/g, "")) || 0;
 
-                <td>
-                  <span
-                    style={{
-                      backgroundColor:
-                        group.delivery_status === "Delivered"
-                          ? "#C6FCD3"
-                          : group.delivery_status === "Cancelled"
-                          ? "#FDE0E0"
-                          : group.delivery_status === "Pending"
-                          ? "#FFF5D7"
-                          : group.delivery_status === "Out for Delivery"
-                          ? "#d2e6f5ff"
-                          : "transparent",
-                      color:
-                        group.delivery_status === "Delivered"
-                          ? "#3E5F44"
-                          : group.delivery_status === "Cancelled"
-                          ? "red"
-                          : group.delivery_status === "Pending"
-                          ? "#FF9D23"
-                          : group.delivery_status === "Out for Delivery"
-                          ? "#1762b1ff"
-                          : "black",
-                      padding: "5px",
-                      borderRadius: "8px",
-                      display: "inline-block",
-                      minWidth: "80px",
-                      textAlign: "center",
-                      fontSize: "0.85rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {group.delivery_status}
-                  </span>
-                </td>
-                <td className="align-middle text-center">
-                  <div className="action-btn d-flex justify-content-center gap-2 py-2">
-                    <button
-                      className="btn btn-view"
-                      onClick={() =>
-                        navigate(`/view-delivery/${group.transaction_id}`)
-                      }
+              return (
+                <tr key={index} className="delivery-table-hover">
+                  <td>{group.transaction_id}</td>
+                  <td>{group.tracking_number}</td>
+                  <td>{group.customer_name}</td>
+
+                  <td>
+                    <span
+                      style={{
+                        backgroundColor:
+                          group.delivery_status === "Delivered"
+                            ? "#C6FCD3"
+                            : group.delivery_status === "Cancelled"
+                            ? "#FDE0E0"
+                            : group.delivery_status === "Pending"
+                            ? "#FFF5D7"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#d2e6f5ff"
+                            : "transparent",
+                        color:
+                          group.delivery_status === "Delivered"
+                            ? "#3E5F44"
+                            : group.delivery_status === "Cancelled"
+                            ? "red"
+                            : group.delivery_status === "Pending"
+                            ? "#FF9D23"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#1762b1ff"
+                            : "black",
+                        padding: "5px",
+                        borderRadius: "8px",
+                        display: "inline-block",
+                        minWidth: "80px",
+                        textAlign: "center",
+                        fontSize: "0.85rem",
+                        fontWeight: "600",
+                      }}
                     >
-                      View
-                    </button>
-                    {group.delivery_status === "Out for Delivery" ||
-                    group.delivery_status === "Delivered" ||
-                    group.delivery_status === "Cancelled" ? (
+                      {group.delivery_status}
+                    </span>
+                  </td>
+
+                  <td className="align-middle text-center">
+                    <div className="action-btn d-flex justify-content-center gap-2 py-2">
                       <button
-                        className="btn upd-btn"
-                        disabled
-                        style={{ opacity: 0.5, cursor: "not-allowed" }}
+                        className="btn btn-view"
+                        onClick={() =>
+                          navigate(`/view-delivery/${group.transaction_id}`)
+                        }
                       >
-                        Update
+                        View
                       </button>
-                    ) : (
+
                       <button
                         className="btn upd-btn"
                         onClick={() => handleUpdate(group.transaction_id)}
+                        disabled={
+                          ["Out for Delivery", "Delivered", "Cancelled"].includes(
+                            group.delivery_status
+                          ) || numericBalance <= 0
+                        }
+                        style={
+                          numericBalance <= 0
+                            ? { opacity: 0.5, cursor: "not-allowed" }
+                            : {}
+                        }
                       >
-                        Update
+                        Update Payment
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td colSpan="7" className="text-center py-4">

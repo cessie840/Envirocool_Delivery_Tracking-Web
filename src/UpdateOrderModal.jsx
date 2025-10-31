@@ -1,15 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useRef } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
-import Select from "react-select";
-import CreatableSelect from "react-select/creatable";
-import axios from "axios";
-import { FaRegTrashAlt, FaPlusCircle } from "react-icons/fa";
 import Swal from "sweetalert2";
-
-const paymentOptions = [
-  { label: "Cash", value: "Cash" },
-  { label: "Bank Transfer", value: "Bank Transfer" },
-];
 
 const UpdateOrderModal = ({
   show,
@@ -17,60 +8,34 @@ const UpdateOrderModal = ({
   handleSubmit,
   formData,
   setFormData,
-  editableItems,
-  setEditableItems,
 }) => {
-  const total = editableItems.reduce(
-    (sum, item) => sum + item.quantity * item.unit_cost,
-    0
+  const [previousValue, setPreviousValue] = useState(
+    formData.full_payment || "0"
   );
 
-  const [showPaymentUpdate, setShowPaymentUpdate] = useState(false);
-  const [productOptions, setProductOptions] = useState([]);
-  const [itemOptions, setItemOptions] = useState({});
+  const [proofFiles, setProofFiles] = useState([]);
+  const [selectedFileNames, setSelectedFileNames] = useState([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const proofFileRef = useRef(null);
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const productsRes = await axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_products.php"
-        );
-        setProductOptions(productsRes.data);
+  const handleProofFileChange = (e) => {
+    const files = Array.from(e.target.files);
 
-        const itemsRes = await axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_items.php"
-        );
-        setItemOptions(itemsRes.data);
-      } catch (err) {
-        console.error("Error fetching options", err);
-      }
-    };
+    const validFiles = files.filter((file) =>
+      ["image/jpeg", "image/png"].includes(file.type)
+    );
 
-    fetchOptions();
-  }, []);
+    if (validFiles.length !== files.length) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid File Type",
+        text: "Only JPEG and PNG images are allowed.",
+      });
+      return;
+    }
 
-  const handleProductChange = (index, selected) => {
-    const newItems = [...editableItems];
-    newItems[index].type_of_product = selected?.value || "";
-    newItems[index].description = "";
-    setEditableItems(newItems);
-  };
-
-  const handleItemChange = (index, selected) => {
-    const newItems = [...editableItems];
-    newItems[index].description = selected?.value || "";
-    setEditableItems(newItems);
-  };
-
-  const selectedPaymentOption = paymentOptions.find(
-    (option) => option.value === formData.mode_of_payment
-  );
-
-  const handleAddItem = () => {
-    setEditableItems([
-      ...editableItems,
-      { quantity: "", type_of_product: "", description: "", unit_cost: "" },
-    ]);
+    setProofFiles(validFiles);
+    setSelectedFileNames(validFiles.map((f) => f.name));
   };
 
   const handleSaveChanges = () => {
@@ -89,8 +54,9 @@ const UpdateOrderModal = ({
           down_payment: parseFloat(formData.down_payment) || 0,
           full_payment: parseFloat(formData.full_payment) || 0,
           balance: parseFloat(formData.balance) || 0,
-          total: parseFloat(formData.total) || 0,
         };
+
+        cleanFormData.proof_files = proofFiles;
 
         setFormData(cleanFormData);
         handleSubmit();
@@ -98,493 +64,252 @@ const UpdateOrderModal = ({
     });
   };
 
-  const remainingBalance =
-    total -
-    (parseFloat(formData.down_payment) || 0) -
-    (parseFloat(formData.full_payment) || 0);
+  const formatCurrency = (value) => {
+    const num = parseFloat(value);
+    return isNaN(num)
+      ? "₱0.00"
+      : "₱" +
+          num.toLocaleString("en-PH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+  };
+
+  const handleFullPaymentChange = (e) => {
+    let rawValue = e.target.value.replace(/[^0-9.]/g, "");
+
+    const parts = rawValue.split(".");
+    if (parts.length > 2) rawValue = parts[0] + "." + parts.slice(1).join("");
+
+    const num = parseFloat(rawValue) || 0;
+
+    const total = parseFloat(formData.total || 0);
+    const downPayment = parseFloat(formData.down_payment) || 0;
+    const remaining = total - downPayment;
+
+    if (num > remaining) {
+      Swal.fire({
+        icon: "error",
+        title: "Payment exceeds balance!",
+        text: `The entered amount (₱${num.toLocaleString("en-PH", {
+          minimumFractionDigits: 2,
+        })}) exceeds the remaining balance (₱${remaining.toLocaleString(
+          "en-PH",
+          { minimumFractionDigits: 2 }
+        )}).`,
+        confirmButtonColor: "#d33",
+      });
+      setFormData({ ...formData, full_payment: previousValue });
+      return;
+    }
+
+    const newBalance = (remaining - num).toFixed(2);
+
+    setPreviousValue(rawValue);
+    setFormData({
+      ...formData,
+      full_payment: rawValue,
+      balance: newBalance,
+    });
+  };
+
+  const handleFullPaymentBlur = (e) => {
+    const num = parseFloat(formData.full_payment);
+    if (!isNaN(num)) {
+      setFormData({ ...formData, full_payment: num.toFixed(2) });
+      e.target.value = formatCurrency(num);
+    } else {
+      e.target.value = "₱0.00";
+    }
+  };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
-      <Modal.Header
-        closeButton
-        closeVariant="white"
-        style={{ backgroundColor: "#008f4c" }}
+    <>
+      <Modal
+        show={show}
+        onHide={handleClose}
+        centered
+        className="update-payment-modal"
       >
-        <Modal.Title className="text-white">Update Delivery Info</Modal.Title>
-      </Modal.Header>
+        <Modal.Header
+          closeButton
+          closeVariant="white"
+          style={{ backgroundColor: "#008f4c", opacity: 0.85 }}
+        >
+          <Modal.Title className="text-white">Update Payment</Modal.Title>
+        </Modal.Header>
 
-      <Modal.Body className="bg-light">
-        <Form>
-          <Row className="p-3 bg-white rounded shadow-sm border mb-4">
-            {/* Left Column */}
-            <Col md={6}>
-              <h5 className="text-success fw-bold mb-3">
-                Customer Information
-              </h5>
-              <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="customer_name"
-                  value={formData.customer_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, customer_name: e.target.value })
-                  }
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Address</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="customer_address"
-                  value={formData.customer_address}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      customer_address: e.target.value,
-                    })
-                  }
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Contact</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="customer_contact"
-                  value={formData.customer_contact}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (/^\d{0,11}$/.test(value)) {
-                      setFormData({ ...formData, customer_contact: value });
-                    }
-                  }}
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Target Delivery Date</Form.Label>
-                <Form.Control
-                  type="date"
-                  name="target_date_delivery"
-                  value={
-                    formData.target_date_delivery
-                      ? new Date(formData.target_date_delivery)
-                          .toISOString()
-                          .split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      target_date_delivery: e.target.value,
-                    })
-                  }
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Right Column */}
-            <Col md={6}>
-              <h5 className="text-success fw-bold mb-3">Payment Details</h5>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Payment Method</Form.Label>
-                <Select
-                  options={paymentOptions}
-                  value={selectedPaymentOption}
-                  onChange={(selected) =>
-                    setFormData({
-                      ...formData,
-                      mode_of_payment: selected.value,
-                    })
-                  }
-                  placeholder="Select Payment Method"
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Payment Option</Form.Label>
-                <Form.Select
-                  name="payment_option"
-                  value={formData.payment_option}
-                  onChange={(e) =>
-                    setFormData({ ...formData, payment_option: e.target.value })
-                  }
-                >
-                  <option value="Full Payment">Full Payment</option>
-                  <option value="Down Payment">Down Payment</option>
-                </Form.Select>
-              </Form.Group>
-
-              {/* Hide Down Payment for Full Payment */}
-              {formData.payment_option !== "Full Payment" && (
+        <Modal.Body className="bg-white">
+          <Form>
+            <Row className="px-3">
+              <Col>
                 <Form.Group className="mb-3">
-                  <Form.Label>Down Payment</Form.Label>
+                  <Form.Label>Payment Option</Form.Label>
                   <Form.Control
                     type="text"
-                    value={
-                      formData.down_payment !== ""
-                        ? `₱${formData.down_payment}`
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const rawValue = e.target.value.replace(/[₱,]/g, "");
-                      const numericValue =
-                        rawValue === "" ? "" : parseFloat(rawValue);
-                      const balance =
-                        total -
-                        (isNaN(numericValue) ? 0 : numericValue) -
-                        (parseFloat(formData.full_payment) || 0);
-
-                      setFormData({
-                        ...formData,
-                        down_payment: isNaN(numericValue)
-                          ? ""
-                          : numericValue,
-                        balance: balance.toFixed(2),
-                        total: total.toFixed(2),
-                      });
-                    }}
-                    onBlur={(e) => {
-                      const rawValue = e.target.value.replace(/[₱,]/g, "");
-                      const numericValue = parseFloat(rawValue);
-                      if (!isNaN(numericValue)) {
-                        setFormData({
-                          ...formData,
-                          down_payment: numericValue.toFixed(2),
-                          balance: (
-                            total -
-                            numericValue -
-                            (parseFloat(formData.full_payment) || 0)
-                          ).toFixed(2),
-                          total: total.toFixed(2),
-                        });
-                        e.target.value =
-                          "₱" +
-                          numericValue.toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          });
-                      }
-                    }}
+                    value={formData.payment_option || ""}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
                   />
                 </Form.Group>
-              )}
 
-              {/* Remaining Balance and Payment Update visible only for Down Payment */}
-              {formData.payment_option === "Down Payment" && (
-                <>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Remaining Balance</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={`₱${remainingBalance.toLocaleString()}`}
-                      readOnly
-                      disabled
-                      className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
-                      style={{ cursor: "not-allowed", opacity: 0.9 }}
+                <Form.Group className="mb-3">
+                  <Form.Label>Initial Down Payment</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formatCurrency(formData.down_payment)}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Remaining Balance</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formatCurrency(formData.balance)}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Final Payment</Form.Label>
+                  <Form.Control
+                    type="text"
+                    inputMode="decimal"
+                    value={
+                      formData.full_payment
+                        ? `₱${formData.full_payment}`.replace(
+                            /\B(?=(\d{3})+(?!\d))/g,
+                            ","
+                          )
+                        : "₱0.00"
+                    }
+                    onChange={handleFullPaymentChange}
+                    onBlur={handleFullPaymentBlur}
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Date of Final Payment</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.fbilling_date || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        fbilling_date: e.target.value,
+                      })
+                    }
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label
+                    htmlFor="proofOfPayment"
+                    className="form-label"
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    Upload Proof of Payment:
+                    <p className="text-secondary fs-6 mb-0">
+                      (JPEG/PNG only, multiple allowed)
+                    </p>
+                  </Form.Label>
+
+                  <div className="d-flex align-items-center">
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="proofOfPayment"
+                      name="proofOfPayment"
+                      accept="image/jpeg,image/png"
+                      multiple
+                      onChange={handleProofFileChange}
+                      ref={proofFileRef}
                     />
-                  </Form.Group>
 
-                  <div className="mb-3">
-                    <Button
-                      variant="success"
-                      onClick={() =>
-                        setShowPaymentUpdate(!showPaymentUpdate)
-                      }
-                    >
-                      {showPaymentUpdate
-                        ? "Hide Payment Update"
-                        : "Update Payment"}
-                    </Button>
+                    {selectedFileNames.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn add-item px-3 py-2 btn-sm ms-2 fs-6"
+                        style={{ whiteSpace: "nowrap" }}
+                        onClick={() => setShowPreviewModal(true)}
+                      >
+                        View ({selectedFileNames.length})
+                      </button>
+                    )}
                   </div>
+                </Form.Group>
+              </Col>
+            </Row>
+          </Form>
+        </Modal.Body>
 
-                  {showPaymentUpdate && (
-                    <>
-                      <Form.Group className="mb-3">
-                        <Form.Label>Final Payment (Balance Paid)</Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={
-                            formData.full_payment !== ""
-                              ? `₱${formData.full_payment}`
-                              : "₱0"
-                          }
-                          onChange={(e) => {
-                            const rawValue = e.target.value.replace(/[₱,]/g, "");
-                            const numericValue =
-                              rawValue === "" ? "" : parseFloat(rawValue);
-                            const balance =
-                              total -
-                              (parseFloat(formData.down_payment) || 0) -
-                              (isNaN(numericValue) ? 0 : numericValue);
+        <Modal.Footer className="bg-white">
+          <Button
+            className="cancel-btn btn d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+            onClick={handleClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+            style={{ fontSize: "16px" }}
+            onClick={handleSaveChanges}
+          >
+            Save Changes
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
-                            setFormData({
-                              ...formData,
-                              full_payment: isNaN(numericValue)
-                                ? ""
-                                : numericValue,
-                              balance: balance.toFixed(2),
-                            });
-                          }}
-                          onBlur={(e) => {
-                            const rawValue = e.target.value.replace(/[₱,]/g, "");
-                            const numericValue = parseFloat(rawValue);
-                            if (!isNaN(numericValue)) {
-                              setFormData({
-                                ...formData,
-                                full_payment: numericValue.toFixed(2),
-                                balance: (
-                                  total -
-                                  (parseFloat(formData.down_payment) || 0) -
-                                  numericValue
-                                ).toFixed(2),
-                              });
-                              e.target.value =
-                                "₱" +
-                                numericValue.toLocaleString("en-PH", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                });
-                            }
-                          }}
-                        />
-                      </Form.Group>
+      <Modal
+        show={showPreviewModal}
+        onHide={() => setShowPreviewModal(false)}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Uploaded Proof of Payment</Modal.Title>
+        </Modal.Header>
 
-                      <Form.Group className="mb-3">
-                        <Form.Label>Date of Final Payment</Form.Label>
-                        <Form.Control
-                          type="date"
-                          value={formData.fbilling_date || ""}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              fbilling_date: e.target.value,
-                            })
-                          }
-                        />
-                      </Form.Group>
-                    </>
-                  )}
-                </>
-              )}
-            </Col>
-          </Row>
-
-          {/* Items Ordered Section */}
-          <div className="p-3 bg-white rounded shadow-sm border">
-            <h5 className="text-success fw-bold mb-3 d-flex justify-content-between align-items-center">
-              Items Ordered
-              <FaPlusCircle
-                style={{ cursor: "pointer", color: "rgba(23, 133, 80, 1)" }}
-                onClick={handleAddItem}
-                title="Add new item"
-              />
-            </h5>
-
-            <table className="table table-bordered table-striped align-middle">
-              <thead
-                className="table-success text-center"
-                style={{ backgroundColor: "##d3eed3" }}
-              >
-                <tr>
-                  <th style={{ width: "10%" }}>Quantity</th>
-                  <th style={{ width: "25%" }}>Type of Product</th>
-                  <th style={{ width: "25%" }}>Item Name</th>
-                  <th style={{ width: "20%" }}>Unit Cost</th>
-                  <th style={{ width: "10%" }}>Action</th>
-                </tr>
-              </thead>
-
-              <tbody className="text-center table-white">
-                {editableItems.map((item, index) => (
-                  <tr key={index}>
-                    <td>
-                      <Form.Control
-                        type="text"
-                        value={item.quantity ?? ""}
-                        placeholder="Qty"
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^\d*$/.test(value)) {
-                            const newItems = [...editableItems];
-                            newItems[index].quantity = value;
-                            setEditableItems(newItems);
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const value = e.target.value.trim();
-                          const newItems = [...editableItems];
-                          newItems[index].quantity =
-                            value === "" ? "" : parseInt(value, 10);
-                          setEditableItems(newItems);
-                        }}
-                      />
-                    </td>
-
-                    <td>
-                      <CreatableSelect
-                        options={productOptions}
-                        value={
-                          productOptions.find(
-                            (opt) => opt.value === item.type_of_product
-                          ) ||
-                          (item.type_of_product
-                            ? {
-                                label: item.type_of_product,
-                                value: item.type_of_product,
-                              }
-                            : null)
-                        }
-                        onChange={(selected) =>
-                          handleProductChange(index, selected)
-                        }
-                        placeholder="Select product"
-                        isSearchable
-                      />
-                    </td>
-
-                    <td>
-                      <CreatableSelect
-                        options={itemOptions[item.type_of_product] || []}
-                        value={
-                          (itemOptions[item.type_of_product] || []).find(
-                            (opt) => opt.value === item.description
-                          ) ||
-                          (item.description
-                            ? {
-                                label: item.description,
-                                value: item.description,
-                              }
-                            : null)
-                        }
-                        onChange={(selected) =>
-                          handleItemChange(index, selected)
-                        }
-                        placeholder="Select item"
-                        isSearchable
-                      />
-                    </td>
-
-                    <td>
-                      <Form.Control
-                        type="text"
-                        inputMode="decimal"
-                        value={
-                          item.isEditing
-                            ? item.unit_cost
-                            : item.unit_cost
-                            ? "₱" +
-                              parseFloat(item.unit_cost).toLocaleString(
-                                "en-PH",
-                                {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }
-                              )
-                            : ""
-                        }
-                        placeholder="₱0.00"
-                        onFocus={(e) => {
-                          const newItems = [...editableItems];
-                          newItems[index].isEditing = true;
-                          setEditableItems(newItems);
-                          e.target.value =
-                            item.unit_cost?.toString().replace(/[₱,]/g, "") ||
-                            "";
-                        }}
-                        onChange={(e) => {
-                          let raw = e.target.value.replace(/[₱,]/g, "");
-                          if (/^[0-9]*\.?[0-9]*$/.test(raw)) {
-                            const newItems = [...editableItems];
-                            newItems[index].unit_cost = raw;
-                            setEditableItems(newItems);
-                          }
-                        }}
-                        onBlur={(e) => {
-                          let raw = e.target.value.replace(/[₱,]/g, "");
-                          const num = parseFloat(raw);
-                          const newItems = [...editableItems];
-                          newItems[index].isEditing = false;
-
-                          if (!isNaN(num)) {
-                            newItems[index].unit_cost = num.toFixed(2);
-                            setEditableItems(newItems);
-                            e.target.value =
-                              "₱" +
-                              num.toLocaleString("en-PH", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              });
-                          } else {
-                            newItems[index].unit_cost = "";
-                            setEditableItems(newItems);
-                            e.target.value = "";
-                          }
-                        }}
-                      />
-                    </td>
-
-                    <td>
-                      <FaRegTrashAlt
-                        style={{
-                          color: "#dc3545",
-                          cursor: "pointer",
-                          fontSize: "18px",
-                        }}
-                        title="Remove this item"
-                        onClick={() => {
-                          Swal.fire({
-                            title: "Remove this item?",
-                            text: "This action cannot be undone.",
-                            icon: "warning",
-                            showCancelButton: true,
-                            confirmButtonColor: "#dc3545",
-                            cancelButtonColor: "#6c757d",
-                            confirmButtonText: "Yes, remove it!",
-                          }).then((result) => {
-                            if (result.isConfirmed) {
-                              const newItems = editableItems.filter(
-                                (_, i) => i !== index
-                              );
-                              setEditableItems(newItems);
-                            }
-                          });
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="text-end mt-3">
-              <h5 className="fw-bold text-success">
-                Total Cost: ₱{total.toLocaleString()}
-              </h5>
+        <Modal.Body>
+          {proofFiles.length === 0 ? (
+            <p>No images uploaded.</p>
+          ) : (
+            <div className="d-flex flex-wrap justify-content-center gap-3">
+              {proofFiles.map((file, i) => (
+                <img
+                  key={i}
+                  src={URL.createObjectURL(file)}
+                  alt="Proof"
+                  style={{
+                    width: "600px",
+                    height: "600px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    border: "1px solid #ccc",
+                    borderWidth: "2px",
+                  }}
+                />
+              ))}
             </div>
-          </div>
-        </Form>
-      </Modal.Body>
+          )}
+        </Modal.Body>
 
-      <Modal.Footer className="bg-white">
-        <Button
-          className="cancel-btn btn btn- d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
-          onClick={handleClose}
-        >
-          Cancel
-        </Button>
-        <Button
-          className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
-          style={{ fontSize: "16px" }}
-          onClick={handleSaveChanges}
-        >
-          Save Changes
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowPreviewModal(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 };
 

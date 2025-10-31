@@ -449,14 +449,16 @@ const ViewOrder = () => {
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
               {!["Delivered", "Out for Delivery", "Cancelled"].includes(
                 orderDetails.status
-              ) && (
-                <button
-                  className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                  onClick={handleUpdate}
-                >
-                  Update
-                </button>
-              )}
+              ) &&
+                (parseFloat(orderDetails.balance) > 0 ||
+                  calculatedBalance > 0) && (
+                  <button
+                    className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                    onClick={handleUpdate}
+                  >
+                    Update Payment
+                  </button>
+                )}
 
               {orderDetails.status === "Cancelled" && (
                 <button
@@ -594,11 +596,10 @@ const ViewOrder = () => {
           )}
         </Modal.Body>
 
-        <Modal.Footer>
+        <Modal.Footer className="bg-white">
           <Button
-            variant="secondary"
+            className="cancel-btn btn d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
             onClick={() => setShowProofViewModal(false)}
-            className="close-btn px-3 py-2 rounded-2 fs-6"
           >
             Close
           </Button>

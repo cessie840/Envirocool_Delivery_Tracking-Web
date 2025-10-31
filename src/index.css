@@ -1153,6 +1153,18 @@ h5{
   border-radius: 8px !important;
 }
 
+.update-payment-modal .form-control {
+  border-color: #91b6c5;
+  border-width: 1px;
+  padding: 8px 12px;
+}
+
+.update-payment-modal label {
+  color: #245985;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {
