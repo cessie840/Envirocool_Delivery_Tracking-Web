@@ -22,10 +22,8 @@ if (empty($type_of_product)) {
     exit;
 }
 
-
 $normalized_type = strtolower($type_of_product);
 $normalized_desc = strtolower($description);
-
 
 if(!empty($description)) {
     $check = $conn->prepare("SELECT product_id 
@@ -48,7 +46,6 @@ if ($check->num_rows > 0) {
     echo json_encode(["success" => false, "message" => "Product type already exists"]);
     exit;
 }
-
 
 $insert = $conn->prepare("INSERT INTO Product (type_of_product, description, unit_cost) VALUES (?, ?, ?)");
 $insert->bind_param("ssd", $type_of_product, $description, $unit_cost);

@@ -13,10 +13,13 @@ import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaEye, FaEyeSlash } from "react-icons/fa";
 import axios from "axios";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 function DriverProfileSettings() {
   const [showSidebar, setShowSidebar] = useState(false);
   const navigate = useNavigate();
+
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [profile, setProfile] = useState({
     Name: "",
@@ -59,7 +62,7 @@ function DriverProfileSettings() {
             const u = res.data.user;
             const profilePicUrl = u.pers_profile_pic
               ? `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${u.pers_profile_pic}`
-              : `http://localhost/DeliveryTrackingSystem/default-profile-pic.png`;
+              : `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
 
             setProfile({
               Name: `${u.pers_fname} ${u.pers_lname}`,
@@ -124,10 +127,10 @@ function DriverProfileSettings() {
       )
       .then((res) => {
         if (res.data.success) {
-          alert("Profile updated successfully!");
+          ToastHelper.success("Profile updated successfully!");
           localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
         } else {
-          alert("Update failed: " + res.data.message);
+          ToastHelper.error("Update failed: " + res.data.message);
         }
       })
       .catch((err) => console.error(err));
@@ -137,7 +140,7 @@ function DriverProfileSettings() {
 
   const handlePasswordSave = () => {
     if (passwordForm.new !== passwordForm.confirm) {
-      alert("New password and confirm password do not match.");
+      ToastHelper.error("New password and confirm password do not match.");
       return;
     }
 
@@ -153,18 +156,17 @@ function DriverProfileSettings() {
       )
       .then((res) => {
         if (res.data.success) {
-          alert("Password successfully changed!");
+          ToastHelper.success("Password successfully changed!");
           localStorage.setItem("userPassword", passwordForm.new);
           setPasswordForm({ old: passwordForm.new, new: "", confirm: "" });
           setModalField(null);
         } else {
-          alert("Update failed: " + res.data.message);
+          ToastHelper.error("Update failed: " + res.data.message);
         }
       })
       .catch((err) => console.error(err));
   };
 
-  // ✅ Preview selected image before upload
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -177,11 +179,10 @@ function DriverProfileSettings() {
     }
   };
 
-  // ✅ Upload selected image
   const handleProfilePicSave = () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!profile.newProfileFile) {
-      alert("Please select a new image first.");
+      ToastHelper.error("Please select a new image first.");
       return;
     }
 
@@ -197,7 +198,7 @@ function DriverProfileSettings() {
       )
       .then((res) => {
         if (res.data.success) {
-          alert("Profile picture updated successfully!");
+          ToastHelper.success("Profile picture updated successfully!");
           const filename = res.data.filename;
           const newUrl = `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${filename}`;
           setProfile((prev) => ({
@@ -208,13 +209,19 @@ function DriverProfileSettings() {
           const updatedUser = { ...storedUser, pers_profile_pic: filename };
           localStorage.setItem("user", JSON.stringify(updatedUser));
         } else {
-          alert("Upload failed: " + res.data.message);
+          ToastHelper.error("Upload failed: " + res.data.message);
         }
       })
       .catch((err) => {
         console.error("Upload error:", err);
-        alert("An error occurred while uploading the picture.");
+        ToastHelper.error("An error occurred while uploading the picture.");
       });
+  };
+
+  const confirmLogout = () => {
+    localStorage.clear();
+    setShowLogoutModal(false);
+    navigate("/");
   };
 
   return (
@@ -239,7 +246,6 @@ function DriverProfileSettings() {
               backgroundColor: "#E8F8F5",
             }}
           >
-            {/* ✅ PROFILE PICTURE SECTION */}
             <div className="text-center">
               <label htmlFor="profilePicInput" style={{ cursor: "pointer" }}>
                 <div
@@ -254,11 +260,11 @@ function DriverProfileSettings() {
                   <Image
                     src={
                       profile.profilePic ||
-                      "http://localhost/DeliveryTrackingSystem/default-profile-pic.png"
+                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                     }
                     onError={(e) =>
                       (e.target.src =
-                        "http://localhost/DeliveryTrackingSystem/default-profile-pic.png")
+                        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
                     }
                     alt="Profile"
                     style={{
@@ -304,7 +310,6 @@ function DriverProfileSettings() {
             </p>
           </div>
 
-          {/* Profile Details */}
           <div
             className="px-4 pb-4"
             style={{
@@ -314,7 +319,6 @@ function DriverProfileSettings() {
             }}
           >
             {[
-              // editable fields
               { label: "Full Name", key: "Name" },
               { label: "Email", key: "Email" },
               { label: "Contact Number", key: "Contact" },
@@ -354,7 +358,6 @@ function DriverProfileSettings() {
               </div>
             ))}
 
-            {/* Password Section */}
             <div className="mt-3">
               <label className="text-secondary small fw-semibold">
                 Password
@@ -384,7 +387,10 @@ function DriverProfileSettings() {
             </div>
 
             <div className="mt-4 d-grid">
-              <Button variant="success" onClick={() => navigate("/")}>
+              <Button
+                variant="success"
+                onClick={() => setShowLogoutModal(true)}
+              >
                 Logout
               </Button>
             </div>
@@ -392,7 +398,6 @@ function DriverProfileSettings() {
         </Card>
       </Container>
 
-      {/* Edit modals */}
       <Modal
         show={modalField && modalField !== "password"}
         onHide={() => setModalField(null)}
@@ -431,7 +436,6 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
-      {/* Password Modal */}
       <Modal
         show={modalField === "password"}
         onHide={() => setModalField(null)}
@@ -495,6 +499,33 @@ function DriverProfileSettings() {
           </Button>
           <Button variant="success" onClick={handlePasswordSave}>
             Save Password
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showLogoutModal}
+        onHide={() => setShowLogoutModal(false)}
+        centered
+      >
+        <Modal.Header className="bg-light" closeButton>
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-white">
+          Are you sure you want to logout?
+        </Modal.Body>
+        <Modal.Footer className="bg-light">
+          <Button
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
+            onClick={() => setShowLogoutModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
+            onClick={confirmLogout}
+          >
+            Logout
           </Button>
         </Modal.Footer>
       </Modal>

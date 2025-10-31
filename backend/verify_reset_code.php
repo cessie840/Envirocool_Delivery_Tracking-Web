@@ -59,7 +59,6 @@ foreach ($tablesToCheck as $table => $cols) {
         $attempts = (int)$row[$cols['attempt_col']];
         $lockUntil = $row[$cols['lock_col']];
 
-        // Check if locked
         if ($lockUntil && strtotime($lockUntil) > time()) {
             echo json_encode([
                 "status" => "locked",
@@ -70,7 +69,6 @@ foreach ($tablesToCheck as $table => $cols) {
         }
 
         if ($code === $dbToken) {
-            // Valid code
             $clear = $conn->prepare("UPDATE $table SET {$cols['attempt_col']} = 0, {$cols['lock_col']} = NULL WHERE {$cols['email_col']} = ?");
             $clear->bind_param("s", $email);
             $clear->execute();
@@ -82,7 +80,6 @@ foreach ($tablesToCheck as $table => $cols) {
                 echo json_encode(["status" => "verified", "message" => "Code is correct."]);
             }
         } else {
-            // Invalid code
             $attempts++;
             if ($attempts >= $maxAttempts) {
             $lockTime = date("Y-m-d H:i:s", strtotime("+5 minutes"));

@@ -1,117 +1,153 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { Toaster } from "sonner";
 
+// Public pages
 import Login from "./Login";
-import AdminDashboard from "./AdminDashboard";
 import ForgotPass from "./ForgotPass";
+
+// ADMIN
+import AdminDashboard from "./AdminDashboard";
 import AddDelivery from "./AdminAddDelivery";
 import DeliveryDetails from "./AdminDeliveryDetails";
 import ViewDelivery from "./AdminViewOrder";
 import MonitorDelivery from "./AdminMonitorDelivery";
 import GenerateReport from "./AdminGenerateReport";
-import DriverModule from "./DriverDashboard";
+import AdminSettings from "./settings/AdminSettings";
+
+// OPERATIONAL
 import OperationalDelivery from "./OperationalDelivery";
-import CreatePersonnelAccount from "./CreatePersonnelAccount";
-import ProtectedRoute from "./ProtectedRoute";
+import OperationalSettings from "./settings/OperationalSettings";
 import RegisterAccount from "./RegisterAccount";
 import PersonnelAccounts from "./PersonnelAccounts";
+import CreatePersonnelAccount from "./CreatePersonnelAccount";
+
+// DRIVER
 import DriverDashboard from "./DriverDashboard";
 import OutForDelivery from "./OutForDelivery";
 import SuccessfulDelivery from "./SuccessfulDelivery";
 import FailedDeliveries from "./FailedDeliveries";
 import DriverProfileSettings from "./DriverProfileSettings";
+import DriverGuidePage from "./DriverGuidePage";
 
-import AdminSettings from "./settings/AdminSettings";
-import OperationalSettings from "./settings/OperationalSettings";
-
+// SETTINGS
 import EditProfileTab from "./settings/EditProfileTab";
 import ChangePasswordTab from "./settings/ChangePasswordTab";
 import AccountSecurityTab from "./settings/AccountSecurityTab";
 import BackupRestoreTab from "./settings/BackupRestoreTab";
 import ViewTermsTab from "./settings/ViewTermsTab";
 
-import "bootstrap/dist/css/bootstrap.min.css";
+// Protected route
+import ProtectedRoute from "./ProtectedRoute";
+
+const NotAuthorized = () => (
+  <div style={{ textAlign: "center", marginTop: "50px" }}>
+    <h1>Access Denied</h1>
+    <p>You don’t have permission to view this page.</p>
+  </div>
+);
 
 function App() {
+  const routes = [
+    // ADMIN
+    { path: "/admin-dashboard", element: <AdminDashboard />, role: "admin" },
+    { path: "/add-delivery", element: <AddDelivery />, role: "admin" },
+    { path: "/delivery-details", element: <DeliveryDetails />, role: "admin" },
+    {
+      path: "/view-delivery/:transaction_id",
+      element: <ViewDelivery />,
+      role: "admin",
+    },
+    { path: "/monitor-delivery", element: <MonitorDelivery />, role: "admin" },
+    { path: "/generate-report", element: <GenerateReport />, role: "admin" },
+    { path: "/admin-settings", element: <AdminSettings />, role: "admin" },
+
+    // OPERATIONAL
+    {
+      path: "/operational-delivery-details",
+      element: <OperationalDelivery />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/operational-settings",
+      element: <OperationalSettings />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/register-account",
+      element: <RegisterAccount />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/personnel-accounts",
+      element: <PersonnelAccounts />,
+      role: "operationalmanager",
+    },
+    {
+      path: "/create-personnel-account",
+      element: <CreatePersonnelAccount />,
+      role: "operationalmanager",
+    },
+
+    // DRIVER
+    {
+      path: "/driver-dashboard",
+      element: <DriverDashboard />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/out-for-delivery",
+      element: <OutForDelivery />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/successful-delivery",
+      element: <SuccessfulDelivery />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/failed-delivery",
+      element: <FailedDeliveries />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/driver-profile-settings",
+      element: <DriverProfileSettings />,
+      role: "deliverypersonnel",
+    },
+    {
+      path: "/driver-guide",
+      element: <DriverGuidePage />,
+      role: "deliverypersonnel",
+    },
+
+    // SETTINGS
+    { path: "/settings/edit-profile", element: <EditProfileTab /> },
+    { path: "/settings/change-password", element: <ChangePasswordTab /> },
+    { path: "/settings/account-security", element: <AccountSecurityTab /> },
+    { path: "/settings/backup-restore", element: <BackupRestoreTab /> },
+    { path: "/settings/view-terms", element: <ViewTermsTab /> },
+  ];
+
   return (
     <Router>
+      <Toaster position="top-center" richColors />
+
       <Routes>
-        {/* PROTECTED ROUTES - ROLE BASED ACCESS  */}
+        {/* PUBLIC ROUTES */}
         <Route path="/" element={<Login />} />
-        <Route
-          path="/admin-dashboard"
-          element={
-            <ProtectedRoute role="admin">
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/operational-delivery-details"
-          element={
-            <ProtectedRoute role="operationalmanager">
-              <OperationalDelivery />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/driver-dashboard"
-          element={
-            <ProtectedRoute role="deliverypersonnel">
-              <DriverDashboard />
-            </ProtectedRoute>
-          }
-        />
         <Route path="/forgotpassword" element={<ForgotPass />} />
+        <Route path="/not-authorized" element={<NotAuthorized />} />
 
-        {/* ADMIN ROUTES  */}
-        <Route path="/add-delivery" element={<AddDelivery />} />
-        <Route path="/delivery-details" element={<DeliveryDetails />} />
-        <Route
-          path="/view-delivery/:transaction_id"
-          element={<ViewDelivery />}
-        />
-        <Route path="/monitor-delivery" element={<MonitorDelivery />} />
-        <Route path="/generate-report" element={<GenerateReport />} />
-        <Route path="/admin-settings" element={<AdminSettings />} />
-
-        {/* OPERATIONAL ROUTES  */}
-        <Route path="/operational-settings" element={<OperationalSettings />} />
-        <Route path="/register-account" element={<RegisterAccount />} />
-        <Route path="/personnel-accounts" element={<PersonnelAccounts />} />
-        <Route
-          path="/create-personnel-account"
-          element={<CreatePersonnelAccount />}
-        />
-
-        {/* DELIVERY PERSONNEL ROUTES  */}
-        <Route path="/driver-dashboard" element={<DriverDashboard />} />
-        <Route path="/out-for-delivery" element={<OutForDelivery />} />
-        <Route path="/successful-delivery" element={<SuccessfulDelivery />} />
-        <Route path="/failed-delivery" element={<FailedDeliveries />} />
-        <Route
-          path="/driver-profile-settings"
-          element={<DriverProfileSettings />}
-        />
-        {/* <Route path="/DriverDashboard" element={<ProtectedRoute role="deliverypersonnel"><DriverModule /></ProtectedRoute>} /> */}
-
-        {/* SETTINGS ROUTES  */}
-        <>
-          <Route path="/settings/edit-profile" element={<EditProfileTab />} />
+        {/* PROTECTED ROUTES */}
+        {routes.map(({ path, element, role }) => (
           <Route
-            path="/settings/change-password"
-            element={<ChangePasswordTab />}
+            key={path}
+            path={path}
+            element={<ProtectedRoute role={role}>{element}</ProtectedRoute>}
           />
-          <Route
-            path="/settings/account-security"
-            element={<AccountSecurityTab />}
-          />
-          <Route
-            path="/settings/backup-restore"
-            element={<BackupRestoreTab />}
-          />
-          <Route path="/settings/view-terms" element={<ViewTermsTab />} />
-        </>
+        ))}
       </Routes>
     </Router>
   );

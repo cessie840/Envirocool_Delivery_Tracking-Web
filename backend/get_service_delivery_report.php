@@ -21,7 +21,6 @@ if ($start && $end) {
     $types = "ss";
 }
 
-// Fetch base transactions
 $sql = "
 SELECT
     t.transaction_id,
@@ -66,24 +65,19 @@ foreach ($serviceDeliveries as &$delivery) {
 
     $delivery['history'] = $history;
 
-    // 🔹 Cancellation reason: last one from history or Transactions
     $cancelledArray = array_filter($history, fn($h) => $h['event_type'] === 'Cancelled' && !empty($h['reason']));
     $lastCancel = !empty($cancelledArray) ? end($cancelledArray) : null;
     $delivery['cancelled_reason'] = $lastCancel['reason'] ?? $delivery['cancelled_reason'];
 
-    // 🔹 Last rescheduled date (from history if available)
     $rescheduledArray = array_filter($history, fn($h) => $h['event_type'] === 'Rescheduled' && !empty($h['reason']));
     $lastReschedule = !empty($rescheduledArray) ? end($rescheduledArray) : null;
 
-    // Keep DB's rescheduled_date field, but prefer last reschedule in history if present
     $delivery['rescheduled_date'] = $lastReschedule['reason'] ?? $delivery['rescheduled_date'];
 
-    // 🔹 Make explicit: original vs rescheduled
     $delivery['original_target_date'] = $delivery['target_date_delivery'];
     $delivery['latest_rescheduled_date'] = $delivery['rescheduled_date'];
 }
 
-// Summary (totals)
 $sqlSummary = "
 SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,
@@ -111,7 +105,6 @@ $resultSum = $stmtSum->get_result();
 $summary = $resultSum->fetch_assoc();
 $stmtSum->close();
 
-// 🔹 Aggregate cancellation reasons history (for charts)
 $sqlReasons = "
     SELECT
         SUM(CASE WHEN LOWER(reason) LIKE '%vehicle%' THEN 1 ELSE 0 END) AS vehicle_related,

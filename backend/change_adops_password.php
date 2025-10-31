@@ -51,7 +51,6 @@ if (isset($_SESSION['ad_username'])) {
     exit();
 }
 
-// ✅ Verify old password
 $sql = "SELECT $passCol FROM $table WHERE $userCol = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
@@ -70,7 +69,6 @@ if ($row = $result->fetch_assoc()) {
     exit();
 }
 
-// ✅ Validate new password
 $pattern = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/';
 if (!preg_match($pattern, $newPassword)) {
     http_response_code(400);
@@ -78,7 +76,6 @@ if (!preg_match($pattern, $newPassword)) {
     exit();
 }
 
-// ✅ Update password
 $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
 $updateSql = "UPDATE $table SET $passCol = ? WHERE $userCol = ?";
 $updateStmt = $conn->prepare($updateSql);

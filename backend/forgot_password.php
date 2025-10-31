@@ -55,7 +55,7 @@ if (!$found) {
     exit;
 }
 
-// Check if account is locked
+
 $lockCheckStmt = $conn->prepare("SELECT lock_until FROM $table WHERE $email_col = ?");
 $lockCheckStmt->bind_param("s", $emailInput);
 $lockCheckStmt->execute();
@@ -66,10 +66,10 @@ if ($lockResult->num_rows === 1) {
     $lockedUntil = $lockData['lock_until'];
 
     if (!empty($lockedUntil) && strtotime($lockedUntil) > time()) {
-      echo json_encode([
-    "status" => "locked",
-    "message" => "Too many failed attempts. Try again after 5 minutes."
-]);
+        echo json_encode([
+            "status" => "locked",
+            "message" => "Too many failed attempts. Try again after 5 minutes."
+        ]);
         $lockCheckStmt->close();
         $conn->close();
         exit;
@@ -78,7 +78,7 @@ if ($lockResult->num_rows === 1) {
 $lockCheckStmt->close();
 
 
-$token = strtoupper(bin2hex(random_bytes(3))); // 6-character token
+$token = strtoupper(bin2hex(random_bytes(3))); 
 $reset_expire = date("Y-m-d H:i:s", strtotime("+5 minutes"));
 $reset_requested_at = date("Y-m-d H:i:s");
 
@@ -90,9 +90,9 @@ switch ($table) {
     case "OperationalManager":
         $updateStmt = $conn->prepare("UPDATE OperationalManager SET   manager_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE manager_email = ?");
         break;
-   case "DeliveryPersonnel":
-    $updateStmt = $conn->prepare("UPDATE DeliveryPersonnel SET pers_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE pers_email = ?");
-    break;
+    case "DeliveryPersonnel":
+        $updateStmt = $conn->prepare("UPDATE DeliveryPersonnel SET pers_resetToken = ?, reset_expire = ?, reset_requested_at = ? WHERE pers_email = ?");
+        break;
 
 }
 
@@ -106,7 +106,6 @@ if (!$updateSuccess) {
     exit;
 }
 
- // Reset failed login attempts when password reset is requested
 $user_col = match ($table) {
     "Admin" => "ad_username",
     "OperationalManager" => "manager_username",
@@ -121,12 +120,23 @@ $update->close();
 $mail = new PHPMailer(true);
 try {
     $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com';
-    $mail->SMTPAuth   = true;
-    $mail->Username   = 'contactenvirocool@gmail.com';
-    $mail->Password   = 'jvjvojduhrcglehv'; // Use env vars in production!
-    $mail->SMTPSecure = 'tls';
-    $mail->Port       = 587;
+    $mail->Host = 'smtp.gmail.com';
+    $mail->SMTPAuth = true;
+    $mail->Username = 'contactenvirocool@gmail.com';
+    $mail->Password = 'jvjvojduhrcglehv';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port = 587;
+
+    $isLocal = in_array($_SERVER['SERVER_NAME'], ['localhost', '127.0.0.1']);
+    if ($isLocal) {
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+            ],
+        ];
+    }
 
     $mail->setFrom('contactenvirocool@gmail.com', 'EnviroCool Support');
     $mail->addAddress($emailInput, $username);
@@ -136,17 +146,21 @@ try {
     $mail->Body = "
         <p>Hello <strong>$username</strong>,</p>
         <p>Your password reset code is:</p>
-        <h2>$token</h2>
+        <h2 style='color:#28a745;'>$token</h2>
         <p>This code will expire in <strong>5 minutes</strong>.</p>
         <p>If you didn't request a reset, please ignore this message.</p>
-        <br><p>- EnviroCool Team</p>
+        <br><p>– EnviroCool Team</p>
     ";
 
     $mail->send();
     echo json_encode(["status" => "success", "message" => "Reset code sent."]);
 } catch (Exception $e) {
-    echo json_encode(["status" => "email_failed", "message" => "Mailer Error: " . $mail->ErrorInfo]);
+    echo json_encode([
+        "status" => "email_failed",
+        "message" => "Mailer Error: " . $mail->ErrorInfo,
+    ]);
 }
+
 
 $conn->close();
 ?>

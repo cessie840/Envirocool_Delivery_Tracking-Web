@@ -7,7 +7,6 @@ header("Access-Control-Allow-Credentials: true");
 include 'database.php';
 header("Content-Type: application/json");
 
-// your existing query below
 $result = $conn->query("SELECT DISTINCT device_id FROM gps_coordinates ORDER BY device_id ASC");
 
 $devices = [];

@@ -11,7 +11,6 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
 } else {
-    // optional fallback
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Credentials: true");
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -25,12 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 
 include 'database.php';
-
-//CREATE DATABASE FOR TESTING 
-// $host = 'localhost';
-// $user = 'root';
-// $password = '';
-// $database = 'backuprestore';  
 
 $backupFile = "backup_" . date("Y-m-d_H-i-s") . "_{$database}.sql";
 

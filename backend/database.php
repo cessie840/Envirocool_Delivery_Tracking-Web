@@ -3,8 +3,6 @@ $host = 'localhost';
 $user = 'root';
 $password = '091203';
 $database = 'DeliveryTrackingSystem';
-// $database = 'backuprestore';
-
 
 $conn = new mysqli($host, $user, $password, $database);
 

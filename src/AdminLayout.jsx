@@ -25,7 +25,6 @@ const AdminLayout = ({
   onSearch,
   children,
 }) => {
-  // const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -56,7 +55,7 @@ const AdminLayout = ({
   };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    return window.innerWidth > 991; // open if desktop, closed if mobile
+    return window.innerWidth > 991;
   });
 
   useEffect(() => {
@@ -78,7 +77,6 @@ const AdminLayout = ({
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
-      {/* LOADING OVERLAY */}
       {loading && (
         <div className="loading-overlay">
           <div className="spinner-border text-primary" role="status">
@@ -87,7 +85,6 @@ const AdminLayout = ({
         </div>
       )}
 
-      {/* SIDEBAR */}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 
     ${isSidebarOpen ? "show" : ""} 
@@ -158,7 +155,7 @@ const AdminLayout = ({
           >
             <FaChartBar className="icon" />
             <span className="nav-text"> DATA ANALYTICS & REPORT</span>
-            <span className="tooltip-text">Generate Report</span>
+            <span className="tooltip-text">Data Analytics & Report</span>
           </button>
 
           <button
@@ -181,7 +178,6 @@ const AdminLayout = ({
         </nav>
       </aside>
 
-      {/* MAIN PANEL */}
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
@@ -220,27 +216,28 @@ const AdminLayout = ({
         {children}
       </main>
 
-      {/* LOGOUT MODAL */}
       <Modal
         show={showLogoutModal}
         onHide={() => setShowLogoutModal(false)}
         centered
       >
         <Modal.Header closeButton className="bg-light">
-          <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-white">
           Are you sure you want to logout?
         </Modal.Body>
         <Modal.Footer className="bg-light">
           <Button
-            className="close-btn p-2 fs-6"
-            variant="secondary"
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
             onClick={() => setShowLogoutModal(false)}
           >
             Cancel
           </Button>
-          <Button className="cancel-btn p-2 fs-6" onClick={confirmLogout}>
+          <Button
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
+            onClick={confirmLogout}
+          >
             Logout
           </Button>
         </Modal.Footer>

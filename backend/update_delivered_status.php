@@ -1,11 +1,8 @@
 <?php
-// CORS headers
-// Enable CORS
-header("Access-Control-Allow-Origin: http://localhost:5173"); // allow your React app
+header("Access-Control-Allow-Origin: http://localhost:5173"); 
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -15,8 +12,6 @@ include 'database.php';
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
-
-    // Debug request payload
     file_put_contents("debug_update.log", print_r($data, true), FILE_APPEND);
 
     if (!isset($data['transaction_id']) || empty($data['transaction_id'])) {
@@ -39,10 +34,8 @@ try {
         exit;
     }
 
-    $transactionId = intval($data['transaction_id']); // force integer
+    $transactionId = intval($data['transaction_id']); 
     $status = trim($data['status']);
-
-    // Decide which timestamp field to update
     $timestampField = null;
     if ($status === "Delivered") {
         $timestampField = "completed_at";
@@ -62,7 +55,6 @@ try {
         exit;
     }
 
-    // Update query
     $sql = "
         UPDATE Transactions 
         SET status = ?, $timestampField = NOW() 
@@ -73,7 +65,6 @@ try {
         throw new Exception("Failed to prepare SQL: " . $conn->error);
     }
 
-    // Bind params: status (string), transaction_id (int)
     $stmt->bind_param("si", $status, $transactionId);
 
     if ($stmt->execute()) {

@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include "database.php";
 
-// ✅ 1. Sync assignment_status = 'Out for Delivery' if personnel has active deliveries
 $syncOutForDelivery = "
     UPDATE DeliveryPersonnel dp
     INNER JOIN DeliveryAssignments da ON dp.pers_username = da.personnel_username
@@ -30,7 +29,6 @@ $syncOutForDelivery = "
 ";
 $conn->query($syncOutForDelivery);
 
-// ✅ 2. Sync assignment_status back to 'Available' if their transactions are finished (Delivered)
 $syncAvailable = "
     UPDATE DeliveryPersonnel dp
     SET dp.assignment_status = 'Available'
@@ -46,7 +44,6 @@ $syncAvailable = "
 ";
 $conn->query($syncAvailable);
 
-// ✅ 3. Handle soft delete (set status = Inactive, assignment_status = NULL)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents("php://input"));
 
@@ -70,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit; 
 }
 
-// ✅ 4. Display accounts with updated assignment_status
 $sql = "
     SELECT pers_username, pers_fname, pers_lname, pers_email, status, assignment_status
     FROM DeliveryPersonnel

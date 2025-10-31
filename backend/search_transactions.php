@@ -2,7 +2,7 @@
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type");
 header('Content-Type: application/json');
-include 'database.php'; // Your DB connection file
+include 'database.php';
 
 $search = $_GET['q'] ?? '';
 

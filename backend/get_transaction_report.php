@@ -72,12 +72,12 @@ SELECT
     t.customer_address,
     t.customer_contact,
     t.date_of_order,
-    -- 👇 Choose rescheduled_date if exists, else target_date_delivery
+    Choose rescheduled_date if exists, else target_date_delivery
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.type_of_product AS product_name,
-po.description AS item_name,
-po.quantity AS qty,
-po.unit_cost,
+    po.description AS item_name,
+    po.quantity AS qty,
+    po.unit_cost,
     (po.quantity * po.unit_cost) AS subtotal,
     t.mode_of_payment,
     t.payment_option,
@@ -104,7 +104,6 @@ $result = $stmt->get_result();
 $transactions = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Summary
 $sqlSummary = "
 SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,

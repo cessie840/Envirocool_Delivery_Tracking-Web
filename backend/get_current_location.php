@@ -17,7 +17,6 @@ if (!$device_id) {
     exit;
 }
 
-// Fetch latest GPS for this device including recorded_at
 $sql = "SELECT lat, lng, recorded_at
         FROM gps_coordinates 
         WHERE device_id = ? 

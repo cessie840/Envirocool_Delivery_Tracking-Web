@@ -55,11 +55,9 @@ $age     = intval($input['age']);
 $phone   = trim($input['contactNumber']);
 $email   = trim($input['email']);
 
-// ✅ Use the correct default profile picture path
 $profilePicName = 'uploads/default-profile-pic.png';
 $status = 'Active';
 
-// Input validation
 if (!preg_match("/^09\d{9}$/", $phone)) {
     echo json_encode(["status" => "invalid_contact"]);
     exit();
@@ -75,7 +73,7 @@ if ($age < 18) {
     exit();
 }
 
-// Check if email already exists
+
 $stmt = $conn->prepare("SELECT * FROM DeliveryPersonnel WHERE pers_email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
@@ -87,17 +85,13 @@ if ($result->num_rows > 0) {
 }
 $stmt->close();
 
-// Generate username
 $result = $conn->query("SELECT COUNT(*) AS count FROM DeliveryPersonnel");
 $row = $result->fetch_assoc();
 $count = $row['count'] + 1;
 $username = 'personnel' . str_pad($count, 2, '0', STR_PAD_LEFT);
-
-// Generate password (birthdate)
 $passwordPlain = $birth;
 $passwordHash = password_hash($passwordPlain, PASSWORD_DEFAULT);
 
-// Insert new personnel
 $stmt = $conn->prepare("INSERT INTO DeliveryPersonnel (
     pers_username, pers_password, pers_fname, pers_lname,
     pers_age, pers_gender, pers_birth, pers_phone, pers_email,
@@ -113,14 +107,13 @@ $stmt->bind_param(
 
 if ($stmt->execute()) {
 
-    // ✅ Send authentication email via PHPMailer
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = 'contactenvirocool@gmail.com';
-        $mail->Password   = 'jvjvojduhrcglehv'; // Gmail App Password
+        $mail->Password   = 'jvjvojduhrcglehv'; 
         $mail->SMTPSecure = 'tls';
         $mail->Port       = 587;
 

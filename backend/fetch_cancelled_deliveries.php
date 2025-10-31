@@ -1,7 +1,6 @@
 <?php
 header("Content-Type: application/json");
 
-// Allow only specific origins
 $allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173"
@@ -19,7 +18,6 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 
 require_once "database.php";
 
-// Get JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 $pers_username = $data['pers_username'] ?? '';
 
@@ -31,7 +29,6 @@ if (empty($pers_username)) {
     exit;
 }
 
-// ✅ FIXED SQL: added missing comma, corrected alias, removed trailing comma
 $query = "
     SELECT 
         t.transaction_id,

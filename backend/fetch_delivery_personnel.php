@@ -2,7 +2,6 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Allowed origins
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'

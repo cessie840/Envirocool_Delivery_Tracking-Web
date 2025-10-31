@@ -57,11 +57,11 @@ function FailedDeliveries() {
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
       <Container className="py-4">
-<br />
+        <br />
         <h2 className="text-center text-danger fw-bold mb-3">
           CANCELLED / FAILED DELIVERIES
         </h2>
-<br />
+        <br />
         {filteredCancelled.length === 0 ? (
           <p className="text-muted text-center">
             No cancelled or failed deliveries.

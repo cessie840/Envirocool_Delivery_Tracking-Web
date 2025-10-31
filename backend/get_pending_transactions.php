@@ -13,18 +13,15 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json");
 
-// Handle preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-include 'database.php'; // DB connection
+include 'database.php'; 
 
-// Initialize total count
 $totalTransactions = 0;
 
-// 1. Get total number of **pending** transactions
 $totalQuery = "
     SELECT COUNT(*) AS total 
     FROM Transactions
@@ -37,7 +34,6 @@ if ($totalResult && $totalResult->num_rows > 0) {
     $totalTransactions = (int)$row['total'];
 }
 
-// 2. Get the last 20 **pending** transactions
 $sql = "
     SELECT 
         transaction_id, 
@@ -65,7 +61,6 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
-// Return JSON response
 echo json_encode([
     "success" => true,
     "transactions" => $transactions,

@@ -4,7 +4,6 @@ header("Content-Type: application/json");
 
 include 'database.php';
 
-// ✅ Fetch unit_cost as well
 $sql = "SELECT type_of_product, description, unit_cost 
         FROM Product 
         ORDER BY type_of_product ASC, description ASC";
@@ -22,7 +21,7 @@ while ($row = $result->fetch_assoc()) {
     $grouped[$type][] = [
         "label" => $row['description'],
         "value" => $row['description'],
-        "unit_cost" => floatval($row['unit_cost']) // ✅ include numeric unit cost
+        "unit_cost" => floatval($row['unit_cost']) 
     ];
 }
 

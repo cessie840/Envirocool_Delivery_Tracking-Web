@@ -22,7 +22,6 @@ if (!$transaction_id || !$new_date) {
     exit;
 }
 
-// 1) Update transaction: set rescheduled_date and status to Pending (do NOT require previous status)
 $sql = "UPDATE Transactions SET rescheduled_date = ?, status = 'Pending' WHERE transaction_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("si", $new_date, $transaction_id);
@@ -30,7 +29,6 @@ $stmt->execute();
 $updatedRows = $stmt->affected_rows;
 $stmt->close();
 
-// 2) Delete all DeliveryAssignments rows for this transaction (clear assignments)
 $resetSql = "DELETE FROM DeliveryAssignments WHERE transaction_id = ?";
 $stmtReset = $conn->prepare($resetSql);
 $stmtReset->bind_param("i", $transaction_id);
@@ -38,14 +36,14 @@ $stmtReset->execute();
 $deletedRows = $stmtReset->affected_rows;
 $stmtReset->close();
 
-// 3) Insert history record (reason holds the new date)
+
 $historySql = "INSERT INTO DeliveryHistory (transaction_id, event_type, reason, event_timestamp) VALUES (?, 'Rescheduled', ?, NOW())";
 $stmtHist = $conn->prepare($historySql);
 $stmtHist->bind_param("is", $transaction_id, $new_date);
 $stmtHist->execute();
 $stmtHist->close();
 
-// Return result and debug info
+
 if ($updatedRows > 0) {
     echo json_encode([
         "success" => true,

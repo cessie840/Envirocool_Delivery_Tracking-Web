@@ -21,7 +21,9 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth > 991);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => window.innerWidth > 991
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebarCollapsed");
     return saved === "true";
@@ -65,7 +67,6 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
         </div>
       )}
 
-      {/* SIDEBAR */}
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 
           ${isSidebarOpen ? "show" : ""} 
@@ -79,7 +80,12 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
         </button>
 
         <div className="sidebar-header d-flex justify-content-between align-items-center w-100 mb-4">
-          <img src={logo} alt="Envirocool Logo" className="logo img-fluid" width="200px" />
+          <img
+            src={logo}
+            alt="Envirocool Logo"
+            className="logo img-fluid"
+            width="200px"
+          />
           <button
             className="btn collapse-toggle d-none d-lg-flex p-3"
             onClick={toggleCollapse}
@@ -91,30 +97,43 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
 
         <nav className="nav-buttons w-100">
           <button
-            className={`nav-btn ${isActive("/personnel-accounts") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/personnel-accounts") ? "active" : ""
+            }`}
             onClick={() => navigate("/personnel-accounts")}
           >
             <FaUserFriends className="icon" />
-            {!isSidebarCollapsed && <span className="nav-text">DELIVERY PERSONNEL ACCOUNTS</span>}
+            {!isSidebarCollapsed && (
+              <span className="nav-text">DELIVERY PERSONNEL ACCOUNTS</span>
+            )}
             <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
           <button
-            className={`nav-btn ${isActive("/operational-delivery-details") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/operational-delivery-details") ? "active" : ""
+            }`}
             onClick={() => navigate("/operational-delivery-details")}
           >
             <FaClipboardList className="icon" />
-            {!isSidebarCollapsed && <span className="nav-text">DELIVERY DETAILS</span>}
+            {!isSidebarCollapsed && (
+              <span className="nav-text">DELIVERY DETAILS</span>
+            )}
             <span className="tooltip-text">Delivery Details</span>
           </button>
           <button
-            className={`nav-btn ${isActive("/operational-settings") ? "active" : ""}`}
+            className={`nav-btn ${
+              isActive("/operational-settings") ? "active" : ""
+            }`}
             onClick={() => navigate("/operational-settings")}
           >
             <FaCog className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
             <span className="tooltip-text">Settings</span>
           </button>
-          <button className="nav-btn logout" onClick={() => setShowLogoutModal(true)}>
+          <button
+            className="nav-btn logout"
+            onClick={() => setShowLogoutModal(true)}
+          >
             <FaSignOutAlt className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">LOGOUT</span>}
             <span className="tooltip-text">Logout</span>
@@ -122,7 +141,6 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
         </nav>
       </aside>
 
-      {/* MAIN PANEL */}
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
@@ -132,7 +150,6 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
             <h2 className="fs-2 fw-bold m-0">{title}</h2>
           </div>
 
-          {/* ✅ CONDITIONAL SEARCH BAR (hidden for /operational-settings) */}
           {location.pathname !== "/operational-settings" && (
             <div className="search-bar position-relative me-3">
               <input
@@ -149,21 +166,28 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
         {children}
       </main>
 
-      {/* LOGOUT MODAL */}
-      <Modal show={showLogoutModal} onHide={() => setShowLogoutModal(false)} centered>
+      <Modal
+        show={showLogoutModal}
+        onHide={() => setShowLogoutModal(false)}
+        centered
+      >
         <Modal.Header closeButton className="bg-light">
-          <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="bg-white">Are you sure you want to logout?</Modal.Body>
+        <Modal.Body className="bg-white">
+          Are you sure you want to logout?
+        </Modal.Body>
         <Modal.Footer className="bg-light">
           <Button
-            className="close-btn p-2 fs-6"
-            variant="secondary"
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
             onClick={() => setShowLogoutModal(false)}
           >
             Cancel
           </Button>
-          <Button className="cancel-btn p-2 fs-6" onClick={confirmLogout}>
+          <Button
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
+            onClick={confirmLogout}
+          >
             Logout
           </Button>
         </Modal.Footer>

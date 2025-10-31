@@ -16,7 +16,6 @@ include 'database.php';
 
 $orders = [];
 
-// ✅ Get only the latest GPS coordinate per device_id
 $sql = "
 SELECT 
     t.*, 
@@ -38,12 +37,12 @@ LEFT JOIN gps_coordinates g
         FROM gps_coordinates 
         WHERE gps_coordinates.device_id = da.device_id
     )
+WHERE t.balance = 0
 ORDER BY t.transaction_id DESC
 ";
 
 $result = $conn->query($sql);
 
-// ✅ Base directories
 $profilePicDir = __DIR__ . "/uploads/personnel_profile_pic/";
 $baseUrl = "http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/";
 
@@ -51,7 +50,6 @@ if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $transactionId = (int) $row['transaction_id'];
 
-        // 🟢 Fetch items for this transaction
         $itemsSql = "
             SELECT 
                 type_of_product AS product_name,
@@ -81,7 +79,6 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
-        // ✅ Correct handling of personnel profile picture
         $profilePic = trim($row['pers_profile_pic']);
         $defaultPic = "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
 
@@ -89,7 +86,6 @@ if ($result && $result->num_rows > 0) {
             $picFilename = basename($profilePic);
             $fullPath = $profilePicDir . $picFilename;
 
-            // Check if the file exists in uploads/personnel_profile_pic/
             if (file_exists($fullPath)) {
                 $profilePic = $baseUrl . $picFilename;
             } else {
@@ -99,7 +95,6 @@ if ($result && $result->num_rows > 0) {
             $profilePic = $defaultPic;
         }
 
-        // 🟢 Build the order object
         $orders[] = [
             'transaction_id' => $transactionId,
             'customer_name' => $row['customer_name'],

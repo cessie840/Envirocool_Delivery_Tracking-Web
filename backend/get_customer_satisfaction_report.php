@@ -88,7 +88,6 @@ $result = $stmt->get_result();
 $customerSatisfaction = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Summary
 $sqlSummary = "
 SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,

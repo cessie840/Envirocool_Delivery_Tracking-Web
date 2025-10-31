@@ -12,14 +12,12 @@ import {
 import L from "leaflet";
 import axios from "axios";
 import { renderToString } from "react-dom/server";
-
 import { PiBuildingApartmentDuotone } from "react-icons/pi";
-import { IoStorefrontSharp } from "react-icons/io5";
 import { FaTruckFront, FaLocationDot } from "react-icons/fa6";
-
+import { Button, Modal } from "react-bootstrap";
 import "leaflet/dist/leaflet.css";
+import { HiQuestionMarkCircle } from "react-icons/hi";
 
-// ======== Icons ========
 const customerIcon = new L.DivIcon({
   html: renderToString(
     <div
@@ -133,7 +131,6 @@ const buildingIcon = new L.DivIcon({
   iconAnchor: [20, 40],
 });
 
-// ======== Helper Functions ========
 const deg2rad = (deg) => deg * (Math.PI / 180);
 
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
@@ -147,7 +144,6 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// ======== MonitorDelivery Component ========
 const MonitorDelivery = () => {
   const [zoomOnNextClick, setZoomOnNextClick] = useState(false);
 
@@ -169,14 +165,42 @@ const MonitorDelivery = () => {
   const [selectedCustomerPosition, setSelectedCustomerPosition] =
     useState(null);
   const [selectedCustomerInfo, setSelectedCustomerInfo] = useState(null);
-
   const navigate = useNavigate();
   const companyLocation = [14.2091835, 121.1368418];
-
   const truckMarkerRefs = useRef({});
-
   const handleAddDelivery = () => navigate("/add-delivery");
   const [hasZoomed, setHasZoomed] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question:
+        "Where can I find all the transactions that are out for delivery?",
+      answer:
+        "You can find all out-for-delivery transactions under the 'In Transit' tab.",
+    },
+    {
+      question: "Where can I find all the transactions that are delivered?",
+      answer:
+        "All delivered transactions are located under the 'Delivered' tab.",
+    },
+    {
+      question: "Where can I find all the transactions that are cancelled?",
+      answer:
+        "All cancelled transactions are located under the 'Cancelled' tab.",
+    },
+    {
+      question: "How can I track a delivery transaction?",
+      answer:
+        "Select the transaction you want to track, and the map will automatically locate it. You can also view details such as the assigned delivery truck, estimated time of arrival (ETA), distance to the customer, and the current status of the truck.",
+    },
+    {
+      question: "Where can I see the status of the truck for a transaction?",
+      answer:
+        "The truck status is indicated by its color: Green - Moving, Yellow - Traffic, Gray - Inactive, Red - Stopped.",
+    },
+  ];
 
   const MapViewUpdater = ({ position, zoom, triggerZoom, onZoomDone }) => {
     const map = useMap();
@@ -195,7 +219,6 @@ const MonitorDelivery = () => {
     return null;
   };
 
-  // Helper to calculate how long the truck has been inactive
   const getInactiveDuration = (lastRecordedAt) => {
     if (!lastRecordedAt) return "N/A";
     const last = new Date(lastRecordedAt);
@@ -234,7 +257,6 @@ const MonitorDelivery = () => {
     return date.toLocaleString("en-US", options);
   };
 
-  // ======== Fetch Deliveries ========
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
@@ -359,7 +381,6 @@ const MonitorDelivery = () => {
     });
   }, [currentPositions, selectedCustomerPosition]);
 
-  // ======== Device Tracking ========
   const startTrackingDevice = (deviceId) => {
     if (trackingIntervals[deviceId]) clearInterval(trackingIntervals[deviceId]);
 
@@ -540,7 +561,7 @@ const MonitorDelivery = () => {
               truckMarkerRefs.current[deviceId]?.closePopup();
             }, 6000);
           }
-        }, 1500); // 200ms wait for Marker to mount
+        }, 1500);
       }
     } catch (err) {
       console.error(err);
@@ -552,7 +573,6 @@ const MonitorDelivery = () => {
     }
   };
 
-  // ======== Render Transactions ========
   const renderTransactions = (transactions, activeTab) => {
     const tabColors = {
       inTransit: { bg: "#EDF4FAFF", border: "#95B0CEFF" },
@@ -636,7 +656,6 @@ const MonitorDelivery = () => {
     ));
   };
 
-  // ======== Stop tracking for completed/cancelled tabs ========
   useEffect(() => {
     if (activeTab === "completed" || activeTab === "cancelled") {
       Object.keys(trackingIntervals).forEach((deviceId) =>
@@ -662,9 +681,22 @@ const MonitorDelivery = () => {
   }, [activeTab]);
   return (
     <AdminLayout
-      title="Monitor Deliveries"
-      onAddClick={handleAddDelivery}
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Monitor Delivery</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
       showSearch={false}
+      onAddClick={handleAddDelivery}
     >
       <div className="p-4 bg-white rounded-4 border border-secondary-subtle">
         <div className="container-fluid p-3">
@@ -716,7 +748,7 @@ const MonitorDelivery = () => {
                     position={
                       selectedDeviceId && currentPositions[selectedDeviceId]
                         ? currentPositions[selectedDeviceId].position
-                        : companyLocation // default
+                        : companyLocation
                     }
                     zoom={17}
                     triggerZoom={zoomOnNextClick}
@@ -728,13 +760,11 @@ const MonitorDelivery = () => {
                       <strong>Envirocool Company</strong>
                     </Popup>
                   </Marker>
-                  {/* Truck & Customer Markers */}
                   {Object.keys(deviceRoutes).map((deviceId) => {
                     const currentData = currentPositions[deviceId];
                     const route = deviceRoutes[deviceId];
 
                     if (!currentData?.position || !route?.length) return null;
-
                     if (selectedDeviceId && deviceId !== selectedDeviceId)
                       return null;
 
@@ -772,7 +802,6 @@ const MonitorDelivery = () => {
                                       )
                                     </>
                                   )}
-                          
                                   <br />
                                   <strong>Distance to Customer:</strong>{" "}
                                   {getDistanceFromLatLonInKm(
@@ -862,6 +891,124 @@ const MonitorDelivery = () => {
           </div>
         </div>
       </div>
+      <Modal
+        show={showFAQ}
+        onHide={() => {
+          setShowFAQ(false);
+          setActiveFAQIndex(null);
+        }}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            borderBottom: "none",
+          }}
+        >
+          <Modal.Title>Guide for Monitoring Delivery</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
+          <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
+            The Monitoring Delivery page allows you to track and manage all
+            delivery transactions in real time. You can view deliveries under
+            the <span className="fw-bold text-primary">In Transit</span>,{" "}
+            <span className="fw-bold text-success">Completed</span>, or{" "}
+            <span className="fw-bold text-danger">Cancelled</span> tabs on the
+            left panel. Selecting a transaction will display its live map
+            location along with details such as the assigned vehicle, estimated
+            time of arrival (ETA), distance to the customer, and current
+            delivery status. This feature helps you monitor operational
+            efficiency and ensure timely deliveries.
+          </p>
+
+          <div className="px-3 mb-3">
+            <div className="accordion" id="faqAccordion">
+              {guideqst.map((faq, index) => (
+                <div
+                  className="accordion-item mb-3 shadow-sm border-0"
+                  key={index}
+                >
+                  <h2 className="accordion-header" id={`heading${index}`}>
+                    <button
+                      className={`accordion-button ${
+                        activeFAQIndex === index ? "" : "collapsed"
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setActiveFAQIndex(
+                          activeFAQIndex === index ? null : index
+                        )
+                      }
+                      aria-expanded={activeFAQIndex === index}
+                      aria-controls={`collapse${index}`}
+                      style={{
+                        backgroundColor:
+                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                        color: activeFAQIndex === index ? "white" : "#116B8A",
+                        fontWeight: 600,
+                        transition: "all 0.3s ease",
+                      }}
+                      onMouseOver={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#d9eff1";
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#e9f6f8";
+                        }
+                      }}
+                    >
+                      {faq.question}
+                    </button>
+                  </h2>
+                  <div
+                    id={`collapse${index}`}
+                    className={`accordion-collapse collapse ${
+                      activeFAQIndex === index ? "show" : ""
+                    }`}
+                    aria-labelledby={`heading${index}`}
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div
+                      className="accordion-body bg-white rounded-bottom"
+                      style={{
+                        borderLeft: "4px solid #116B8A",
+                        color: "#333",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <strong>Answer:</strong> {faq.answer}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderTop: "1px solid #dee2e6",
+          }}
+        >
+          <Button
+            variant="outline-secondary"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+            className="px-4"
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

@@ -5,6 +5,7 @@ import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./loading-overlay.css";
+import { Toaster, toast } from "react-hot-toast";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Login = () => {
   const [showTerms, setShowTerms] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showToastOverlay, setShowToastOverlay] = useState(false);
 
   useEffect(() => {
     if (errorMessage) {
@@ -25,16 +27,17 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-      setErrorMessage("");
+    setErrorMessage("");
 
-      if (!agreed) {
-        setErrorMessage(
-          "You must agree to the Terms and Conditions before logging in."
-        );
-        return; 
-      }
+    if (!agreed) {
+      setErrorMessage(
+        "You must agree to the Terms and Conditions before logging in."
+      );
+      return;
+    }
+
     setLoading(true);
-  
+    const startTime = Date.now();
 
     try {
       const response = await axios.post(
@@ -43,66 +46,89 @@ const Login = () => {
         {
           headers: { "Content-Type": "application/json" },
           withCredentials: true,
+          validateStatus: () => true,
         }
       );
 
-      const user = response.data.user;
+      const data = response.data;
 
+      if (!data.success) {
+        setErrorMessage(data.message || "Login failed. Please try again.");
+        return;
+      }
+
+      const user = data.user;
       localStorage.setItem("user", JSON.stringify(user));
       sessionStorage.setItem("showLoginNotif", "true");
 
-      alert("Login successful!");
+      const elapsed = Date.now() - startTime;
+      const remaining = 500 - elapsed;
+      await new Promise((resolve) =>
+        setTimeout(resolve, remaining > 0 ? remaining : 0)
+      );
 
-      switch (user.role) {
-        case "admin":
-          navigate("/admin-dashboard");
-          break;
-        case "operationalmanager":
-          navigate("/operational-delivery-details");
-          break;
-        case "deliverypersonnel":
-          navigate("/driver-dashboard");
-          break;
-        default:
-          navigate("/");
-          break;
-      }
-    } catch (error) {
-     const errName = error?.response?.data?.errorName;
+      setLoading(false);
 
-     switch (errName) {
-       case "MISSING_CREDENTIALS":
-         setErrorMessage("Please enter both username and password.");
-         break;
-       case "INVALID_USERNAME":
-         setErrorMessage("Username not found. Please check and try again.");
-         break;
-       case "INVALID_PASSWORD":
-         setErrorMessage(error?.response?.data?.error); // Shows attempt count
-         break;
-       case "MAX_ATTEMPTS_REACHED":
-         setErrorMessage(error?.response?.data?.error);
-         break;
-       case "ACCOUNT_LOCKED":
-         setErrorMessage(error?.response?.data?.error);
-         break;
-       case "DB_ERROR":
-         setErrorMessage("A database error occurred. Please try again later.");
-         break;
-       case "SERVER_ERROR":
-         setErrorMessage("A server error occurred. Please contact support.");
-         break;
-       default:
-         setErrorMessage("Login failed. Please try again.");
-     }
+      setShowToastOverlay(true);
+      toast.success("Login successful!", {
+        duration: 1500,
+        style: {
+          background: "#E2F7E3FF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "300px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "10px",
+          boxShadow: "0 3px 10px rgba(0, 0, 0, 0.2)",
+        },
+        iconTheme: {
+          primary: "#2E7D32",
+          secondary: "#E2F7E3",
+        },
+        onClose: () => setShowToastOverlay(false),
+      });
 
+      setTimeout(() => {
+        switch (user.role) {
+          case "admin":
+            navigate("/admin-dashboard");
+            break;
+          case "operationalmanager":
+            navigate("/operational-delivery-details");
+            break;
+          case "deliverypersonnel":
+            navigate("/driver-dashboard");
+            break;
+          default:
+            navigate("/");
+            break;
+        }
+      }, 1000);
+    } catch (networkError) {
+      console.warn("Network error occurred:", networkError.message);
+      setErrorMessage(
+        "Unable to reach the server. Please check your connection."
+      );
     } finally {
+      const elapsed = Date.now() - startTime;
+      const remaining = 500 - elapsed;
+      await new Promise((resolve) =>
+        setTimeout(resolve, remaining > 0 ? remaining : 0)
+      );
       setLoading(false);
     }
   };
 
   return (
     <div className="login-container container-fluid">
+      {showToastOverlay && <div className="toast-overlay"></div>}
+      <Toaster position="top-center" richColors />
+
       <div className="login-card text-center container-fluid">
         <img
           src={logo}
@@ -112,7 +138,6 @@ const Login = () => {
         />
 
         <form className="login-form text-start" onSubmit={handleLogin}>
-          {/* Username */}
           <div className="mb-3">
             <label htmlFor="username" className="login form-label">
               Username:
@@ -127,7 +152,6 @@ const Login = () => {
             />
           </div>
 
-          {/* Password */}
           <div className="mb-1 position-relative">
             <label htmlFor="password" className="login form-label">
               Password:
@@ -157,7 +181,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Terms + Forgot Password */}
           <div className="d-flex justify-content-between align-items-center mt-3 mb-4 fs-6">
             <div className="d-flex align-items-center justify-content-center">
               <input
@@ -191,14 +214,12 @@ const Login = () => {
             </span>
           </div>
 
-          {/* Error Message */}
           {errorMessage && (
             <div className="text-danger mb-3 text-center fw-bold">
               {errorMessage}
             </div>
           )}
 
-          {/* Loading / Button */}
           {loading ? (
             <div className="loading-overlay">
               <div className="spinner-border text-primary" role="status">
@@ -216,7 +237,6 @@ const Login = () => {
         </form>
       </div>
 
-      {/* Terms Modal */}
       {showTerms && (
         <div className="modal d-block" tabIndex="-1">
           <div className="modal-dialog modal-md modal-dialog-centered">

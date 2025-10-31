@@ -21,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// --- SESSION ---
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
@@ -32,7 +31,7 @@ session_set_cookie_params([
 ]);
 session_start();
 
-if (isset($_SESSION['ad_username'])) { /* fetch admin */
+if (isset($_SESSION['ad_username'])) { 
 } elseif (isset($_SESSION['manager_username'])) {
 } elseif (isset($_SESSION['pers_username'])) { 
 } else {
@@ -72,7 +71,6 @@ if (isset($_SESSION['pers_username'])) {
     exit();
 }
 
-// If no session exists
 http_response_code(401);
 echo json_encode(["error" => "Unauthorized"]);
 exit();

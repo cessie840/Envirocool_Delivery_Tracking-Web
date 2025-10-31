@@ -90,7 +90,6 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [], onSearch }) => {
 
   return (
     <>
-      {/* Header */}
       <div
         style={{
           position: "fixed",
@@ -159,8 +158,6 @@ const HeaderAndNav = ({ onSidebarToggle, newDeliveries = [], onSearch }) => {
       </div>
 
       <div style={{ height: "112px" }}></div>
-
-      {/* Notifications Modal */}
       <Modal show={showNotif} onHide={() => setShowNotif(false)} centered>
         <Modal.Header closeButton className="bg-light">
           <Modal.Title>Notifications</Modal.Title>

@@ -4,8 +4,10 @@ import { FaArrowLeft } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
-import { Button, Modal, Form } from "react-bootstrap";
-
+import { Button, Modal, Collapse, Form } from "react-bootstrap";
+import { Toaster, toast } from "sonner";
+import { ToastHelper } from "./helpers/ToastHelper";
+import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const ViewOrder = () => {
   const [editableItems, setEditableItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [formData, setFormData] = useState({
     tracking_number: "",
     customer_name: "",
@@ -27,10 +30,56 @@ const ViewOrder = () => {
     balance: "",
     total: "",
     proof_of_delivery: "",
+    full_payment: "0",
+    fbilling_date: "",
   });
+
+  const [showFAQ, setShowFAQ] = useState(false);
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I update a delivery transaction?",
+      answer:
+        "Click the 'Update' button below the transaction details. A modal will appear where you can modify customer information, order details, or payment information.",
+    },
+    {
+      question:
+        "Where can I add another payment record for the remaining balance?",
+      answer:
+        "Click the 'Update Payment' button to enter the final payment made by the customer.",
+    },
+    {
+      question: "How can I add new ordered items to a transaction?",
+      answer:
+        "Click the add (+) icon in the 'Items Ordered' section to include additional items for the customer’s order.",
+    },
+    {
+      question: "How can I reschedule a delivery?",
+      answer:
+        "The 'Reschedule' button will appear if the order has been cancelled. Click it to select a new delivery date, then confirm your changes.",
+    },
+  ];
 
   const [showProofViewModal, setShowProofViewModal] = useState(false);
   const [proofUrl, setProofUrl] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
+
+  const openProofModal = (url, title) => {
+    let normalized = url;
+    if (typeof url === "string" && url.startsWith("[")) {
+      try {
+        normalized = JSON.parse(url);
+      } catch {
+        normalized = [url];
+      }
+    } else if (!Array.isArray(url)) {
+      normalized = [url];
+    }
+    setProofUrl(normalized);
+    setModalTitle(title);
+    setShowProofViewModal(true);
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
@@ -41,13 +90,19 @@ const ViewOrder = () => {
     return `${mm}/${dd}/${yyyy}`;
   };
 
-  useEffect(() => {
-    document.title = "View Order Details";
+  const fetchOrderDetails = () => {
     fetch(
-      `http://localhost//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}`
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}&_=${Date.now()}`,
+      {
+        method: "GET",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      }
     )
       .then((res) => res.json())
       .then((data) => {
+        console.log("Fetched data:", data);
         setOrderDetails(data);
         setFormData({
           tracking_number: data.tracking_number,
@@ -62,12 +117,19 @@ const ViewOrder = () => {
           total: data.total,
           target_date_delivery: formatDate(data.target_date_delivery),
           proof_of_delivery: data.proof_of_delivery,
+          full_payment: data.full_payment || "0",
+          fbilling_date: data.fbilling_date || "",
         });
       })
       .catch((err) => {
         console.error("Failed to fetch order:", err);
       });
-  }, [transaction_id]);
+  };
+
+  useEffect(() => {
+    document.title = "View Order Details";
+    fetchOrderDetails();
+  }, [transaction_id, refetchTrigger]);
 
   const handleUpdate = () => {
     const fixedItems = orderDetails.items.map((item) => ({
@@ -99,12 +161,14 @@ const ViewOrder = () => {
   const handleSubmit = () => {
     const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
     if (hasInvalidQuantity) {
-      alert("One or more items have invalid quantity.");
+      ToastHelper.error("One or more items have invalid quantity.");
       return;
     }
 
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
+      ToastHelper.error(
+        "Contact number must start with '09' and be exactly 11 digits."
+      );
       return;
     }
 
@@ -119,6 +183,7 @@ const ViewOrder = () => {
       ...formData,
       date_of_order: formatDateForDB(formData.date_of_order),
       target_date_delivery: formatDateForDB(formData.target_date_delivery),
+      fbilling_date: formData.fbilling_date,
       items: editableItems,
     };
 
@@ -130,21 +195,46 @@ const ViewOrder = () => {
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          alert("Update successful!");
+          ToastHelper.success("Update successful!", {
+            duration: 2500,
+            style: {
+              background: "#EBFAECFF",
+              border: "1px solid #91C793FF",
+              color: "#2E7D32",
+              fontWeight: 600,
+              fontSize: "1.1rem",
+              textAlign: "center",
+              width: "100%",
+              maxWidth: "600px",
+              margin: "0 auto",
+              justifyContent: "center",
+              borderRadius: "8px",
+            },
+          });
           setOrderDetails((prev) => ({
             ...prev,
             ...formData,
             items: editableItems,
           }));
-          setShowModal(false);
+          setOrderDetails((prev) => ({
+            ...prev,
+            ...formData,
+            items: editableItems,
+          }));
+
+          setTimeout(() => {
+            setRefetchTrigger((prev) => prev + 1);
+          }, 500);
         } else {
           console.error("Update failed:", response.message);
-          alert("Update failed: " + (response.message || "Unknown error"));
+          ToastHelper.error(
+            "Update failed: " + (response.message || "Unknown error")
+          );
         }
       })
       .catch((err) => {
         console.error("Update error:", err);
-        alert("An error occurred.");
+        ToastHelper.error("An error occurred.");
       });
   };
 
@@ -154,6 +244,12 @@ const ViewOrder = () => {
     (sum, item) => sum + item.quantity * item.unit_cost,
     0
   );
+
+  const calculatedBalance =
+    parseFloat(orderDetails?.balance) ??
+    totalCost -
+      (parseFloat(orderDetails?.down_payment) || 0) -
+      (parseFloat(orderDetails?.full_payment) || 0);
 
   const renderStatusBadge = (status) => {
     switch (status) {
@@ -171,10 +267,26 @@ const ViewOrder = () => {
   };
 
   return (
-    <AdminLayout title="View Order Details" showSearch={false}>
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>View Order Details</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+    >
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
-          className="back-btn btn-success d-flex align-items-center gap-2"
+          className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft /> Back
@@ -239,24 +351,67 @@ const ViewOrder = () => {
 
                 <div className="col-md-6 order-2 order-md-2">
                   <h5 className="text-success fw-bold">Payment Details</h5>
+
                   <p>
-                    <span>Payment Method:</span> {orderDetails.mode_of_payment}
+                    <span>Payment Method:</span>{" "}
+                    {orderDetails.mode_of_payment || "—"}
                   </p>
                   <p>
-                    <span>Payment Option:</span> {orderDetails.payment_option}
+                    <span>Payment Option:</span>{" "}
+                    {orderDetails.payment_option || "—"}
                   </p>
                   <p>
                     <span>Total:</span> ₱
                     {Number(orderDetails?.total || 0).toLocaleString()}
                   </p>
-                  <p>
-                    <span>Down Payment:</span> ₱
-                    {Number(orderDetails?.down_payment || 0).toLocaleString()}
-                  </p>
-                  <p>
-                    <span>Balance:</span> ₱
-                    {Number(orderDetails?.balance || 0).toLocaleString()}
-                  </p>
+
+                  {orderDetails.payment_option !== "Full Payment" && (
+                    <>
+                      {orderDetails.down_payment &&
+                        parseFloat(orderDetails.down_payment) > 0 && (
+                          <p>
+                            <span>Initial Payment (Down Payment):</span> ₱
+                            {Number(orderDetails.down_payment).toLocaleString()}
+                          </p>
+                        )}
+
+                      {orderDetails.full_payment &&
+                        parseFloat(orderDetails.full_payment) > 0 && (
+                          <>
+                            <p>
+                              <span>Final Payment (Balance Paid):</span> ₱
+                              {Number(
+                                orderDetails.full_payment
+                              ).toLocaleString()}
+                            </p>
+
+                            {calculatedBalance > 0 && (
+                              <p>
+                                <span>Remaining Balance:</span> ₱
+                                {calculatedBalance.toLocaleString()}
+                              </p>
+                            )}
+
+                            {orderDetails.fbilling_date &&
+                              orderDetails.fbilling_date !== "0000-00-00" && (
+                                <p>
+                                  <span>Date of Final Payment:</span>{" "}
+                                  {formatDate(orderDetails.fbilling_date)}
+                                </p>
+                              )}
+                          </>
+                        )}
+
+                      {orderDetails.payment_option === "Down Payment" &&
+                        (!orderDetails.full_payment ||
+                          parseFloat(orderDetails.full_payment) === 0) && (
+                          <p>
+                            <span>Remaining Balance:</span> ₱
+                            {calculatedBalance.toLocaleString()}
+                          </p>
+                        )}
+                    </>
+                  )}
                 </div>
 
                 <div className="col-md-12 order-3 order-md-3 mt-4">
@@ -266,10 +421,12 @@ const ViewOrder = () => {
                     <div className="mb-2">
                       <button
                         className="btn btn-view py-2 px-3 fs-6 rounded-2"
-                        onClick={() => {
-                          setProofUrl(orderDetails.proof_of_payment);
-                          setShowProofViewModal(true);
-                        }}
+                        onClick={() =>
+                          openProofModal(
+                            orderDetails.proof_of_payment,
+                            "Proof of Payment"
+                          )
+                        }
                       >
                         View Proof of Payment
                       </button>
@@ -281,10 +438,12 @@ const ViewOrder = () => {
                       <div>
                         <button
                           className="btn add-btn py-2 px-3 fs-6 rounded-2"
-                          onClick={() => {
-                            setProofUrl(orderDetails.proof_of_delivery);
-                            setShowProofViewModal(true);
-                          }}
+                          onClick={() =>
+                            openProofModal(
+                              orderDetails.proof_of_delivery,
+                              "Proof of Delivery"
+                            )
+                          }
                         >
                           View Proof of Delivery
                         </button>
@@ -316,28 +475,33 @@ const ViewOrder = () => {
                 ))}
               </ul>
               <div className="d-flex justify-content-between align-items-center mt-4 px-3">
-                <h4 className="fw-bold text-danger">
-                  Balance: ₱
-                  {Number(orderDetails?.balance || 0).toLocaleString()}
-                </h4>
-                <h4 className="fw-bold text-success">
-                  Total Cost: ₱{totalCost.toLocaleString()}
-                </h4>
+                <div>
+                  {orderDetails.payment_option === "Down Payment" && (
+                    <h4 className="fw-bold text-danger mb-0">
+                      Remaining Balance: ₱{calculatedBalance.toLocaleString()}
+                    </h4>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="fw-bold text-success text-end mb-0">
+                    Total Cost: ₱{totalCost.toLocaleString()}
+                  </h4>
+                </div>
               </div>
             </div>
 
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
-              {orderDetails.status !== "Delivered" &&
-                orderDetails.status !== "Out for Delivery" &&
-                orderDetails.status !== "Cancelled" && (
-                  <Button
-                    variant="primary"
-                    className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                    onClick={handleUpdate}
-                  >
-                    Update
-                  </Button>
-                )}
+              {!["Delivered", "Out for Delivery", "Cancelled"].includes(
+                orderDetails.status
+              ) && (
+                <button
+                  className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                  onClick={handleUpdate}
+                >
+                  Update
+                </button>
+              )}
 
               {orderDetails.status === "Cancelled" && (
                 <button
@@ -352,7 +516,6 @@ const ViewOrder = () => {
         </div>
       </div>
 
-      {/* Update Modal */}
       <UpdateOrderModal
         show={showModal}
         handleClose={handleClose}
@@ -363,7 +526,6 @@ const ViewOrder = () => {
         setEditableItems={setEditableItems}
       />
 
-      {/* Reschedule Modal */}
       <RescheduleModal
         show={showReschedule}
         handleClose={() => setShowReschedule(false)}
@@ -383,24 +545,92 @@ const ViewOrder = () => {
           closeButton
           className="bg-primary bg-opacity-75 text-white"
         >
-          <Modal.Title>Proof of Delivery</Modal.Title>
+          <Modal.Title>{modalTitle}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="d-flex justify-content-center bg-light">
-          {proofUrl ? (
+          {Array.isArray(proofUrl) ||
+          (typeof proofUrl === "string" && proofUrl.startsWith("[")) ? (
+            <div className="d-flex align-items-center justify-content-center">
+              {proofUrl.length > 1 && (
+                <button
+                  className="btn btn-secondary me-2"
+                  onClick={() => {
+                    const container = document.getElementById(
+                      "proof-scroll-container"
+                    );
+                    const imageWidth = container.clientWidth;
+                    container.scrollBy({
+                      left: -imageWidth,
+                      behavior: "smooth",
+                    });
+                  }}
+                >
+                  ‹
+                </button>
+              )}
+              <div
+                id="proof-scroll-container"
+                style={{
+                  display: "flex",
+                  overflowX: "auto",
+                  scrollBehavior: "smooth",
+                  width: "700px",
+                  height: "720px",
+                  gap: "10px",
+                  padding: "5px",
+                  border: "2px solid #ccc",
+                  borderRadius: "10px",
+                }}
+              >
+                {proofUrl.map((url, index) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`${modalTitle} ${index + 1}`}
+                    style={{
+                      width: "700px",
+                      height: "680px",
+                      objectFit: "contain",
+                      flexShrink: 0,
+                      scrollSnapAlign: "center",
+                    }}
+                  />
+                ))}
+              </div>
+              {proofUrl.length > 1 && (
+                <button
+                  className="btn btn-secondary ms-2"
+                  onClick={() => {
+                    const container = document.getElementById(
+                      "proof-scroll-container"
+                    );
+                    const imageWidth = container.clientWidth;
+                    container.scrollBy({
+                      left: imageWidth,
+                      behavior: "smooth",
+                    });
+                  }}
+                >
+                  ›
+                </button>
+              )}
+            </div>
+          ) : proofUrl ? (
             <img
               src={proofUrl}
-              alt="Proof of Delivery"
+              alt={modalTitle}
               className="w-100 h-auto"
               style={{
                 maxHeight: "75vh",
                 maxWidth: "35rem",
                 objectFit: "fill",
-                // borderRadius: "10px",
                 border: "1px solid #9E9E9EFF",
               }}
             />
           ) : (
-            <p className="text-muted">No proof of delivery available.</p>
+            <p className="text-muted">
+              No {modalTitle.toLowerCase()} available.
+            </p>
           )}
         </Modal.Body>
 
@@ -409,6 +639,118 @@ const ViewOrder = () => {
             variant="secondary"
             onClick={() => setShowProofViewModal(false)}
             className="close-btn px-3 py-2 rounded-2 fs-6"
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showFAQ}
+        onHide={() => setShowFAQ(false)}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            borderBottom: "none",
+          }}
+        >
+          <Modal.Title>Guide for View Order Details</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
+          <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
+            The View Order Details page allows you to review all information
+            related to a specific order, including customer details, ordered
+            items, and payment records. From here, you can update pending
+            transactions, add new items, or record additional payments. Once the
+            order is marked as
+            <span className="fw-bold text-success"> Delivered</span>,{" "}
+            <span className="fw-bold text-danger">Cancelled</span>, or{" "}
+            <span className="fw-bold text-primary">Out for Delivery</span>,
+            editing options will be limited to preserve data accuracy.
+          </p>
+
+          <div className="px-3 mb-3">
+            <div className="accordion" id="faqAccordion">
+              {guideqst.map((faq, index) => (
+                <div
+                  className="accordion-item mb-3 shadow-sm border-0"
+                  key={index}
+                >
+                  <h2 className="accordion-header" id={`heading${index}`}>
+                    <button
+                      className={`accordion-button ${
+                        activeFAQIndex === index ? "" : "collapsed"
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setActiveFAQIndex(
+                          activeFAQIndex === index ? null : index
+                        )
+                      }
+                      aria-expanded={activeFAQIndex === index}
+                      aria-controls={`collapse${index}`}
+                      style={{
+                        backgroundColor:
+                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                        color: activeFAQIndex === index ? "white" : "#116B8A",
+                        fontWeight: 600,
+                        transition: "all 0.3s ease",
+                      }}
+                      onMouseOver={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#d9eff1";
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#e9f6f8";
+                        }
+                      }}
+                    >
+                      {faq.question}
+                    </button>
+                  </h2>
+                  <div
+                    id={`collapse${index}`}
+                    className={`accordion-collapse collapse ${
+                      activeFAQIndex === index ? "show" : ""
+                    }`}
+                    aria-labelledby={`heading${index}`}
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div
+                      className="accordion-body bg-white rounded-bottom"
+                      style={{
+                        borderLeft: "4px solid #116B8A",
+                        color: "#333",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <strong>Answer:</strong> {faq.answer}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderTop: "1px solid #dee2e6",
+          }}
+        >
+          <Button
+            variant="outline-secondary"
+            onClick={() => setShowFAQ(false)}
+            className="px-4"
           >
             Close
           </Button>

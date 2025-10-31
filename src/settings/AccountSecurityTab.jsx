@@ -5,7 +5,6 @@ const AccountSecurityTab = () => {
     <div>
       <h4>Account Security</h4>
       <p>Manage two-factor authentication, trusted devices, etc.</p>
-      {/* Add your security settings options */}
     </div>
   );
 };

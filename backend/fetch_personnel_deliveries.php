@@ -31,7 +31,7 @@ SELECT
     t.customer_contact, 
     t.mode_of_payment,
     t.status AS delivery_status,
-    da.device_id,  -- ✅ include device ID here
+    da.device_id, 
 
     po.quantity, 
     po.type_of_product AS product_name,
@@ -71,7 +71,6 @@ if ($result && $result->num_rows > 0) {
 
         $itemTotal = (float) $row['item_total'];
 
-        // ✅ Use $row here, not $item
         $grouped[$tid]['items'][] = [
             'name' => trim(($row['product_name'] ?? '') . ' ' . ($row['description'] ?? '')),
             'qty' => (int) $row['quantity'],

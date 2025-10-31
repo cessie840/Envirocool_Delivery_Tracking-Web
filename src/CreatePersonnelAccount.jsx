@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import OperationalLayout from "./OperationalLayout";
 import { FaArrowLeft } from "react-icons/fa";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const CreatePersonnelAccount = () => {
   const navigate = useNavigate();
@@ -64,7 +65,6 @@ const CreatePersonnelAccount = () => {
       }
     }
 
-    // 2. Contact Number Validation
     if (!/^09\d{9}$/.test(formData.contactNumber)) {
       setErrorMessage(
         "Contact number must start with '09' and be exactly 11 digits."
@@ -72,7 +72,6 @@ const CreatePersonnelAccount = () => {
       return;
     }
 
-    // 3. Email Validation
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setErrorMessage(
         "Please enter a valid email address (e.g., example@email.com)."
@@ -80,7 +79,6 @@ const CreatePersonnelAccount = () => {
       return;
     }
 
-    // 4. Age Check
     if (parseInt(formData.age) < 18) {
       setErrorMessage("You must be at least 18 years old to register.");
       return;
@@ -95,7 +93,7 @@ const CreatePersonnelAccount = () => {
       console.log(response.data);
 
       if (response.data.status === "success") {
-        alert(`Account created!`);
+        ToastHelper.success(`Account created!`);
         navigate("/personnel-accounts");
       } else if (response.data.status === "existing_account") {
         setErrorMessage(response.data.message);
@@ -157,7 +155,7 @@ const CreatePersonnelAccount = () => {
 
               <div className="form-group">
                 <label htmlFor="gender">
-                  Gender <span className="required">*</span>
+                  Sex <span className="required">*</span>
                 </label>
                 <select
                   id="gender"
@@ -165,7 +163,7 @@ const CreatePersonnelAccount = () => {
                   value={formData.gender}
                   onChange={handleChange}
                 >
-                  <option value="">Select Gender</option>
+                  <option value="">Select Sex</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>

@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include 'database.php';
 
-// Collect inputs
 $pers_username = $_POST['pers_username'] ?? null;
 $pers_fname    = $_POST['pers_fname'] ?? null;
 $pers_lname    = $_POST['pers_lname'] ?? null;
@@ -36,7 +35,6 @@ if (!$pers_username) {
     exit;
 }
 
-// Handle profile picture upload if provided
 $profile_pic_filename = null;
 if (isset($_FILES['profilePic']) && $_FILES['profilePic']['error'] === UPLOAD_ERR_OK) {
     $uploadDir = __DIR__ . "/uploads/";
@@ -52,7 +50,6 @@ if (isset($_FILES['profilePic']) && $_FILES['profilePic']['error'] === UPLOAD_ER
     }
 }
 
-// Build update query dynamically
 $fields = [];
 $params = [];
 $types  = "";

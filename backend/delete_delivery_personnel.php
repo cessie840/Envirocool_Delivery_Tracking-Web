@@ -1,12 +1,10 @@
 <?php
-// Allowed origins
 $allowed_origins = [
     "https://cessie840.github.io",
     "http://localhost:5173",
     "http://localhost:5173/Envirocool-Tracking-Page"
 ];
 
-// If the request's origin is allowed, send the CORS header
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
 }
@@ -14,10 +12,9 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-// Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Methods: POST, OPTIONS");
-    header("Access-Control-Max-Age: 86400"); // Cache preflight for 1 day
+    header("Access-Control-Max-Age: 86400"); 
     http_response_code(200);
     exit();
 }

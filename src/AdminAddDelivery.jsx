@@ -3,16 +3,18 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
 import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
-import { Button, Modal } from "react-bootstrap";
+import { Button, Modal, Collapse } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
+import { ToastHelper } from "./helpers/ToastHelper";
+import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const paymentOptions = [
-  { label: "CASH", value: "Cash" },
-  { label: "BANK TRANSFER", value: "Bank Transfer" },
+  { label: "Cash", value: "Cash" },
+  { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
 import { components } from "react-select";
@@ -98,9 +100,10 @@ const AddDelivery = () => {
   });
   const [newValue, setNewValue] = useState("");
 
-  const [proofFile, setProofFile] = useState(null);
-  const [proofPreview, setProofPreview] = useState("");
-  const [selectedFileName, setSelectedFileName] = useState("");
+  const [proofFiles, setProofFiles] = useState([]);
+  const [proofPreviews, setProofPreviews] = useState([]);
+  const [selectedFileNames, setSelectedFileNames] = useState([]);
+
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [dateError, setDateError] = useState("");
   const [orderDateError, setOrderDateError] = useState("");
@@ -140,62 +143,55 @@ const AddDelivery = () => {
   const [lagunaData, setLagunaData] = useState({});
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
-  
 
-useEffect(() => {
-  axios
-    .get("http://localhost/DeliveryTrackingSystem/get_provinces.php")
-    .then((res) => setProvinceOptions(res.data))
-    .catch((err) => console.error(err));
-}, []);
-
-useEffect(() => {
-  if (form.province) {
+  useEffect(() => {
     axios
-      .get(
-        `http://localhost/DeliveryTrackingSystem/get_city.php?province=${form.province}`
-      )
-      .then((res) => setCityOptions(res.data))
+      .get("http://localhost/DeliveryTrackingSystem/get_provinces.php")
+      .then((res) => setProvinceOptions(res.data))
       .catch((err) => console.error(err));
-  } else {
-    setCityOptions([]);
-  }
-}, [form.province]);
+  }, []);
 
-useEffect(() => {
-  if (form.city && form.province) {
-    axios
-      .get(
-        `http://localhost/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
-      )
-      .then((res) => setBarangayOptions(res.data))
-      .catch((err) => console.error(err));
-  } else {
-    setBarangayOptions([]);
-  }
-}, [form.city]);
+  useEffect(() => {
+    if (form.province) {
+      axios
+        .get(
+          `http://localhost/DeliveryTrackingSystem/get_city.php?province=${form.province}`
+        )
+        .then((res) => setCityOptions(res.data))
+        .catch((err) => console.error(err));
+    } else {
+      setCityOptions([]);
+    }
+  }, [form.province]);
 
+  useEffect(() => {
+    if (form.city && form.province) {
+      axios
+        .get(
+          `http://localhost/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
+        )
+        .then((res) => setBarangayOptions(res.data))
+        .catch((err) => console.error(err));
+    } else {
+      setBarangayOptions([]);
+    }
+  }, [form.city]);
 
+  useEffect(() => {
+    fetchProvinces();
+  }, []);
 
-useEffect(() => {
-  fetchProvinces();
-}, []);
-
-const fetchProvinces = async () => {
-  try {
-    const response = await axios.get(
-      "http://localhost/backend/get_provinces.php"
-    );
-    const data = response.data;
-    const formatted = data.map((item) => ({
-      label: item.province_name,
-      value: item.province_name,
-    }));
-    setProvinceOptions(formatted);
-  } catch (error) {
-    console.error("Error fetching provinces:", error);
-  }
-};
+  const fetchProvinces = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost/DeliveryTrackingSystem/get_provinces.php"
+      );
+      const data = response.data;
+      setProvinceOptions(data);
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+    }
+  };
 
   const handleCityChange = (selected) => {
     const city = selected.value;
@@ -251,10 +247,10 @@ const fetchProvinces = async () => {
         );
       }
 
-      alert("Deleted successfully!");
+      ToastHelper.success("Deleted successfully!");
     } catch (err) {
       console.error(err);
-      alert("Error deleting item");
+      ToastHelper.error("Error deleting item");
     }
   };
 
@@ -288,16 +284,32 @@ const fetchProvinces = async () => {
   };
 
   const handleProofFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProofFile(file);
-      setSelectedFileName(file.name);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const validPreviews = [];
+    const validNames = [];
+
+    files.forEach((file) => {
+      if (file.type === "image/jpeg" || file.type === "image/png") {
+        validFiles.push(file);
+        validNames.push(file.name);
+        const previewUrl = URL.createObjectURL(file);
+        validPreviews.push(previewUrl);
+      } else {
+        ToastHelper.error(
+          `File "${file.name}" is not a valid JPEG or PNG image.`,
+          {
+            className: "toast-error",
+          }
+        );
+      }
+    });
+
+    proofPreviews.forEach((url) => URL.revokeObjectURL(url));
+
+    setProofFiles(validFiles);
+    setProofPreviews(validPreviews);
+    setSelectedFileNames(validNames);
   };
 
   const handleUnitCostChange = (index, e) => {
@@ -588,56 +600,116 @@ const fetchProvinces = async () => {
   };
 
   const handlePrintReceipt = () => {
+    const element = document.getElementById("receipt-section");
+    if (!element) {
+      console.error("Receipt section not found!");
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `ENV-Receipt_TN${transactionId}_${today}`;
+
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
     <html>
       <head>
-        <title>Delivery Receipt</title>
+        <title>${filename}</title>
         <style>
-          @page { size: auto; margin: 0; } /* Auto size for height, no margins */
-          body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: Arial, sans-serif; 
-            font-size: 11px; /* Standard font size for body */
-            line-height: 1.4; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; /* Center vertically */
+          @page {
+            size: auto;
+            margin: 10mm;
           }
-          .receipt { 
-            width: 80mm; /* Standard receipt width */
-            margin: 0; 
-            padding: 10px; 
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Optional shadow for aesthetics */
+          body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #000;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
           }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
+          .receipt {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
           }
-          th, td { 
-            border: 1px solid #000; 
-            padding: 2px; 
-            text-align: left; 
-            font-size: 10px; /* Smaller font size for table cells */
+          .receipt p {
+            margin: 3px 0;
+          }
+
+          h3 {
+            font-size: 15px;
+            margin-bottom: 3px;
+          }
+          p, th {
+            font-size: 11px;
+          }
+          table, td {
+            font-size: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            text-align: left;
+          }
+          th {
+            background-color: #f5f5f5;
+            font-weight: bold;
           }
           .text-center { text-align: center; }
-          .fw-bold { font-weight: bold; }
           .text-end { text-align: right; }
+
+          small:contains("Date Generated"),
+          p:has(small:contains("Date Generated")) {
+            display: block;
+            margin-bottom: 5px;
+          }
+
+          .signature-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 60px;
+          }
+          .signature {
+            text-align: center;
+            width: 40%;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            font-size: 11px;
+          }
         </style>
       </head>
       <body>
-        <div class="receipt">${
-          document.getElementById("receipt-section").innerHTML
-        }</div>
+        <div class="receipt">
+         ${
+           element.innerHTML
+             .replace("Date Printed:", "Date Generated:")
+             .replace(/(<hr>|_{3,}|Prepared By[\s\S]*?Received By)/gi, "") +
+           `
+            <div class='signature-container'>
+              <div class='signature'>Prepared By</div>
+              <div class='signature'>Received By</div>
+            </div>
+          `
+         }
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            // Uncomment to auto-close the print window after printing
+            // window.onafterprint = () => window.close();
+          };
+        </script>
       </body>
     </html>
   `);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
   };
 
   const handleSubmit = async (e) => {
@@ -645,19 +717,40 @@ const fetchProvinces = async () => {
     setLoading(true);
 
     if (!/^09\d{9}$/.test(form.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
+      ToastHelper.error(
+        "Contact number must start with '09' and be exactly 11 digits.",
+        { className: "toast-error" }
+      );
       setLoading(false);
       return;
     }
+
+    const fullAddress =
+      `${form.street}, ${form.barangay}, ${form.city}, ${form.province}`.trim();
+    if (!fullAddress.replace(/[, ]/g, "")) {
+      ToastHelper.error(
+        "Please complete the customer's address before proceeding.",
+        {
+          className: "toast-error",
+        }
+      );
+      setLoading(false);
+      return;
+    }
+    form.customer_address = fullAddress;
 
     if (!form.payment_method) {
-      alert("Please select a payment method.");
+      ToastHelper.error("Please select a payment method.", {
+        className: "toast-error",
+      });
       setLoading(false);
       return;
     }
 
-    if (form.payment_method && !proofFile) {
-      alert("Please upload proof of payment.");
+    if (form.payment_method && proofFiles.length === 0) {
+      ToastHelper.error("Please upload proof of payment.", {
+        className: "toast-error",
+      });
       setLoading(false);
       return;
     }
@@ -669,25 +762,42 @@ const fetchProvinces = async () => {
       const description = item.description?.trim();
 
       if (!typeOfProduct) {
-        alert(`Please select a type of product for item #${index + 1}`);
+        ToastHelper.error(
+          `Please select a type of product for item #${index + 1}`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
 
       if (!description) {
-        alert(`Please select an item name for item #${index + 1}`);
+        ToastHelper.error(`Please select an item name for item #${index + 1}`, {
+          className: "toast-error",
+        });
         setLoading(false);
         return;
       }
 
       if (isNaN(quantity) || quantity < 1) {
-        alert(`Quantity for item #${index + 1} must be at least 1`);
+        ToastHelper.error(
+          `Quantity for item #${index + 1} must be at least 1`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
 
       if (isNaN(unitCost) || unitCost < 0) {
-        alert(`Unit cost for item #${index + 1} must be a non-negative number`);
+        ToastHelper.error(
+          `Unit cost for item #${index + 1} must be a non-negative number`,
+          {
+            className: "toast-error",
+          }
+        );
         setLoading(false);
         return;
       }
@@ -720,7 +830,7 @@ const fetchProvinces = async () => {
     formData.append("street_name", form.street_name);
     formData.append("barangay", form.barangay);
     formData.append("city", form.city);
-     formData.append("province", form.province);
+    formData.append("province", form.province);
     formData.append("customer_contact", form.customer_contact);
     formData.append("date_of_order", form.date_of_order);
     formData.append("target_date_delivery", form.target_date_delivery);
@@ -741,19 +851,21 @@ const fetchProvinces = async () => {
     formData.append(
       "customer_address",
       [
+        form.province,
+        form.city,
+        form.barangay,
         form.house_no,
         form.street_name,
         form.barangay,
-        form.city,
-        form.province,
-       
         "Philippines",
       ]
         .filter(Boolean)
         .join(", ")
     );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
-    formData.append("proofOfPayment", proofFile);
+    proofFiles.forEach((file, index) => {
+      formData.append(`proofOfPayment[${index}]`, file);
+    });
 
     try {
       const res = await axios.post(
@@ -765,47 +877,55 @@ const fetchProvinces = async () => {
         }
       );
 
-      alert("Delivery added successfully!");
-      fetchProvinces(); 
+      ToastHelper.success("Delivery added successfully!", {
+        duration: 2500,
+        style: {
+          background: "#EBFAECFF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+      fetchProvinces();
 
-      const newTransactionId = res.data.transaction_id || transactionId;
-
-      const fetchAndStoreReceipt = async (id) => {
-        try {
-          const res = await axios.get(
-            `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${id}`
-          );
-          console.log("Receipt data fetched:", res.data);
-
-          const data = res.data;
-          if (!data || !data.form) {
-            console.error("Receipt fetch returned empty data", data);
-            return false;
-          }
-
-          setReceiptData(data.form);
-          setReceiptItems(
-            Array.isArray(data.order_items) ? data.order_items : []
-          );
-
-          return true;
-        } catch (err) {
-          console.error("Error fetching receipt data", err);
-          return false;
-        }
-      };
-
+      setReceiptData({
+        customer_name: form.customer_name,
+        house_no: form.house_no,
+        street_name: form.street_name,
+        barangay: form.barangay,
+        city: form.city,
+        province: form.province,
+        customer_contact: form.customer_contact,
+        date_of_order: form.date_of_order,
+        target_date_delivery: form.target_date_delivery,
+        payment_method: form.payment_method,
+        payment_option: form.payment_option,
+        full_payment: form.full_payment,
+        fp_collection_date: form.fp_collection_date,
+        down_payment: form.down_payment,
+        dp_collection_date: form.dp_collection_date,
+        balance: form.balance,
+        total: form.total,
+      });
+      setReceiptItems(
+        orderItems.map((item) => ({
+          quantity: item.quantity,
+          type_of_product: item.type_of_product,
+          description: item.description,
+          unit_cost: item.unit_cost,
+          total_cost: item.total_cost,
+        }))
+      );
+      setShowReceiptModal(true);
       if (AUTO_DOWNLOAD_RECEIPT) {
-        const ok = await fetchAndStoreReceipt(newTransactionId);
-        if (ok) {
-          setShowReceiptModal(true);
-          setTimeout(() => window.print(), 1000);
-        } else {
-          setShowReceiptModal(true);
-        }
-      } else {
-        const ok = await fetchAndStoreReceipt(newTransactionId);
-        setShowReceiptModal(true);
+        setTimeout(() => window.print(), 1000);
       }
 
       setForm({
@@ -814,7 +934,7 @@ const fetchProvinces = async () => {
         street_name: "",
         barangay: "",
         city: "",
-        province:"",
+        province: "",
         customer_contact: "",
         date_of_order: "",
         target_date_delivery: "",
@@ -837,8 +957,11 @@ const fetchProvinces = async () => {
         },
       ]);
 
-      setProofFile(null);
-      setSelectedFileName("");
+      setProofFiles([]);
+      setProofPreviews([]);
+      setSelectedFileNames([]);
+      proofPreviews.forEach((url) => URL.revokeObjectURL(url));
+
       if (proofFileRef.current) {
         proofFileRef.current.value = "";
       }
@@ -846,13 +969,71 @@ const fetchProvinces = async () => {
       fetchLatestIDs();
     } catch (error) {
       console.error("Error submitting form", error);
-      alert("Error saving delivery.");
+      ToastHelper.error("Error saving delivery.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
     } finally {
       setLoading(false);
     }
   };
+  const [showFAQ, setShowFAQ] = useState(false);
+
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I add a delivery?",
+      answer:
+        "Complete all the required fields, then click the 'Add' button below to create a delivery transaction.",
+    },
+    {
+      question: "I want to add a new type of product.",
+      answer:
+        "In the 'Order Details' section, under 'Type of Product', type the new product name. An option to create it will appear—click it, and it will automatically be added to the product selection.",
+    },
+    {
+      question: "I want to add a new item to our product.",
+      answer:
+        "In the 'Order Details' section, first select the product you want to add an item to. Then, type the new item name in the item selection field. An option to create it will appear—click it, and it will automatically be saved under that product.",
+    },
+    {
+      question: "The customer wants multiple orders in one transaction.",
+      answer:
+        "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
+    },
+  ];
+
   return (
-    <AdminLayout title="Add Delivery" showSearch={false}>
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Add Delivery</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+    >
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
           className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
@@ -1012,7 +1193,7 @@ const fetchProvinces = async () => {
                     setForm((prev) => ({
                       ...prev,
                       city: selected?.value || "",
-                      barangay: "", // ✅ clear barangay when city changes
+                      barangay: "",
                     }))
                   }
                   onInputChange={(inputValue, { action }) => {
@@ -1023,7 +1204,7 @@ const fetchProvinces = async () => {
                   placeholder={
                     form.province ? "Select City" : "Select province first"
                   }
-                  isDisabled={!form.province} 
+                  isDisabled={!form.province}
                   isClearable
                   isSearchable
                   openMenuOnClick
@@ -1033,7 +1214,6 @@ const fetchProvinces = async () => {
                       .toLowerCase()
                       .includes(inputValue.toLowerCase())
                   }
-                
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -1086,7 +1266,6 @@ const fetchProvinces = async () => {
                       .toLowerCase()
                       .includes(inputValue.toLowerCase())
                   }
-                
                   styles={{
                     control: (provided) => ({
                       ...provided,
@@ -1289,7 +1468,7 @@ const fetchProvinces = async () => {
                             console.error("Error saving product type", err);
                           }
                         }}
-                        placeholder="Select type"
+                        placeholder="SELECT PRODUCT"
                         isSearchable
                         components={{ MenuList: CustomMenuList }}
                         onEdit={() =>
@@ -1552,10 +1731,10 @@ const fetchProvinces = async () => {
                               }
 
                               setEditModal({ ...editModal, show: false });
-                              alert("Updated successfully!");
+                              ToastHelper.success("Updated successfully!");
                             } catch (err) {
                               console.error(err);
-                              alert("Error updating!");
+                              ToastHelper.error("Error updating!");
                             }
                           }}
                         >
@@ -1723,7 +1902,7 @@ const fetchProvinces = async () => {
                       <label
                         className="form-check-label"
                         htmlFor={method.toLowerCase().replace(" ", "_")}
-                        style={{ fontSize: "18px", fontWeight: "normal" }}
+                        style={{ fontSize: "17px", fontWeight: "normal" }}
                       >
                         {method}
                       </label>
@@ -1784,7 +1963,6 @@ const fetchProvinces = async () => {
                 )}
               </div>
 
-              {/* ✅ Payment Due moved here to replace Full Payment Amount */}
               <div className="col-md-6">
                 <label htmlFor="dpBillingDate" className="form-label">
                   Payment Due:
@@ -1892,8 +2070,15 @@ const fetchProvinces = async () => {
             <h4 className="mt-5">PROOF OF PAYMENT</h4>
             <div className="row mb-3">
               <div className="col-md-6">
-                <label htmlFor="proofOfPayment" className="form-label">
+                <label
+                  htmlFor="proofOfPayment"
+                  className="form-label"
+                  style={{ whiteSpace: "nowrap" }}
+                >
                   Upload Proof of Payment:
+                  <p className="text-secondary fs-6">
+                    (JPEG/PNG only, multiple allowed)
+                  </p>
                 </label>
                 <div className="d-flex align-items-center">
                   <input
@@ -1901,18 +2086,19 @@ const fetchProvinces = async () => {
                     className="form-control"
                     id="proofOfPayment"
                     name="proofOfPayment"
-                    accept="image/*"
+                    accept="image/jpeg,image/png"
+                    multiple
                     onChange={handleProofFileChange}
                     ref={proofFileRef}
                   />
-
-                  {selectedFileName && (
+                  {selectedFileNames.length > 0 && (
                     <button
                       type="button"
-                      className="btn add-item px-3 py-1 btn-sm ms-2 fs-6"
+                      className="btn add-item px-3 py-2 btn-sm ms-2 fs-6"
+                      style={{ whiteSpace: "nowrap" }}
                       onClick={() => setShowPreviewModal(true)}
                     >
-                      View
+                      View ({selectedFileNames.length})
                     </button>
                   )}
                 </div>
@@ -1931,23 +2117,85 @@ const fetchProvinces = async () => {
               >
                 <Modal.Title>Proof of Payment Preview</Modal.Title>
               </Modal.Header>
+
               <Modal.Body className="text-center bg-light">
-                {proofPreview &&
-                  typeof proofPreview === "string" &&
-                  proofPreview.startsWith("data:") && (
-                    <img
-                      src={proofPreview}
-                      alt="Proof of Payment"
+                {proofPreviews.length > 0 ? (
+                  <div className="d-flex align-items-center justify-content-center">
+                    {proofPreviews.length > 1 && (
+                      <button
+                        className="btn btn-secondary me-2"
+                        onClick={() => {
+                          const container = document.getElementById(
+                            "preview-scroll-container"
+                          );
+                          const imageWidth = container.offsetWidth;
+                          container.scrollBy({
+                            left: -imageWidth,
+                            behavior: "smooth",
+                          });
+                        }}
+                      >
+                        ‹
+                      </button>
+                    )}
+
+                    <div
+                      id="preview-scroll-container"
                       style={{
-                        maxWidth: "100%",
-                        maxHeight: "700px",
-                        objectFit: "contain",
+                        display: "flex",
+                        overflowX: "auto",
+                        scrollSnapType: "x mandatory",
+                        scrollBehavior: "smooth",
+                        width: "700px",
+                        height: "720px",
+                        gap: "10px",
+                        padding: "5px",
+                        border: "2px solid #ccc",
+                        borderRadius: "10px",
+                        justifyContent:
+                          proofPreviews.length === 1 ? "center" : "flex-start",
                       }}
-                      className="border border-secondary border-1"
-                    />
-                  )}
+                    >
+                      {proofPreviews.map((preview, index) => (
+                        <img
+                          key={index}
+                          src={preview}
+                          alt={`Proof of Payment ${index + 1}`}
+                          style={{
+                            width: "700px",
+                            height: "680px",
+                            objectFit: "contain",
+                            flexShrink: 0,
+                            scrollSnapAlign: "center",
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    {proofPreviews.length > 1 && (
+                      <button
+                        className="btn btn-secondary ms-2"
+                        onClick={() => {
+                          const container = document.getElementById(
+                            "preview-scroll-container"
+                          );
+                          const imageWidth = container.offsetWidth;
+                          container.scrollBy({
+                            left: imageWidth,
+                            behavior: "smooth",
+                          });
+                        }}
+                      >
+                        ›
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p>No images to preview.</p>
+                )}
               </Modal.Body>
             </Modal>
+
             <Modal
               show={showSummaryModal}
               onHide={() => setShowSummaryModal(false)}
@@ -1965,7 +2213,6 @@ const fetchProvinces = async () => {
                   <p className="mb-3">
                     <strong>P.O. No.:</strong> {poId}
                   </p>
-
                   <p>
                     <strong>Customer Name:</strong> {form.customer_name}
                   </p>
@@ -2024,8 +2271,7 @@ const fetchProvinces = async () => {
                       </p>
                     </>
                   )}
-
-                  <strong className="fs-5">Order Items:</strong>
+                  {/* <strong className="fs-5">Order Items:</strong> */}
                   <table className="table table-bordered table-sm mt-2">
                     <thead className="table-success text-center align-middle">
                       <tr>
@@ -2064,14 +2310,16 @@ const fetchProvinces = async () => {
                       </tr>
                     </tfoot>
                   </table>
-                  {proofFile ? (
+                  {proofFiles.length > 0 ? (
                     <div className="mt-3">
                       <Button
-                        variant="success"
+                        variant={showImageViewer ? "success" : "success"}
                         size="sm"
-                        onClick={() => setShowImageViewer(true)}
+                        onClick={() => setShowImageViewer((prev) => !prev)}
                       >
-                        View Proof of Payment
+                        {showImageViewer
+                          ? "Hide Proof of Payment"
+                          : `View Proof of Payment`}
                       </Button>
                     </div>
                   ) : (
@@ -2079,32 +2327,90 @@ const fetchProvinces = async () => {
                       <strong>Proof of Payment:</strong> Not uploaded
                     </p>
                   )}
-
-                  {showImageViewer && proofFile && (
+                  {showImageViewer && proofFiles.length > 0 && (
                     <div className="mt-3 border p-2 bg-success bg-opacity-10 rounded">
                       <div className="d-flex justify-content-between align-items-center mb-2">
                         <h6 className="text-center w-100 fs-5">
-                          Proof of Payment Preview
+                          Proof of Payment Preview ({proofFiles.length} images)
                         </h6>
                         <Button
                           variant="close"
                           onClick={() => setShowImageViewer(false)}
                         />
                       </div>
-                      <div className="text-center">
-                        {proofPreview && (
-                          <img
-                            src={proofPreview}
-                            alt="Proof of Payment"
-                            style={{
-                              maxWidth: "100%",
-                              maxHeight: "400px",
-                              objectFit: "contain",
-                              border: "1px solid gray",
-                              borderRadius: "5px",
+                      <div className="d-flex align-items-center justify-content-center">
+                        {proofPreviews.length > 1 && (
+                          <button
+                            className="btn btn-secondary me-2"
+                            onClick={() => {
+                              const container = document.getElementById(
+                                "summary-scroll-container"
+                              );
+                              const imageWidth = container.offsetWidth;
+                              container.scrollBy({
+                                left: -imageWidth,
+                                behavior: "smooth",
+                              });
                             }}
-                            className="img-fluid"
-                          />
+                          >
+                            ‹
+                          </button>
+                        )}
+                        <div
+                          id="summary-scroll-container"
+                          style={{
+                            display: "flex",
+                            overflowX:
+                              proofPreviews.length > 1 ? "auto" : "hidden",
+                            scrollSnapType: "x mandatory",
+                            scrollBehavior: "smooth",
+                            width: "600px",
+                            height: "450px",
+                            gap: "10px",
+                            padding: "10px",
+                            border: "1px solid #ccc",
+                            borderRadius: "5px",
+                            justifyContent:
+                              proofPreviews.length === 1
+                                ? "center"
+                                : "flex-start",
+                            backgroundColor: "white",
+                          }}
+                        >
+                          {proofPreviews.map((preview, index) => (
+                            <img
+                              key={index}
+                              src={preview}
+                              alt={`Proof of Payment ${index + 1}`}
+                              style={{
+                                width: "600px",
+                                height: "400px",
+                                objectFit: "contain",
+                                flexShrink: 0,
+                                scrollSnapAlign: "center",
+                                border: "1px solid #aaa",
+                              }}
+                              className="img-fluid"
+                            />
+                          ))}
+                        </div>
+
+                        {proofPreviews.length > 1 && (
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={() => {
+                              const container = document.getElementById(
+                                "summary-scroll-container"
+                              );
+                              const imageWidth = container.offsetWidth;
+                              container.scrollBy({
+                                left: imageWidth,
+                                behavior: "smooth",
+                              });
+                            }}
+                          >
+                            ›
+                          </button>
                         )}
                       </div>
                     </div>
@@ -2149,7 +2455,6 @@ const fetchProvinces = async () => {
                   <small>Date Printed: {new Date().toLocaleString()}</small>
                 </div>
 
-                {/* Customer and order details */}
                 <div className="mb-3">
                   <p>
                     <b>Customer Name:</b> {receiptData?.customer_name || ""}
@@ -2246,8 +2551,15 @@ const fetchProvinces = async () => {
                           {item.type_of_product} - {item.description}
                         </td>
                         <td className="text-end">
-                          {formatPeso(parseFloat(item.unit_cost || 0))}
+                          {formatPeso(
+                            parseFloat(
+                              (item.unit_cost || "0")
+                                .toString()
+                                .replace(/[^0-9.]/g, "")
+                            )
+                          )}
                         </td>
+
                         <td className="text-end">
                           {formatPeso(
                             parseFloat(
@@ -2272,7 +2584,6 @@ const fetchProvinces = async () => {
                   </tfoot>
                 </table>
 
-                {/* Signature Section */}
                 <div className="signature-section mt-4">
                   <div className="row">
                     <div className="col-6 text-center">
@@ -2297,9 +2608,7 @@ const fetchProvinces = async () => {
                 <Button variant="success" onClick={handlePrintReceipt}>
                   Print / Download
                 </Button>
-                {/* <Button variant="primary" onClick={handleDownloadPDF}>
-      Download PDF
-    </Button> */}
+                
               </Modal.Footer>
             </Modal>
           </div>
@@ -2359,6 +2668,120 @@ const fetchProvinces = async () => {
           )}
         </div>
       </div>
+
+      <Modal
+        show={showFAQ}
+        onHide={() => {
+          setShowFAQ(false);
+          setActiveFAQIndex(null);
+        }}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            borderBottom: "none",
+          }}
+        >
+          <Modal.Title>Guide for Adding a Delivery</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
+          <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
+            This page allows you to add a new delivery. Fill in all required
+            details such as <strong>customer information</strong>,{" "}
+            <strong>order items</strong>, and
+            <strong> payment details</strong>. Once submitted, the delivery will
+            be recorded and tracked in the system.
+          </p>
+
+          <div className="px-3 mb-3">
+            <div className="accordion" id="faqAccordion">
+              {guideqst.map((faq, index) => (
+                <div
+                  className="accordion-item mb-3 shadow-sm border-0"
+                  key={index}
+                >
+                  <h2 className="accordion-header" id={`heading${index}`}>
+                    <button
+                      className={`accordion-button ${
+                        activeFAQIndex === index ? "" : "collapsed"
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setActiveFAQIndex(
+                          activeFAQIndex === index ? null : index
+                        )
+                      }
+                      aria-expanded={activeFAQIndex === index}
+                      aria-controls={`collapse${index}`}
+                      style={{
+                        backgroundColor:
+                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                        color: activeFAQIndex === index ? "white" : "#116B8A",
+                        fontWeight: 600,
+                        transition: "all 0.3s ease",
+                      }}
+                      onMouseOver={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#d9eff1";
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#e9f6f8";
+                        }
+                      }}
+                    >
+                      {faq.question}
+                    </button>
+                  </h2>
+                  <div
+                    id={`collapse${index}`}
+                    className={`accordion-collapse collapse ${
+                      activeFAQIndex === index ? "show" : ""
+                    }`}
+                    aria-labelledby={`heading${index}`}
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div
+                      className="accordion-body bg-white rounded-bottom"
+                      style={{
+                        borderLeft: "4px solid #116B8A",
+                        color: "#333",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <strong>Answer:</strong> {faq.answer}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderTop: "1px solid #dee2e6",
+          }}
+        >
+          <Button
+            variant="outline-secondary"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+            className="px-4"
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

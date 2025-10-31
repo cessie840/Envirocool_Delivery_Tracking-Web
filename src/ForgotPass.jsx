@@ -4,6 +4,7 @@ import axios from "axios";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import logo from "./assets/envirocool-logo.png";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -30,7 +31,6 @@ const ForgotPassword = () => {
     }
   }, [errorMessage]);
 
-  // Step 1: Send reset code
   const handleEmail = async (e) => {
     e.preventDefault();
 
@@ -45,7 +45,7 @@ const ForgotPassword = () => {
 
       switch (data.status) {
         case "success":
-          alert("Reset code has been sent to your email.");
+          ToastHelper.success("Reset code has been sent to your email.");
           setStep(2);
           break;
         case "user_not_found":
@@ -62,10 +62,10 @@ const ForgotPassword = () => {
           setTimeout(() => navigate("/"), 3000);
           break;
         case "db_error":
-          alert("Something went wrong. Try again later.");
+          ToastHelper.error("Something went wrong. Try again later.");
           break;
         default:
-          alert("Unexpected error occurred.");
+          ToastHelper.error("Unexpected error occurred.");
           console.warn("Unhandled status:", data.status);
           break;
       }
@@ -75,7 +75,6 @@ const ForgotPassword = () => {
     }
   };
 
-  // Step 2: Verify code
   const handleVerifyCode = async (e) => {
     e.preventDefault();
 
@@ -113,11 +112,10 @@ const ForgotPassword = () => {
       }
     } catch (error) {
       console.error("Verification error:", error);
-      alert("Failed to verify code. Please try again.");
+      ToastHelper.error("Failed to verify code. Please try again.");
     }
   };
 
-  // Step 3: Change password
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -148,14 +146,14 @@ const ForgotPassword = () => {
       console.log("Reset response:", data);
 
       if (data.status === "success") {
-        alert("Password has been changed successfully.");
+        ToastHelper.success("Password has been changed successfully.");
         navigate("/");
       } else {
         setErrorMessage(data.message || "Failed to reset password.");
       }
     } catch (error) {
       console.error("Reset error:", error);
-      alert("Server error. Try again later.");
+      ToastHelper.error("Server error. Try again later.");
     }
   };
 
@@ -171,7 +169,6 @@ const ForgotPassword = () => {
 
         <h4 className="mb-4">Reset Password</h4>
 
-        {/* STEP 1: EMAIL */}
         {step === 1 && (
           <form className="login-form text-start" onSubmit={handleEmail}>
             <div className="mb-3">
@@ -204,7 +201,6 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        {/* STEP 2: VERIFY CODE */}
         {step === 2 && (
           <form className="login-form text-start" onSubmit={handleVerifyCode}>
             <div className="mb-3">
@@ -237,13 +233,11 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        {/* STEP 3: RESET PASSWORD */}
         {step === 3 && (
           <form
             className="login-form text-start"
             onSubmit={handleChangePassword}
           >
-            {/* NEW PASSWORD */}
             <div className="mb-3 position-relative">
               <label htmlFor="newPassword" className="form-label">
                 New Password:
@@ -284,7 +278,6 @@ const ForgotPassword = () => {
               </div>
             </div>
 
-            {/* CONFIRM PASSWORD */}
             <div className="mb-3 position-relative">
               <label htmlFor="confirmPassword" className="form-label">
                 Confirm New Password:
@@ -314,7 +307,6 @@ const ForgotPassword = () => {
               </div>
             </div>
 
-            {/* PASSWORD REQUIREMENTS */}
             <div
               className="mt-2"
               style={{ fontSize: "0.8rem", marginBottom: "8px" }}

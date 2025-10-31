@@ -34,10 +34,8 @@ if (!$username || !$status) {
     exit;
 }
 
-// Normalize status
 $status = (strtolower($status) === 'active') ? 'Active' : 'Inactive';
 
-// ✅ Ensure personnel exists
 $stmt = $conn->prepare("SELECT pers_username, status, assignment_status 
                         FROM DeliveryPersonnel 
                         WHERE pers_username = ? LIMIT 1");
@@ -53,7 +51,6 @@ if (!$result || $result->num_rows === 0) {
 $personRow = $result->fetch_assoc();
 $stmt->close();
 
-// ✅ Check if they are currently Out for Delivery
 $checkSql = "
     SELECT 1
     FROM DeliveryAssignments da
@@ -69,7 +66,6 @@ $checkResult = $stmt->get_result();
 $isOutForDelivery = ($checkResult && $checkResult->num_rows > 0);
 $stmt->close();
 
-// ✅ Decide assignment_status
 if ($status === "Inactive") {
     $assignment_status = null;
 } else {
@@ -77,7 +73,6 @@ if ($status === "Inactive") {
     $assignment_status = $isOutForDelivery ? "Out for Delivery" : "Available";
 }
 
-// ✅ Update DeliveryPersonnel
 if ($assignment_status === null) {
     $updateSql = "UPDATE DeliveryPersonnel SET status = ?, assignment_status = NULL WHERE pers_username = ?";
     $stmt = $conn->prepare($updateSql);

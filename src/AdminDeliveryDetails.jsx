@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Form } from "react-bootstrap";
+import { Table, Form, Button, Modal } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
+import { ToastHelper } from "./helpers/ToastHelper";
+import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const DeliveryDetails = () => {
   const navigate = useNavigate();
@@ -19,6 +21,8 @@ const DeliveryDetails = () => {
     down_payment: "",
     balance: "",
     total: "",
+    full_payment: "0",
+    fbilling_date: "",
   });
   const [transactionId, setTransactionId] = useState(null);
 
@@ -26,6 +30,40 @@ const DeliveryDetails = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
+  const [showFAQ, setShowFAQ] = useState(false);
+
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I add a new delivery?",
+      answer:
+        "Click the 'Add Delivery' button at the top right, or navigate to the Add Delivery page to input the transaction details.",
+    },
+    {
+      question:
+        "How can I view only the transactions that are out for delivery?",
+      answer:
+        "Use the 'Filter by Status' dropdown above the table and select 'Out for Delivery' to display only those transactions.",
+    },
+    {
+      question: "How can I find a specific transaction?",
+      answer:
+        "Use the search bar to look for a specific record by typing the customer's name, tracking number, or transaction number.",
+    },
+    {
+      question: "Where can I view the full details of a transaction?",
+      answer:
+        "Click the 'View' button on the corresponding transaction row to see all details.",
+    },
+    {
+      question:
+        "Why can’t I click the Update button for transactions marked as Cancelled, Delivered, or Out for Delivery?",
+      answer:
+        "The Update button is only available for pending transactions. Once an order is out for delivery, delivered, or cancelled, it can no longer be modified.",
+    },
+  ];
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -49,7 +87,13 @@ const DeliveryDetails = () => {
   const handleUpdate = (id) => {
     setTransactionId(id);
     fetch(
-      `http://localhost//DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}`
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`, // Added cache-busting
+      {
+        method: "GET",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      }
     )
       .then((res) => res.json())
       .then((data) => {
@@ -74,6 +118,8 @@ const DeliveryDetails = () => {
           down_payment: parseFloat(data.down_payment) || 0,
           balance: parseFloat(data.balance) || 0,
           total: parseFloat(data.total) || 0,
+          full_payment: parseFloat(data.full_payment) || 0, 
+          fbilling_date: data.fbilling_date || "", 
         });
 
         setShowModal(true);
@@ -82,8 +128,67 @@ const DeliveryDetails = () => {
   };
 
   const handleSubmit = () => {
+    const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
+    if (hasInvalidQuantity) {
+      ToastHelper.error("One or more items have invalid quantity.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+      return;
+    }
+
     if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      alert("Contact number must start with '09' and be exactly 11 digits.");
+      ToastHelper.error(
+        "Contact number must start with '09' and be exactly 11 digits.",
+        {
+          duration: 2500,
+          style: {
+            background: "#FFEAEA",
+            border: "1px solid #E57373",
+            color: "#C62828",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+            borderRadius: "8px",
+          },
+        }
+      );
+      return;
+    }
+
+    if (!transactionId) {
+      ToastHelper.error("Transaction ID is missing — please try again.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
       return;
     }
 
@@ -93,33 +198,85 @@ const DeliveryDetails = () => {
     );
 
     const down_payment = parseFloat(formData.down_payment) || 0;
-    const balance = total - down_payment;
+    const full_payment = parseFloat(formData.full_payment) || 0; 
+    const balance = total - down_payment - full_payment;
+
+    const payload = {
+      transaction_id: transactionId,
+      ...formData,
+      total,
+      balance, 
+      items: editableItems,
+    };
 
     fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        transaction_id: transactionId,
-        ...formData,
-        total,
-        balance,
-        items: editableItems,
-      }),
+      body: JSON.stringify(payload),
     })
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
-          alert("Update successful!");
+          ToastHelper.success("Transaction updated successfully!", {
+            duration: 2500,
+            style: {
+              background: "#EBFAECFF",
+              border: "1px solid #91C793FF",
+              color: "#2E7D32",
+              fontWeight: 600,
+              fontSize: "1.1rem",
+              textAlign: "center",
+              width: "100%",
+              maxWidth: "600px",
+              margin: "0 auto",
+              justifyContent: "center",
+              borderRadius: "8px",
+            },
+          });
+
           fetchDeliveries();
           setShowModal(false);
         } else {
-          console.error("Update response:", response);
-          alert("Update failed.");
+          console.error("Update failed:", response.message);
+          ToastHelper.error(
+            "Update failed: " + (response.message || "Unknown error"),
+            {
+              duration: 2500,
+              style: {
+                background: "#FFEAEA",
+                border: "1px solid #E57373",
+                color: "#C62828",
+                fontWeight: 600,
+                fontSize: "1.1rem",
+                textAlign: "center",
+                width: "100%",
+                maxWidth: "600px",
+                margin: "0 auto",
+                justifyContent: "center",
+                borderRadius: "8px",
+              },
+            }
+          );
         }
       })
       .catch((err) => {
         console.error("Update error:", err);
-        alert("An error occurred.");
+        ToastHelper.error("An unexpected error occurred.", {
+          duration: 2500,
+          style: {
+            background: "#FFEAEA",
+            border: "1px solid #E57373",
+            color: "#C62828",
+            fontWeight: 600,
+            fontSize: "1.1rem",
+            textAlign: "center",
+            width: "100%",
+            maxWidth: "600px",
+            margin: "0 auto",
+            justifyContent: "center",
+            borderRadius: "8px",
+          },
+        });
       });
   };
 
@@ -188,7 +345,20 @@ const DeliveryDetails = () => {
 
   return (
     <AdminLayout
-      title="Delivery Details"
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Delivery Details</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
       onAddClick={handleAddDelivery}
       showSearch={true}
       onSearch={handleSearch}
@@ -340,6 +510,123 @@ const DeliveryDetails = () => {
         editableItems={editableItems}
         setEditableItems={setEditableItems}
       />
+
+      <Modal
+        show={showFAQ}
+        onHide={() => {
+          setShowFAQ(false);
+          setActiveFAQIndex(null);
+        }}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            borderBottom: "none",
+          }}
+        >
+          <Modal.Title>Guide for Delivery Details</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
+          <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
+            The Delivery Details page provides a comprehensive overview of a
+            specific transaction, including customer details, delivery address,
+            order items, and payment history. You can monitor and manage each
+            stage of the delivery process. Once a transaction is marked as{" "}
+            <span className="fw-bold text-primary">Out for Delivery</span>,{" "}
+            <span className="fw-bold text-success">Delivered</span>, or{" "}
+            <span className="fw-bold text-danger">Cancelled</span>, editing
+            options become limited to preserve data integrity.
+          </p>
+
+          <div className="px-3 mb-3">
+            <div className="accordion" id="faqAccordion">
+              {guideqst.map((faq, index) => (
+                <div
+                  className="accordion-item mb-3 shadow-sm border-0"
+                  key={index}
+                >
+                  <h2 className="accordion-header" id={`heading${index}`}>
+                    <button
+                      className={`accordion-button ${
+                        activeFAQIndex === index ? "" : "collapsed"
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setActiveFAQIndex(
+                          activeFAQIndex === index ? null : index
+                        )
+                      }
+                      aria-expanded={activeFAQIndex === index}
+                      aria-controls={`collapse${index}`}
+                      style={{
+                        backgroundColor:
+                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                        color: activeFAQIndex === index ? "white" : "#116B8A",
+                        fontWeight: 600,
+                        transition: "all 0.3s ease",
+                      }}
+                      onMouseOver={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#d9eff1";
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#e9f6f8";
+                        }
+                      }}
+                    >
+                      {faq.question}
+                    </button>
+                  </h2>
+                  <div
+                    id={`collapse${index}`}
+                    className={`accordion-collapse collapse ${
+                      activeFAQIndex === index ? "show" : ""
+                    }`}
+                    aria-labelledby={`heading${index}`}
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div
+                      className="accordion-body bg-white rounded-bottom"
+                      style={{
+                        borderLeft: "4px solid #116B8A",
+                        color: "#333",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <strong>Answer:</strong> {faq.answer}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderTop: "1px solid #dee2e6",
+          }}
+        >
+          <Button
+            variant="outline-secondary"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+            className="px-4"
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

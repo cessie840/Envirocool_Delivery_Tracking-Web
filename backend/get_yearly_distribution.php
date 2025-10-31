@@ -13,27 +13,19 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json");
 
-// ✅ Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-include 'database.php'; // ✅ Your DB connection
+include 'database.php'; 
 
-// ✅ Get year (from ?year=2025 or current)
 $year = isset($_GET['year']) ? (int)$_GET['year'] : date("Y");
 
-// ✅ Initialize counts
 $successful = 0;
 $cancelled = 0;
 $total = 0;
 
-/*
-----------------------------------------------------
- SUCCESSFUL TRANSACTIONS
-----------------------------------------------------
-*/
 $sql_success = "
     SELECT COUNT(DISTINCT t.transaction_id) AS total
     FROM Transactions t
@@ -55,11 +47,6 @@ $result = $stmt->get_result()->fetch_assoc();
 $successful = (int)($result['total'] ?? 0);
 $stmt->close();
 
-/*
-----------------------------------------------------
- CANCELLED TRANSACTIONS (counts even if rescheduled)
-----------------------------------------------------
-*/
 $sql_cancelled = "
     SELECT COUNT(DISTINCT t.transaction_id) AS total
     FROM Transactions t
@@ -89,14 +76,8 @@ $result = $stmt->get_result()->fetch_assoc();
 $cancelled = (int)($result['total'] ?? 0);
 $stmt->close();
 
-/*
-----------------------------------------------------
- TOTAL (successful + cancelled)
-----------------------------------------------------
-*/
 $total = $successful + $cancelled;
 
-// ✅ Return JSON
 echo json_encode([
     "success" => true,
     "year" => $year,

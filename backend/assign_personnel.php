@@ -3,7 +3,6 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// CORS handling
 $allowed_origins = [
     "https://cessie840.github.io",
     "http://localhost:5173",
@@ -28,7 +27,6 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 
 include 'database.php';
 
-// ✅ Parse JSON input
 $data = json_decode(file_get_contents("php://input"));
 
 if (
@@ -45,7 +43,6 @@ $personnelUsername = $conn->real_escape_string($data->personnelUsername);
 $device_id = $conn->real_escape_string($data->device_id);
 
 try {
-    // ✅ Step 1: Check if this transaction already has an assignment
     $checkSql = "SELECT assignment_id FROM DeliveryAssignments WHERE transaction_id = ?";
     $checkStmt = $conn->prepare($checkSql);
     $checkStmt->bind_param("i", $transaction_id);
@@ -53,7 +50,6 @@ try {
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
-        // update existing
         $updateAssignSql = "UPDATE DeliveryAssignments 
                             SET personnel_username = ?, device_id = ? 
                             WHERE transaction_id = ?";
@@ -62,7 +58,6 @@ try {
         $success = $updateAssignStmt->execute();
         $updateAssignStmt->close();
     } else {
-        // insert new
         $insertSql = "INSERT INTO DeliveryAssignments (transaction_id, personnel_username, device_id)
                       VALUES (?, ?, ?)";
         $insertStmt = $conn->prepare($insertSql);
@@ -71,8 +66,6 @@ try {
         $insertStmt->close();
     }
     $checkStmt->close();
-
-    // ✅ Step 2: Update DeliveryPersonnel
     if ($success) {
         $updateSql = "UPDATE DeliveryPersonnel 
                       SET assignment_status = 'Out for Delivery', assigned_transaction_id = ? 
@@ -83,7 +76,6 @@ try {
         $updateStmt->close();
     }
 
-    // ✅ Step 3: Update Transactions
     if ($success) {
         $updateTrans = "UPDATE Transactions 
                         SET assigned_device_id = ?, status = 'Pending'

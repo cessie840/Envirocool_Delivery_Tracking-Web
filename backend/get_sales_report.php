@@ -64,7 +64,6 @@ if ($start && $end) {
     $types = "ss";
 }
 
-// Sales data query with payment fields
 $sql = "
 SELECT
     t.transaction_id,
@@ -94,7 +93,6 @@ $result = $stmt->get_result();
 $sales = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Top selling items (no change needed here)
 $sqlTop = "
 SELECT
     po.description AS item_name,
@@ -115,7 +113,6 @@ $resultTop = $stmtTop->get_result();
 $topSelling = $resultTop->fetch_all(MYSQLI_ASSOC);
 $stmtTop->close();
 
-// Summary with payment fields added
 $sqlSummary = "
 SELECT
     COUNT(DISTINCT t.transaction_id) AS total_transactions,

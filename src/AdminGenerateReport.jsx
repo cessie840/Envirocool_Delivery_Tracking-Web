@@ -22,6 +22,7 @@ import {
   Col,
   Spinner,
   Card,
+  Collapse,
 } from "react-bootstrap";
 import {
   BarChart,
@@ -42,8 +43,10 @@ import {
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import html2canvas from "html2canvas";
+import { Toaster, toast } from "sonner";
 
 import logo from "./assets/envirocool-logo.png";
+import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const REPORT_TYPES = [
   { value: "sales", label: "Sales Report" },
@@ -64,10 +67,56 @@ const PERIODS = [
 const COLORS = ["#4CAF50", "#E57373", "#FFC107", "#2196F3", "#9C27B0"];
 
 const GenerateReport = () => {
+  const [showFAQ, setShowFAQ] = useState(false);
+
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I filter the reports?",
+      answer:
+        "Click the 'Filter Reports' button at the top-left. You can filter by Start Date, End Date, Period (Annually, Quarterly, Monthly, Weekly, Daily), Report Type, Payment Option, Delivery Status, Delivery Personnel, and Reason for Cancellation.",
+    },
+    {
+      question: "What does the Sales Report Table show?",
+      answer:
+        "It displays all successfully delivered transactions that generated sales within the selected filtered period.",
+    },
+    {
+      question: "What does Sales Growth Over Time show?",
+      answer:
+        "It shows the growth of sales within the selected filtered period based on successfully delivered transactions.",
+    },
+    {
+      question: "What does Top Selling Item show?",
+      answer:
+        "It highlights the top three best-selling items most frequently purchased by customers.",
+    },
+    {
+      question: "How can I generate a PDF?",
+      answer:
+        "Click the 'Generate Report' button at the top-left. The report is generated based on the applied filters and includes a 'Prepared By' section for the employee to sign.",
+    },
+    {
+      question: "What does the Transaction Report show?",
+      answer:
+        "It displays all transactions recorded within the selected filtered period and provides an analysis comparing delivered vs. cancelled transactions.",
+    },
+    {
+      question: "What does the Delivery Service Report show?",
+      answer:
+        "It displays all transactions within the selected filtered period, including cancelled dates, rescheduled dates, and reasons, along with an analysis of cancellation reasons.",
+    },
+    {
+      question: "What does the Customer Satisfaction Report show?",
+      answer:
+        "It displays all successfully delivered transactions with customer ratings and feedback based on the selected filters, including an analysis of the rating percentages.",
+    },
+  ];
+
   const navigate = useNavigate();
   const reportRef = useRef(null);
 
-  // Filter modal state
   const [showFilter, setShowFilter] = useState(false);
   const [period, setPeriod] = useState(() => {
     return localStorage.getItem("reportPeriod") || "monthly";
@@ -89,7 +138,6 @@ const GenerateReport = () => {
     return localStorage.getItem("reportActiveTab") || "overall";
   });
 
-  // Data states
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({});
   const [salesData, setSalesData] = useState([]);
@@ -110,8 +158,6 @@ const GenerateReport = () => {
   const transactionRef = useRef(null);
   const serviceRef = useRef(null);
   const customerRef = useRef(null);
-
-  // PAGINATION STATES
   const [salesPage, setSalesPage] = useState(1);
   const [transactionPage, setTransactionPage] = useState(1);
   const [servicePage, setServicePage] = useState(1);
@@ -119,7 +165,6 @@ const GenerateReport = () => {
 
   const [failedReasons, setFailedReasons] = useState({});
 
-  // Fetch data based on filters
   useEffect(() => {
     fetchData();
   }, [
@@ -187,7 +232,6 @@ const GenerateReport = () => {
     return `${reportLabel} for the ${periodLabel} Period`;
   };
 
-  // Normalizers (defensive)
   const normalizeSales = (raw = []) =>
     (Array.isArray(raw) ? raw : [])
       .map((r) => ({
@@ -315,9 +359,9 @@ const GenerateReport = () => {
 
   const fetchData = async () => {
     setLoading(true);
-     let normalizedTransactions = [];
-     let deliveredTransactionIds = [];
-     let normalizedSales = [];
+    let normalizedTransactions = [];
+    let deliveredTransactionIds = [];
+    let normalizedSales = [];
 
     try {
       if (reportType === "sales" || reportType === "all") {
@@ -329,7 +373,6 @@ const GenerateReport = () => {
         if (!res.ok) throw new Error("get_sales_report failed");
         const data = await safeJson(res);
         let normalizedSales = normalizeSales(data.sales ?? []);
-        // Filter to only delivered sales
         normalizedSales = normalizedSales.filter(
           (sale) => sale.delivery_status.toLowerCase() === "delivered"
         );
@@ -358,7 +401,6 @@ const GenerateReport = () => {
             : prev
         );
 
-        // Extract unique delivery personnel for dropdown
         const personnelSet = new Set();
         normalizedTransactions.forEach((t) => {
           if (t.delivery_personnel && t.delivery_personnel !== "-") {
@@ -387,7 +429,6 @@ const GenerateReport = () => {
         );
         setServiceData(normalizedService);
 
-        // ⬇️ new: store failedReasons from PHP response
         if (data.failedReasons) {
           setFailedReasons(data.failedReasons);
         }
@@ -400,7 +441,6 @@ const GenerateReport = () => {
             : prev
         );
 
-        // Extract unique Reason for Cancellations for dropdown
         setCancellationReasonOptions([
           "Vehicle-related Issue",
           "Location Inaccessible",
@@ -444,20 +484,18 @@ const GenerateReport = () => {
     }
   };
 
-  // Helper: format date for display
   const formatDate = (d) => {
     if (!d) return "";
     const dateObj = new Date(d);
     if (isNaN(dateObj)) return "";
 
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0"); // month first
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
     const day = String(dateObj.getDate()).padStart(2, "0");
     const year = dateObj.getFullYear();
 
     return `${month}/${day}/${year}`;
   };
 
-  // Helper: format date for period filtering (used in totals)
   const isDateInPeriod = (dateStr) => {
     if (!dateStr) return false;
     const date = new Date(dateStr);
@@ -502,10 +540,8 @@ const GenerateReport = () => {
     }
   };
 
-  // Calculate totals based on period filtering for Sales and Transaction reports
   const isValidDate = (d) => d instanceof Date && !isNaN(d);
 
-  // Utility: group transactions into single rows
   const groupTransactions = (data) => {
     return Object.values(
       data.reduce((acc, row) => {
@@ -520,7 +556,6 @@ const GenerateReport = () => {
           };
         }
 
-        // combine product_name + item_name
         const fullItemName = `${row.product_name || ""} ${
           row.item_name || ""
         }`.trim();
@@ -540,10 +575,8 @@ const GenerateReport = () => {
     }));
   };
 
-  // add new state
   const [searchQuery, setSearchQuery] = useState("");
 
-  // helper function
   const matchesSearch = (row) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -666,7 +699,6 @@ const GenerateReport = () => {
           if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
             return false;
 
-          // ✅ Delivery Status filter
           if (
             deliveryStatus &&
             row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
@@ -687,7 +719,6 @@ const GenerateReport = () => {
           return true;
         })
       : serviceData.filter((row) => {
-          // ✅ Delivery Status filter
           if (
             deliveryStatus &&
             row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
@@ -731,7 +762,6 @@ const GenerateReport = () => {
     transactionData.map((row) => row.customer_name)
   ).size;
 
-  // Totals for Sales report
   const totalSalesAmount = filteredSalesData.reduce(
     (acc, cur) => acc + (Number(cur.total_cost) || 0),
     0
@@ -740,7 +770,6 @@ const GenerateReport = () => {
     filteredSalesData.map((row) => row.customer_name)
   ).size;
 
-  // Totals for Transaction report
   const totalTransactions = new Set(
     filteredTransactionData.map((row) => row.transaction_id)
   ).size;
@@ -792,7 +821,6 @@ const GenerateReport = () => {
     }
   });
 
-  // Customer satisfaction rating distribution chart
   const ratingDistribution = filteredCustomerData.reduce((acc, cur) => {
     const rating = cur.customer_rating ?? "No Rating";
     const found = acc.find((a) => String(a.name) === String(rating));
@@ -804,7 +832,6 @@ const GenerateReport = () => {
     return acc;
   }, []);
 
-  // Sales growth line chart data (group sales by date)
   const salesGrowthData = filteredSalesData.reduce((acc, cur) => {
     const date = cur.date ?? "";
     const found = acc.find((a) => a.date === date);
@@ -817,7 +844,6 @@ const GenerateReport = () => {
     return acc;
   }, []);
 
-  // Transaction status data (Delivered vs Cancelled)
   const transactionStatusData = [
     {
       name: "Delivered",
@@ -848,7 +874,6 @@ const GenerateReport = () => {
       return `${year}-${month}-${day}`;
     };
 
-    // ✅ Format numbers with commas
     const formatNumber = (num, decimals = 2, stripDecimals = true) => {
       if (num == null || isNaN(num)) return "0.00";
       let fixed = Number(num).toFixed(decimals);
@@ -901,10 +926,10 @@ const GenerateReport = () => {
       const month = start.getMonth();
       let quarterMonths = [];
 
-      if (month <= 2) quarterMonths = [0, 1, 2]; // Jan-Mar
-      else if (month <= 5) quarterMonths = [3, 4, 5]; // Apr-Jun
-      else if (month <= 8) quarterMonths = [6, 7, 8]; // Jul-Sep
-      else quarterMonths = [9, 10, 11]; // Oct-Dec
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
+      else quarterMonths = [9, 10, 11];
 
       quarterMonths.forEach((m) => {
         const monthSales = salesData.filter(
@@ -930,17 +955,14 @@ const GenerateReport = () => {
     } else if (period === "monthly") {
       const base = new Date(startDate || new Date());
 
-      // ✅ Force start at the 1st of the month
       const start = new Date(base.getFullYear(), base.getMonth(), 1);
 
-      // ✅ Get the last day of the same month
       const daysInMonth = new Date(
         base.getFullYear(),
         base.getMonth() + 1,
         0
       ).getDate();
 
-      // ✅ Loop through the whole month (always 1 → last day)
       for (let d = 1; d <= daysInMonth; d++) {
         const dObj = new Date(start.getFullYear(), start.getMonth(), d);
         const dateStr = formatDate(dObj);
@@ -969,7 +991,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
@@ -1083,7 +1105,6 @@ const GenerateReport = () => {
       ]);
     };
 
-    // === PERIOD LOGIC ===
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = transactionData.filter(
@@ -1167,7 +1188,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
@@ -1195,8 +1216,6 @@ const GenerateReport = () => {
       }
     }
 
-    // === TOTAL ROW (MODIFIED to depend on selected period) ===
-    // ✅ Added: compute totals based on period
     const relevantTxs =
       period === "daily"
         ? transactionData.filter(
@@ -1213,9 +1232,8 @@ const GenerateReport = () => {
       { qty: 0, subtotal: 0 }
     );
 
-    // ✅ Added: dynamic TOTAL row per period
     rows.push([
-      `TOTAL (${period.toUpperCase()})`, // ✅ Added: dynamic label
+      `TOTAL (${period.toUpperCase()})`,
       "-",
       "-",
       "-",
@@ -1232,8 +1250,6 @@ const GenerateReport = () => {
 
     return rows;
   };
-
-  // ============================================
 
   const generateServicePeriodRows = (
     serviceData,
@@ -1276,8 +1292,6 @@ const GenerateReport = () => {
       ...s,
       date_of_order: formatDate(s.date_of_order),
     }));
-
-    // --- (Period logic unchanged) ---
 
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
@@ -1365,7 +1379,6 @@ const GenerateReport = () => {
       }
     }
 
-    // ✅ Added: compute total dynamically
     const relevantData =
       period === "daily"
         ? normalizedData.filter(
@@ -1383,7 +1396,6 @@ const GenerateReport = () => {
       { total: 0, cancelled: 0, completed: 0 }
     );
 
-    // ✅ Added: label and totals
     rows.push([
       `TOTAL (${period.toUpperCase()})`,
       "-",
@@ -1398,7 +1410,6 @@ const GenerateReport = () => {
     return rows;
   };
 
-  // ✅ Generate rows (WITH Item column, no double formatting)
   const generateCustomerSatisfactionRows = (
     satisfactionData,
     period,
@@ -1407,7 +1418,6 @@ const GenerateReport = () => {
   ) => {
     const rows = [];
 
-    // Helper to get month name
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
@@ -1420,7 +1430,6 @@ const GenerateReport = () => {
       return d.toISOString().split("T")[0];
     };
 
-    // --- Row builders ---
     const pushCustomerRow = (label, c) => {
       rows.push([
         label || "",
@@ -1437,13 +1446,11 @@ const GenerateReport = () => {
       rows.push([label, "-", "-", "-", "-", "-", "-"]);
     };
 
-    // --- Normalize Data ---
     const normalizedData = satisfactionData.map((c) => ({
       ...c,
       date_of_order: formatDate(c.date_of_order),
     }));
 
-    // --- Period Logic ---
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = normalizedData.filter(
@@ -1501,7 +1508,7 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
@@ -1519,7 +1526,7 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
+      const todayStr = formatDate(new Date());
       const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
 
       if (dayTxs.length > 0) {
@@ -1530,7 +1537,6 @@ const GenerateReport = () => {
       }
     }
 
-    // === ✅ Fixed: compute total dynamically based on period ===
     const relevantData =
       period === "daily"
         ? normalizedData.filter(
@@ -1548,7 +1554,6 @@ const GenerateReport = () => {
       { total: 0, cancelled: 0, completed: 0 }
     );
 
-    // ✅ Fixed TOTAL label and count display
     rows.push([
       `TOTAL (${period.toUpperCase()})`,
       "-",
@@ -1566,7 +1571,7 @@ const GenerateReport = () => {
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "mm",
-      format: [330.2, 215.9], // long bond paper
+      format: [330.2, 215.9],
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1598,7 +1603,7 @@ const GenerateReport = () => {
       }
       if (period === "quarterly") {
         const start = new Date(startDate || getTodayDate());
-        const monthNumber = start.toISOString().slice(5, 7); // "01" to "12"
+        const monthNumber = start.toISOString().slice(5, 7);
         let quarterMonths = [];
 
         if (monthNumber >= "01" && monthNumber <= "03")
@@ -1628,9 +1633,7 @@ const GenerateReport = () => {
         return ` (${formatDate(start)} - ${formatDate(end)})`;
       }
       if (period === "daily") {
-        // Use startDate if provided, otherwise today
         const today = startDate ? new Date(startDate) : new Date();
-        // Format as MM/DD/YYYY for display
         const formattedDay = `${String(today.getMonth() + 1).padStart(
           2,
           "0"
@@ -1705,7 +1708,6 @@ const GenerateReport = () => {
       doc.line(15, yPos, pageWidth - 15, yPos);
       yPos += 6;
 
-      // Only print title on the first page of each report
       if (withTitle) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
@@ -1731,8 +1733,6 @@ const GenerateReport = () => {
 
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-
-        // Show title only on the first page of each report
         if (i === reports[reportIndex].startPage) {
           renderHeader(true, reports[reportIndex].title);
         } else {
@@ -1741,7 +1741,6 @@ const GenerateReport = () => {
 
         addFooter(i, totalPages);
 
-        // Move to next report if needed
         if (
           reportIndex < reports.length - 1 &&
           i === reports[reportIndex + 1].startPage
@@ -1751,36 +1750,31 @@ const GenerateReport = () => {
       }
     };
 
-  // Signature section – "Prepared By" in bold with line below
-const addSignatureSection = (doc, pageWidth, pageHeight) => {
-  const spaceAboveLine = 10; // space between "Prepared By:" and the line
-  const lineY = pageHeight - 35; // position above footer
-  const labelY = lineY - spaceAboveLine; // "Prepared By:" position
+    const addSignatureSection = (doc, pageWidth, pageHeight, tableBottomY) => {
+      const bottomSafeMargin = 40;
+      let startY = tableBottomY + 15;
 
-  // "Prepared By:" text in bold
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("Prepared By:", pageWidth / 2, labelY, { align: "center" });
+      if (startY > pageHeight - bottomSafeMargin) {
+        doc.addPage();
+        startY = 80;
+      }
 
-  // Draw signature line (centered, blank for manual name)
-  const lineWidth = 60;
-  const lineX = (pageWidth - lineWidth) / 2;
-  doc.setLineWidth(0.2);
-  doc.line(lineX, lineY, lineX + lineWidth, lineY);
+      const lineWidth = 60;
+      const lineX = (pageWidth - lineWidth) / 2;
+      const lineY = startY + 10;
 
-  // Reset font to normal for safety
-  doc.setFont("helvetica", "normal");
-};
-
-
+      doc.setLineWidth(0.3);
+      doc.line(lineX, lineY, lineX + lineWidth, lineY);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Prepared By:", pageWidth / 2, lineY + 5, { align: "center" });
+      doc.setFont("helvetica", "normal");
+    };
 
     const addFooter = (pageNum, totalPages) => {
-      // Draw a clear separator line above the footer
-      doc.setDrawColor(50, 50, 50); // darker gray for visibility
+      doc.setDrawColor(50, 50, 50);
       doc.setLineWidth(0.3);
       doc.line(15, pageHeight - 12, pageWidth - 15, pageHeight - 12);
-
-      // Add company name (italic)
       doc.setFont("helvetica", "italic");
       doc.setFontSize(8);
       doc.setTextColor(0, 0, 0);
@@ -1788,7 +1782,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         align: "center",
       });
 
-      // Add page numbering (bold for clarity)
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.text(
@@ -1800,7 +1793,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         }
       );
 
-      // Reset styles (to avoid affecting next elements)
       doc.setFont("helvetica", "normal");
       doc.setTextColor(0, 0, 0);
     };
@@ -1844,7 +1836,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
           data.transactions ?? []
         );
 
-        // Generate rows based on period (daily, weekly, monthly, annually)
         const transactionRows = generateTransactionPeriodRows(
           normalizedTransactions,
           period,
@@ -1909,10 +1900,21 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       }
     };
 
-    // Main report logic
     const type = (
       typeof reportType === "string" ? reportType : ""
     ).toLowerCase();
+
+    const getFormattedDateTime = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      return `${year}-${month}-${day}_${hours}-${minutes}${ampm}`;
+    };
 
     try {
       if (type === "all") {
@@ -1927,7 +1929,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
           const r = reports[idx];
           if (idx > 0) doc.addPage();
 
-          // record where this report starts
           r.startPage = doc.internal.getCurrentPageInfo().pageNumber;
 
           let headerY = renderHeader(true, r.title);
@@ -1935,16 +1936,15 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
           if (r.type === "sales") {
             let salesData = await fetchSalesData();
             if (period === "daily") {
-              // Replace salesData with today's date row
               salesData = salesData.map((row) => [
-                new Date().toLocaleDateString("en-US"), // Current day
+                new Date().toLocaleDateString("en-US"),
                 row.quoteAmount || "0.00",
                 row.awardedAmount || "0.00",
                 row.actualCollection || "0.00",
                 row.balance || "0.00",
               ]);
             }
-            await createSalesReportTable(
+            const { finalYPosition } = await createSalesReportTable(
               doc,
               pageWidth,
               pageHeight,
@@ -1952,9 +1952,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
               salesData,
               period
             );
+            addSignatureSection(doc, pageWidth, pageHeight, finalYPosition);
           } else if (r.type === "transaction") {
             const transactionRows = await fetchTransactionData();
-            await createTransactionReportTable(
+            const transactionEndY = await createTransactionReportTable(
               doc,
               pageWidth,
               pageHeight,
@@ -1962,9 +1963,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
               transactionRows,
               period
             );
+            addSignatureSection(doc, pageWidth, pageHeight, transactionEndY);
           } else if (r.type === "service") {
             const serviceRows = await fetchServiceData();
-            await createDeliveryServiceReportTable(
+            const serviceEndY = await createDeliveryServiceReportTable(
               doc,
               pageWidth,
               pageHeight,
@@ -1972,16 +1974,19 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
               serviceRows,
               period
             );
+            addSignatureSection(doc, pageWidth, pageHeight, serviceEndY);
           } else if (r.type === "customer") {
             const satisfactionRows = await fetchCustomerSatisfactionData();
-            await createCustomerSatisfactionReportTable(
-              doc,
-              pageWidth,
-              pageHeight,
-              headerY,
-              satisfactionRows,
-              period
-            );
+            const satisfactionEndY =
+              await createCustomerSatisfactionReportTable(
+                doc,
+                pageWidth,
+                pageHeight,
+                headerY,
+                satisfactionRows,
+                period
+              );
+            addSignatureSection(doc, pageWidth, pageHeight, satisfactionEndY);
           } else {
             doc.setFontSize(12);
             doc.setFont("helvetica", "normal");
@@ -1992,17 +1997,20 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
               { align: "center" }
             );
           }
-          addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(idx + 1, reports.length);
         }
-
-        // ✅ Now apply headers & footers correctly
         applyHeaderFooterToAllPages(reports);
-        doc.save("envirocool-overall-report.pdf");
-        alert(
-          `Overall Report PDF (${getPeriodLabel(
-            period
-          )}) has been generated and downloaded successfully!`
+        const dateTimeStamp = getFormattedDateTime();
+        doc.save(`envirocool-overall-report-${dateTimeStamp}.pdf`);
+        toast(
+          <div className="custom-banner-toast">
+            Overall Report PDF (${getPeriodLabel(period)}) has been generated
+            and downloaded successfully!
+          </div>,
+          {
+            className: "report-toast",
+            duration: 2500,
+          }
         );
       } else {
         let title;
@@ -2020,7 +2028,21 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
             title = "Client Satisfaction";
             break;
           default:
-            alert("Please select a report type.");
+            toast.error("Please select a report type.", {
+              duration: 2500,
+              style: {
+                background: "#FDECEA",
+                border: "1px solid #F5C6CB",
+                color: "#A94442",
+                fontWeight: 600,
+                fontSize: "1rem",
+                textAlign: "center",
+                width: "100%",
+                maxWidth: "500px",
+                margin: "0 auto",
+                justifyContent: "center",
+              },
+            });
             return;
         }
 
@@ -2029,16 +2051,15 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         if (type === "sales") {
           let salesData = await fetchSalesData();
           if (period === "daily") {
-            // Replace salesData with today's date row
             salesData = salesData.map((row) => [
-              new Date().toLocaleDateString("en-US"), // Current day
+              new Date().toLocaleDateString("en-US"),
               row.quoteAmount || "0.00",
               row.awardedAmount || "0.00",
               row.actualCollection || "0.00",
               row.balance || "0.00",
             ]);
           }
-          await createSalesReportTable(
+          const { finalYPosition } = await createSalesReportTable(
             doc,
             pageWidth,
             pageHeight,
@@ -2046,9 +2067,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
             salesData,
             period
           );
+          addSignatureSection(doc, pageWidth, pageHeight, finalYPosition);
         } else if (type === "transaction") {
           const transactionRows = await fetchTransactionData();
-          await createTransactionReportTable(
+          const transactionEndY = await createTransactionReportTable(
             doc,
             pageWidth,
             pageHeight,
@@ -2056,9 +2078,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
             transactionRows,
             period
           );
+          addSignatureSection(doc, pageWidth, pageHeight, transactionEndY);
         } else if (type === "service") {
           const serviceRows = await fetchServiceData();
-          await createDeliveryServiceReportTable(
+          const serviceEndY = await createDeliveryServiceReportTable(
             doc,
             pageWidth,
             pageHeight,
@@ -2066,9 +2089,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
             serviceRows,
             period
           );
+          addSignatureSection(doc, pageWidth, pageHeight, serviceEndY);
         } else if (type === "customer") {
           const satisfactionRows = await fetchCustomerSatisfactionData();
-          await createCustomerSatisfactionReportTable(
+          const satisfactionEndY = await createCustomerSatisfactionReportTable(
             doc,
             pageWidth,
             pageHeight,
@@ -2076,6 +2100,7 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
             satisfactionRows,
             period
           );
+          addSignatureSection(doc, pageWidth, pageHeight, satisfactionEndY);
         } else {
           doc.setFontSize(12);
           doc.setFont("helvetica", "normal");
@@ -2087,31 +2112,50 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
           );
         }
 
-        // Apply headers/footers to all pages
         const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
           doc.setPage(i);
 
           if (i === 1) {
-            renderHeader(true, title); // first page → with title
+            renderHeader(true, title);
           } else {
-            renderHeader(false); // overflow → no title
+            renderHeader(false);
           }
-          addSignatureSection(doc, pageWidth, pageHeight);
           addFooter(i, totalPages);
         }
 
-        const fileName = `envirocool-${type}-report-${period}-${getTodayDate()}.pdf`;
+        const dateTimeStamp = getFormattedDateTime();
+        const fileName = `envirocool-${type}-report-${period}-${dateTimeStamp}.pdf`;
         doc.save(fileName);
-        alert(
-          `${title} Report PDF (${getPeriodLabel(
-            period
-          )}) has been generated and downloaded successfully!`
+        toast(
+          <div className="custom-banner-toast">
+            {`${title} Report PDF (${getPeriodLabel(
+              period
+            )}) has been generated and downloaded successfully!`}
+          </div>,
+          {
+            className: "report-toast",
+            duration: 2500,
+          }
         );
       }
     } catch (error) {
       console.error("PDF generation error:", error);
-      alert("Error generating PDF. Please try again.");
+      toast.error("Error generating PDF. Please try again.", {
+        duration: 2500,
+        style: {
+          background: "#FDECEA",
+          border: "1px solid #F5C6CB",
+          color: "#A94442",
+          fontWeight: 600,
+          fontSize: "1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "500px",
+          margin: "0 auto",
+          justifyContent: "center",
+        },
+      });
     }
   };
 
@@ -2124,9 +2168,8 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     period
   ) => {
     let yPosition = yStartPosition;
-    const headerTopMargin = yStartPosition; // safe top for subsequent pages
+    const headerTopMargin = yStartPosition;
 
-    // Config
     const tableConfig = {
       marginLeft: 15,
       marginRight: 15,
@@ -2137,7 +2180,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       cellFontSize: 8,
     };
 
-    // Width setup (5 columns)
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
     const colWidths = [
@@ -2161,7 +2203,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
       const awardedX = tableConfig.marginLeft + colWidths[0];
 
-      // Sales Opportunity
       doc.setFillColor(173, 216, 230);
       doc.setTextColor(0, 0, 0);
       doc.rect(
@@ -2179,7 +2220,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         tableConfig.headerFontSize
       );
 
-      // Awarded Sales
       doc.setFillColor(221, 160, 221);
       doc.rect(
         awardedX,
@@ -2198,7 +2238,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
       currentY += tableConfig.headerHeight;
 
-      // Second Header Row
       doc.setFont("helvetica", "bold");
       doc.setFontSize(tableConfig.subHeaderFontSize);
 
@@ -2236,7 +2275,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
       currentY += tableConfig.rowHeight;
 
-      // Column Headers
       let periodLabel = "MONTHS";
       if (period === "monthly") periodLabel = "DAYS";
       else if (period === "weekly") periodLabel = "WEEKDAYS";
@@ -2269,12 +2307,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       yPosition = currentY;
     };
 
-    // Draw headers initially
     drawHeaders();
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(tableConfig.cellFontSize);
-    // ✅ Added: Helper function to format numbers with commas
     const formatNumber = (num) => {
       if (num == null || isNaN(num)) return "0.00";
       return Number(num).toLocaleString(undefined, {
@@ -2283,7 +2319,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       });
     };
 
-    // ✅ Added: Variables to store totals for each numeric column
     let totalQuote = 0;
     let totalAwarded = 0;
     let totalActual = 0;
@@ -2291,19 +2326,16 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
     if (Array.isArray(aggregatedData)) {
       aggregatedData.forEach((row, rowIndex) => {
-        // For sales each row uses the fixed rowHeight:
         const rowHeight = tableConfig.rowHeight;
 
-        // Page break check BEFORE drawing row (use headerTopMargin)
         if (yPosition + rowHeight > pageHeight - 20) {
           doc.addPage();
-          yPosition = headerTopMargin; // start below the page header
+          yPosition = headerTopMargin;
           drawHeaders();
         }
 
         let x = tableConfig.marginLeft;
 
-        // ✅ Added: Accumulate totals (skip first column which is label)
         totalQuote += parseFloat(row[1]?.replace(/,/g, "")) || 0;
         totalAwarded += parseFloat(row[2]?.replace(/,/g, "")) || 0;
         totalActual += parseFloat(row[3]?.replace(/,/g, "")) || 0;
@@ -2317,7 +2349,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
           let displayText = cell || "";
 
-          // Red text if Balance = 0
           if (i === 4 && parseFloat(cell) === 0) {
             doc.setTextColor(255, 0, 0);
           } else {
@@ -2340,19 +2371,17 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       });
     }
 
-    // ✅ Added: Add TOTAL ROW (after looping all rows)
     if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
       doc.addPage();
       yPosition = headerTopMargin;
       drawHeaders();
     }
 
-    // ✅ Added: Total row styling
-    doc.setFont("helvetica", "bolditalic"); // italicized + bold
+    doc.setFont("helvetica", "bolditalic");
     doc.setTextColor(0, 0, 0);
 
     const totalsRow = [
-      "TOTAL", // italicized label
+      "TOTAL",
       formatNumber(totalQuote),
       formatNumber(totalAwarded),
       formatNumber(totalActual),
@@ -2361,13 +2390,12 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
     let x = tableConfig.marginLeft;
     totalsRow.forEach((cell, i) => {
-      doc.setFillColor(255, 255, 204); // ✅ light yellow for total row
+      doc.setFillColor(255, 255, 204);
       doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
       doc.setDrawColor(0, 0, 0);
       doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
 
       if (i === 0) {
-        // ✅ Align TOTAL text to the right for better visual balance
         doc.text(cell, x + colWidths[i] - 4, yPosition + 6, {
           align: "right",
         });
@@ -2399,7 +2427,7 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     pageHeight,
     yStartPosition,
     transactionData,
-    period // ✅ Added as parameter
+    period
   ) => {
     let yPosition = yStartPosition;
 
@@ -2411,16 +2439,15 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       headerFontSize: 10,
       subHeaderFontSize: 9,
       cellFontSize: 10,
-      lineSpacing: 1.2, // spacing multiplier for wrapped text
+      lineSpacing: 1.2,
     };
 
-    // ✅ Dynamic Filter Column Label
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
     else if (period === "weekly") periodLabel = "WEEKDAYS";
     else if (period === "daily") periodLabel = "DATE";
     else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS"; // fallback
+    else if (period === "annually") periodLabel = "MONTHS";
 
     const headers = [
       periodLabel,
@@ -2438,7 +2465,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       "Completed At",
     ];
 
-    // ===== Column Config =====
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
@@ -2450,7 +2476,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
     const tableStartX = tableConfig.marginLeft;
 
-    // Helper: draw centered text
     const drawCenteredText = (text, x, y, width, fontSize) => {
       doc.setFontSize(fontSize);
       const textWidth = doc.getTextWidth(text);
@@ -2458,7 +2483,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       doc.text(text, textX, y, { maxWidth: width - 4 });
     };
 
-    // ✅ Different background colors per header
     const headerColors = [
       [173, 216, 230], // Filter
       [221, 160, 221], // Transaction No
@@ -2475,7 +2499,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       [255, 182, 193], // Completed At
     ];
 
-    // ✅ Function to draw headers (for first page + repeated on new pages)
     const drawHeaders = () => {
       let xPos = tableStartX;
       doc.setFont("helvetica", "bold");
@@ -2496,10 +2519,8 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
     drawHeaders();
 
-    // ===== Rows =====
     transactionData.forEach((row, rowIndex) => {
       let xPos = tableStartX;
       let maxLines = 1;
@@ -2511,11 +2532,9 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         return lines;
       });
 
-      // ✅ Adjust row height
       const rowHeight =
         tableConfig.cellFontSize * 0.5 * maxLines * tableConfig.lineSpacing + 2;
 
-      // Alternate row colors
       const isEvenRow = rowIndex % 2 === 0;
       const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
@@ -2535,11 +2554,9 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
       yPosition += rowHeight;
 
-      // ✅ Page break + redraw headers
-      // ✅ Page break check BEFORE drawing row
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; // 👈 margin-top to push table under the header
+        const topMargin = 50;
         yPosition = topMargin;
         drawHeaders();
       }
@@ -2554,7 +2571,7 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     pageHeight,
     yStartPosition,
     serviceData,
-    period // ✅ Added as parameter
+    period
   ) => {
     let yPosition = yStartPosition;
 
@@ -2566,18 +2583,16 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       headerFontSize: 11,
       subHeaderFontSize: 10,
       cellFontSize: 10,
-      lineSpacing: 1.2, // spacing multiplier for wrapped text
+      lineSpacing: 1.2,
     };
 
-    // ✅ Dynamic Filter Column Label
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
     else if (period === "weekly") periodLabel = "WEEKDAYS";
     else if (period === "daily") periodLabel = "DATE";
     else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS"; // fallback
+    else if (period === "annually") periodLabel = "MONTHS";
 
-    // ✅ Headers (new structure)
     const headers = [
       periodLabel,
       "Transaction No.",
@@ -2589,11 +2604,9 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       "Reason for Cancellation",
     ];
 
-    // ===== Column Config =====
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
-    // ✅ Adjusted widths for 8 columns (must match headers length)
     const originalWidths = [25, 28, 30, 28, 32, 32, 32, 40];
     const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
     const colWidths = originalWidths.map(
@@ -2602,7 +2615,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
 
     const tableStartX = tableConfig.marginLeft;
 
-    // Helper: draw centered text
     const drawCenteredText = (text, x, y, width, fontSize) => {
       doc.setFontSize(fontSize);
       const textWidth = doc.getTextWidth(text);
@@ -2610,7 +2622,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       doc.text(text, textX, y, { maxWidth: width - 4 });
     };
 
-    // ✅ Different background colors per header (8 colors)
     const headerColors = [
       [173, 216, 230], // Filter (periodLabel)
       [221, 160, 221], // Transaction No.
@@ -2622,7 +2633,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       [255, 182, 193], // Reason for Cancellation
     ];
 
-    // ✅ Function to draw headers (first page + repeated on new pages)
     const drawHeaders = () => {
       let xPos = tableStartX;
       doc.setFont("helvetica", "bold");
@@ -2643,14 +2653,12 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
     drawHeaders();
 
     serviceData.forEach((row, rowIndex) => {
       let xPos = tableStartX;
       let maxLines = 1;
 
-      // Split text into lines per cell
       const cellLinesArray = row.map((cell, i) => {
         const text = cell !== null && cell !== undefined ? cell.toString() : "";
         const lines = doc.splitTextToSize(text, colWidths[i] - 2);
@@ -2658,23 +2666,19 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         return lines;
       });
 
-      // ✅ Calculate row height first
       const rowHeight =
         maxLines * tableConfig.cellFontSize * tableConfig.lineSpacing * 0.5 + 4;
 
-      // ✅ Page break check BEFORE drawing
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; // 👈 margin-top to push table under header
+        const topMargin = 50;
         yPosition = topMargin;
         drawHeaders();
       }
 
-      // Alternate row colors
       const isEvenRow = rowIndex % 2 === 0;
       const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
-      // Draw row
       row.forEach((cell, i) => {
         doc.setFillColor(...bgColor);
         doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
@@ -2691,7 +2695,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     return yPosition;
   };
 
-  // ================== CUSTOMER SATISFACTION REPORT TABLE ==================
   const createCustomerSatisfactionReportTable = async (
     doc,
     pageWidth,
@@ -2713,7 +2716,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       lineSpacing: 1.2,
     };
 
-    // ✅ Dynamic Filter Column Label
     let periodLabel = "MONTHS";
     if (period === "monthly") periodLabel = "DAYS";
     else if (period === "weekly") periodLabel = "WEEKDAYS";
@@ -2731,7 +2733,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       "Delivery Status",
     ];
 
-    // ===== Column Config =====
     const availableWidth =
       pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
 
@@ -2780,10 +2781,8 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       yPosition += tableConfig.headerHeight;
     };
 
-    // ✅ Draw headers first time
     drawHeaders();
 
-    // ===== Rows =====
     satisfactionRows.forEach((row, rowIndex) => {
       let xPos = tableStartX;
       let maxLines = 1;
@@ -2801,10 +2800,9 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       const isEvenRow = rowIndex % 2 === 0;
       const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
 
-      // ✅ Page break check BEFORE drawing row
       if (yPosition + rowHeight > pageHeight - 20) {
         doc.addPage();
-        const topMargin = 50; // 👈 margin-top to push table under the header
+        const topMargin = 50;
         yPosition = topMargin;
         drawHeaders();
       }
@@ -2968,7 +2966,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
       );
     };
 
-    // Render rows for current report
     return Array.isArray(cardGroups[0])
       ? cardGroups.map((row, idx) => <div key={idx}>{renderRow(row)}</div>)
       : renderRow(cardGroups);
@@ -2997,24 +2994,32 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     </ResponsiveContainer>
   );
 
-  // Render top selling bar chart (Sales)
-  const renderTopSellingChart = () => (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart
-        data={topSelling}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="item_name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="quantity_sold" fill="#4CAF50" radius={[5, 5, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
+  const renderTopSellingChart = () => {
+    const top3Items = [...topSelling]
+      .sort((a, b) => b.quantity_sold - a.quantity_sold)
+      .slice(0, 3);
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart
+          data={top3Items}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="item_name" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar
+            dataKey="quantity_sold"
+            fill="#4CAF50"
+            radius={[5, 5, 0, 0]}
+            name="Items Sold"
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
 
-  // Render transaction bar chart for successful & failed deliveries
   const renderTransactionStatusChart = () => (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart
@@ -3026,7 +3031,12 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
         <YAxis allowDecimals={false} />
         <Tooltip />
         <Legend />
-        <Bar dataKey="count">
+        <Bar
+          dataKey="count"
+          radius={[5, 5, 0, 0]}
+          name="Number of Transactions"
+          fill="darkblue"
+        >
           {transactionStatusData.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
@@ -3038,9 +3048,7 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     </ResponsiveContainer>
   );
 
-  // Render service delivery failed reasons bar chart
   const renderServiceFailedReasonsChart = () => {
-    // Ensure chart always renders
     const data =
       failedReasons && Object.keys(failedReasons).length > 0
         ? Object.entries(failedReasons).map(([reason, count]) => ({
@@ -3060,15 +3068,18 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
           <YAxis allowDecimals={false} />
           <Tooltip />
           <Legend />
-          <Bar dataKey="count" fill="#E57373" radius={[5, 5, 0, 0]} />
+          <Bar
+            dataKey="count"
+            fill="#E6A152FF"
+            radius={[5, 5, 0, 0]}
+            name="Number of Transactions"
+          />
         </BarChart>
       </ResponsiveContainer>
     );
   };
 
-  // Render customer satisfaction pie chart for rating percentages
   const renderCustomerRatingPieChart = () => {
-    // Calculate total ratings count for percentages
     const totalRatings =
       ratingDistribution.reduce((acc, cur) => acc + cur.value, 0) || 0;
     const dataWithPercent =
@@ -3106,7 +3117,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     );
   };
 
-  // PAGINATION FOR EVERY TABLE
   useEffect(() => {
     setActiveTab("overall");
   }, [reportType]);
@@ -3124,7 +3134,6 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
   const renderSalesTable = () => {
     const itemsPerPage = getItemsPerPage();
 
-    // Group by transaction_id
     const groupedData = Object.values(
       filteredSalesData.reduce((acc, row) => {
         const id = row.transaction_id;
@@ -3183,12 +3192,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
               </tr>
             ) : (
               paginatedData.map((row, i) => {
-                // compute subtotals per item
                 const subtotals = row.items.map(
                   (item) => item.qty * item.unit_cost
                 );
 
-                // compute total cost
                 const totalCost = subtotals.reduce((a, b) => a + b, 0);
 
                 return (
@@ -3350,12 +3357,10 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
               </tr>
             ) : (
               paginatedData.map((row, i) => {
-                // compute subtotals per item
                 const subtotals = row.items.map(
                   (item) => item.qty * item.unit_cost
                 );
 
-                // compute total cost
                 const totalCost = subtotals.reduce((a, b) => a + b, 0);
 
                 return (
@@ -3590,7 +3595,7 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
     const groupedData = Object.values(
       filteredCustomerData.reduce((acc, row) => {
         if (!acc[row.transaction_id]) {
-          acc[row.transaction_id] = row; 
+          acc[row.transaction_id] = row;
         }
         return acc;
       }, {})
@@ -3667,7 +3672,23 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
   };
 
   return (
-    <AdminLayout title="Generate Report" onSearch={setSearchQuery}>
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Generate Report</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+    >
       <style>{`
         .table-row-hover:hover { background-color: #f1f3f5 !important; transition: background-color 0.3s ease; }
         .btn-primary, .btn-success, .btn-danger { transition: box-shadow 0.3s ease; }
@@ -3958,6 +3979,121 @@ const addSignatureSection = (doc, pageWidth, pageHeight) => {
             }}
           >
             Apply Filters
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Toaster position="top-center" />
+      <Modal
+        show={showFAQ}
+        onHide={() => {
+          setShowFAQ(false);
+          setActiveFAQIndex(null);
+        }}
+        centered
+        dialogClassName="faq-modal-dialog"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            borderBottom: "none",
+          }}
+        >
+          <Modal.Title>Guide for Generate Report</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
+          <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
+            The Generate Report page provides a detailed summary of all
+            transactions and delivery performance. You can filter reports by
+            date range, delivery status, or assigned personnel to analyze
+            trends. The system also allows exporting data in PDF or Excel format
+            for documentation or record-keeping. This helps monitor performance
+            metrics such as successful, cancelled, and rescheduled deliveries.
+          </p>
+
+          <div className="px-3 mb-3">
+            <div className="accordion" id="faqAccordion">
+              {guideqst.map((faq, index) => (
+                <div
+                  className="accordion-item mb-3 shadow-sm border-0"
+                  key={index}
+                >
+                  <h2 className="accordion-header" id={`heading${index}`}>
+                    <button
+                      className={`accordion-button ${
+                        activeFAQIndex === index ? "" : "collapsed"
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setActiveFAQIndex(
+                          activeFAQIndex === index ? null : index
+                        )
+                      }
+                      aria-expanded={activeFAQIndex === index}
+                      aria-controls={`collapse${index}`}
+                      style={{
+                        backgroundColor:
+                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                        color: activeFAQIndex === index ? "white" : "#116B8A",
+                        fontWeight: 600,
+                        transition: "all 0.3s ease",
+                      }}
+                      onMouseOver={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#d9eff1";
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeFAQIndex !== index) {
+                          e.currentTarget.style.backgroundColor = "#e9f6f8";
+                        }
+                      }}
+                    >
+                      {faq.question}
+                    </button>
+                  </h2>
+                  <div
+                    id={`collapse${index}`}
+                    className={`accordion-collapse collapse ${
+                      activeFAQIndex === index ? "show" : ""
+                    }`}
+                    aria-labelledby={`heading${index}`}
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div
+                      className="accordion-body bg-white rounded-bottom"
+                      style={{
+                        borderLeft: "4px solid #116B8A",
+                        color: "#333",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <strong>Answer:</strong> {faq.answer}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderTop: "1px solid #dee2e6",
+          }}
+        >
+          <Button
+            variant="outline-secondary"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+            className="px-4"
+          >
+            Close
           </Button>
         </Modal.Footer>
       </Modal>

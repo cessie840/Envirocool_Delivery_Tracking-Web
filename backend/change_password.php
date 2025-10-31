@@ -1,11 +1,9 @@
 <?php
 include 'database.php';
 
-// Enable error reporting (for debugging)
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-
-// --- CORS setup ---
 $allowed_origins = [
     'http://localhost:5173',
     'https://cessie840.github.io'
@@ -21,13 +19,11 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-// Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-// --- Input handling ---
 $data = json_decode(file_get_contents("php://input"), true);
 $email = trim($data['email']);
 $newPassword = trim($data['newPassword']);
@@ -39,7 +35,6 @@ if (!$email || !$newPassword) {
 
 $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 
-// Include correct email and password column names per table
 $tablesToCheck = [
     "Admin" => ["email" => "ad_email", "password" => "ad_password"],
     "OperationalManager" => ["email" => "manager_email", "password" => "manager_password"],
@@ -59,8 +54,6 @@ foreach ($tablesToCheck as $table => $columns) {
 
     if ($result->num_rows === 1) {
         $stmt->close();
-
-        // ✅ Update password and unlock the account if locked
         $updateStmt = $conn->prepare("
           UPDATE $table 
 SET $passwordCol = ?, 

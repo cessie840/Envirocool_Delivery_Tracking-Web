@@ -28,7 +28,6 @@ if (empty($_POST["pers_username"])) {
 $username = $_POST["pers_username"];
 $fileUpload = $_FILES["profile_pic"] ?? $_FILES["profilePic"] ?? null;
 
-// ✅ Get personnel name
 $stmt_name = $conn->prepare("SELECT pers_fname, pers_lname FROM DeliveryPersonnel WHERE pers_username = ?");
 $stmt_name->bind_param("s", $username);
 $stmt_name->execute();
@@ -43,13 +42,11 @@ $row = $result->fetch_assoc();
 $fullName = trim($row["pers_fname"] . " " . $row["pers_lname"]);
 $stmt_name->close();
 
-// ✅ Prepare directory
 $targetDir = __DIR__ . "/uploads/personnel_profile_pic/";
 if (!file_exists($targetDir)) {
     mkdir($targetDir, 0777, true);
 }
 
-// ✅ Validate file
 $allowedExts = ["jpg", "jpeg", "png", "gif"];
 $newFileName = null;
 
@@ -62,12 +59,10 @@ if ($fileUpload && isset($fileUpload["tmp_name"]) && $fileUpload["tmp_name"] !==
         exit;
     }
 
-    // ✅ Use the naming pattern you wanted
     $cleanName = preg_replace('/[^A-Za-z0-9_]/', '_', $fullName);
     $newFileName = "personnel_profile_" . $cleanName . "." . $fileExt;
     $targetFile = $targetDir . $newFileName;
 
-    // Overwrite existing file
     if (file_exists($targetFile)) unlink($targetFile);
 
     if (!move_uploaded_file($fileUpload["tmp_name"], $targetFile)) {
@@ -75,7 +70,6 @@ if ($fileUpload && isset($fileUpload["tmp_name"]) && $fileUpload["tmp_name"] !==
         exit;
     }
 
-    // ✅ Update DB
     $stmt = $conn->prepare("UPDATE DeliveryPersonnel SET pers_profile_pic = ? WHERE pers_username = ?");
     $stmt->bind_param("ss", $newFileName, $username);
 

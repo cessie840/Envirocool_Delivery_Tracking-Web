@@ -4,6 +4,7 @@ import axios from "axios";
 import Sidebar from "./DriverSidebar";
 import HeaderAndNav from "./DriverHeaderAndNav";
 import { useNavigate, useLocation } from "react-router-dom";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 function DriverDashboard() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -110,13 +111,11 @@ function DriverDashboard() {
     setNewDeliveriesCount(0);
   };
 
-  // --- Trigger the confirmation modal ---
   const handleOutForDeliveryClick = (transactionNo) => {
     setSelectedTxn(transactionNo);
     setShowConfirmModal(true);
   };
 
-  // --- Confirm and proceed with marking out for delivery ---
   const handleConfirmOutForDelivery = () => {
     if (!selectedTxn) return;
 
@@ -124,7 +123,7 @@ function DriverDashboard() {
       (d) => d.transactionNo === selectedTxn
     );
     if (!delivery) {
-      alert("Delivery not found.");
+      ToastHelper.error("Delivery not found.");
       return;
     }
 
@@ -136,16 +135,18 @@ function DriverDashboard() {
       .then((res) => {
         const { success, message } = res.data;
         if (success) {
-          alert("Order is now marked as 'Out for Delivery'.");
+          ToastHelper.success("Order is now marked as 'Out for Delivery'.");
           fetchAssignedDeliveries();
           navigate("/driver-dashboard");
         } else {
-          alert(`Error: ${message}`);
+          ToastHelper.error(`Error: ${message}`);
         }
       })
       .catch((err) => {
         console.error("API error:", err);
-        alert("Failed to update delivery status. Please try again later.");
+        ToastHelper.error(
+          "Failed to update delivery status. Please try again later."
+        );
       })
       .finally(() => {
         setShowConfirmModal(false);
@@ -182,7 +183,6 @@ function DriverDashboard() {
       />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
 
-      {/* New Delivery Notification Modal */}
       <Modal show={showNewDeliveryPopup} onHide={handleClosePopup} centered>
         <Modal.Header closeButton>
           <Modal.Title>New Assigned Deliveries</Modal.Title>
@@ -199,7 +199,6 @@ function DriverDashboard() {
         </Modal.Footer>
       </Modal>
 
-      {/* --- Confirmation Modal --- */}
       <Modal
         show={showConfirmModal}
         onHide={() => setShowConfirmModal(false)}

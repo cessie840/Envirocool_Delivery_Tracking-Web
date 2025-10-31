@@ -24,8 +24,8 @@ $query = "
         t.shipout_at AS shipout_time,
         t.cancelled_reason,
         t.cancelled_at AS cancelled_time,
-           t.tracking_number AS tracking_number,
-            t.assigned_device_id,
+        t.tracking_number AS tracking_number,
+        t.assigned_device_id,
        t.latitude,             
     t.longitude,    
         CONCAT(dp.pers_fname, ' ', dp.pers_lname, ' (', dp.pers_username, ')') AS driver,
@@ -61,8 +61,6 @@ if ($result && $result->num_rows > 0) {
             "longitude"        => $row['longitude'],  
             "assigned_device_id" => $row['assigned_device_id'], 
             "status"           => $row['status'],
-            "distance"         => "N/A",
-            "eta"              => "N/A"
         ];
     }
 

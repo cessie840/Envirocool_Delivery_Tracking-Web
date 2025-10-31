@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Offcanvas, ListGroup, Modal, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import "./loading-overlay.css"; // ✅ import same overlay CSS
+import "./loading-overlay.css";
+import { ToastHelper } from "./helpers/ToastHelper";
 
 const Sidebar = ({ show, onHide }) => {
   const navigate = useNavigate();
@@ -14,100 +15,100 @@ const Sidebar = ({ show, onHide }) => {
   });
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [loading, setLoading] = useState(false); // ✅ new state
+  const [loading, setLoading] = useState(false);
 
-useEffect(() => {
-  const storedProfile = localStorage.getItem("user");
+  useEffect(() => {
+    const storedProfile = localStorage.getItem("user");
 
-  if (storedProfile) {
-    const parsed = JSON.parse(storedProfile);
+    if (storedProfile) {
+      const parsed = JSON.parse(storedProfile);
 
-    axios
-      .post("http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php", {
-        pers_username: parsed.pers_username,
-      })
-      .then((response) => {
-        const data = response.data;
+      axios
+        .post(
+          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
+          {
+            pers_username: parsed.pers_username,
+          }
+        )
+        .then((response) => {
+          const data = response.data;
 
-        if (data.success) {
-          const user = data.user;
+          if (data.success) {
+            const user = data.user;
 
-          // ✅ Use uploaded image if available, else default
-          const profilePicUrl = user.pers_profile_pic
-            ? `http://localhost//DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
-            : `http://localhost//DeliveryTrackingSystem/default-profile-pic.png`;
+            const profilePicUrl = user.pers_profile_pic
+              ? `http://localhost//DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
+              : `http://localhost//DeliveryTrackingSystem/default-profile-pic.png`;
 
-          setProfile({
-            name: `${user.pers_fname} ${user.pers_lname}`,
-            email: user.pers_email,
-            contact: user.pers_phone,
-            profilePic: profilePicUrl,
-            userId: user.pers_username,
-          });
+            setProfile({
+              name: `${user.pers_fname} ${user.pers_lname}`,
+              email: user.pers_email,
+              contact: user.pers_phone,
+              profilePic: profilePicUrl,
+              userId: user.pers_username,
+            });
 
-          // ✅ Also update localStorage to persist the image
-          const updatedUser = { ...parsed, pers_profile_pic: user.pers_profile_pic };
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-        } else {
-          console.warn("User not a delivery personnel:", data.message);
-        }
-      })
-      .catch((error) => {
-        console.error("Axios error:", error);
-      });
-  }
-}, []);
-
-
-const handleProfileChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const formData = new FormData();
-  formData.append("profile_pic", file);
-  formData.append("pers_username", storedUser.pers_username);
-
-  try {
-    const response = await axios.post(
-      "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    if (response.data.success) {
-      const newPicUrl = response.data.image_url;
-
-      // ✅ Update local UI
-      setProfile((prev) => ({ ...prev, profilePic: newPicUrl }));
-
-      // ✅ Persist to localStorage
-      const updatedUser = { ...storedUser, pers_profile_pic: newPicUrl };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-
-      alert("Profile picture updated successfully!");
-    } else {
-      alert("Upload failed: " + response.data.message);
+            const updatedUser = {
+              ...parsed,
+              pers_profile_pic: user.pers_profile_pic,
+            };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+          } else {
+            console.warn("User not a delivery personnel:", data.message);
+          }
+        })
+        .catch((error) => {
+          console.error("Axios error:", error);
+        });
     }
-  } catch (err) {
-    console.error("Upload error:", err);
-    alert("An error occurred while uploading the picture.");
-  }
-};
+  }, []);
 
+  const handleProfileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const formData = new FormData();
+    formData.append("profile_pic", file);
+    formData.append("pers_username", storedUser.pers_username);
+
+    try {
+      const response = await axios.post(
+        "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const newPicUrl = response.data.image_url;
+
+        setProfile((prev) => ({ ...prev, profilePic: newPicUrl }));
+
+        const updatedUser = { ...storedUser, pers_profile_pic: newPicUrl };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+
+        ToastHelper.success("Profile picture updated successfully!");
+      } else {
+        ToastHelper.error("Upload failed: " + response.data.message);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      ToastHelper.error("An error occurred while uploading the picture.");
+    }
+  };
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
-    setLoading(true); // ✅ show loading
+    setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      localStorage.removeItem("user"); // clear storage
-      navigate("/"); // redirect after timeout
-    }, 800); // adjust delay
+      localStorage.removeItem("user");
+      navigate("/");
+    }, 800); //
   };
 
   const userName = profile.name;
@@ -115,7 +116,6 @@ const handleProfileChange = async (e) => {
 
   return (
     <>
-      {/* ✅ Loading Overlay */}
       {loading && (
         <div className="loading-overlay">
           <div className="spinner-border text-primary" role="status">
@@ -153,7 +153,6 @@ const handleProfileChange = async (e) => {
           <Offcanvas.Title>Delivery Menu</Offcanvas.Title>
         </Offcanvas.Header>
 
-        {/* ACCOUNT DISPLAY */}
         <Offcanvas.Body className="bg-light">
           <div className="mx-2 mb-4 my-3 p-3 rounded border shadow-sm bg-white d-flex align-items-center gap-3 border-info rounded">
             <label htmlFor="profileUpload" style={{ cursor: "pointer" }}>
@@ -194,7 +193,6 @@ const handleProfileChange = async (e) => {
               </div>
             </label>
 
-            {/* EDIT PROFILE */}
             <div>
               <i
                 className="bi bi-pencil-square"
@@ -221,7 +219,6 @@ const handleProfileChange = async (e) => {
             </div>
           </div>
 
-          {/* SIDEBAR NAVIGATION */}
           <div
             className="mx-2 mb-4 p-3 border border-info rounded"
             style={{ backgroundColor: "#eaf7f7" }}
@@ -233,7 +230,8 @@ const handleProfileChange = async (e) => {
                 { name: "Out For Delivery", path: "/out-for-delivery" },
                 { name: "Successful Delivered", path: "/successful-delivery" },
                 { name: "Failed Deliveries", path: "/failed-delivery" },
-                { name: "Logout", path: "logout" }, // special case
+                { name: "Guide", path: "/driver-guide" },
+                { name: "Logout", path: "logout" },
               ].map((item, i) => (
                 <ListGroup.Item
                   key={i}
@@ -270,21 +268,28 @@ const handleProfileChange = async (e) => {
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* LOGOUT CONFIRMATION MODAL */}
       <Modal
         show={showLogoutModal}
         onHide={() => setShowLogoutModal(false)}
         centered
       >
-        <Modal.Header className="bg-light" closeButton>
-          <Modal.Title className="text-danger">Confirm Logout</Modal.Title>
+        <Modal.Header closeButton className="bg-light">
+          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="bg-white">Are you sure you want to logout?</Modal.Body>
+        <Modal.Body className="bg-white">
+          Are you sure you want to logout?
+        </Modal.Body>
         <Modal.Footer className="bg-light">
-          <Button className="close-btn px-2 py-2 fs-6" variant="secondary" onClick={() => setShowLogoutModal(false)}>
+          <Button
+            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
+            onClick={() => setShowLogoutModal(false)}
+          >
             Cancel
           </Button>
-          <Button className="cancel-btn px-2 py-2 fs-6" variant="danger" onClick={confirmLogout}>
+          <Button
+            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
+            onClick={confirmLogout}
+          >
             Logout
           </Button>
         </Modal.Footer>

@@ -11,7 +11,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
+    echo json_encode(["success" => true, "message" => "Preflight OK"]);
     exit();
 }
 
@@ -22,10 +22,10 @@ header("Content-Type: application/json; charset=UTF-8");
 $data = json_decode(file_get_contents("php://input"));
 
 if (!isset($data->username) || !isset($data->password)) {
-    http_response_code(400);
     echo json_encode([
+        "success" => false,
         "errorName" => "MISSING_CREDENTIALS",
-        "error" => "Missing username or password."
+        "message" => "Missing username or password."
     ]);
     exit();
 }
@@ -33,15 +33,13 @@ if (!isset($data->username) || !isset($data->password)) {
 $username = trim($data->username);
 $password = $data->password;
 
-// ✅ Constants
 $MAX_ATTEMPTS = 3;
 $LOCK_TIME_MINUTES = 5;
 
-// ✅ Function to log successful logins
 function logLogin($username, $role, $details = []) {
     $logFile = __DIR__ . '/login_logs.txt';
     $timestamp = date("Y-m-d H:i:s");
-    $userDetails = isset($details['email']) ? $details['email'] : 'N/A';
+    $userDetails = $details['email'] ?? 'N/A';
     $fullname = trim(($details['fname'] ?? '') . ' ' . ($details['lname'] ?? ''));
     $logEntry = "[$timestamp] USER: $username | ROLE: $role | NAME: $fullname | EMAIL: $userDetails\n";
     file_put_contents($logFile, $logEntry, FILE_APPEND);
@@ -58,24 +56,22 @@ function checkUser($conn, $table, $user_col, $pass_col, $fields) {
     $result = $stmt->get_result();
 
     if (!$row = $result->fetch_assoc()) {
-        return null; // Username not found
+        return null; 
     }
 
-    // Check permanent lock
-    if ($row['is_locked']) {
-        http_response_code(403);
+    if (!empty($row['is_locked'])) {
         echo json_encode([
+            "success" => false,
             "errorName" => "ACCOUNT_LOCKED",
-            "error" => "Your account is permanently locked. Please reset your password to unlock."
+            "message" => "Your account is permanently locked. Please reset your password to unlock."
         ]);
         exit();
     }
 
-    $attempts = $row['login_attempts'] ?? 0;
+    $attempts = (int)($row['login_attempts'] ?? 0);
     $last_attempt = $row['last_attempt'] ?? null;
     $now = new DateTime();
 
-    // Reset attempts if last attempt was long ago
     if ($last_attempt) {
         $last = new DateTime($last_attempt);
         $diff = $now->getTimestamp() - $last->getTimestamp();
@@ -87,7 +83,6 @@ function checkUser($conn, $table, $user_col, $pass_col, $fields) {
         }
     }
 
-    // Password correct
     if (password_verify($password, $row[$pass_col])) {
         $stmt = $conn->prepare("UPDATE $table SET login_attempts = 0, last_attempt = NULL WHERE $user_col = ?");
         $stmt->bind_param("s", $username);
@@ -98,37 +93,32 @@ function checkUser($conn, $table, $user_col, $pass_col, $fields) {
         return $row;
     }
 
-    // Wrong password
     $attempts++;
     if ($attempts >= $MAX_ATTEMPTS) {
-        // Lock account permanently
         $stmt = $conn->prepare("UPDATE $table SET login_attempts = ?, last_attempt = NOW(), is_locked = 1 WHERE $user_col = ?");
         $stmt->bind_param("is", $attempts, $username);
         $stmt->execute();
 
-        http_response_code(403);
         echo json_encode([
+            "success" => false,
             "errorName" => "MAX_ATTEMPTS_REACHED",
-            "error" => "You have reached $MAX_ATTEMPTS invalid login attempts. Your account is now locked. Please reset your password to unlock."
+            "message" => "You have reached $MAX_ATTEMPTS invalid login attempts. Your account is now locked. Please reset your password to unlock."
         ]);
         exit();
     } else {
-        // Just increment attempts
         $stmt = $conn->prepare("UPDATE $table SET login_attempts = ?, last_attempt = NOW() WHERE $user_col = ?");
         $stmt->bind_param("is", $attempts, $username);
         $stmt->execute();
 
-        http_response_code(401);
         echo json_encode([
+            "success" => false,
             "errorName" => "INVALID_PASSWORD",
-            "error" => "Invalid password. Attempt $attempts of $MAX_ATTEMPTS."
+            "message" => "Invalid password. Attempt $attempts of $MAX_ATTEMPTS."
         ]);
         exit();
     }
 }
 
-
-// ✅ ADMIN 
 $user = checkUser($conn, "Admin", "ad_username", "ad_password", "ad_fname, ad_lname, ad_email, ad_phone");
 if ($user) {
     unset($_SESSION['manager_username'], $_SESSION['pers_username']);
@@ -140,11 +130,10 @@ if ($user) {
         'email' => $user['ad_email']
     ]);
 
-    echo json_encode(["status" => "success", "user" => $user]);
+    echo json_encode(["success" => true, "user" => $user]);
     exit();
 }
 
-// ✅ OPERATIONAL MANAGER 
 $user = checkUser($conn, "OperationalManager", "manager_username", "manager_password", "manager_fname, manager_lname, manager_email, manager_phone");
 if ($user) {
     unset($_SESSION['ad_username'], $_SESSION['pers_username']);
@@ -156,11 +145,10 @@ if ($user) {
         'email' => $user['manager_email']
     ]);
 
-    echo json_encode(["status" => "success", "user" => $user]);
+    echo json_encode(["success" => true, "user" => $user]);
     exit();
 }
 
-// ✅ DELIVERY PERSONNEL 
 $user = checkUser(
     $conn,
     "DeliveryPersonnel",
@@ -178,15 +166,14 @@ if ($user) {
         'email' => $user['pers_email']
     ]);
 
-    echo json_encode(["status" => "success", "user" => $user]);
+    echo json_encode(["success" => true, "user" => $user]);
     exit();
 }
 
-// ❌ Username not found in any table
-http_response_code(404);
 echo json_encode([
+    "success" => false,
     "errorName" => "INVALID_USERNAME",
-    "error" => "Invalid username. Please check and try again."
+    "message" => "Invalid username. Please check and try again."
 ]);
 
 $conn->close();

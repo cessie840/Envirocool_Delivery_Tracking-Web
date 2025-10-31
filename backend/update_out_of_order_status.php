@@ -34,14 +34,12 @@ $stmt1 = $stmt3 = $stmtHist = null;
 try {
     $conn->begin_transaction();
 
-    // --- Update transaction status ---
     $sql1 = "UPDATE Transactions SET status = 'Out for Delivery', shipout_at = NOW() WHERE transaction_id = ?";
     $stmt1 = $conn->prepare($sql1);
     $stmt1->bind_param("i", $transactionId);
     $stmt1->execute();
 
     if ($stmt1->affected_rows <= 0) {
-        // check if transaction exists
         $check = $conn->prepare("SELECT transaction_id FROM Transactions WHERE transaction_id = ?");
         $check->bind_param("i", $transactionId);
         $check->execute();
@@ -50,8 +48,6 @@ try {
             throw new Exception("Transaction not found or not updated.");
         }
     }
-
-    // --- Fetch customer info ---
     $sql3 = "SELECT customer_name, customer_contact, tracking_number FROM Transactions WHERE transaction_id = ?";
     $stmt3 = $conn->prepare($sql3);
     $stmt3->bind_param("i", $transactionId);
@@ -67,7 +63,6 @@ try {
     $customerContact = $row['customer_contact'];
     $trackingNumber = $row['tracking_number'];
 
-    // --- Normalize phone number ---
     $c = preg_replace('/[^0-9\+]/', '', $customerContact);
     if (preg_match('/^\+63[0-9]{10}$/', $c)) {
         $phoneNormalized = $c;
@@ -78,13 +73,12 @@ try {
     } elseif (preg_match('/^[0-9]{10}$/', $c)) {
         $phoneNormalized = '+63' . $c;
     } else {
-        $phoneNormalized = null; // avoid breaking transaction
+        $phoneNormalized = null; 
     }
 
     $conn->commit();
 
-    // --- Prepare SMS ---
-    $trackingUrlSafe = "https://cessie840.github.io/Envirocool-Tracking-Page/";
+     $trackingUrlSafe = "cessie840 . github . io / Envirocool-Tracking-Page /";
     $message = "Hi {$customerName}!\n\nYour order is now Out for Delivery.\nTracking No: {$trackingNumber}.\nTrack here: {$trackingUrlSafe}\n\nUse your tracking number to check your delivery status on the website.\n\nThis is a system notification from Envirocool Corp. Please do not reply.\n-Envirocool Corp.";
 
     $smsResponse = null;
@@ -115,7 +109,6 @@ try {
             $curlError = curl_error($ch);
             curl_close($ch);
 
-            // --- Safe logging ---
             @file_put_contents(__DIR__ . '/sms_debug_log.txt', "HTTP {$httpCode}\n{$smsResponse}\nError: {$curlError}\n\n", FILE_APPEND);
 
             $historyReason = $curlError ? "cURL error: {$curlError}" : "HTTP {$httpCode} | Response: {$smsResponse}";
@@ -126,7 +119,6 @@ try {
             $stmtHist->execute();
 
         } catch (Exception $e) {
-            // do not break response if SMS fails
             $smsResponse = "SMS sending failed: " . $e->getMessage();
         }
     } else {

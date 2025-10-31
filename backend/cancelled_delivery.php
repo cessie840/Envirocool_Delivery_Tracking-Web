@@ -11,7 +11,6 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
 } else {
-    // optional fallback
     header("Access-Control-Allow-Origin: http://localhost:5173");
     header("Access-Control-Allow-Credentials: true");
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -38,7 +37,6 @@ if (!$transaction_id || empty($reason)) {
     exit;
 }
 
-// ✅ Check if transaction exists
 $check = $conn->prepare("SELECT * FROM Transactions WHERE transaction_id = ?");
 $check->bind_param("i", $transaction_id);
 $check->execute();
@@ -52,7 +50,6 @@ if ($result->num_rows === 0) {
     exit;
 }
 
-// ✅ Update Transactions table
 $update = $conn->prepare("
     UPDATE Transactions 
     SET status = 'Cancelled', cancelled_reason = ?, cancelled_at = NOW() 
@@ -61,7 +58,6 @@ $update = $conn->prepare("
 $update->bind_param("si", $reason, $transaction_id);
 
 if ($update->execute()) {
-    // ✅ Update DeliveryDetails table (if exists)
     $updDetails = $conn->prepare("
         UPDATE DeliveryDetails 
         SET delivery_status = 'Cancelled', cancellation_reason = ?, cancelled_at = NOW() 
@@ -70,8 +66,6 @@ if ($update->execute()) {
     $updDetails->bind_param("si", $reason, $transaction_id);
     $updDetails->execute();
     $updDetails->close();
-
-    // ✅ INSERT into DeliveryHistory (keeps permanent record)
     $insertHist = $conn->prepare("
         INSERT INTO DeliveryHistory (transaction_id, event_type, reason, event_timestamp) 
         VALUES (?, 'Cancelled', ?, NOW())
@@ -79,8 +73,6 @@ if ($update->execute()) {
     $insertHist->bind_param("is", $transaction_id, $reason);
     $insertHist->execute();
     $insertHist->close();
-
-    // ✅ Update DeliverySummary (for dashboard counts)
     $summary_date = date("Y-m-d");
     $summary_month = date("Y-m");
 
@@ -90,7 +82,6 @@ if ($update->execute()) {
     $summaryResult = $checkSummary->get_result();
 
     if ($summaryResult->num_rows > 0) {
-        // Update existing summary
         if (stripos($reason, 'location') !== false) {
             $conn->query("UPDATE DeliverySummary 
                           SET failed_deliveries = failed_deliveries + 1,
@@ -107,7 +98,6 @@ if ($update->execute()) {
                           WHERE summary_date = '$summary_date'");
         }
     } else {
-        // Insert new summary row
         $location_reason = 0;
         $vehicle_reason = 0;
         if (stripos($reason, 'location') !== false) {

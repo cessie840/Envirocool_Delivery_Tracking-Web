@@ -136,7 +136,7 @@ function OutForDelivery() {
 
   const confirmCancellation = () => {
     if (!cancelReason) {
-      showToastMessage("danger", "⚠️ Please select a cancellation reason.");
+      showToastMessage("danger", "Please select a cancellation reason.");
       return;
     }
 
@@ -161,24 +161,28 @@ function OutForDelivery() {
           setSelectedDelivery(null);
           setCancelReason("");
 
-          showToastMessage("success", "❌ Delivery cancelled successfully.");
-          navigate("/failed-delivery");
+          showToastMessage("success", "Delivery cancelled successfully.");
+          setTimeout(() => {
+            navigate("/failed-delivery");
+          }, 1000); 
+
+
         } else {
           showToastMessage(
             "danger",
-            res.data.message || "⚠️ Cancellation failed."
+            res.data.message || "Cancellation failed."
           );
         }
       })
       .catch((err) => {
         console.error(err);
-        showToastMessage("danger", "⚠️ Error cancelling delivery.");
+        showToastMessage("danger", "Error cancelling delivery.");
       });
   };
 
  const handleProofSubmit = () => {
    if (!proofFile) {
-     showToastMessage("danger", "⚠️ Please capture a photo first.");
+     showToastMessage("danger", "Please capture a photo first.");
      return;
    }
 
@@ -197,6 +201,9 @@ function OutForDelivery() {
      .then((res) => {
        if (res.data.success) {
          showToastMessage("success", "Proof submitted successfully!");
+            setTimeout(() => {
+              navigate("/successful-delivery");
+            }, 1000); 
          setDeliveries(
            deliveries.filter(
              (d) => d.transactionNo !== deliveryToMark.transactionNo
@@ -223,7 +230,7 @@ function OutForDelivery() {
      })
      .catch((err) => {
        console.error(err);
-       showToastMessage("danger", "⚠️ Failed to submit proof.");
+       showToastMessage("danger", "Failed to submit proof.");
        stopCamera();
        setShowProofModal(false); 
      });
@@ -237,8 +244,6 @@ function OutForDelivery() {
         onSearch={setSearchTerm}
       />
       <Sidebar show={showSidebar} onHide={() => setShowSidebar(false)} />
-
-      {/* ✅ Toast Notification */}
       <ToastContainer position="top-center" className="mt-3">
         <Toast
           onClose={() => setShowToast(false)}
@@ -348,7 +353,6 @@ function OutForDelivery() {
         )}
       </Container>
 
-      {/* Camera Confirmation Modal */}
       <Modal
         show={showCameraConfirm}
         onHide={() => setShowCameraConfirm(false)}
@@ -381,7 +385,6 @@ function OutForDelivery() {
         </Modal.Footer>
       </Modal>
 
-      {/* Proof Modal */}
       <Modal
         show={showProofModal}
         onHide={() => {
@@ -476,7 +479,6 @@ function OutForDelivery() {
         </Modal.Footer>
       </Modal>
 
-      {/* Cancel Modal */}
       <Modal
         show={showCancelModal}
         onHide={() => setShowCancelModal(false)}

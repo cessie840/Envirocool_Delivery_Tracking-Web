@@ -1,5 +1,4 @@
 <?php
-// ✅ Allow specific origins
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174'
@@ -14,28 +13,13 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json");
 
-// ✅ Handle preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-// ✅ Include your database connection
 include 'database.php'; 
 
-/*
--------------------------------------------------------
-  QUERY LOGIC:
-  - total: All transactions
-  - successful: Delivered transactions
-  - cancelled: 
-        • Either has current status = 'Cancelled'
-        • OR has any 'Cancelled' record in DeliveryHistory
-    (So previously cancelled but rescheduled transactions 
-     are still counted as cancelled.)
-  - pending: Pending transactions
--------------------------------------------------------
-*/
 
 $sql = "
     SELECT 
@@ -70,10 +54,8 @@ $sql = "
         ON t.transaction_id = dd.transaction_id
 ";
 
-// ✅ Run query
 $result = $conn->query($sql);
 
-// ✅ Output result as JSON
 if ($result && $row = $result->fetch_assoc()) {
     echo json_encode([
         "success"    => true,
@@ -89,6 +71,5 @@ if ($result && $row = $result->fetch_assoc()) {
     ]);
 }
 
-// ✅ Close connection
 $conn->close();
 ?>

@@ -18,7 +18,6 @@ header("Content-Type: application/json");
 
 include 'database.php';
 
-// ✅ Fetch unique provinces
 $query = "SELECT DISTINCT province_name FROM location ORDER BY province_name ASC";
 $result = $conn->query($query);
 

@@ -7,7 +7,9 @@ const ViewTermsTab = () => {
       <p className="mb-2 text-secondary fw-medium">
         Envirocool Delivery & Monitoring System
       </p>
-      <p className="mb-4 text-sm text-muted">Last Updated: September 19, 2025</p>
+      <p className="mb-4 text-sm text-muted">
+        Last Updated: September 19, 2025
+      </p>
 
       {/* Scrollable container */}
       <div className="max-h-96 overflow-y-auto border px-5 py-4 rounded-4 bg-gray-50 fw-normal">
@@ -26,18 +28,29 @@ const ViewTermsTab = () => {
           business use only.
         </p>
 
-        <h5 className="font-semibold mt-4">2. User Roles and Responsibilities</h5>
+        <h5 className="font-semibold mt-4">
+          2. User Roles and Responsibilities
+        </h5>
         <h6 className="mt-2 fw-bold" style={{ color: "#0c759d" }}>
           2.1 Admin
         </h6>
         <ul className="list-disc list-inside">
-          <li>Add and manage delivery transactions (customer, order, and payment details).</li>
+          <li>
+            Add and manage delivery transactions (customer, order, and payment
+            details).
+          </li>
           <li>Reschedule cancelled deliveries.</li>
           <li>View and update transaction details.</li>
           <li>Monitor deliveries through GPS.</li>
-          <li>Generate reports (sales, transactions, deliveries, customer satisfaction).</li>
+          <li>
+            Generate reports (sales, transactions, deliveries, customer
+            satisfaction).
+          </li>
           <li>Export reports in PDF.</li>
-          <li>Manage account settings (edit profile, change password, backup and restore).</li>
+          <li>
+            Manage account settings (edit profile, change password, backup and
+            restore).
+          </li>
           <li>Manage these Terms & Conditions.</li>
         </ul>
 
@@ -49,7 +62,10 @@ const ViewTermsTab = () => {
           <li>View delivery transactions.</li>
           <li>Assign or reassign delivery personnel.</li>
           <li>Monitor assigned and unassigned orders.</li>
-          <li>Manage account settings (edit profile, change password, terms and conditions).</li>
+          <li>
+            Manage account settings (edit profile, change password, terms and
+            conditions).
+          </li>
         </ul>
 
         <h6 className="mt-3 fw-bold" style={{ color: "#0c759d" }}>
@@ -57,7 +73,9 @@ const ViewTermsTab = () => {
         </h6>
         <ul className="list-disc list-inside">
           <li>View assigned deliveries.</li>
-          <li>Update delivery status (Out for Delivery, Delivered, Cancelled).</li>
+          <li>
+            Update delivery status (Out for Delivery, Delivered, Cancelled).
+          </li>
         </ul>
 
         <h5 className="font-semibold mt-4">3. Data Privacy and Protection</h5>
@@ -66,7 +84,9 @@ const ViewTermsTab = () => {
           <b> Data Privacy Act of 2012 (Republic Act No. 10173).</b>
         </p>
         <ul className="list-disc list-inside">
-          <li>Only authorized users may access customer and transaction data.</li>
+          <li>
+            Only authorized users may access customer and transaction data.
+          </li>
           <li>
             All personal information collected (e.g., names, addresses, contact
             numbers, payment details) shall be used solely for transaction
@@ -90,7 +110,9 @@ const ViewTermsTab = () => {
             their account credentials.
           </li>
           <li>Sharing of usernames and passwords is strictly prohibited.</li>
-          <li>Users must immediately report any suspected unauthorized access.</li>
+          <li>
+            Users must immediately report any suspected unauthorized access.
+          </li>
         </ul>
 
         <h5 className="font-semibold mt-4">5. Acceptable Use</h5>
@@ -98,7 +120,9 @@ const ViewTermsTab = () => {
         <ul className="list-disc list-inside">
           <li>Use the System only for official company purposes.</li>
           <li>Enter accurate and truthful data at all times.</li>
-          <li>Not attempt to modify, hack, or exploit the System in any way.</li>
+          <li>
+            Not attempt to modify, hack, or exploit the System in any way.
+          </li>
           <li>
             Not use the System for personal gain or activities outside company
             operations.
@@ -123,9 +147,7 @@ const ViewTermsTab = () => {
         <ul className="list-disc list-inside">
           <li>User errors in data entry or delivery handling.</li>
           <li>Delays caused by incorrect information entered in the System.</li>
-          <li>
-            Unauthorized use of accounts due to negligence of the user.
-          </li>
+          <li>Unauthorized use of accounts due to negligence of the user.</li>
         </ul>
 
         <h5 className="font-semibold mt-4">8. Amendments to Terms</h5>

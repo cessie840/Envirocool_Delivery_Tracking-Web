@@ -28,7 +28,6 @@ $out = [
 ];
 
 if ($type === 'daily') {
-  // From DeliverySummary
   $sql = "SELECT 
             COALESCE(SUM(successful_deliveries),0) AS succ,
             COALESCE(SUM(failed_deliveries),0) AS fail,
@@ -51,7 +50,6 @@ if ($type === 'daily') {
   }
   $stmt->close();
 
-  // Fallback from Transactions
   if ($out["total"] === 0) {
     $sql = "SELECT 
               SUM(CASE WHEN status='Delivered' THEN 1 ELSE 0 END) AS succ,
@@ -76,7 +74,6 @@ if ($type === 'daily') {
     $stmt->close();
   }
 } else {
-  // MONTHLY
   $sql = "SELECT 
     COALESCE(SUM(successful_deliveries),0) AS succ,
     COALESCE(SUM(failed_deliveries),0) AS fail,
