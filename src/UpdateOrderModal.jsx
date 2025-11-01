@@ -1,26 +1,58 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Swal from "sweetalert2";
+import { ToastHelper } from "./helpers/ToastHelper";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const UpdateOrderModal = ({
   show,
   handleClose,
-  handleSubmit,
+  onSuccess,
   formData,
   setFormData,
 }) => {
-  const [previousValue, setPreviousValue] = useState(
-    formData.full_payment || "0"
-  );
-
   const [proofFiles, setProofFiles] = useState([]);
   const [selectedFileNames, setSelectedFileNames] = useState([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [payments, setPayments] = useState(formData.payments || []);
+  const [displayPayment, setDisplayPayment] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [dateError, setDateError] = useState("");
   const proofFileRef = useRef(null);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handleOpenPreviewModal = () => {
+    setCurrentIndex(0);
+    setShowPreviewModal(true);
+  };
+
+  const [maxPaymentDate, setMaxPaymentDate] = useState("");
+
+  useEffect(() => {
+    if (show) {
+      setFormData((prev) => ({
+        ...prev,
+        full_payment: "",
+        fbilling_date: "",
+      }));
+      setPayments(formData.payments || []);
+      setDisplayPayment("");
+      setPaymentError("");
+      setDateError("");
+      setProofFiles([]);
+      setSelectedFileNames([]);
+    }
+    if (formData.dbilling_date) {
+      const [mm, dd, yyyy] = formData.dbilling_date.split("/");
+      if (mm && dd && yyyy) setMaxPaymentDate(`${yyyy}-${mm}-${dd}`);
+      else setMaxPaymentDate("");
+    }
+
+  }, [show, formData.dbilling_date]);
 
   const handleProofFileChange = (e) => {
     const files = Array.from(e.target.files);
-
     const validFiles = files.filter((file) =>
       ["image/jpeg", "image/png"].includes(file.type)
     );
@@ -38,7 +70,202 @@ const UpdateOrderModal = ({
     setSelectedFileNames(validFiles.map((f) => f.name));
   };
 
-  const handleSaveChanges = () => {
+  const getRemainingBeforeAdditional = () => {
+    const total = parseFloat(formData.total || 0);
+    const downPayment = parseFloat(formData.down_payment || 0);
+    const totalPayments = payments.reduce(
+      (sum, p) => sum + parseFloat(p.amount || 0),
+      0
+    );
+    const remaining = total - (downPayment + totalPayments);
+    return Math.max(0, remaining);
+  };
+  const remainingAfterCurrentPayment = () => {
+    const total = parseFloat(formData.total || 0);
+    const down = parseFloat(formData.down_payment || 0);
+    const paid = payments.reduce(
+      (sum, p) => sum + parseFloat(p.amount || 0),
+      0
+    );
+    const current = parseFloat(formData.full_payment || 0);
+    const remaining = total - (down + paid + (isNaN(current) ? 0 : current));
+    return Math.max(0, remaining);
+  };
+
+  const isWeekend = (dateString) => {
+    if (!dateString) return false;
+    const d = new Date(dateString);
+    const day = d.getDay();
+    return day === 0 || day === 6;
+  };
+
+  const handleFullPaymentChange = (e) => {
+    setPaymentError("");
+    let raw = e.target.value.replace(/[^\d.]/g, "");
+    if (raw.split(".").length > 2) return;
+    if (raw && !/^\d*\.?\d{0,2}$/.test(raw)) return;
+
+    const typedNum = parseFloat(raw || 0);
+
+    const remainingBefore = getRemainingBeforeAdditional();
+
+    if (typedNum > remainingBefore) {
+      setPaymentError("Payment cannot exceed remaining balance.");
+      setDisplayPayment("");
+      setFormData({ ...formData, full_payment: "" });
+      return;
+    }
+
+    const formatted = raw
+      ? "₱" +
+        parseFloat(raw).toLocaleString("en-PH", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })
+      : "";
+
+    setDisplayPayment(formatted);
+    setFormData({ ...formData, full_payment: raw });
+  };
+
+  const handleFullPaymentBlur = () => {
+    const val = formData.full_payment;
+    if (!val) {
+      setDisplayPayment("");
+      return;
+    }
+
+    let num = parseFloat(val);
+    if (isNaN(num)) num = 0;
+
+    const remainingBefore = getRemainingBeforeAdditional();
+    if (num > remainingBefore) {
+      setPaymentError("Payment cannot exceed remaining balance.");
+      setDisplayPayment("");
+      setFormData({ ...formData, full_payment: "" });
+      return;
+    }
+
+    const formatted =
+      "₱" +
+      num.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+    setDisplayPayment(formatted);
+    setFormData({ ...formData, full_payment: num.toFixed(2) });
+  };
+
+  const handleDateChange = (e) => {
+    const picked = e.target.value;
+    setDateError("");
+
+    if (!picked) {
+      setFormData({ ...formData, fbilling_date: "" });
+      return;
+    }
+
+    const pickedDate = new Date(picked);
+    const dueDate = new Date(formData.dbilling_date);
+
+    if (isWeekend(picked)) {
+      setDateError("Weekends are not allowed for payment date.");
+      setFormData({ ...formData, fbilling_date: "" });
+      return;
+    }
+
+    const toYMD = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+
+    if (toYMD(pickedDate) > toYMD(dueDate)) {
+      setDateError("Date cannot exceed payment due date.");
+      setFormData({ ...formData, fbilling_date: "" });
+      return;
+    }
+
+    setFormData({ ...formData, fbilling_date: picked });
+  };
+
+  const handleSaveChanges = async () => {
+    const remainingBefore = getRemainingBeforeAdditional();
+    const amount = parseFloat(formData.full_payment || 0);
+    const paymentDate = formData.fbilling_date;
+
+    let hasError = false;
+
+    if (!amount || amount <= 0) {
+      setPaymentError("Enter a valid payment amount.");
+      hasError = true;
+    }
+
+    if (amount > remainingBefore) {
+      setPaymentError("Payment cannot exceed remaining balance.");
+      setDisplayPayment("");
+      setFormData({ ...formData, full_payment: "" });
+      hasError = true;
+    }
+
+    if (!paymentDate) {
+      setDateError("Please select a date for the additional payment.");
+      hasError = true;
+    } else {
+      if (isWeekend(paymentDate)) {
+        setDateError("Weekends are not allowed for payment date.");
+        setFormData({ ...formData, fbilling_date: "" });
+        hasError = true;
+      }
+      if (formData.dbilling_date) {
+        const toYMD = (d) => {
+          const date = new Date(d);
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return `${y}-${m}-${day}`;
+        };
+        if (toYMD(paymentDate) > toYMD(formData.dbilling_date)) {
+          setDateError("Date cannot exceed payment due date.");
+          setFormData({ ...formData, fbilling_date: "" });
+          hasError = true;
+        }
+      }
+    }
+
+    if (proofFiles.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Proof of Payment Required",
+        text: "Please upload at least one proof of payment before submitting.",
+      });
+      return;
+    }
+
+    if (hasError || paymentError || dateError) {
+      ToastHelper.error(
+        "Please fix the highlighted fields before saving."
+      );
+      return;
+    }
+
+    if (!formData.transaction_id) {
+      Swal.fire({
+        icon: "error",
+        title: "Missing Transaction ID",
+        text: "Cannot update order because transaction ID is missing.",
+      });
+      return;
+    }
+
+    const newPayment = {
+      amount,
+      date: paymentDate,
+    };
+    const newPayments = [newPayment];
+
     Swal.fire({
       title: "Are you sure?",
       text: "Do you want to update this order?",
@@ -47,19 +274,61 @@ const UpdateOrderModal = ({
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, update it!",
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        const cleanFormData = {
-          ...formData,
-          down_payment: parseFloat(formData.down_payment) || 0,
-          full_payment: parseFloat(formData.full_payment) || 0,
-          balance: parseFloat(formData.balance) || 0,
-        };
+        try {
+          const formDataToSend = new FormData();
 
-        cleanFormData.proof_files = proofFiles;
+          Object.entries(formData).forEach(([key, value]) => {
+            if (key === "payments") {
+              formDataToSend.append(key, JSON.stringify(newPayments));
+            } else {
+              formDataToSend.append(key, value);
+            }
+          });
 
-        setFormData(cleanFormData);
-        handleSubmit();
+          proofFiles.forEach((file) => {
+            formDataToSend.append("proof_files[]", file);
+          });
+
+          const res = await fetch(
+            "http://localhost/DeliveryTrackingSystem/update_payment_proof.php",
+            {
+              method: "POST",
+              body: formDataToSend,
+            }
+          );
+
+          const data = await res.json();
+
+          if (data.status === "success") {
+            const updatedRes = await fetch(
+              `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${formData.transaction_id}`
+            );
+            const updatedData = await updatedRes.json();
+
+            if (updatedData.form) {
+              setFormData(updatedData.form);
+            }
+
+            ToastHelper.success(
+              "Updated successfully!",
+              "Order updated successfully.",
+              "success"
+            );
+
+            onSuccess();
+            handleClose();
+          } else {
+            Swal.fire(
+              "Error",
+              data.message || "Something went wrong.",
+              "error"
+            );
+          }
+        } catch (err) {
+          Swal.fire("Error", err.message, "error");
+        }
       }
     });
   };
@@ -73,54 +342,6 @@ const UpdateOrderModal = ({
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           });
-  };
-
-  const handleFullPaymentChange = (e) => {
-    let rawValue = e.target.value.replace(/[^0-9.]/g, "");
-
-    const parts = rawValue.split(".");
-    if (parts.length > 2) rawValue = parts[0] + "." + parts.slice(1).join("");
-
-    const num = parseFloat(rawValue) || 0;
-
-    const total = parseFloat(formData.total || 0);
-    const downPayment = parseFloat(formData.down_payment) || 0;
-    const remaining = total - downPayment;
-
-    if (num > remaining) {
-      Swal.fire({
-        icon: "error",
-        title: "Payment exceeds balance!",
-        text: `The entered amount (₱${num.toLocaleString("en-PH", {
-          minimumFractionDigits: 2,
-        })}) exceeds the remaining balance (₱${remaining.toLocaleString(
-          "en-PH",
-          { minimumFractionDigits: 2 }
-        )}).`,
-        confirmButtonColor: "#d33",
-      });
-      setFormData({ ...formData, full_payment: previousValue });
-      return;
-    }
-
-    const newBalance = (remaining - num).toFixed(2);
-
-    setPreviousValue(rawValue);
-    setFormData({
-      ...formData,
-      full_payment: rawValue,
-      balance: newBalance,
-    });
-  };
-
-  const handleFullPaymentBlur = (e) => {
-    const num = parseFloat(formData.full_payment);
-    if (!isNaN(num)) {
-      setFormData({ ...formData, full_payment: num.toFixed(2) });
-      e.target.value = formatCurrency(num);
-    } else {
-      e.target.value = "₱0.00";
-    }
   };
 
   return (
@@ -169,7 +390,7 @@ const UpdateOrderModal = ({
                   <Form.Label>Remaining Balance</Form.Label>
                   <Form.Control
                     type="text"
-                    value={formatCurrency(formData.balance)}
+                    value={formatCurrency(remainingAfterCurrentPayment())}
                     readOnly
                     disabled
                     className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
@@ -177,36 +398,59 @@ const UpdateOrderModal = ({
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Final Payment</Form.Label>
+                  <Form.Label>Additional Payment</Form.Label>
                   <Form.Control
                     type="text"
                     inputMode="decimal"
-                    value={
-                      formData.full_payment
-                        ? `₱${formData.full_payment}`.replace(
-                            /\B(?=(\d{3})+(?!\d))/g,
-                            ","
-                          )
-                        : "₱0.00"
-                    }
+                    value={displayPayment}
                     onChange={handleFullPaymentChange}
                     onBlur={handleFullPaymentBlur}
+                    placeholder="₱0.00"
+                    isInvalid={!!paymentError}
                   />
+                  {paymentError && (
+                    <Form.Text className="text-danger">
+                      {paymentError}
+                    </Form.Text>
+                  )}
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Date of Final Payment</Form.Label>
+                  <Form.Label>Date of Additional Payment</Form.Label>
                   <Form.Control
                     type="date"
                     value={formData.fbilling_date || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fbilling_date: e.target.value,
-                      })
-                    }
+                    onChange={handleDateChange}
+                    isInvalid={!!dateError}
+                    max={maxPaymentDate || undefined}
                   />
+
+                  {dateError && (
+                    <Form.Text className="text-danger">{dateError}</Form.Text>
+                  )}
                 </Form.Group>
+
+                {payments.length > 0 && (
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">
+                      Recent Payments:
+                    </Form.Label>
+                    <ul className="list-group small">
+                      {payments.map((p, i) => (
+                        <li
+                          key={i}
+                          className="list-group-item d-flex justify-content-between align-items-center"
+                        >
+                          <span>{`₱${parseFloat(p.amount).toLocaleString(
+                            "en-PH",
+                            { minimumFractionDigits: 2 }
+                          )}`}</span>
+                          <span className="text-muted">{p.date}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Form.Group>
+                )}
 
                 <Form.Group className="mb-3">
                   <Form.Label
@@ -239,7 +483,7 @@ const UpdateOrderModal = ({
                         style={{ whiteSpace: "nowrap" }}
                         onClick={() => setShowPreviewModal(true)}
                       >
-                        View ({selectedFileNames.length})
+                        View
                       </button>
                     )}
                   </div>
@@ -251,13 +495,13 @@ const UpdateOrderModal = ({
 
         <Modal.Footer className="bg-white">
           <Button
-            className="cancel-btn btn d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+            className="cancel-btn btn fs-6 rounded-2 px-3 py-1"
             onClick={handleClose}
           >
             Cancel
           </Button>
           <Button
-            className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+            className="upd-btn btn-success fs-6 rounded-2 px-3 py-1"
             style={{ fontSize: "16px" }}
             onClick={handleSaveChanges}
           >
@@ -271,38 +515,79 @@ const UpdateOrderModal = ({
         onHide={() => setShowPreviewModal(false)}
         centered
         size="lg"
+        className="proof-preview-modal"
       >
-        <Modal.Header closeButton>
-          <Modal.Title>Uploaded Proof of Payment</Modal.Title>
+        <Modal.Header
+          closeButton
+          style={{ backgroundColor: "#00628FFF", color: "white", opacity: 0.85 }}
+        >
+          <Modal.Title className="fw-semibold">
+             Proof of Payment Preview
+          </Modal.Title>
         </Modal.Header>
 
-        <Modal.Body>
+        <Modal.Body className="bg-light text-center">
           {proofFiles.length === 0 ? (
-            <p>No images uploaded.</p>
+            <div className="py-5">
+              <i
+                className="bi bi-file-earmark-image text-secondary"
+                style={{ fontSize: "3rem" }}
+              ></i>
+              <p className="mt-3 text-muted fs-5">No images uploaded.</p>
+            </div>
           ) : (
-            <div className="d-flex flex-wrap justify-content-center gap-3">
-              {proofFiles.map((file, i) => (
+            <div className="position-relative d-flex align-items-center justify-content-center">
+              {currentIndex > 0 && (
+                <button
+                  onClick={() => setCurrentIndex(currentIndex - 1)}
+                  className="btn btn-light rounded-circle shadow position-absolute"
+                  style={{ left: "15px", zIndex: 10 }}
+                >
+                  <FaChevronLeft size={20} />
+                </button>
+              )}
+
+              <div
+                className="bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-center"
+                style={{
+                  width: "600px",
+                  height: "600px",
+                  overflow: "hidden",
+                  border: "3px solid #ddd",
+                }}
+              >
                 <img
-                  key={i}
-                  src={URL.createObjectURL(file)}
-                  alt="Proof"
+                  src={URL.createObjectURL(proofFiles[currentIndex])}
+                  alt={`Proof ${currentIndex + 1}`}
                   style={{
-                    width: "600px",
-                    height: "600px",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
-                    borderWidth: "2px",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
                   }}
                 />
-              ))}
+              </div>
+
+              {currentIndex < proofFiles.length - 1 && (
+                <button
+                  onClick={() => setCurrentIndex(currentIndex + 1)}
+                  className="btn btn-light rounded-circle shadow position-absolute"
+                  style={{ right: "15px", zIndex: 10 }}
+                >
+                  <FaChevronRight size={20} />
+                </button>
+              )}
             </div>
           )}
         </Modal.Body>
 
-        <Modal.Footer>
+        <Modal.Footer className="bg-white border-top d-flex justify-content-between">
+          <span className="text-muted small">
+            {proofFiles.length > 0 &&
+              `Image ${currentIndex + 1} of ${proofFiles.length}`}
+          </span>
           <Button
             variant="secondary"
+            className="close-btn px-4 py-2 rounded-3 fw-semibold fs-6"
             onClick={() => setShowPreviewModal(false)}
           >
             Close

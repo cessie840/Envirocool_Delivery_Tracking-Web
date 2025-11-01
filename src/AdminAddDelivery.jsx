@@ -2,7 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
-import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
+import {
+  FaRegTrashAlt,
+  FaArrowLeft,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 import { Button, Modal, Collapse } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
@@ -11,7 +16,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
-import html2pdf from "html2pdf.js";
 
 const paymentOptions = [
   { label: "Cash", value: "Cash" },
@@ -23,6 +27,7 @@ import { components } from "react-select";
 const CustomMenuList = (props) => {
   const { children, selectProps } = props;
 
+  
   return (
     <components.MenuList {...props}>
       {children}
@@ -118,6 +123,8 @@ const AddDelivery = () => {
   const [receiptData, setReceiptData] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
   const [provinceOptions, setProvinceOptions] = useState([]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const AUTO_DOWNLOAD_RECEIPT = false;
 
@@ -1016,6 +1023,8 @@ const AddDelivery = () => {
         "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
     },
   ];
+
+  
 
   return (
     <AdminLayout
@@ -2099,7 +2108,7 @@ const AddDelivery = () => {
                       style={{ whiteSpace: "nowrap" }}
                       onClick={() => setShowPreviewModal(true)}
                     >
-                      View ({selectedFileNames.length})
+                      View
                     </button>
                   )}
                 </div>
@@ -2111,90 +2120,88 @@ const AddDelivery = () => {
               onHide={() => setShowPreviewModal(false)}
               centered
               size="lg"
+              className="proof-preview-modal"
             >
               <Modal.Header
                 closeButton
-                className="bg-primary text-white bg-opacity-75"
+                style={{
+                  backgroundColor: "#00628FFF",
+                  color: "white",
+                  opacity: 0.85,
+                }}
               >
-                <Modal.Title>Proof of Payment Preview</Modal.Title>
+                <Modal.Title className="fw-semibold">
+                  Proof of Payment Preview
+                </Modal.Title>
               </Modal.Header>
 
-              <Modal.Body className="text-center bg-light">
-                {proofPreviews.length > 0 ? (
-                  <div className="d-flex align-items-center justify-content-center">
-                    {proofPreviews.length > 1 && (
+              <Modal.Body className="bg-light text-center">
+                {proofPreviews.length === 0 ? (
+                  <div className="py-5">
+                    <i
+                      className="bi bi-file-earmark-image text-secondary"
+                      style={{ fontSize: "3rem" }}
+                    ></i>
+                    <p className="mt-3 text-muted fs-5">No images uploaded.</p>
+                  </div>
+                ) : (
+                  <div className="position-relative d-flex align-items-center justify-content-center">
+                    {currentIndex > 0 && (
                       <button
-                        className="btn btn-secondary me-2"
-                        onClick={() => {
-                          const container = document.getElementById(
-                            "preview-scroll-container"
-                          );
-                          const imageWidth = container.offsetWidth;
-                          container.scrollBy({
-                            left: -imageWidth,
-                            behavior: "smooth",
-                          });
-                        }}
+                        onClick={() => setCurrentIndex(currentIndex - 1)}
+                        className="btn btn-light rounded-circle shadow position-absolute"
+                        style={{ left: "15px", zIndex: 10 }}
                       >
-                        ‹
+                        <FaChevronLeft size={20} />
                       </button>
                     )}
 
                     <div
-                      id="preview-scroll-container"
+                      className="bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-center"
                       style={{
-                        display: "flex",
-                        overflowX: "auto",
-                        scrollSnapType: "x mandatory",
-                        scrollBehavior: "smooth",
                         width: "700px",
-                        height: "720px",
-                        gap: "10px",
-                        padding: "5px",
-                        border: "2px solid #ccc",
-                        borderRadius: "10px",
-                        justifyContent:
-                          proofPreviews.length === 1 ? "center" : "flex-start",
+                        height: "700px",
+                        overflow: "hidden",
+                        border: "3px solid #ddd",
                       }}
                     >
-                      {proofPreviews.map((preview, index) => (
-                        <img
-                          key={index}
-                          src={preview}
-                          alt={`Proof of Payment ${index + 1}`}
-                          style={{
-                            width: "700px",
-                            height: "680px",
-                            objectFit: "contain",
-                            flexShrink: 0,
-                            scrollSnapAlign: "center",
-                          }}
-                        />
-                      ))}
+                      <img
+                        src={proofPreviews[currentIndex]}
+                        alt={`Proof ${currentIndex + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                        }}
+                      />
                     </div>
 
-                    {proofPreviews.length > 1 && (
+                    {currentIndex < proofPreviews.length - 1 && (
                       <button
-                        className="btn btn-secondary ms-2"
-                        onClick={() => {
-                          const container = document.getElementById(
-                            "preview-scroll-container"
-                          );
-                          const imageWidth = container.offsetWidth;
-                          container.scrollBy({
-                            left: imageWidth,
-                            behavior: "smooth",
-                          });
-                        }}
+                        onClick={() => setCurrentIndex(currentIndex + 1)}
+                        className="btn btn-light rounded-circle shadow position-absolute"
+                        style={{ right: "15px", zIndex: 10 }}
                       >
-                        ›
+                        <FaChevronRight size={20} />
                       </button>
                     )}
                   </div>
-                ) : (
-                  <p>No images to preview.</p>
                 )}
               </Modal.Body>
+
+              <Modal.Footer className="bg-white border-top d-flex justify-content-between">
+                <span className="text-muted small">
+                  {proofPreviews.length > 0 &&
+                    `Image ${currentIndex + 1} of ${proofPreviews.length}`}
+                </span>
+                <Button
+                  variant="secondary"
+                  className="px-4 py-2 rounded-3 fw-semibold fs-6"
+                  onClick={() => setShowPreviewModal(false)}
+                >
+                  Close
+                </Button>
+              </Modal.Footer>
             </Modal>
 
             <Modal
@@ -2486,7 +2493,6 @@ const AddDelivery = () => {
                   </p>
                 </div>
 
-                {/* Payment details */}
                 <div className="mb-3">
                   <p>
                     <b>Payment Method:</b>{" "}
@@ -2533,7 +2539,6 @@ const AddDelivery = () => {
                   )}
                 </div>
 
-                {/* Order items */}
                 <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
                 <table className="table table-bordered table-sm">
                   <thead className="table-light text-center">

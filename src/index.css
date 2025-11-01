@@ -1165,6 +1165,10 @@ h5{
   font-weight: 500;
 }
 
+input[type="date"].is-invalid {
+  padding-right: 1.8rem !important; 
+}
+
 /* LARGER DEVICES */
 @media (min-width: 992px) {
   .sidebar {

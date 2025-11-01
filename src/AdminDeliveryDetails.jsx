@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Form } from "react-bootstrap";
+import { Table, Form, Button } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import { ToastHelper } from "./helpers/ToastHelper";
@@ -9,32 +9,43 @@ const DeliveryDetails = () => {
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
   const [filter, setFiltered] = useState([]);
-
   const [showModal, setShowModal] = useState(false);
   const [editableItems, setEditableItems] = useState([]);
   const [formData, setFormData] = useState({
+    transaction_id: "",
+    tracking_number: "",
     customer_name: "",
     customer_address: "",
     customer_contact: "",
+    date_of_order: "",
+    target_date_delivery: "",
+    dbilling_date: "",
     mode_of_payment: "",
+    payment_option: "",
     down_payment: "",
     balance: "",
     total: "",
+    proof_of_delivery: "",
     full_payment: "0",
     fbilling_date: "",
+    payments: [],
   });
-  const [transactionId, setTransactionId] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("All");
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  // format date for UI
   const formatDate = (dateString) => {
-    if (!dateString) return "";
-    return dateString.split("T")[0] || dateString.split(" ")[0];
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
   };
 
+  // fetch all deliveries
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
@@ -50,20 +61,55 @@ const DeliveryDetails = () => {
     fetchDeliveries();
   }, []);
 
+  const refetchData = () => fetchDeliveries();
+
+  // 🟢 identical modal logic as in AdminViewOrder
   const handleUpdate = (id) => {
-    setTransactionId(id);
     fetch(
       `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,
       {
         method: "GET",
-        headers: {
-          "Cache-Control": "no-cache",
-        },
+        headers: { "Cache-Control": "no-cache" },
       }
     )
       .then((res) => res.json())
       .then((data) => {
-        const fixedItems = data.items.map((item) => ({
+        if (!data || data.error) {
+          ToastHelper.error("Failed to fetch delivery details.");
+          return;
+        }
+
+        // normalize payment data
+        const parsedPayments = Array.isArray(data.payments)
+          ? data.payments
+          : (() => {
+              try {
+                return JSON.parse(data.payments || "[]");
+              } catch {
+                return [];
+              }
+            })();
+
+        setFormData({
+          transaction_id: data.transaction_id,
+          tracking_number: data.tracking_number,
+          customer_name: data.customer_name,
+          customer_address: data.customer_address,
+          customer_contact: data.customer_contact,
+          date_of_order: formatDate(data.date_of_order),
+          mode_of_payment: data.mode_of_payment,
+          payment_option: data.payment_option,
+          down_payment: data.down_payment,
+          full_payment: data.full_payment,
+          fbilling_date: data.fbilling_date,
+          balance: data.balance,
+          total: data.total,
+          target_date_delivery: formatDate(data.target_date_delivery),
+          dbilling_date: formatDate(data.dbilling_date),
+          payments: parsedPayments,
+        });
+
+        const fixedItems = (data.items || []).map((item) => ({
           quantity: item.quantity,
           type_of_product: item.type_of_product || "",
           description: item.description || "",
@@ -71,86 +117,13 @@ const DeliveryDetails = () => {
         }));
 
         setEditableItems(fixedItems);
-
-        setFormData({
-          tracking_number: data.tracking_number || "",
-          customer_name: data.customer_name || "",
-          customer_address: data.customer_address || "",
-          customer_contact: data.customer_contact || "",
-          date_of_order: data.date_of_order || "",
-          target_date_delivery: formatDate(data.target_date_delivery),
-          mode_of_payment: data.mode_of_payment || "",
-          payment_option: data.payment_option || "Full Payment",
-          down_payment: parseFloat(data.down_payment) || 0,
-          balance: parseFloat(data.balance) || 0,
-          total: parseFloat(data.total) || 0,
-          full_payment: parseFloat(data.full_payment) || 0,
-          fbilling_date: data.fbilling_date || "",
-        });
-
         setShowModal(true);
       })
-      .catch((err) => console.error("Failed to fetch order:", err));
-  };
-
-  const handleSubmit = () => {
-    const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
-    if (hasInvalidQuantity) {
-      ToastHelper.error("One or more items have invalid quantity.");
-      return;
-    }
-
-    if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      ToastHelper.error(
-        "Contact number must start with '09' and be exactly 11 digits."
-      );
-      return;
-    }
-
-    if (!transactionId) {
-      ToastHelper.error("Transaction ID is missing — please try again.");
-      return;
-    }
-
-    const total = editableItems.reduce(
-      (sum, item) => sum + item.quantity * item.unit_cost,
-      0
-    );
-
-    const down_payment = parseFloat(formData.down_payment) || 0;
-    const full_payment = parseFloat(formData.full_payment) || 0;
-    const balance = total - down_payment - full_payment;
-
-    const payload = {
-      transaction_id: transactionId,
-      ...formData,
-      total,
-      balance,
-      items: editableItems,
-    };
-
-    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then((response) => {
-        if (response.status === "success") {
-          ToastHelper.success("Transaction updated successfully!");
-          fetchDeliveries();
-          setShowModal(false);
-        } else {
-          ToastHelper.error("Update failed: " + response.message);
-        }
-      })
       .catch((err) => {
-        console.error("Update error:", err);
-        ToastHelper.error("An unexpected error occurred.");
+        console.error("Error fetching order:", err);
+        ToastHelper.error("Something went wrong while fetching the delivery.");
       });
   };
-
-  const handleAddDelivery = () => navigate("/add-delivery");
 
   const applyFilters = (list, term, status) => {
     const lower = term.toLowerCase();
@@ -166,7 +139,6 @@ const DeliveryDetails = () => {
         (e.description && e.description.toLowerCase().includes(lower));
 
       const matchesStatus = status === "All" || e.delivery_status === status;
-
       return matchesSearch && matchesStatus;
     });
   };
@@ -182,7 +154,6 @@ const DeliveryDetails = () => {
 
   const groupedDeliveries = filter.reduce((acc, item) => {
     const id = item.transaction_id;
-
     if (!acc[id]) {
       acc[id] = {
         transaction_id: id,
@@ -195,12 +166,10 @@ const DeliveryDetails = () => {
         items: [],
       };
     }
-
     acc[id].items.push({
       description: item.description,
       quantity: item.quantity,
     });
-
     return acc;
   }, {});
 
@@ -218,11 +187,11 @@ const DeliveryDetails = () => {
   return (
     <AdminLayout
       title="Delivery Details"
-      onAddClick={handleAddDelivery}
+      onAddClick={() => navigate("/add-delivery")}
       showSearch={true}
       onSearch={handleSearch}
     >
-      <div className="mb-3 d-flex justify-content-end ">
+      <div className="mb-3 d-flex justify-content-end">
         <Form.Select
           value={statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}
@@ -266,7 +235,6 @@ const DeliveryDetails = () => {
                   <td>{group.transaction_id}</td>
                   <td>{group.tracking_number}</td>
                   <td>{group.customer_name}</td>
-
                   <td>
                     <span
                       style={{
@@ -318,9 +286,12 @@ const DeliveryDetails = () => {
                         className="btn upd-btn"
                         onClick={() => handleUpdate(group.transaction_id)}
                         disabled={
-                          ["Out for Delivery", "Delivered", "Cancelled"].includes(
-                            group.delivery_status
-                          ) || numericBalance <= 0
+                          [
+                            "Out for Delivery",
+                            "Delivered",
+                            "Cancelled",
+                          ].includes(group.delivery_status) ||
+                          numericBalance <= 0
                         }
                         style={
                           numericBalance <= 0
@@ -365,10 +336,11 @@ const DeliveryDetails = () => {
         </button>
       </div>
 
+      {/* 🟢 Same UpdateOrderModal as AdminViewOrder */}
       <UpdateOrderModal
         show={showModal}
         handleClose={() => setShowModal(false)}
-        handleSubmit={handleSubmit}
+        onSuccess={refetchData}
         formData={formData}
         setFormData={setFormData}
         editableItems={editableItems}
