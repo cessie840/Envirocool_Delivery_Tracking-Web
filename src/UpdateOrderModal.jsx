@@ -19,8 +19,9 @@ const UpdateOrderModal = ({
   const [paymentError, setPaymentError] = useState("");
   const [dateError, setDateError] = useState("");
   const proofFileRef = useRef(null);
-
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showReceiptModal, setShowReceiptModal] = useState(false); 
+  const [receiptData, setReceiptData] = useState({}); 
 
   const handleOpenPreviewModal = () => {
     setCurrentIndex(0);
@@ -48,7 +49,6 @@ const UpdateOrderModal = ({
       if (mm && dd && yyyy) setMaxPaymentDate(`${yyyy}-${mm}-${dd}`);
       else setMaxPaymentDate("");
     }
-
   }, [show, formData.dbilling_date]);
 
   const handleProofFileChange = (e) => {
@@ -80,6 +80,7 @@ const UpdateOrderModal = ({
     const remaining = total - (downPayment + totalPayments);
     return Math.max(0, remaining);
   };
+
   const remainingAfterCurrentPayment = () => {
     const total = parseFloat(formData.total || 0);
     const down = parseFloat(formData.down_payment || 0);
@@ -106,7 +107,6 @@ const UpdateOrderModal = ({
     if (raw && !/^\d*\.?\d{0,2}$/.test(raw)) return;
 
     const typedNum = parseFloat(raw || 0);
-
     const remainingBefore = getRemainingBeforeAdditional();
 
     if (typedNum > remainingBefore) {
@@ -118,10 +118,10 @@ const UpdateOrderModal = ({
 
     const formatted = raw
       ? "₱" +
-        parseFloat(raw).toLocaleString("en-PH", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })
+      parseFloat(raw).toLocaleString("en-PH", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      })
       : "";
 
     setDisplayPayment(formatted);
@@ -245,9 +245,7 @@ const UpdateOrderModal = ({
     }
 
     if (hasError || paymentError || dateError) {
-      ToastHelper.error(
-        "Please fix the highlighted fields before saving."
-      );
+      ToastHelper.error("Please fix the highlighted fields before saving.");
       return;
     }
 
@@ -309,6 +307,7 @@ const UpdateOrderModal = ({
 
             if (updatedData.form) {
               setFormData(updatedData.form);
+              setReceiptData(updatedData.form); 
             }
 
             ToastHelper.success(
@@ -319,6 +318,7 @@ const UpdateOrderModal = ({
 
             onSuccess();
             handleClose();
+            setShowReceiptModal(true); 
           } else {
             Swal.fire(
               "Error",
@@ -338,10 +338,124 @@ const UpdateOrderModal = ({
     return isNaN(num)
       ? "₱0.00"
       : "₱" +
-          num.toLocaleString("en-PH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          });
+      num.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+  };
+
+  const handlePrintReceipt = () => {
+    const element = document.getElementById("receipt-section");
+    if (!element) {
+      console.error("Receipt section not found!");
+      return;
+    }
+
+    const transactionId = receiptData?.transaction_id || "N/A";
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `DP-Receipt_TN${transactionId}_${today}`;
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>${filename}</title>
+        <style>
+          @page {
+            size: auto;
+            margin: 10mm;
+          }
+          body {
+            font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #000;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+          }
+          .receipt {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .receipt p {
+            margin: 3px 0;
+          }
+
+          h3 {
+            font-size: 18px;
+            margin-bottom: 0;
+          }
+          p, th {
+            font-size: 11px;
+          }
+          table, td {
+            font-size: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            text-align: left;
+          }
+          th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+          }
+          .text-center { text-align: center; }
+          .text-end { text-align: right; }
+
+          small:contains("Date Generated"),
+          p:has(small:contains("Date Generated")) {
+            display: block;
+            margin-bottom: 10px;
+          }
+
+          .signature-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 40px;
+          }
+          .signature {
+            text-align: center;
+            width: 35%;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            font-size: 10px;
+            font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+         ${element.innerHTML
+        .replace("Date Printed:", "Date Generated:")
+        .replace(/(<hr>|_{3,}|Prepared By[\s\S]*?Received By)/gi, "") +
+      `
+            <div class='signature-container'>
+              <div class='signature'>Prepared By</div>
+              <div class='signature'>Received By</div>
+            </div>
+          `
+      }
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            // Uncomment to auto-close the print window after printing
+            // window.onafterprint = () => window.close();
+          };
+        </script>
+      </body>
+    </html>
+  `);
+    printWindow.document.close();
   };
 
   return (
@@ -522,7 +636,7 @@ const UpdateOrderModal = ({
           style={{ backgroundColor: "#00628FFF", color: "white", opacity: 0.85 }}
         >
           <Modal.Title className="fw-semibold">
-             Proof of Payment Preview
+            Proof of Payment Preview
           </Modal.Title>
         </Modal.Header>
 
@@ -591,6 +705,64 @@ const UpdateOrderModal = ({
             onClick={() => setShowPreviewModal(false)}
           >
             Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showReceiptModal}
+        onHide={() => setShowReceiptModal(false)}
+        centered
+        size="lg"
+      >
+        <Modal.Header
+          closeButton
+          className="bg-light text-black no-print"
+        >
+        </Modal.Header>
+
+        <Modal.Body
+          id="receipt-section"
+          className="bg-white text-black p-4"
+        >
+          <div className="text-center mb-4 border-bottom pb-2">
+            <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
+            <p className="mb-0">Official Down Payment Receipt</p>
+            <small>Date Generated: {new Date().toLocaleString()}</small>
+          </div>
+
+          <div className="mb-3">
+            <p><b>Transaction No.:</b> {receiptData?.transaction_id || "N/A"}</p>
+            <p><b>Name:</b> {receiptData?.customer_name || "N/A"}</p>
+            <p><b>Payment Option:</b> {receiptData?.payment_option || "N/A"}</p>
+            <p><b>Initial Down Payment:</b> {formatCurrency(receiptData?.down_payment || 0)}</p>
+            <p><b>Additional Payment:</b> {formatCurrency(receiptData?.additional_payment || 0)}</p>
+            <p><b>Date of Additional Payment:</b> {receiptData?.additional_payment_date || "N/A"}</p>
+            <p><b>Remaining Balance:</b> {formatCurrency(receiptData?.balance || 0)}</p>
+            <p><b>Payment Status:</b> {parseFloat(receiptData?.balance || 0) > 0 ? "Partially Paid" : "Fully Paid"}</p>          </div>
+          <div className="signature-section mt-4">
+            <div className="row">
+              <div className="col-6 text-center">
+                <p>________________________</p>
+                <small>Prepared By</small>
+              </div>
+              <div className="col-6 text-center">
+                <p>________________________</p>
+                <small>Received By</small>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer className="no-print bg-light">
+          <Button
+            variant="secondary"
+            onClick={() => setShowReceiptModal(false)}
+          >
+            Close
+          </Button>
+          <Button variant="success" onClick={handlePrintReceipt}>
+            Print / Download
           </Button>
         </Modal.Footer>
       </Modal>

@@ -615,7 +615,7 @@ const AddDelivery = () => {
     }
 
     const today = new Date().toISOString().split("T")[0];
-    const filename = `ENV-Receipt_TN${transactionId}_${today}`;
+    const filename = `Receipt_TN${transactionId}_${today}`;
 
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
@@ -628,7 +628,7 @@ const AddDelivery = () => {
             margin: 10mm;
           }
           body {
-            font-family: Arial, sans-serif;
+            font-family: "Calibri", "Segoe UI", Arial, sans-serif;
             font-size: 11px;
             line-height: 1.4;
             color: #000;
@@ -647,7 +647,7 @@ const AddDelivery = () => {
           }
 
           h3 {
-            font-size: 15px;
+            font-size: 18px;
             margin-bottom: 3px;
           }
           p, th {
@@ -2440,6 +2440,7 @@ const AddDelivery = () => {
                 </Button>
               </Modal.Footer>
             </Modal>
+
             <Modal
               show={showReceiptModal}
               onHide={() => setShowReceiptModal(false)}
@@ -2459,7 +2460,7 @@ const AddDelivery = () => {
               >
                 <div className="text-center mb-4 border-bottom pb-2">
                   <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
-                  <p className="mb-0">Official Delivery Receipt</p>
+                  <p className="mb-0">Official Transaction Receipt</p>
                   <small>Date Printed: {new Date().toLocaleString()}</small>
                 </div>
 
