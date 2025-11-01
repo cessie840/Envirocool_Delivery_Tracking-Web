@@ -8,11 +8,11 @@ header("Content-Type: application/json");
 
 $sql = "
     SELECT 
-   
         t.transaction_id,
         t.tracking_number,
         t.customer_name,
         t.total,
+        t.balance,           
         t.status AS delivery_status, 
         p.description,
         p.quantity
@@ -20,6 +20,7 @@ $sql = "
     INNER JOIN PurchaseOrder p ON t.transaction_id = p.transaction_id
     ORDER BY t.transaction_id DESC
 ";
+
 
 $result = $conn->query($sql);
 

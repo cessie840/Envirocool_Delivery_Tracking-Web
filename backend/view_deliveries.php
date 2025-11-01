@@ -31,12 +31,14 @@ function buildFileUrl($baseUrl, $path) {
     return $baseUrl . '/' . str_replace('\\', '/', $path);
 }
 
+// 👇 UPDATED: include payments column
 $sql_customer = "
-    SELECT tracking_number, customer_name, customer_address, customer_contact, 
-           date_of_order, target_date_delivery, rescheduled_date, 
+    SELECT transaction_id, tracking_number, customer_name, customer_address, customer_contact, 
+           date_of_order, target_date_delivery, dbilling_date, rescheduled_date, 
            mode_of_payment, payment_option, 
            down_payment, full_payment, fbilling_date, balance, total, 
-           status, cancelled_reason, proof_of_delivery, proof_of_payment
+           status, cancelled_reason, proof_of_delivery, proof_of_payment,
+           payments  -- 👈 added
     FROM Transactions 
     WHERE transaction_id = ?
 ";
@@ -52,46 +54,55 @@ if ($result_customer->num_rows > 0) {
     $proofOfDeliveryUrl = $customer['proof_of_delivery'] ? buildFileUrl($baseUrl, $customer['proof_of_delivery']) : null;
 
     // Decode proof_of_payment robustly
-   // ✅ Robust decoder for proof_of_payment
-$proofOfPaymentUrls = [];
+    $proofOfPaymentUrls = [];
 
-if (!empty($customer['proof_of_payment'])) {
-    $raw = trim($customer['proof_of_payment']);
+    if (!empty($customer['proof_of_payment'])) {
+        $raw = trim($customer['proof_of_payment']);
 
-    // Try JSON decode first
-    $decoded = json_decode($raw, true);
+        // Try JSON decode first
+        $decoded = json_decode($raw, true);
 
-    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-        foreach ($decoded as $path) {
-            if (!empty($path)) {
-                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
-            }
-        }
-    } else {
-        // Try extracting paths with regex (handles double-encoded or malformed strings)
-        preg_match_all(
-            '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
-            $raw,
-            $matches
-        );
-        if (!empty($matches[0])) {
-            foreach ($matches[0] as $relativePath) {
-                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $relativePath);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            foreach ($decoded as $path) {
+                if (!empty($path)) {
+                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
+                }
             }
         } else {
-            // As a last resort, treat as single path if it contains uploads/
-            if (str_contains($raw, 'uploads/')) {
-                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
+            // Try extracting paths with regex (handles double-encoded or malformed strings)
+            preg_match_all(
+                '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
+                $raw,
+                $matches
+            );
+            if (!empty($matches[0])) {
+                foreach ($matches[0] as $relativePath) {
+                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $relativePath);
+                }
+            } else {
+                // As a last resort, treat as single path if it contains uploads/
+                if (str_contains($raw, 'uploads/')) {
+                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
+                }
             }
         }
     }
-}
 
-// Always ensure it’s an array, even if empty
-$proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
+    // Always ensure it’s an array, even if empty
+    $proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
 
+    // 👇 decode payments JSON safely
+    $payments = [];
+    if (!empty($customer['payments'])) {
+        $decoded = json_decode($customer['payments'], true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $payments = $decoded;
+        }
+    }
 
+    // 👈 UPDATED: Add transaction_id and payments to the response array
     $response = [
+        'transaction_id' => $customer['transaction_id'],
         'tracking_number' => $customer['tracking_number'],
         'customer_name' => $customer['customer_name'],
         'customer_address' => $customer['customer_address'],
@@ -103,15 +114,18 @@ $proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
         'payment_option' => $customer['payment_option'],
         'down_payment' => $customer['down_payment'],
         'full_payment' => $customer['full_payment'],
+        'dbilling_date' => $customer['dbilling_date'],
         'fbilling_date' => $customer['fbilling_date'],
         'balance' => $customer['balance'],
         'total' => $customer['total'],
         'status' => $customer['status'],
         'cancelled_reason' => $customer['cancelled_reason'],
         'proof_of_delivery' => $proofOfDeliveryUrl,
-        'proof_of_payment' => $proofOfPaymentUrls
+        'proof_of_payment' => $proofOfPaymentUrls,
+        'payments' => $payments, // 👈 added — this feeds your React payment history
     ];
 
+    // Fetch items
     $sql_items = "
         SELECT type_of_product, description, quantity, unit_cost 
         FROM PurchaseOrder 
