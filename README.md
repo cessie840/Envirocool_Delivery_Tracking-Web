@@ -21,7 +21,10 @@ CREATE TABLE Admin (
     reset_expire DATETIME,
     reset_requested_at DATETIME,
     attempts INT DEFAULT 0,
-    lock_until DATETIME DEFAULT NULL
+    lock_until DATETIME DEFAULT NULL,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+	is_locked TINYINT(1) DEFAULT 0
 );
 
 CREATE TABLE OperationalManager (
@@ -35,7 +38,10 @@ CREATE TABLE OperationalManager (
     reset_expire DATETIME,
     reset_requested_at DATETIME,
     attempts INT DEFAULT 0,
-    lock_until DATETIME DEFAULT NULL
+    lock_until DATETIME DEFAULT NULL,
+    login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+	is_locked TINYINT(1) DEFAULT 0
 );
 
 CREATE TABLE DeliveryPersonnel (
@@ -48,7 +54,7 @@ CREATE TABLE DeliveryPersonnel (
     pers_birth DATE,
     pers_phone VARCHAR(11),
     status ENUM('Active','Inactive') DEFAULT 'Active',
-    assignment_status ENUM('Available', 'Assigned') DEFAULT 'Available',
+    assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available',
     assigned_transaction_id INT DEFAULT NULL,
     pers_resetToken VARCHAR(100),
     reset_expire DATETIME,
@@ -56,7 +62,11 @@ CREATE TABLE DeliveryPersonnel (
     pers_profile_pic VARCHAR(255) DEFAULT 'default-profile-pic.png',
     pers_email VARCHAR(255),
     attempts INT DEFAULT 0,
-    lock_until DATETIME DEFAULT NULL
+    lock_until DATETIME DEFAULT NULL,
+	login_attempts INT DEFAULT 0,
+	last_attempt DATETIME NULL,
+	is_locked TINYINT(1) DEFAULT 0
+
 );
 
 CREATE TABLE Transactions (
@@ -83,16 +93,23 @@ CREATE TABLE Transactions (
     cancelled_at DATETIME NULL,
     rescheduled_date DATE NULL,
     customer_rating DECIMAL(3,1) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    customer_feedback VARCHAR(500) NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    customer_feedback VARCHAR(500) NULL,
+    proof_of_payment TEXT,
+    payments JSON NULL,
+    assigned_device_id VARCHAR(50) DEFAULT NULL,
+    latitude DOUBLE DEFAULT 0,
+    longitude DOUBLE DEFAULT 0,
+    payment_status ENUM('Fully Paid', 'Partially Paid')
 ) AUTO_INCREMENT = 4001;
+
 
 
 CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
     type_of_product VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
-    unit_cost DECIMAL(10,2) NOT NULL,
+    unit_cost DECIMAL(10,2) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(type_of_product, description)
 );
@@ -114,6 +131,8 @@ CREATE TABLE DeliveryAssignments (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
     transaction_id INT,
     personnel_username VARCHAR(100),
+    device_id VARCHAR(50) NULL,
+    notified TINYINT(1) DEFAULT 0,
     assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_username) REFERENCES DeliveryPersonnel(pers_username) ON DELETE SET NULL
@@ -160,7 +179,6 @@ CREATE TABLE DeliverySummary (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE TopSellingItems (
     top_item_id INT AUTO_INCREMENT PRIMARY KEY,
     month VARCHAR(7),
@@ -169,7 +187,6 @@ CREATE TABLE TopSellingItems (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE DeliveryHistory (
     history_id INT AUTO_INCREMENT PRIMARY KEY,
     transaction_id INT NOT NULL,
@@ -177,6 +194,22 @@ CREATE TABLE DeliveryHistory (
     reason TEXT NULL,
     event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (transaction_id) REFERENCES Transactions(transaction_id) ON DELETE CASCADE
+);
+
+CREATE TABLE location (
+    city_id INT AUTO_INCREMENT PRIMARY KEY,
+    province_name VARCHAR(50),
+    city_name VARCHAR(50),
+    barangay_name VARCHAR(50)
+);
+
+CREATE TABLE payment_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id INT(11) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_date DATE NOT NULL,
+    proof_files JSON DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -199,20 +232,6 @@ VALUES (
     'pacienteliezel04@gmail.com',
     '09171234567'
 );
-
-ALTER TABLE DeliveryPersonnel
-MODIFY assignment_status ENUM('Available', 'Out For Delivery') DEFAULT 'Available';
-
-ALTER TABLE DeliveryAssignments
-ADD COLUMN notified TINYINT(1) DEFAULT 0;
-
-select*from transactions;
-select*from DeliveryPersonnel;
-select*from Product;
-
-select*from DeliveryAssignments;
-ALTER TABLE Product MODIFY unit_cost DECIMAL(10,2) NULL;
-
 
 INSERT INTO Product (type_of_product, description, unit_cost) 
 VALUES 
@@ -237,187 +256,215 @@ VALUES
 ("AIRCON", "FLOOR MOUNTED TYPE 3TR", NULL),
 ("AIRCON", "FLOOR MOUNTED TYPE 5TR", NULL);
 
-ALTER TABLE DeliveryAssignments
-ADD COLUMN device_id VARCHAR(50) NULL AFTER personnel_username;
+INSERT INTO gps_coordinates (device_id, lat, lng, recorded_at) VALUES
+('DEVICE_01', 14.2091835, 121.1368418, NOW()),
+('DEVICE_01', 14.2092500, 121.1369000, NOW() + INTERVAL 1 MINUTE),
+('DEVICE_01', 14.2093100, 121.1369700, NOW() + INTERVAL 2 MINUTE),
+('DEVICE_01', 14.2093700, 121.1370500, NOW() + INTERVAL 3 MINUTE),
+('DEVICE_01', 14.2094200, 121.1371200, NOW() + INTERVAL 4 MINUTE),
+('DEVICE_01', 14.2095000, 121.1372500, NOW() + INTERVAL 5 MINUTE),
+('DEVICE_01', 14.2096000, 121.1374000, NOW() + INTERVAL 6 MINUTE),
+('DEVICE_01', 14.2097000, 121.1375500, NOW() + INTERVAL 7 MINUTE),
+('DEVICE_01', 14.2098000, 121.1377000, NOW() + INTERVAL 8 MINUTE),
+('DEVICE_01', 14.2099000, 121.1378500, NOW() + INTERVAL 9 MINUTE),
+('DEVICE_01', 14.2100000, 121.1380000, NOW() + INTERVAL 10 MINUTE),
+('DEVICE_01', 14.2101000, 121.1381500, NOW() + INTERVAL 11 MINUTE),
+('DEVICE_01', 14.2102000, 121.1383000, NOW() + INTERVAL 12 MINUTE),
+('DEVICE_01', 14.2103000, 121.1384500, NOW() + INTERVAL 13 MINUTE),
+('DEVICE_01', 14.2104000, 121.1386000, NOW() + INTERVAL 14 MINUTE),
+('DEVICE_01', 14.2676956, 121.1112068, NOW() + INTERVAL 15 MINUTE);
 
-ALTER TABLE Transactions
-ADD COLUMN assigned_device_id VARCHAR(50) DEFAULT NULL;
-
-
-ALTER TABLE Transactions
-ADD COLUMN latitude DOUBLE DEFAULT 0,
-ADD COLUMN longitude DOUBLE DEFAULT 0;
-
-ALTER TABLE Transactions
-ADD COLUMN customer_feedback VARCHAR(500) NULL;
-
-
-CREATE TABLE laguna (
-city_id INT AUTO_INCREMENT PRIMARY KEY,
-city_name VARCHAR (50),
-barangay_name varchar (50)
-);
-
-INSERT INTO laguna (city_name, barangay_name) VALUES
+-- Laguna barangays
+INSERT INTO location (province_name, city_name, barangay_name) VALUES
 -- Santa Rosa
-('Santa Rosa', 'Aplaya'),
-('Santa Rosa', 'Balibago'),
-('Santa Rosa', 'Caingin'),
-('Santa Rosa', 'Dila'),
-('Santa Rosa', 'Dita'),
-('Santa Rosa', 'Don Jose'),
-('Santa Rosa', 'Ibaba'),
-('Santa Rosa', 'Kanluran'),
-('Santa Rosa', 'Labas'),
-('Santa Rosa', 'Macabling'),
-('Santa Rosa', 'Malitlit'),
-('Santa Rosa', 'Malusak'),
-('Santa Rosa', 'Market'),
-('Santa Rosa', 'Pooc'),
-('Santa Rosa', 'Pulong Santa Cruz'),
-('Santa Rosa', 'Sinalhan'),
-('Santa Rosa', 'Sto Domingo'),
-('Santa Rosa', 'Tagapo'),
+('Laguna', 'Santa Rosa', 'Aplaya'),
+('Laguna', 'Santa Rosa', 'Balibago'),
+('Laguna', 'Santa Rosa', 'Caingin'),
+('Laguna', 'Santa Rosa', 'Dila'),
+('Laguna', 'Santa Rosa', 'Dita'),
+('Laguna', 'Santa Rosa', 'Don Jose'),
+('Laguna', 'Santa Rosa', 'Ibaba'),
+('Laguna', 'Santa Rosa', 'Kanluran (Poblacion 1)'),
+('Laguna', 'Santa Rosa', 'Labas'),
+('Laguna', 'Santa Rosa', 'Macabling'),
+('Laguna', 'Santa Rosa', 'Malitlit'),
+('Laguna', 'Santa Rosa', 'Malusak (Poblacion 2)'),
+('Laguna', 'Santa Rosa', 'Market Area (Poblacion 3)'),
+('Laguna', 'Santa Rosa', 'Pooc'),
+('Laguna', 'Santa Rosa', 'Pulong Santa Cruz'),
+('Laguna', 'Santa Rosa', 'Santo Domingo'),
+('Laguna', 'Santa Rosa', 'Sinalhan'),
+('Laguna', 'Santa Rosa', 'Tagapo'),
 
 -- Calamba
-('Calamba', 'Bagong Kalsada'),
-('Calamba', 'Banadero'),
-('Calamba', 'Banlic'),
-('Calamba', 'Barandal'),
-('Calamba', 'Barangay 1 (Poblacion 1)'),
-('Calamba', 'Barangay 2 (Poblacion 2)'),
-('Calamba', 'Barangay 3 (Poblacion 3)'),
-('Calamba', 'Barangay 4 (Poblacion 4)'),
-('Calamba', 'Barangay 5 (Poblacion 5)'),
-('Calamba', 'Barangay 6 (Poblacion 6)'),
-('Calamba', 'Barangay 7 (Poblacion 7)'),
-('Calamba', 'Batino'),
-('Calamba', 'Bubuyan'),
-('Calamba', 'Bucal'),
-('Calamba', 'Bunggo'),
-('Calamba', 'Burol'),
-('Calamba', 'Camaligan'),
-('Calamba', 'Canlubang'),
-('Calamba', 'Halang'),
-('Calamba', 'Hornalan'),
-('Calamba', 'Kay-Anlog'),
-('Calamba', 'Laguerta'),
-('Calamba', 'La Mesa'),
-('Calamba', 'Lawa'),
-('Calamba', 'Lecheria'),
-('Calamba', 'Lingga'),
-('Calamba', 'Looc'),
-('Calamba', 'Mabato'),
-('Calamba', 'Majada Labas'),
-('Calamba', 'Makiling'),
-('Calamba', 'Mapagong'),
-('Calamba', 'Masili'),
-('Calamba', 'Maunong'),
-('Calamba', 'Mayapa'),
-('Calamba', 'Milagrosa (Tulo)'),
-('Calamba', 'Paciano Rizal'),
-('Calamba', 'Palingon'),
-('Calamba', 'Palo-Alto'),
-('Calamba', 'Pansol'),
-('Calamba', 'Parian'),
-('Calamba', 'Prinza'),
-('Calamba', 'Punta'),
-('Calamba', 'Puting Lupa'),
-('Calamba', 'Real'),
-('Calamba', 'Saimsim'),
-('Calamba', 'Sampiruhan'),
-('Calamba', 'San Cristobal'),
-('Calamba', 'San Jose'),
-('Calamba', 'San Juan'),
-('Calamba', 'Sirang Lupa'),
-('Calamba', 'Sucol'),
-('Calamba', 'Turbina'),
-('Calamba', 'Ulango'),
-('Calamba', 'Uwisan'),
+('Laguna', 'Calamba', 'Bagong Kalsada'),
+('Laguna', 'Calamba', 'Banadero'),
+('Laguna', 'Calamba', 'Banlic'),
+('Laguna', 'Calamba', 'Barandal'),
+('Laguna', 'Calamba', 'Barangay 1 (Poblacion 1)'),
+('Laguna', 'Calamba', 'Barangay 2 (Poblacion 2)'),
+('Laguna', 'Calamba', 'Barangay 3 (Poblacion 3)'),
+('Laguna', 'Calamba', 'Barangay 4 (Poblacion 4)'),
+('Laguna', 'Calamba', 'Barangay 5 (Poblacion 5)'),
+('Laguna', 'Calamba', 'Barangay 6 (Poblacion 6)'),
+('Laguna', 'Calamba', 'Barangay 7 (Poblacion 7)'),
+('Laguna', 'Calamba', 'Batino'),
+('Laguna', 'Calamba', 'Bubuyan'),
+('Laguna', 'Calamba', 'Bucal'),
+('Laguna', 'Calamba', 'Bunggo'),
+('Laguna', 'Calamba', 'Burol'),
+('Laguna', 'Calamba', 'Camaligan'),
+('Laguna', 'Calamba', 'Canlubang'),
+('Laguna', 'Calamba', 'Halang'),
+('Laguna', 'Calamba', 'Hornalan'),
+('Laguna', 'Calamba', 'Kay-Anlog'),
+('Laguna', 'Calamba', 'Laguerta'),
+('Laguna', 'Calamba', 'La Mesa'),
+('Laguna', 'Calamba', 'Lawa'),
+('Laguna', 'Calamba', 'Lecheria'),
+('Laguna', 'Calamba', 'Lingga'),
+('Laguna', 'Calamba', 'Looc'),
+('Laguna', 'Calamba', 'Mabato'),
+('Laguna', 'Calamba', 'Majada Labas'),
+('Laguna', 'Calamba', 'Makiling'),
+('Laguna', 'Calamba', 'Mapagong'),
+('Laguna', 'Calamba', 'Masili'),
+('Laguna', 'Calamba', 'Maunong'),
+('Laguna', 'Calamba', 'Mayapa'),
+('Laguna', 'Calamba', 'Milagrosa (Tulo)'),
+('Laguna', 'Calamba', 'Paciano Rizal'),
+('Laguna', 'Calamba', 'Palingon'),
+('Laguna', 'Calamba', 'Palo-Alto'),
+('Laguna', 'Calamba', 'Pansol'),
+('Laguna', 'Calamba', 'Parian'),
+('Laguna', 'Calamba', 'Prinza'),
+('Laguna', 'Calamba', 'Punta'),
+('Laguna', 'Calamba', 'Puting Lupa'),
+('Laguna', 'Calamba', 'Real'),
+('Laguna', 'Calamba', 'Saimsim'),
+('Laguna', 'Calamba', 'Sampiruhan'),
+('Laguna', 'Calamba', 'San Cristobal'),
+('Laguna', 'Calamba', 'San Jose'),
+('Laguna', 'Calamba', 'San Juan'),
+('Laguna', 'Calamba', 'Sirang Lupa'),
+('Laguna', 'Calamba', 'Sucol'),
+('Laguna', 'Calamba', 'Turbina'),
+('Laguna', 'Calamba', 'Ulango'),
+('Laguna', 'Calamba', 'Uwisan'),
 
 -- Cabuyao
-('Cabuyao', 'Baclaran'),
-('Cabuyao', 'Banaybanay'),
-('Cabuyao', 'Banlic'),
-('Cabuyao', 'Barangay Dos'),
-('Cabuyao', 'Barangay Tres'),
-('Cabuyao', 'Barangay Uno'),
-('Cabuyao', 'Bigaa'),
-('Cabuyao', 'Butong'),
-('Cabuyao', 'Casile'),
-('Cabuyao', 'Diezmo'),
-('Cabuyao', 'Gulod'),
-('Cabuyao', 'Mamatid'),
-('Cabuyao', 'Marinig'),
-('Cabuyao', 'Niugan'),
-('Cabuyao', 'Pittland'),
-('Cabuyao', 'Pulo'),
-('Cabuyao', 'Sala'),
-('Cabuyao', 'San Isidro'),
+('Laguna', 'Cabuyao', 'Baclaran'),
+('Laguna', 'Cabuyao', 'Banay-Banay'),
+('Laguna', 'Cabuyao', 'Banlic'),
+('Laguna', 'Cabuyao', 'Bigaa'),
+('Laguna', 'Cabuyao', 'Butong'),
+('Laguna', 'Cabuyao', 'Casile'),
+('Laguna', 'Cabuyao', 'Diezmo'),
+('Laguna', 'Cabuyao', 'Gulod'),
+('Laguna', 'Cabuyao', 'Mamatid'),
+('Laguna', 'Cabuyao', 'Marinig'),
+('Laguna', 'Cabuyao', 'Niugan'),
+('Laguna', 'Cabuyao', 'Pittland'),
+('Laguna', 'Cabuyao', 'Pulo'),
+('Laguna', 'Cabuyao', 'Sala'),
+('Laguna', 'Cabuyao', 'San Isidro'),
+('Laguna', 'Cabuyao', 'Barangay Uno (Poblacion 1)'),
+('Laguna', 'Cabuyao', 'Barangay Dos (Poblacion 2)'),
+('Laguna', 'Cabuyao', 'Barangay Tres (Poblacion 3)'),
 
 -- San Pedro
-('San Pedro', 'Bagong Silang'),
-('San Pedro', 'Calendola'),
-('San Pedro', 'Chrysanthemum'),
-('San Pedro', 'Cuyab'),
-('San Pedro', 'Estrella'),
-('San Pedro', 'Fatima'),
-('San Pedro', 'G.S.I.S.'),
-('San Pedro', 'Landayan'),
-('San Pedro', 'Langgam'),
-('San Pedro', 'Laram'),
-('San Pedro', 'Magsaysay'),
-('San Pedro', 'Maharlika'),
-('San Pedro', 'Narra'),
-('San Pedro', 'Nueva'),
-('San Pedro', 'Pacita 1'),
-('San Pedro', 'Pacita 2'),
-('San Pedro', 'Poblacion'),
-('San Pedro', 'Riverside'),
-('San Pedro', 'Rosario'),
-('San Pedro', 'Sampaguita Village'),
-('San Pedro', 'San Antonio'),
-('San Pedro', 'San Lorenzo Ruiz'),
-('San Pedro', 'San Roque'),
-('San Pedro', 'Santo Niño'),
-('San Pedro', 'San Vicente'),
-('San Pedro', 'United Bayanihan'),
-('San Pedro', 'United Better Living'),
+('Laguna', 'San Pedro', 'Bagong Silang'),
+('Laguna', 'San Pedro', 'Calendola'),
+('Laguna', 'San Pedro', 'Chrysanthemum'),
+('Laguna', 'San Pedro', 'Cuyab'),
+('Laguna', 'San Pedro', 'Estrella'),
+('Laguna', 'San Pedro', 'Fatima'),
+('Laguna', 'San Pedro', 'G.S.I.S.'),
+('Laguna', 'San Pedro', 'Landayan'),
+('Laguna', 'San Pedro', 'Langgam'),
+('Laguna', 'San Pedro', 'Laram'),
+('Laguna', 'San Pedro', 'Magsaysay'),
+('Laguna', 'San Pedro', 'Maharlika'),
+('Laguna', 'San Pedro', 'Narra'),
+('Laguna', 'San Pedro', 'Nueva'),
+('Laguna', 'San Pedro', 'Pacita 1'),
+('Laguna', 'San Pedro', 'Pacita 2'),
+('Laguna', 'San Pedro', 'Poblacion'),
+('Laguna', 'San Pedro', 'Riverside'),
+('Laguna', 'San Pedro', 'Rosario'),
+('Laguna', 'San Pedro', 'Sampaguita Village'),
+('Laguna', 'San Pedro', 'San Antonio'),
+('Laguna', 'San Pedro', 'San Lorenzo Ruiz'),
+('Laguna', 'San Pedro', 'San Roque'),
+('Laguna', 'San Pedro', 'San Vicente'),
+('Laguna', 'San Pedro', 'Santo Niño'),
+('Laguna', 'San Pedro', 'United Bayanihan'),
+('Laguna', 'San Pedro', 'United Better Living'),
 
 -- Biñan
-('Biñan', 'Bagong Silang'),
-('Biñan', 'Banlic'),
-('Biñan', 'Langgam'),
-('Biñan', 'Malamig'),
-('Biñan', 'Niugan'),
-('Biñan', 'San Antonio'),
-('Biñan', 'San Cristobal'),
-('Biñan', 'San Isidro'),
-('Biñan', 'Sto. Niño'),
-('Biñan', 'Tabing Ilog'),
+('Laguna', 'Biñan', 'Biñan (Poblacion)'),
+('Laguna', 'Biñan', 'Bungahan'),
+('Laguna', 'Biñan', 'Canlalay'),
+('Laguna', 'Biñan', 'Casile'),
+('Laguna', 'Biñan', 'De La Paz'),
+('Laguna', 'Biñan', 'Ganado'),
+('Laguna', 'Biñan', 'Langkiwa'),
+('Laguna', 'Biñan', 'Loma'),
+('Laguna', 'Biñan', 'Malaban'),
+('Laguna', 'Biñan', 'Malamig'),
+('Laguna', 'Biñan', 'Mampalasan'),
+('Laguna', 'Biñan', 'Platero'),
+('Laguna', 'Biñan', 'San Antonio'),
+('Laguna', 'Biñan', 'San Jose'),
+('Laguna', 'Biñan', 'San Vicente'),
+('Laguna', 'Biñan', 'Soro-Soro'),
+('Laguna', 'Biñan', 'Santo Niño'),
+('Laguna', 'Biñan', 'Santo Tomas (Calabuso)'),
+('Laguna', 'Biñan', 'Timbao'),
+('Laguna', 'Biñan', 'Tubigan'),
+('Laguna', 'Biñan', 'Zapote'),
+('Laguna', 'Biñan', 'San Cristobal'),
 
 -- Los Baños
-('Los Baños', 'Bagong Silang'),
-('Los Baños', 'Baybayin'),
-('Los Baños', 'Bucal'),
-('Los Baños', 'Canlubang'),
-('Los Baños', 'Bayog'),
-('Los Baños', 'Maahas'),
-('Los Baños', 'Timugan'),
-('Los Baños', 'Putho-Tuntungin'),
+('Laguna', 'Los Baños', 'Anos'),
+('Laguna', 'Los Baños', 'Bagong Silang'),
+('Laguna', 'Los Baños', 'Bambang'),
+('Laguna', 'Los Baños', 'Batong Malake'),
+('Laguna', 'Los Baños', 'Baybayin'),
+('Laguna', 'Los Baños', 'Bayog'),
+('Laguna', 'Los Baños', 'Lalakay'),
+('Laguna', 'Los Baños', 'Maahas'),
+('Laguna', 'Los Baños', 'Malinta'),
+('Laguna', 'Los Baños', 'Mayondon'),
+('Laguna', 'Los Baños', 'Putho-Tuntungin'),
+('Laguna', 'Los Baños', 'San Antonio'),
+('Laguna', 'Los Baños', 'Tadlac'),
+('Laguna', 'Los Baños', 'Timugan'),
 
 -- Calauan
-('Calauan', 'Bagumbayan'),
-('Calauan', 'Caloocan'),
-('Calauan', 'Malabanan'),
-('Calauan', 'San Juan'),
-('Calauan', 'San Antonio'),
-('Calauan', 'Santo Niño'),
-('Calauan', 'Mayamot');
+('Laguna', 'Calauan', 'Balayhangin'),
+('Laguna', 'Calauan', 'Bangyas'),
+('Laguna', 'Calauan', 'Dayap'),
+('Laguna', 'Calauan', 'Hanggan'),
+('Laguna', 'Calauan', 'Imok'),
+('Laguna', 'Calauan', 'Lamot 1'),
+('Laguna', 'Calauan', 'Lamot 2'),
+('Laguna', 'Calauan', 'Limao'),
+('Laguna', 'Calauan', 'Mabacan'),
+('Laguna', 'Calauan', 'Masiit'),
+('Laguna', 'Calauan', 'Paliparan'),
+('Laguna', 'Calauan', 'Perez'),
+('Laguna', 'Calauan', 'Kanluran (Poblacion)'),
+('Laguna', 'Calauan', 'Silangan (Poblacion)'),
+('Laguna', 'Calauan', 'Prinza'),
+('Laguna', 'Calauan', 'San Isidro'),
+('Laguna', 'Calauan', 'Santo Tomas');
 
+SELECT * FROM Transactions;
+SELECT * FROM PurchaseOrder;
+SELECT * FROM payment_history;
+SELECT * FROM Admin;
 
-select*from transactions;
-select*from deliveryassignments;
 
 -- Assuming table already exists:
 -- CREATE TABLE gps_coordinates (
