@@ -2,7 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import axios from "axios";
-import { FaRegTrashAlt, FaArrowLeft } from "react-icons/fa";
+import {
+  FaRegTrashAlt,
+  FaArrowLeft,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 import { Button, Modal, Collapse } from "react-bootstrap";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
@@ -116,7 +121,11 @@ const AddDelivery = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
+  const [receiptNumber, setReceiptNumber] = useState(null);
+
   const [provinceOptions, setProvinceOptions] = useState([]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const AUTO_DOWNLOAD_RECEIPT = false;
 
@@ -143,6 +152,16 @@ const AddDelivery = () => {
   const [lagunaData, setLagunaData] = useState({});
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
+
+ useEffect(() => {
+  if (showReceiptModal) {
+    let storedCount = parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
+    const newCount = storedCount + 1;
+    localStorage.setItem("envirocoolReceiptCounter", newCount);
+    setReceiptNumber(newCount);
+  }
+}, [showReceiptModal]);
+
 
   useEffect(() => {
     axios
@@ -457,6 +476,7 @@ const AddDelivery = () => {
     document.title = "Add Delivery";
     fetchLatestIDs();
 
+
     const fetchProducts = async () => {
       try {
         const res = await axios.get(
@@ -606,8 +626,13 @@ const AddDelivery = () => {
       return;
     }
 
+    const transactionId = receiptData?.transaction_id || "N/A";
     const today = new Date().toISOString().split("T")[0];
-    const filename = `ENV-Receipt_TN${transactionId}_${today}`;
+    const filename = `Receipt_TN${transactionId}_${today}`;
+
+    const clonedElement = element.cloneNode(true);
+
+    clonedElement.querySelectorAll(".signature-section").forEach((el) => el.remove());
 
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
@@ -620,7 +645,7 @@ const AddDelivery = () => {
             margin: 10mm;
           }
           body {
-            font-family: Arial, sans-serif;
+            font-family: "Calibri", "Segoe UI", Arial, sans-serif;
             font-size: 11px;
             line-height: 1.4;
             color: #000;
@@ -637,9 +662,8 @@ const AddDelivery = () => {
           .receipt p {
             margin: 3px 0;
           }
-
           h3 {
-            font-size: 15px;
+            font-size: 18px;
             margin-bottom: 3px;
           }
           p, th {
@@ -654,31 +678,28 @@ const AddDelivery = () => {
             margin: 15px 0;
           }
           th, td {
-            border: 1px solid #000;
-            padding: 5px 8px;
+            border: 1px solid #5E5E5EFF;
+            padding: 3px;
             text-align: left;
           }
           th {
-            background-color: #f5f5f5;
+            background-color: #EBEBEBFF;
             font-weight: bold;
           }
           .text-center { text-align: center; }
           .text-end { text-align: right; }
-
-          small:contains("Date Generated"),
-          p:has(small:contains("Date Generated")) {
-            display: block;
-            margin-bottom: 5px;
+          hr.dashed {
+            border-top: 1px dashed #999;
+            margin: 20px 0;
           }
-
           .signature-container {
             display: flex;
             justify-content: space-around;
-            margin-top: 60px;
+            margin-top: 30px;
           }
           .signature {
             text-align: center;
-            width: 40%;
+            width: 35%;
             border-top: 1px solid #000;
             padding-top: 4px;
             font-size: 11px;
@@ -687,30 +708,29 @@ const AddDelivery = () => {
       </head>
       <body>
         <div class="receipt">
-         ${
-           element.innerHTML
-             .replace("Date Printed:", "Date Generated:")
-             .replace(/(<hr>|_{3,}|Prepared By[\s\S]*?Received By)/gi, "") +
-           `
-            <div class='signature-container'>
-              <div class='signature'>Prepared By</div>
-              <div class='signature'>Received By</div>
-            </div>
-          `
-         }
+          ${clonedElement.innerHTML}
+          <div class="signature-container">
+            <div class="signature">Prepared By</div>
+            <div class="signature">Received By</div>
+          </div>
+          <hr class="dashed" />
+          <div class="text-center mt-3">
+            <h4>Thank you for trusting Envirocool!</h4>
+            <small>We appreciate your business.</small>
+          </div>
         </div>
         <script>
           window.onload = () => {
             window.print();
-            // Uncomment to auto-close the print window after printing
-            // window.onafterprint = () => window.close();
           };
         </script>
       </body>
     </html>
   `);
+
     printWindow.document.close();
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1000,19 +1020,39 @@ const AddDelivery = () => {
         "Complete all the required fields, then click the 'Add' button below to create a delivery transaction.",
     },
     {
-      question: "I want to add a new type of product.",
+      question: "How can I add a new product type?",
       answer:
         "In the 'Order Details' section, under 'Type of Product', type the new product name. An option to create it will appear—click it, and it will automatically be added to the product selection.",
     },
     {
-      question: "I want to add a new item to our product.",
+      question: "How can I add a new item name?",
       answer:
         "In the 'Order Details' section, first select the product you want to add an item to. Then, type the new item name in the item selection field. An option to create it will appear—click it, and it will automatically be saved under that product.",
     },
     {
-      question: "The customer wants multiple orders in one transaction.",
+      question: "How can I add multiple orders to the same transaction?",
       answer:
         "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
+    },
+    {
+      question: "How can I input customer's address?",
+      answer:
+        "Start by selecting the province, then choose the city and barangay. You can also manually type a new location if it isn’t listed. Add a house number, street name, or subdivision for a complete address.",
+    },
+    {
+      question: "How does the payment option work?",
+      answer:
+        "Choose a Payment Method (e.g., Cash or Bank Transfer), then select a Payment Option:\n• Full Payment – Pay the entire amount; no (₱0.00) balance is recorded.\n• Down Payment – Pay a portion; the system automatically calculates the remaining balance.",
+    },
+    {
+      question: "Can I still edit or delete a delivery after saving?",
+      answer:
+        "No, once a delivery has been added, it can no longer be edited. All details should be reviewed in the Transaction Summary to confirm the details before the final submission. Only the customer's payment information can be updated later if the 'Down Payment' option was selected.",
+    },
+    {
+      question: "What are the valid date rules when adding a delivery?",
+      answer:
+        "\n• Date of Order & Billing Date – Cannot be set in the future.\n• Date of Delivery – Cannot be set in the past.\n• Payment Due Date – Cannot exceed the Date of Delivery and must not be set in the past.",
     },
   ];
 
@@ -1093,9 +1133,8 @@ const AddDelivery = () => {
               </label>
               <input
                 type="date"
-                className={`form-control ${
-                  form.date_of_order ? "text-black" : "text-muted"
-                } ${orderDateError ? "is-invalid" : ""}`}
+                className={`form-control ${form.date_of_order ? "text-black" : "text-muted"
+                  } ${orderDateError ? "is-invalid" : ""}`}
                 id="dateOfOrder"
                 name="date_of_order"
                 value={
@@ -1137,7 +1176,6 @@ const AddDelivery = () => {
           <div className="mb-3">
             <label className="form-label">Customer Address:</label>
             <div className="row g-2">
-              {/* Province Dropdown with free input */}
               <div className="col-md-4">
                 <CreatableSelect
                   placeholder="Province"
@@ -1182,7 +1220,6 @@ const AddDelivery = () => {
                 />
               </div>
 
-              {/* City Dropdown */}
               <div className="col-md-4">
                 <Select
                   options={cityOptions}
@@ -1286,7 +1323,6 @@ const AddDelivery = () => {
                 />
               </div>
 
-              {/* STREET FIELD (Optional) */}
               <div className="col-md-6">
                 <input
                   type="text"
@@ -1298,7 +1334,6 @@ const AddDelivery = () => {
                 />
               </div>
 
-              {/* VILLAGE/SUBDIVISION FIELD (Optional) */}
               <div className="col-md-6">
                 <input
                   type="text"
@@ -1344,9 +1379,8 @@ const AddDelivery = () => {
                 type="date"
                 id="targetDate"
                 name="target_date_delivery"
-                className={`form-control ${
-                  form.target_date_delivery ? "text-black" : "text-muted"
-                } ${dateError ? "is-invalid" : ""}`}
+                className={`form-control ${form.target_date_delivery ? "text-black" : "text-muted"
+                  } ${dateError ? "is-invalid" : ""}`}
                 value={form.target_date_delivery || ""}
                 onChange={(e) => {
                   const selectedDate = new Date(e.target.value + "T00:00:00");
@@ -1520,8 +1554,8 @@ const AddDelivery = () => {
                             backgroundColor: state.isSelected
                               ? "#84cf95ff"
                               : state.isFocused
-                              ? "#bbd2c1ff"
-                              : "#e6f4ea",
+                                ? "#bbd2c1ff"
+                                : "#e6f4ea",
                             color: state.isSelected ? "#fff" : "#000",
                             cursor: "pointer",
                           }),
@@ -1534,15 +1568,15 @@ const AddDelivery = () => {
                         options={
                           item.type_of_product
                             ? itemOptions[item.type_of_product]?.filter(
-                                (opt) => opt.value && opt.value.trim() !== ""
-                              ) || []
+                              (opt) => opt.value && opt.value.trim() !== ""
+                            ) || []
                             : []
                         }
                         value={
                           item.description
                             ? itemOptions[item.type_of_product]?.find(
-                                (opt) => opt.value === item.description
-                              ) || null
+                              (opt) => opt.value === item.description
+                            ) || null
                             : null
                         }
                         onChange={(selected) => {
@@ -1636,8 +1670,8 @@ const AddDelivery = () => {
                             backgroundColor: state.isSelected
                               ? "#84cf95ff"
                               : state.isFocused
-                              ? "#bbd2c1ff"
-                              : "#e6f4ea",
+                                ? "#bbd2c1ff"
+                                : "#e6f4ea",
                             color: state.isSelected ? "#fff" : "#000",
                             cursor: "pointer",
                           }),
@@ -1712,7 +1746,7 @@ const AddDelivery = () => {
                                 setOrderItems((prev) =>
                                   prev.map((item) =>
                                     item.type_of_product ===
-                                    editModal.currentValue
+                                      editModal.currentValue
                                       ? { ...item, type_of_product: newValue }
                                       : item
                                   )
@@ -1920,16 +1954,15 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className={`form-control ${
-                    form.fp_collection_date ? "text-black" : "text-muted"
-                  } ${fpBillingError ? "is-invalid" : ""}`}
+                  className={`form-control ${form.fp_collection_date ? "text-black" : "text-muted"
+                    } ${fpBillingError ? "is-invalid" : ""}`}
                   id="fpBillingDate"
                   name="fp_collection_date"
                   value={
                     form.fp_collection_date
                       ? new Date(form.fp_collection_date)
-                          .toISOString()
-                          .split("T")[0]
+                        .toISOString()
+                        .split("T")[0]
                       : ""
                   }
                   onChange={(e) => {
@@ -2000,13 +2033,12 @@ const AddDelivery = () => {
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
                   min={getLocalDate()}
-                  className={`form-control ${
-                    form.payment_option !== "Down Payment"
-                      ? "text-muted"
-                      : form.dp_collection_date
+                  className={`form-control ${form.payment_option !== "Down Payment"
+                    ? "text-muted"
+                    : form.dp_collection_date
                       ? "text-black"
                       : "text-muted"
-                  } ${dpDateError ? "is-invalid" : ""}`}
+                    } ${dpDateError ? "is-invalid" : ""}`}
                   style={{
                     backgroundColor:
                       form.payment_option === "Down Payment"
@@ -2058,9 +2090,9 @@ const AddDelivery = () => {
                   <span className="form-control bg-white text-start fw-semibold fs-6 p-2">
                     {form.payment_option === "Down Payment"
                       ? Number(form.balance).toLocaleString("en-PH", {
-                          style: "currency",
-                          currency: "PHP",
-                        })
+                        style: "currency",
+                        currency: "PHP",
+                      })
                       : "₱0.00"}
                   </span>
                 </div>
@@ -2098,7 +2130,7 @@ const AddDelivery = () => {
                       style={{ whiteSpace: "nowrap" }}
                       onClick={() => setShowPreviewModal(true)}
                     >
-                      View ({selectedFileNames.length})
+                      View
                     </button>
                   )}
                 </div>
@@ -2110,90 +2142,88 @@ const AddDelivery = () => {
               onHide={() => setShowPreviewModal(false)}
               centered
               size="lg"
+              className="proof-preview-modal"
             >
               <Modal.Header
                 closeButton
-                className="bg-primary text-white bg-opacity-75"
+                style={{
+                  backgroundColor: "#00628FFF",
+                  color: "white",
+                  opacity: 0.85,
+                }}
               >
-                <Modal.Title>Proof of Payment Preview</Modal.Title>
+                <Modal.Title className="fw-semibold">
+                  Proof of Payment Preview
+                </Modal.Title>
               </Modal.Header>
 
-              <Modal.Body className="text-center bg-light">
-                {proofPreviews.length > 0 ? (
-                  <div className="d-flex align-items-center justify-content-center">
-                    {proofPreviews.length > 1 && (
+              <Modal.Body className="bg-light text-center">
+                {proofPreviews.length === 0 ? (
+                  <div className="py-5">
+                    <i
+                      className="bi bi-file-earmark-image text-secondary"
+                      style={{ fontSize: "3rem" }}
+                    ></i>
+                    <p className="mt-3 text-muted fs-5">No images uploaded.</p>
+                  </div>
+                ) : (
+                  <div className="position-relative d-flex align-items-center justify-content-center">
+                    {currentIndex > 0 && (
                       <button
-                        className="btn btn-secondary me-2"
-                        onClick={() => {
-                          const container = document.getElementById(
-                            "preview-scroll-container"
-                          );
-                          const imageWidth = container.offsetWidth;
-                          container.scrollBy({
-                            left: -imageWidth,
-                            behavior: "smooth",
-                          });
-                        }}
+                        onClick={() => setCurrentIndex(currentIndex - 1)}
+                        className="btn btn-light rounded-circle shadow position-absolute"
+                        style={{ left: "15px", zIndex: 10 }}
                       >
-                        ‹
+                        <FaChevronLeft size={20} />
                       </button>
                     )}
 
                     <div
-                      id="preview-scroll-container"
+                      className="bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-center"
                       style={{
-                        display: "flex",
-                        overflowX: "auto",
-                        scrollSnapType: "x mandatory",
-                        scrollBehavior: "smooth",
                         width: "700px",
-                        height: "720px",
-                        gap: "10px",
-                        padding: "5px",
-                        border: "2px solid #ccc",
-                        borderRadius: "10px",
-                        justifyContent:
-                          proofPreviews.length === 1 ? "center" : "flex-start",
+                        height: "700px",
+                        overflow: "hidden",
+                        border: "3px solid #ddd",
                       }}
                     >
-                      {proofPreviews.map((preview, index) => (
-                        <img
-                          key={index}
-                          src={preview}
-                          alt={`Proof of Payment ${index + 1}`}
-                          style={{
-                            width: "700px",
-                            height: "680px",
-                            objectFit: "contain",
-                            flexShrink: 0,
-                            scrollSnapAlign: "center",
-                          }}
-                        />
-                      ))}
+                      <img
+                        src={proofPreviews[currentIndex]}
+                        alt={`Proof ${currentIndex + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                        }}
+                      />
                     </div>
 
-                    {proofPreviews.length > 1 && (
+                    {currentIndex < proofPreviews.length - 1 && (
                       <button
-                        className="btn btn-secondary ms-2"
-                        onClick={() => {
-                          const container = document.getElementById(
-                            "preview-scroll-container"
-                          );
-                          const imageWidth = container.offsetWidth;
-                          container.scrollBy({
-                            left: imageWidth,
-                            behavior: "smooth",
-                          });
-                        }}
+                        onClick={() => setCurrentIndex(currentIndex + 1)}
+                        className="btn btn-light rounded-circle shadow position-absolute"
+                        style={{ right: "15px", zIndex: 10 }}
                       >
-                        ›
+                        <FaChevronRight size={20} />
                       </button>
                     )}
                   </div>
-                ) : (
-                  <p>No images to preview.</p>
                 )}
               </Modal.Body>
+
+              <Modal.Footer className="bg-white border-top d-flex justify-content-between">
+                <span className="text-muted small">
+                  {proofPreviews.length > 0 &&
+                    `Image ${currentIndex + 1} of ${proofPreviews.length}`}
+                </span>
+                <Button
+                  variant="secondary"
+                  className="px-4 py-2 rounded-3 fw-semibold fs-6"
+                  onClick={() => setShowPreviewModal(false)}
+                >
+                  Close
+                </Button>
+              </Modal.Footer>
             </Modal>
 
             <Modal
@@ -2432,6 +2462,7 @@ const AddDelivery = () => {
                 </Button>
               </Modal.Footer>
             </Modal>
+
             <Modal
               show={showReceiptModal}
               onHide={() => setShowReceiptModal(false)}
@@ -2449,11 +2480,15 @@ const AddDelivery = () => {
                 id="receipt-section"
                 className="bg-white text-black p-4"
               >
-                <div className="text-center mb-4 border-bottom pb-2">
+                <div className="text-center mb-4">
                   <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
-                  <p className="mb-0">Official Delivery Receipt</p>
+                  <p className="mb-0">Official Transaction Receipt</p>
                   <small>Date Printed: {new Date().toLocaleString()}</small>
+                  <br />
+                  <small className="text-muted">Transaction Receipt No.: #{receiptNumber?.toString().padStart(5, "0")}</small>
                 </div>
+
+                <hr style={{ borderTop: "1px dashed rgb(153, 153, 153)", marginBottom: "20px" }} />
 
                 <div className="mb-3">
                   <p>
@@ -2485,7 +2520,6 @@ const AddDelivery = () => {
                   </p>
                 </div>
 
-                {/* Payment details */}
                 <div className="mb-3">
                   <p>
                     <b>Payment Method:</b>{" "}
@@ -2532,7 +2566,6 @@ const AddDelivery = () => {
                   )}
                 </div>
 
-                {/* Order items */}
                 <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
                 <table className="table table-bordered table-sm">
                   <thead className="table-light text-center">
@@ -2564,8 +2597,8 @@ const AddDelivery = () => {
                           {formatPeso(
                             parseFloat(
                               item.total_cost ||
-                                item.quantity * item.unit_cost ||
-                                0
+                              item.quantity * item.unit_cost ||
+                              0
                             )
                           )}
                         </td>
@@ -2595,6 +2628,11 @@ const AddDelivery = () => {
                       <small>Received By</small>
                     </div>
                   </div>
+                  <hr style={{ borderTop: "2px dashed #999", marginTop: "30px" }} />
+                  <div className="text-center mt-3">
+                    <h6 className="fw-bold text-success mb-0">Thank you for trusting Envirocool!</h6>
+                    <small>We appreciate your business.</small>
+                  </div>
                 </div>
               </Modal.Body>
 
@@ -2608,9 +2646,12 @@ const AddDelivery = () => {
                 <Button variant="success" onClick={handlePrintReceipt}>
                   Print / Download
                 </Button>
-                
+                {/* <Button variant="primary" onClick={handleDownloadPDF}>
+                    Download PDF
+                  </Button> */}
               </Modal.Footer>
             </Modal>
+
           </div>
         </form>
         <div className="btn-group mx-3 mt-4 gap-4">
@@ -2707,9 +2748,8 @@ const AddDelivery = () => {
                 >
                   <h2 className="accordion-header" id={`heading${index}`}>
                     <button
-                      className={`accordion-button ${
-                        activeFAQIndex === index ? "" : "collapsed"
-                      }`}
+                      className={`accordion-button ${activeFAQIndex === index ? "" : "collapsed"
+                        }`}
                       type="button"
                       onClick={() =>
                         setActiveFAQIndex(
@@ -2720,7 +2760,7 @@ const AddDelivery = () => {
                       aria-controls={`collapse${index}`}
                       style={{
                         backgroundColor:
-                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                          activeFAQIndex === index ? "#116B8A" : "#DCF0F3FF",
                         color: activeFAQIndex === index ? "white" : "#116B8A",
                         fontWeight: 600,
                         transition: "all 0.3s ease",
@@ -2741,9 +2781,8 @@ const AddDelivery = () => {
                   </h2>
                   <div
                     id={`collapse${index}`}
-                    className={`accordion-collapse collapse ${
-                      activeFAQIndex === index ? "show" : ""
-                    }`}
+                    className={`accordion-collapse collapse ${activeFAQIndex === index ? "show" : ""
+                      }`}
                     aria-labelledby={`heading${index}`}
                     data-bs-parent="#faqAccordion"
                   >
@@ -2771,12 +2810,11 @@ const AddDelivery = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>
