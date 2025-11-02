@@ -423,12 +423,11 @@ const PersonnelAccounts = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
+            className="close-btn px-4 py-2 fs-6 rounded-2"
           >
             Close
           </Button>

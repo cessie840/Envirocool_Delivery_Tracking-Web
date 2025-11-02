@@ -630,7 +630,6 @@ const ViewOrder = () => {
         </div>
       </div>
 
-      {/* Update Modal */}
       <UpdateOrderModal
         show={showModal}
         handleClose={handleClose}
@@ -641,7 +640,6 @@ const ViewOrder = () => {
         setEditableItems={setEditableItems}
       />
 
-      {/* Reschedule Modal */}
       <RescheduleModal
         show={showReschedule}
         handleClose={() => setShowReschedule(false)}

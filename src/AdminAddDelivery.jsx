@@ -916,6 +916,7 @@ const AddDelivery = () => {
       fetchProvinces();
 
       setReceiptData({
+        transaction_id: transactionId,
         customer_name: form.customer_name,
         house_no: form.house_no,
         street_name: form.street_name,
