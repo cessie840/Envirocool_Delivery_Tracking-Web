@@ -36,7 +36,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "http://13.239.143.31/DeliveryTrackingSystem/forgot_password.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/forgot_password.php",
         { email }
       );
 
@@ -80,7 +80,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "http://13.239.143.31/DeliveryTrackingSystem/verify_reset_code.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/verify_reset_code.php",
         { email, code }
       );
 
@@ -138,7 +138,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await axios.post(
-        "http://13.239.143.31/DeliveryTrackingSystem/change_password.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/change_password.php",
         { email, newPassword }
       );
 

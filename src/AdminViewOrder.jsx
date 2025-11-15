@@ -77,7 +77,7 @@ const ViewOrder = () => {
 
   const fetchOrderDetails = () => {
     fetch(
-      `http://13.239.143.31/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}&_=${Date.now()}`,
+      `https://13.239.143.31/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}&_=${Date.now()}`,
       {
         method: "GET",
         headers: {
@@ -210,7 +210,7 @@ const ViewOrder = () => {
       items: editableItems,
     };
 
-    fetch("http://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
+    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

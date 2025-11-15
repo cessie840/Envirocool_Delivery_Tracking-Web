@@ -88,7 +88,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "http://13.239.143.31/DeliveryTrackingSystem/get_total_dashboard.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/get_total_dashboard.php",
         {
           withCredentials: true,
         }
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "http://13.239.143.31/DeliveryTrackingSystem/get_recent_transactions.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/get_recent_transactions.php",
         {
           withCredentials: true,
         }
@@ -114,7 +114,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "http://13.239.143.31/DeliveryTrackingSystem/get_pending_transactions.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/get_pending_transactions.php",
         {
           withCredentials: true,
         }
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "http://13.239.143.31/DeliveryTrackingSystem/get_yearly_distribution.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/get_yearly_distribution.php",
         {
           withCredentials: true,
         }
@@ -142,7 +142,7 @@ const AdminDashboard = () => {
 
     axios
       .get(
-        "http://13.239.143.31/DeliveryTrackingSystem/get_monthly_transactions.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/get_monthly_transactions.php",
         {
           withCredentials: true,
         }

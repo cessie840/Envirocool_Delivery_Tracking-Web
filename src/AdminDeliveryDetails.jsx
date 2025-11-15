@@ -80,7 +80,7 @@ const DeliveryDetails = () => {
   };
 
   const fetchDeliveries = () => {
-    fetch("http://13.239.143.31/DeliveryTrackingSystem/get_deliveries.php")
+    fetch("https://13.239.143.31/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
       .then((data) => {
         setDeliveries(data);
@@ -100,7 +100,7 @@ const DeliveryDetails = () => {
 
   const handleUpdate = (id) => {
     fetch(
-      `http://13.239.143.31/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,
+      `https://13.239.143.31/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,
       {
         method: "GET",
         headers: { "Cache-Control": "no-cache" },

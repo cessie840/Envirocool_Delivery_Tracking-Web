@@ -18,7 +18,7 @@ const BackupRestoreTab = () => {
   const handleBackupClick = async () => {
     try {
       const response = await axios.get(
-        "http://13.239.143.31/DeliveryTrackingSystem/backup.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/backup.php",
         {
           responseType: "blob",
           withCredentials: true,
@@ -128,7 +128,7 @@ const BackupRestoreTab = () => {
 
     try {
       const res = await axios.post(
-        "http://13.239.143.31/DeliveryTrackingSystem/restore.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/restore.php",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
