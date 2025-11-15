@@ -18,7 +18,7 @@ const BackupRestoreTab = () => {
   const handleBackupClick = async () => {
     try {
       const response = await axios.get(
-        "http://localhost/DeliveryTrackingSystem/backup.php",
+        "http://13.239.143.31/DeliveryTrackingSystem/backup.php",
         {
           responseType: "blob",
           withCredentials: true,
@@ -128,7 +128,7 @@ const BackupRestoreTab = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/restore.php",
+        "http://13.239.143.31/DeliveryTrackingSystem/restore.php",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -194,7 +194,6 @@ const BackupRestoreTab = () => {
   return (
     <div className="p-3 position-relative">
       <Toaster position="top-center" richColors />{" "}
-     
       <h4 className="title mb-1">
         <FaDatabase /> Backup & Restore
       </h4>
@@ -210,7 +209,6 @@ const BackupRestoreTab = () => {
         </span>
       </div>
       <hr />
-   
       <section className="mb-5">
         <h5>Backup Data</h5>
         <button
@@ -222,7 +220,6 @@ const BackupRestoreTab = () => {
         </button>
       </section>
       <hr />
-
       <section>
         <h5>Restore Options</h5>
         <form onSubmit={handleRestoreSubmit}>

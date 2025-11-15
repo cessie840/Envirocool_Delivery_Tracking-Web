@@ -24,7 +24,7 @@ const EditProfileTab = () => {
     if (!silent) setLoading(true);
     try {
       const res = await axios.get(
-        "http://localhost/DeliveryTrackingSystem/get_profile.php",
+        "http://13.239.143.31/DeliveryTrackingSystem/get_profile.php",
         { withCredentials: true }
       );
       const data = res.data;
@@ -218,7 +218,7 @@ const EditProfileTab = () => {
     switch (role) {
       case "admin":
         updateUrl =
-          "http://localhost/DeliveryTrackingSystem/update_admin_profile.php";
+          "http://13.239.143.31/DeliveryTrackingSystem/update_admin_profile.php";
         payload = {
           ad_username: formData.username.trim(),
           ad_fname: formData.fname.trim(),
@@ -229,7 +229,7 @@ const EditProfileTab = () => {
         break;
       case "manager":
         updateUrl =
-          "http://localhost/DeliveryTrackingSystem/update_operational_profile.php";
+          "http://13.239.143.31/DeliveryTrackingSystem/update_operational_profile.php";
         payload = {
           manager_username: formData.username.trim(),
           manager_fname: formData.fname.trim(),
@@ -240,7 +240,7 @@ const EditProfileTab = () => {
         break;
       case "personnel":
         updateUrl =
-          "http://localhost/DeliveryTrackingSystem/update_personnel_profile.php";
+          "http://13.239.143.31/DeliveryTrackingSystem/update_personnel_profile.php";
         payload = {
           pers_username: formData.username.trim(),
           pers_fname: formData.fname.trim(),

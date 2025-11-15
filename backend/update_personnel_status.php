@@ -4,7 +4,8 @@ error_reporting(E_ALL);
 
 $allowed_origins = [
     'http://localhost:5173',
-    'http://localhost:5174'
+    'http://localhost:5174',
+    'https://envirocool-delivery-tracking-web.vercel.app/'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {

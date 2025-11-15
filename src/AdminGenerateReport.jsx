@@ -368,7 +368,7 @@ const GenerateReport = () => {
       if (reportType === "sales" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_sales_report.php"
+            "http://13.239.143.31/DeliveryTrackingSystem/get_sales_report.php"
           )
         );
         if (!res.ok) throw new Error("get_sales_report failed");
@@ -385,7 +385,7 @@ const GenerateReport = () => {
       if (reportType === "transaction" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_transaction_report.php"
+            "http://13.239.143.31/DeliveryTrackingSystem/get_transaction_report.php"
           )
         );
         if (!res.ok) throw new Error("get_transaction_report failed");
@@ -419,7 +419,7 @@ const GenerateReport = () => {
       ) {
         const res = await fetch(
           buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
+            "http://13.239.143.31/DeliveryTrackingSystem/get_service_delivery_report.php"
           )
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
@@ -451,7 +451,7 @@ const GenerateReport = () => {
       if (reportType === "customer" || reportType === "all") {
         const res = await fetch(
           buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
+            "http://13.239.143.31/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
           )
         );
         if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
@@ -1801,7 +1801,7 @@ const GenerateReport = () => {
     const fetchSalesData = async () => {
       try {
         const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_sales_report.php",
+          "http://13.239.143.31/DeliveryTrackingSystem/get_sales_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_sales_report failed");
@@ -1827,7 +1827,7 @@ const GenerateReport = () => {
     const fetchTransactionData = async () => {
       try {
         const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_transaction_report.php",
+          "http://13.239.143.31/DeliveryTrackingSystem/get_transaction_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_transaction_report failed");
@@ -1854,7 +1854,7 @@ const GenerateReport = () => {
     const fetchServiceData = async () => {
       try {
         const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php",
+          "http://13.239.143.31/DeliveryTrackingSystem/get_service_delivery_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_service_delivery_report failed");
@@ -1879,7 +1879,7 @@ const GenerateReport = () => {
     const fetchCustomerSatisfactionData = async () => {
       try {
         const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
+          "http://13.239.143.31/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_customer_satisfaction_report failed");

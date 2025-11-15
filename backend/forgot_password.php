@@ -8,10 +8,15 @@ require 'PHPMailer/PHPMailer.php';
 require 'PHPMailer/SMTP.php';
 require 'PHPMailer/Exception.php';
 
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json");
+$allowed_origins = [
+    "https://cessie840.github.io",
+    "http://localhost:5173",
+    "http://localhost:5173/add-delivery", 'https://envirocool-delivery-tracking-web.vercel.app/'
+];
+
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
 
 $data = json_decode(file_get_contents("php://input"), true);
 $emailInput = trim($data['email']);
