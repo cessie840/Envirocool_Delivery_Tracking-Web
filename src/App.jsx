@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Routes, Route } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from "sonner";
@@ -131,7 +131,7 @@ function App() {
   ];
 
   return (
-    <Router>
+    <>
       <Toaster position="top-center" richColors />
 
       <Routes>
@@ -149,7 +149,7 @@ function App() {
           />
         ))}
       </Routes>
-    </Router>
+    </>
   );
 }
 
