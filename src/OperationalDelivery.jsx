@@ -19,34 +19,33 @@ const OperationalDelivery = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [deviceList, setDeviceList] = useState([]);
- const [showFAQ, setShowFAQ] = useState(false);
-    const [activeFAQIndex, setActiveFAQIndex] = useState(null);
-    
- const guideqst = [
-   {
-     question: "How can I assign deliveries to delivery personnel?",
-     answer:
-       "Go to the 'Unassigned Orders' tab inside the Delivery Details page, then click the 'Assign Now' button. Within the transaction details, click the 'Assign Delivery Personnel' button to select and assign the designated delivery personnel and delivery truck for that transaction.",
-   },
-   {
-     question:
-       "How can I update the assigned delivery personnel in a transaction?",
-     answer:
-       "Navigate to the 'Assigned Orders' tab and click the 'View Details' button. Inside the transaction details, click the 'Change Personnel' button to update the assigned delivery personnel and/or delivery truck for that specific transaction.",
-   },
-   {
-     question:
-       "What happens if a delivery is assigned to the wrong personnel and the personnel has already left?",
-     answer:
-       "This situation is beyond the system’s control, as it requires direct communication with the delivery personnel involved since they are the account holder responsible for the delivery.",
-   },
- ];
+  const [showFAQ, setShowFAQ] = useState(false);
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  const guideqst = [
+    {
+      question: "How can I assign deliveries to delivery personnel?",
+      answer:
+        "Go to the 'Unassigned Orders' tab inside the Delivery Details page, then click the 'Assign Now' button. Within the transaction details, click the 'Assign Delivery Personnel' button to select and assign the designated delivery personnel and delivery truck for that transaction.",
+    },
+    {
+      question:
+        "How can I update the assigned delivery personnel in a transaction?",
+      answer:
+        "Navigate to the 'Assigned Orders' tab and click the 'View Details' button. Inside the transaction details, click the 'Change Personnel' button to update the assigned delivery personnel and/or delivery truck for that specific transaction.",
+    },
+    {
+      question:
+        "What happens if a delivery is assigned to the wrong personnel and the personnel has already left?",
+      answer:
+        "This situation is beyond the system’s control, as it requires direct communication with the delivery personnel involved since they are the account holder responsible for the delivery.",
+    },
+  ];
 
   useEffect(() => {
     document.title = "Operational Delivery";
     fetchOrders();
   }, []);
-
 
   const formatPeso = (value) => {
     if (value === null || value === undefined || isNaN(value)) return "₱0.00";
@@ -738,12 +737,11 @@ const OperationalDelivery = () => {
             }}
           >
             <Button
-              variant="outline-secondary"
               onClick={() => {
                 setShowFAQ(false);
                 setActiveFAQIndex(null);
               }}
-              className="px-4"
+              className="close-btn px-4 py-2 fs-6 rounded-2"
             >
               Close
             </Button>

@@ -17,27 +17,64 @@ const AdminSettings = () => {
     {
       question: "How can I edit my profile?",
       answer:
-        "Click the 'Edit Profile' tab to display your current account details. Then, click the 'Edit' button to enable the input fields where you can update your credentials, such as Username, First Name, Last Name, Email, and Phone. After making your changes, click 'Save' and confirm to apply your updates.",
+        "Click the 'Edit Profile' tab to display your current account details.\n\n" +
+        "Then, click the 'Edit' button to enable the input fields where you can update your credentials such as Username, First Name, Last Name, Email, and Phone.\n\n" +
+        "After making changes, click 'Save' and confirm to apply your updates.",
     },
     {
       question: "How can I change my password?",
       answer:
-        "Go to the 'Change Password' tab to open the password settings. Enter your current password, then your new password, and confirm the new password. The system will validate your input, and once everything is correct, click the 'Change Password' button to update it.",
+        "Go to the 'Change Password' tab to open the password settings.\n\n" +
+        "Enter your current password, then your new password, and confirm it again.\n\n" +
+        "The system validates your input, and once correct, click 'Change Password' to update it.",
+    },
+    {
+      question: "What if I forgot my password before logging in?",
+      answer:
+        "If you forgot your password, go to the Login page and click the 'Forgot password?' link below the login form.\n\n" +
+        "Enter your registered email address — a reset code will be sent to your inbox.\n\n" +
+        "Use that code to verify your identity, then create a new password that meets the system’s security requirements.",
     },
     {
       question: "How can I back up my data?",
       answer:
-        "Navigate to the 'Backup and Restore' tab. To back up your data, click 'Download Backup Data' — this will generate and download a copy of the current database to your computer.",
+        "Navigate to the 'Backup and Restore' tab.\n\n" +
+        "Click 'Download Backup Data' to generate and download a copy of the current database to your computer.\n\n" +
+        "This helps preserve important delivery and transaction records.",
     },
     {
       question: "How can I restore my data?",
       answer:
-        "Under the 'Backup and Restore' tab, go to the 'Restore Options' section. Click 'Choose File', select your previously backed-up .sql file from your computer, and then click 'Restore Database' to import and restore your data.",
+        "Under the 'Backup and Restore' tab, go to the 'Restore Options' section.\n\n" +
+        "Click 'Choose File', select your previously backed-up .sql file, and then click 'Restore Database' to import your saved data.\n\n" +
+        "Restoring data will overwrite the current database, so proceed carefully.",
     },
     {
-      question: "How can I view the terms and conditions of the website?",
+      question:
+        "What is the purpose of the Terms and Conditions in the system?",
       answer:
-        "Click the 'Terms and Conditions' tab to view all policies and guidelines that govern the use of the system.",
+        "The Terms and Conditions define how the Envirocool Delivery & Monitoring System should be used by all authorized users.\n\n" +
+        "It ensures that every Admin, Operational Manager, and Delivery Personnel understands the system’s purpose, data privacy policies, and proper usage of system features.",
+    },
+    {
+      question: "Who manages and updates the Terms and Conditions?",
+      answer:
+        "Only the system developers are authorized to edit or update the Terms and Conditions.\n\n" +
+        "If revisions are required, staff members must contact the developers to request the necessary updates.\n\n" +
+        "Once approved and implemented, all changes will automatically reflect across all user accounts to ensure consistent policies and compliance.",
+    },
+    {
+      question: "How does the system ensure data security?",
+      answer:
+        "The system limits access to sensitive features like Backup, Restore, and Password changes to authorized users only.\n\n" +
+        "All data is stored securely and complies with the Data Privacy Act of 2012.\n\n" +
+        "Unauthorized access, data sharing, or misuse of information is strictly prohibited.",
+    },
+    {
+      question: "What should I do if my account becomes locked?",
+      answer:
+        "If your account becomes locked after multiple failed login attempts, you’ll need to reset your password using the 'Forgot Password?' link on the login page.\n\n" +
+        "Follow the password reset process sent to your registered email. If the issue persists, contact the system administrator or developer for further assistance.",
     },
   ];
 

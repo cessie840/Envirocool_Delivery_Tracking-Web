@@ -320,7 +320,6 @@ const AdminDashboard = () => {
             </div>
           </Col>
 
-          {/* Pending Transactions */}
           <Col lg={5} md={12}>
             <div className="dashboard-panel bg-white p-4 h-100 shadow-sm border border-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -539,19 +538,14 @@ const AdminDashboard = () => {
           </div>
         </Modal.Body>
 
-        <Modal.Footer
-          style={{
-            backgroundColor: "#f8f9fa",
-            borderTop: "1px solid #dee2e6",
-          }}
-        >
-          <Button
-            variant="outline-secondary"
+        <Modal.Footer>
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
           >
             Close
           </Button>

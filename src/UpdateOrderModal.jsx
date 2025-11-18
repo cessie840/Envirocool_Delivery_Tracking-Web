@@ -1,171 +1,281 @@
-import React, { useEffect, useState } from "react";
-import { Modal, Button, Form, Row, Col, Collapse } from "react-bootstrap";
-import Select from "react-select";
-import CreatableSelect from "react-select/creatable";
-import axios from "axios";
-import { FaRegTrashAlt, FaPlusCircle } from "react-icons/fa";
+import React, { useState, useRef, useEffect } from "react";
+import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Swal from "sweetalert2";
 import { ToastHelper } from "./helpers/ToastHelper";
-import { HiQuestionMarkCircle } from "react-icons/hi";
-
-const paymentOptions = [
-  { label: "Cash", value: "Cash" },
-  { label: "Bank Transfer", value: "Bank Transfer" },
-];
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const UpdateOrderModal = ({
   show,
   handleClose,
-  handleSubmit,
+  onSuccess,
   formData,
   setFormData,
-  editableItems,
-  setEditableItems,
 }) => {
-  const total = editableItems.reduce(
-    (sum, item) => sum + item.quantity * item.unit_cost,
-    0
-  );
+  const [proofFiles, setProofFiles] = useState([]);
+  const [selectedFileNames, setSelectedFileNames] = useState([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [payments, setPayments] = useState(formData.payments || []);
+  const [displayPayment, setDisplayPayment] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [dateError, setDateError] = useState("");
+  const proofFileRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState({});
+  const [receiptNumber, setReceiptNumber] = useState(null);
 
-  const [productOptions, setProductOptions] = useState([]);
-  const [itemOptions, setItemOptions] = useState({});
-  const [showPaymentUpdate, setShowPaymentUpdate] = useState(false);
-  const [showFAQ, setShowFAQ] = useState(false);
-  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
 
-  const guideqst = [
-    {
-      question: "How can I save the changes i made?",
-      answer:
-        "Click the 'Save Changes' button below the transaction details.Then confirm your chanages",
-    },
-    {
-      question:
-        "Where can I add another payment record for the remaining balance?",
-      answer:
-        "Click the 'Update Payment' button to enter the final payment made by the customer.",
-    },
-    {
-      question: "How can I add new ordered items to a transaction?",
-      answer:
-        "Click the add (+) icon in the 'Items Ordered' section to include additional items for the customer’s order.",
-    },
-  ];
+  const handleOpenPreviewModal = () => {
+    setCurrentIndex(0);
+    setShowPreviewModal(true);
+  };
+
+  const [maxPaymentDate, setMaxPaymentDate] = useState("");
 
   useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const productsRes = await axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_products.php"
-        );
+    if (show) {
+      setFormData((prev) => ({
+        ...prev,
+        full_payment: "",
+        fbilling_date: "",
+      }));
+      setPayments(formData.payments || []);
+      setDisplayPayment("");
+      setPaymentError("");
+      setDateError("");
+      setProofFiles([]);
+      setSelectedFileNames([]);
+    }
+    if (formData.dbilling_date) {
+      const [mm, dd, yyyy] = formData.dbilling_date.split("/");
+      if (mm && dd && yyyy) setMaxPaymentDate(`${yyyy}-${mm}-${dd}`);
+      else setMaxPaymentDate("");
+    }
+  }, [show, formData.dbilling_date]);
 
-        const uniqueProducts = Array.from(
-          new Map(productsRes.data.map((item) => [item.value, item])).values()
-        );
+ useEffect(() => {
+  if (showReceiptModal) {
+    const storedCount = parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
+    const newCount = storedCount + 1;
+    localStorage.setItem("envirocoolReceiptCounter", newCount);
+    setReceiptNumber(newCount);
+  }
+}, [showReceiptModal]);
 
-        setProductOptions(uniqueProducts);
 
-        const itemsRes = await axios.get(
-          "http://localhost/DeliveryTrackingSystem/get_items.php"
-        );
-        setItemOptions(itemsRes.data);
-      } catch (err) {
-        console.error("Error fetching options", err);
-      }
-    };
+  const handleProofFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter((file) =>
+      ["image/jpeg", "image/png"].includes(file.type)
+    );
 
-    fetchOptions();
-  }, []);
+    if (validFiles.length !== files.length) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid File Type",
+        text: "Only JPEG and PNG images are allowed.",
+      });
+      return;
+    }
 
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined || value === "") return "";
-    const num = parseFloat(value.toString().replace(/[^0-9.]/g, ""));
-    if (isNaN(num)) return "";
-    return (
+    setProofFiles(validFiles);
+    setSelectedFileNames(validFiles.map((f) => f.name));
+  };
+
+  const getRemainingBeforeAdditional = () => {
+    const total = parseFloat(formData.total || 0);
+    const downPayment = parseFloat(formData.down_payment || 0);
+    const totalPayments = payments.reduce(
+      (sum, p) => sum + parseFloat(p.amount || 0),
+      0
+    );
+    const remaining = total - (downPayment + totalPayments);
+    return Math.max(0, remaining);
+  };
+
+  const remainingAfterCurrentPayment = () => {
+    const total = parseFloat(formData.total || 0);
+    const down = parseFloat(formData.down_payment || 0);
+    const paid = payments.reduce(
+      (sum, p) => sum + parseFloat(p.amount || 0),
+      0
+    );
+    const current = parseFloat(formData.full_payment || 0);
+    const remaining = total - (down + paid + (isNaN(current) ? 0 : current));
+    return Math.max(0, remaining);
+  };
+
+  const isWeekend = (dateString) => {
+    if (!dateString) return false;
+    const d = new Date(dateString);
+    const day = d.getDay();
+    return day === 0 || day === 6;
+  };
+
+  const handleFullPaymentChange = (e) => {
+    setPaymentError("");
+    let raw = e.target.value.replace(/[^\d.]/g, "");
+    if (raw.split(".").length > 2) return;
+    if (raw && !/^\d*\.?\d{0,2}$/.test(raw)) return;
+
+    const typedNum = parseFloat(raw || 0);
+    const remainingBefore = getRemainingBeforeAdditional();
+
+    if (typedNum > remainingBefore) {
+      setPaymentError("Payment cannot exceed remaining balance.");
+      setDisplayPayment("");
+      setFormData({ ...formData, full_payment: "" });
+      return;
+    }
+
+    const formatted = raw
+      ? "₱" +
+      parseFloat(raw).toLocaleString("en-PH", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      })
+      : "";
+
+    setDisplayPayment(formatted);
+    setFormData({ ...formData, full_payment: raw });
+  };
+
+  const handleFullPaymentBlur = () => {
+    const val = formData.full_payment;
+    if (!val) {
+      setDisplayPayment("");
+      return;
+    }
+
+    let num = parseFloat(val);
+    if (isNaN(num)) num = 0;
+
+    const remainingBefore = getRemainingBeforeAdditional();
+    if (num > remainingBefore) {
+      setPaymentError("Payment cannot exceed remaining balance.");
+      setDisplayPayment("");
+      setFormData({ ...formData, full_payment: "" });
+      return;
+    }
+
+    const formatted =
       "₱" +
       num.toLocaleString("en-PH", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      })
-    );
+      });
+
+    setDisplayPayment(formatted);
+    setFormData({ ...formData, full_payment: num.toFixed(2) });
   };
 
-  const parseCurrency = (value) => {
-    if (!value) return 0;
-    return parseFloat(value.toString().replace(/[₱,]/g, "")) || 0;
-  };
+  const handleDateChange = (e) => {
+    const picked = e.target.value;
+    setDateError("");
 
-  const handleProductChange = (index, selected) => {
-    const newItems = [...editableItems];
-    newItems[index].type_of_product = selected?.value || "";
-    newItems[index].description = "";
-    setEditableItems(newItems);
-  };
-
-  const handleItemChange = (index, selected) => {
-    const newItems = [...editableItems];
-    newItems[index].description = selected?.value || "";
-    setEditableItems(newItems);
-  };
-
-  const handleDownPaymentChange = (e) => {
-    const down_payment = parseFloat(e.target.value) || 0;
-    const balance =
-      total - down_payment - (parseFloat(formData.full_payment) || 0);
-    setFormData({
-      ...formData,
-      down_payment,
-      balance: balance.toFixed(2),
-      total: total.toFixed(2),
-    });
-  };
-
-  const selectedPaymentOption = (() => {
-    for (const option of paymentOptions) {
-      if (option.options) {
-        const found = option.options.find(
-          (sub) => sub.value === formData.mode_of_payment
-        );
-        if (found) return found;
-      } else if (option.value === formData.mode_of_payment) {
-        return option;
-      }
-    }
-    return null;
-  })();
-
-  const handleAddItem = () => {
-    setEditableItems([
-      ...editableItems,
-      { quantity: 1, type_of_product: "", description: "", unit_cost: 0 },
-    ]);
-  };
-
-  const handleSaveChanges = () => {
-    if (editableItems.length === 0) {
-      ToastHelper.error("Items ordered cannot be empty.");
+    if (!picked) {
+      setFormData({ ...formData, fbilling_date: "" });
       return;
     }
 
-    for (let i = 0; i < editableItems.length; i++) {
-      const item = editableItems[i];
-      if (!item.type_of_product) {
-        ToastHelper.error(`Item ${i + 1}: Type of product cannot be empty.`);
-        return;
+    const pickedDate = new Date(picked);
+    const dueDate = new Date(formData.dbilling_date);
+
+    if (isWeekend(picked)) {
+      setDateError("Weekends are not allowed for payment date.");
+      setFormData({ ...formData, fbilling_date: "" });
+      return;
+    }
+
+    const toYMD = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+
+    if (toYMD(pickedDate) > toYMD(dueDate)) {
+      setDateError("Date cannot exceed payment due date.");
+      setFormData({ ...formData, fbilling_date: "" });
+      return;
+    }
+
+    setFormData({ ...formData, fbilling_date: picked });
+  };
+
+  const handleSaveChanges = async () => {
+    const remainingBefore = getRemainingBeforeAdditional();
+    const amount = parseFloat(formData.full_payment || 0);
+    const paymentDate = formData.fbilling_date;
+
+    let hasError = false;
+
+    if (!amount || amount <= 0) {
+      setPaymentError("Enter a valid payment amount.");
+      hasError = true;
+    }
+
+    if (amount > remainingBefore) {
+      setPaymentError("Payment cannot exceed remaining balance.");
+      setDisplayPayment("");
+      setFormData({ ...formData, full_payment: "" });
+      hasError = true;
+    }
+
+    if (!paymentDate) {
+      setDateError("Please select a date for the additional payment.");
+      hasError = true;
+    } else {
+      if (isWeekend(paymentDate)) {
+        setDateError("Weekends are not allowed for payment date.");
+        setFormData({ ...formData, fbilling_date: "" });
+        hasError = true;
       }
-      if (!item.description) {
-        ToastHelper.error(`Item ${i + 1}: Item name cannot be empty.`);
-        return;
-      }
-      if (!item.quantity || item.quantity <= 0) {
-        ToastHelper.error(`Item ${i + 1}: Quantity must be greater than 0.`);
-        return;
-      }
-      if (!item.unit_cost || item.unit_cost <= 0) {
-        ToastHelper.error(`Item ${i + 1}: Unit cost must be greater than 0.`);
-        return;
+      if (formData.dbilling_date) {
+        const toYMD = (d) => {
+          const date = new Date(d);
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return `${y}-${m}-${day}`;
+        };
+        if (toYMD(paymentDate) > toYMD(formData.dbilling_date)) {
+          setDateError("Date cannot exceed payment due date.");
+          setFormData({ ...formData, fbilling_date: "" });
+          hasError = true;
+        }
       }
     }
+
+    if (proofFiles.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Proof of Payment Required",
+        text: "Please upload at least one proof of payment before submitting.",
+      });
+      return;
+    }
+
+    if (hasError || paymentError || dateError) {
+      ToastHelper.error("Please fix the highlighted fields before saving.");
+      return;
+    }
+
+    if (!formData.transaction_id) {
+      Swal.fire({
+        icon: "error",
+        title: "Missing Transaction ID",
+        text: "Cannot update order because transaction ID is missing.",
+      });
+      return;
+    }
+
+    const newPayment = {
+      amount,
+      date: paymentDate,
+    };
+    const newPayments = [newPayment];
+
     Swal.fire({
       title: "Are you sure?",
       text: "Do you want to update this order?",
@@ -174,499 +284,358 @@ const UpdateOrderModal = ({
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, update it!",
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        const cleanFormData = {
-          ...formData,
-          down_payment: parseFloat(formData.down_payment) || 0,
-          full_payment: parseFloat(formData.full_payment) || 0,
-          balance: parseFloat(formData.balance) || 0,
-          total: parseFloat(formData.total) || 0,
-        };
+        try {
+          const formDataToSend = new FormData();
 
-        setFormData(cleanFormData);
-        handleSubmit();
+          Object.entries(formData).forEach(([key, value]) => {
+            if (key === "payments") {
+              formDataToSend.append(key, JSON.stringify(newPayments));
+            } else {
+              formDataToSend.append(key, value);
+            }
+          });
+
+          proofFiles.forEach((file) => {
+            formDataToSend.append("proof_files[]", file);
+          });
+
+          const res = await fetch(
+            "http://localhost/DeliveryTrackingSystem/update_payment_proof.php",
+            {
+              method: "POST",
+              body: formDataToSend,
+            }
+          );
+
+          const data = await res.json();
+
+          if (data.status === "success") {
+            const updatedRes = await fetch(
+              `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${formData.transaction_id}`
+            );
+            const updatedData = await updatedRes.json();
+
+            if (updatedData.form) {
+              setFormData(updatedData.form);
+              setReceiptData(updatedData.form);
+            }
+
+            ToastHelper.success(
+              "Updated successfully!",
+              "Order updated successfully.",
+              "success"
+            );
+
+            onSuccess();
+            handleClose();
+            setShowReceiptModal(true);
+          } else {
+            Swal.fire(
+              "Error",
+              data.message || "Something went wrong.",
+              "error"
+            );
+          }
+        } catch (err) {
+          Swal.fire("Error", err.message, "error");
+        }
       }
     });
   };
 
-  const remainingBalance =
-    total -
-    (parseFloat(formData.down_payment) || 0) -
-    (parseFloat(formData.full_payment) || 0);
+  const formatCurrency = (value) => {
+    const num = parseFloat(value);
+    return isNaN(num)
+      ? "₱0.00"
+      : "₱" +
+      num.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+  };
+
+  const handlePrintReceipt = () => {
+    const element = document.getElementById("receipt-section");
+    if (!element) {
+      console.error("Receipt section not found!");
+      return;
+    }
+
+    const transactionId = receiptData?.transaction_id || "N/A";
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `DP-Receipt_TN${transactionId}_${today}`;
+
+    const clonedElement = element.cloneNode(true);
+
+    clonedElement.querySelectorAll(".signature-section, .text-center.mt-4").forEach((el) => el.remove());
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+  <html>
+    <head>
+      <title>${filename}</title>
+      <style>
+        @page {
+          size: auto;
+          margin: 10mm;
+        }
+        body {
+          font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+          font-size: 11px;
+          line-height: 1.4;
+          color: #000;
+          display: flex;
+          justify-content: center;
+          padding: 0;
+          margin: 0;
+        }
+        .receipt {
+          width: 100%;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        .receipt p {
+          margin: 3px 0;
+        }
+        h3 {
+          font-size: 18px;
+          margin-bottom: 0;
+        }
+        p, th {
+          font-size: 11px;
+        }
+        table, td {
+          font-size: 10px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+        }
+        th, td {
+          border: 1px solid #000;
+          padding: 5px 8px;
+          text-align: left;
+        }
+        th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+        }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+
+        .signature-container {
+          display: flex;
+          justify-content: space-around;
+          margin-top: 40px;
+        }
+        .signature {
+          text-align: center;
+          width: 35%;
+          border-top: 1px solid #000;
+          padding-top: 4px;
+          font-size: 10px;
+          font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+        }
+        .receipt-top {
+          margin-bottom: 20px;
+        }
+        hr.dashed {
+          border-top: 1px dashed #999;
+          margin-top: 50px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        ${clonedElement.innerHTML}
+
+
+        <div class="signature-container">
+          <div class="signature">Prepared By</div>
+          <div class="signature">Received By</div>
+        </div>
+        <hr class="dashed" />
+        <div class="text-center mt-2">
+          <h4>Thank you for trusting Envirocool!</h4>
+          <small>We appreciate your business.</small>
+        </div>
+      </div>
+      <script>
+        window.onload = () => {
+          window.print();
+          // Optional: auto-close the print window
+          // window.onafterprint = () => window.close();
+        };
+      </script>
+    </body>
+  </html>
+  `);
+
+    printWindow.document.close();
+  };
+
 
   return (
     <>
-      {showFAQ && (
-        <Modal
-          show={showFAQ}
-          onHide={() => setShowFAQ(false)}
-          centered
-          backdrop="true"
-          keyboard={false}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Guide for Updating Delivery Details</Modal.Title>
-          </Modal.Header>
-
-          <Modal.Body>
-            <p className="px-3 text-justify">
-              The Update Delivery Details page allows you to modify existing
-              transaction information such as customer details, ordered items,
-              or payment records. Use the update buttons provided to make
-              necessary changes, and confirm your updates to ensure that the
-              delivery information remains accurate and up to date.
-            </p>
-
-            <div className="px-3 mb-3">
-              {guideqst.map((faq, index) => (
-                <div key={index} className="mb-2">
-                  <button
-                    className={`faq-btn w-100 text-start ${
-                      activeFAQIndex === index ? "active" : ""
-                    }`}
-                    onClick={() =>
-                      setActiveFAQIndex(activeFAQIndex === index ? null : index)
-                    }
-                  >
-                    {faq.question}
-                  </button>
-                  <Collapse in={activeFAQIndex === index}>
-                    <div className="faq-answer">
-                      <strong>Answer:</strong>
-                      <p className="mt-2 mb-0">{faq.answer}</p>
-                    </div>
-                  </Collapse>
-                </div>
-              ))}
-            </div>
-          </Modal.Body>
-
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => {
-                setShowFAQ(false);
-                setActiveFAQIndex(null);
-              }}
-            >
-              Close
-            </Button>
-          </Modal.Footer>
-        </Modal>
-      )}
-
-      <Modal show={show} onHide={handleClose} size="lg" centered>
+      <Modal
+        show={show}
+        onHide={handleClose}
+        centered
+        className="update-payment-modal"
+      >
         <Modal.Header
           closeButton
           closeVariant="white"
-          style={{ backgroundColor: "#008f4c" }}
+          style={{ backgroundColor: "#008f4c", opacity: 0.85 }}
         >
-          <Modal.Title className="text-white">Update Delivery Info</Modal.Title>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#d7e0d798",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
+          <Modal.Title className="text-white">Update Payment</Modal.Title>
         </Modal.Header>
 
-        <Modal.Body className="bg-light">
+        <Modal.Body className="bg-white">
           <Form>
-            <Row className="p-3 bg-white rounded shadow-sm border mb-4">
-              <Col md={6}>
-                <h5 className="text-success fw-bold mb-3">
-                  Customer Information
-                </h5>
-                <Form.Group className="mb-3">
-                  <Form.Label>Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="customer_name"
-                    value={formData.customer_name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        customer_name: e.target.value,
-                      })
-                    }
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Address</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="customer_address"
-                    value={formData.customer_address}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        customer_address: e.target.value,
-                      })
-                    }
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Contact</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="customer_contact"
-                    maxLength="11"
-                    value={formData.customer_contact}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (/^\d{0,11}$/.test(value)) {
-                        setFormData({ ...formData, customer_contact: value });
-                      }
-                    }}
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Target Delivery Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="target_date_delivery"
-                    value={
-                      formData.target_date_delivery
-                        ? new Date(formData.target_date_delivery)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        target_date_delivery: e.target.value,
-                      })
-                    }
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <h5 className="text-success fw-bold mb-3">Payment Details</h5>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Payment Method</Form.Label>
-                  <Select
-                    options={paymentOptions}
-                    value={selectedPaymentOption}
-                    onChange={(selected) =>
-                      setFormData({
-                        ...formData,
-                        mode_of_payment: selected.value,
-                      })
-                    }
-                    placeholder="Select Payment Method"
-                  />
-                </Form.Group>
-
+            <Row className="px-3">
+              <Col>
                 <Form.Group className="mb-3">
                   <Form.Label>Payment Option</Form.Label>
-                  <Form.Select
-                    name="payment_option"
-                    value={formData.payment_option}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        payment_option: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="Full Payment">Full Payment</option>
-                    <option value="Down Payment">Down Payment</option>
-                  </Form.Select>
+                  <Form.Control
+                    type="text"
+                    value={formData.payment_option || ""}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                  />
                 </Form.Group>
 
-                {formData.payment_option === "Down Payment" && (
+                <Form.Group className="mb-3">
+                  <Form.Label>Initial Down Payment</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formatCurrency(formData.down_payment)}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Remaining Balance</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formatCurrency(remainingAfterCurrentPayment())}
+                    readOnly
+                    disabled
+                    className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Additional Payment</Form.Label>
+                  <Form.Control
+                    type="text"
+                    inputMode="decimal"
+                    value={displayPayment}
+                    onChange={handleFullPaymentChange}
+                    onBlur={handleFullPaymentBlur}
+                    placeholder="₱0.00"
+                    isInvalid={!!paymentError}
+                  />
+                  {paymentError && (
+                    <Form.Text className="text-danger">
+                      {paymentError}
+                    </Form.Text>
+                  )}
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Date of Additional Payment</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.fbilling_date || ""}
+                    onChange={handleDateChange}
+                    isInvalid={!!dateError}
+                    max={maxPaymentDate || undefined}
+                  />
+
+                  {dateError && (
+                    <Form.Text className="text-danger">{dateError}</Form.Text>
+                  )}
+                </Form.Group>
+
+                {payments.length > 0 && (
                   <Form.Group className="mb-3">
-                    <Form.Label>Down Payment</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={
-                        formData.isEditingDown
-                          ? formData.down_payment
-                          : formatCurrency(formData.down_payment)
-                      }
-                      onFocus={() =>
-                        setFormData({ ...formData, isEditingDown: true })
-                      }
-                      onChange={(e) => {
-                        const numericValue = e.target.value.replace(
-                          /[^0-9.]/g,
-                          ""
-                        );
-                        const balance =
-                          total -
-                          numericValue -
-                          (parseFloat(formData.full_payment) || 0);
-                        setFormData({
-                          ...formData,
-                          down_payment: numericValue,
-                          balance: balance.toFixed(2),
-                        });
-                      }}
-                      onBlur={() => {
-                        setFormData({
-                          ...formData,
-                          isEditingDown: false,
-                          down_payment: parseFloat(formData.down_payment) || 0,
-                        });
-                      }}
-                    />
+                    <Form.Label className="fw-semibold">
+                      Recent Payments:
+                    </Form.Label>
+                    <ul className="list-group small">
+                      {payments.map((p, i) => (
+                        <li
+                          key={i}
+                          className="list-group-item d-flex justify-content-between align-items-center"
+                        >
+                          <span>{`₱${parseFloat(p.amount).toLocaleString(
+                            "en-PH",
+                            { minimumFractionDigits: 2 }
+                          )}`}</span>
+                          <span className="text-muted">{p.date}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </Form.Group>
                 )}
 
-                {formData.payment_option === "Down Payment" && (
-                  <Form.Group className="mb-3">
-                    <Form.Label>Remaining Balance</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={`₱${remainingBalance.toLocaleString()}`}
-                      readOnly
-                      disabled
-                      className="bg-secondary text-dark fw-semibold border-0 bg-opacity-25"
-                      style={{
-                        cursor: "not-allowed",
-                        opacity: 0.9,
-                      }}
-                    />
-                  </Form.Group>
-                )}
+                <Form.Group className="mb-3">
+                  <Form.Label
+                    htmlFor="proofOfPayment"
+                    className="form-label"
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    Upload Proof of Payment:
+                    <p className="text-secondary fs-6 mb-0">
+                      (JPEG/PNG only, multiple allowed)
+                    </p>
+                  </Form.Label>
 
-                {formData.payment_option === "Down Payment" && (
-                  <div className="mb-3">
-                    <Button
-                      variant="success"
-                      onClick={() => setShowPaymentUpdate(!showPaymentUpdate)}
-                    >
-                      {showPaymentUpdate
-                        ? "Hide Payment Update"
-                        : "Update Payment"}
-                    </Button>
+                  <div className="d-flex align-items-center">
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="proofOfPayment"
+                      name="proofOfPayment"
+                      accept="image/jpeg,image/png"
+                      multiple
+                      onChange={handleProofFileChange}
+                      ref={proofFileRef}
+                    />
+
+                    {selectedFileNames.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn add-item px-3 py-2 btn-sm ms-2 fs-6"
+                        style={{ whiteSpace: "nowrap" }}
+                        onClick={() => setShowPreviewModal(true)}
+                      >
+                        View
+                      </button>
+                    )}
                   </div>
-                )}
-
-                {showPaymentUpdate && (
-                  <>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Final Payment (Balance Paid)</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={
-                          formData.isEditingFull
-                            ? formData.full_payment
-                            : formatCurrency(formData.full_payment)
-                        }
-                        onFocus={() =>
-                          setFormData({ ...formData, isEditingFull: true })
-                        }
-                        onChange={(e) => {
-                          const numericValue = e.target.value.replace(
-                            /[^0-9.]/g,
-                            ""
-                          );
-                          const balance =
-                            total -
-                            (parseFloat(formData.down_payment) || 0) -
-                            (parseFloat(numericValue) || 0);
-                          setFormData({
-                            ...formData,
-                            full_payment: numericValue,
-                            balance: balance.toFixed(2),
-                          });
-                        }}
-                        onBlur={() => {
-                          setFormData({
-                            ...formData,
-                            isEditingFull: false,
-                            full_payment:
-                              parseFloat(formData.full_payment) || 0,
-                          });
-                        }}
-                      />
-                    </Form.Group>
-
-                    <Form.Group className="mb-3">
-                      <Form.Label>Date of Final Payment</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={formData.fbilling_date || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            fbilling_date: e.target.value,
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </>
-                )}
+                </Form.Group>
               </Col>
             </Row>
-
-            <div className="p-3 bg-white rounded shadow-sm border">
-              <h5 className="text-success fw-bold mb-3 d-flex justify-content-between align-items-center">
-                Items Ordered
-                <FaPlusCircle
-                  style={{ cursor: "pointer", color: "rgba(23, 133, 80, 1)" }}
-                  onClick={handleAddItem}
-                  title="Add new item"
-                />
-              </h5>
-
-              <table className="table table-bordered table-striped align-middle">
-                <thead
-                  className="table-success text-center"
-                  style={{ backgroundColor: "##d3eed3" }}
-                >
-                  <tr>
-                    <th style={{ width: "10%" }}>Quantity</th>
-                    <th style={{ width: "25%" }}>Type of Product</th>
-                    <th style={{ width: "25%" }}>Item Name</th>
-                    <th style={{ width: "20%" }}>Unit Cost</th>
-                    <th style={{ width: "10%" }}>Action</th>
-                  </tr>
-                </thead>
-
-                <tbody className="text-center table-white">
-                  {editableItems.map((item, index) => (
-                    <tr key={index}>
-                      <td>
-                        <Form.Control
-                          type="number"
-                          min={1}
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const newItems = [...editableItems];
-                            newItems[index].quantity =
-                              parseInt(e.target.value) || 1;
-                            setEditableItems(newItems);
-                          }}
-                        />
-                      </td>
-
-                      <td>
-                        <Select
-                          options={productOptions}
-                          value={
-                            productOptions.find(
-                              (opt) => opt.value === item.type_of_product
-                            ) || null
-                          }
-                          onChange={(selected) =>
-                            handleProductChange(index, selected)
-                          }
-                          placeholder="Select type"
-                          isSearchable
-                        />
-                      </td>
-
-                      <td>
-                        <Select
-                          options={itemOptions[item.type_of_product] || []}
-                          value={
-                            (itemOptions[item.type_of_product] || []).find(
-                              (opt) => opt.value === item.description
-                            ) || null
-                          }
-                          onChange={(selected) =>
-                            handleItemChange(index, selected)
-                          }
-                          placeholder="Select item"
-                          isSearchable
-                        />
-                      </td>
-
-                      <td>
-                        <Form.Control
-                          type="text"
-                          value={
-                            item.isEditing
-                              ? item.unit_cost
-                              : formatCurrency(item.unit_cost)
-                          }
-                          onFocus={() => {
-                            const newItems = [...editableItems];
-                            newItems[index].isEditing = true;
-                            setEditableItems(newItems);
-                          }}
-                          onChange={(e) => {
-                            const numericValue = e.target.value.replace(
-                              /[^0-9.]/g,
-                              ""
-                            );
-                            const newItems = [...editableItems];
-                            newItems[index].unit_cost = numericValue;
-                            setEditableItems(newItems);
-                          }}
-                          onBlur={() => {
-                            const newItems = [...editableItems];
-                            newItems[index].isEditing = false;
-                            newItems[index].unit_cost =
-                              parseFloat(newItems[index].unit_cost) || 0;
-                            setEditableItems(newItems);
-                          }}
-                        />
-                      </td>
-
-                      <td>
-                        <FaRegTrashAlt
-                          style={{
-                            color: "#dc3545",
-                            cursor: "pointer",
-                            fontSize: "18px",
-                          }}
-                          title="Remove this item"
-                          onClick={() => {
-                            Swal.fire({
-                              title: "Remove this item?",
-                              text: "This action cannot be undone.",
-                              icon: "warning",
-                              showCancelButton: true,
-                              confirmButtonColor: "#dc3545",
-                              cancelButtonColor: "#6c757d",
-                              confirmButtonText: "Yes, remove it!",
-                            }).then((result) => {
-                              if (result.isConfirmed) {
-                                const newItems = editableItems.filter(
-                                  (_, i) => i !== index
-                                );
-                                setEditableItems(newItems);
-                              }
-                            });
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="text-end mt-3">
-                <h5 className="fw-bold text-success">
-                  Total Cost: ₱{total.toLocaleString()}
-                </h5>
-              </div>
-            </div>
           </Form>
         </Modal.Body>
 
         <Modal.Footer className="bg-white">
           <Button
-            className="cancel-btn btn btn- d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+            className="cancel-btn btn fs-6 rounded-2 px-3 py-1"
             onClick={handleClose}
           >
             Cancel
           </Button>
           <Button
-            className="upd-btn btn-success d-flex align-items-center gap-2 fs-6 rounded-2 px-3 py-1"
+            className="upd-btn btn-success fs-6 rounded-2 px-3 py-1"
             style={{ fontSize: "16px" }}
             onClick={handleSaveChanges}
           >
@@ -674,6 +643,154 @@ const UpdateOrderModal = ({
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <Modal
+        show={showPreviewModal}
+        onHide={() => setShowPreviewModal(false)}
+        centered
+        size="lg"
+        className="proof-preview-modal"
+      >
+        <Modal.Header
+          closeButton
+          style={{ backgroundColor: "#00628FFF", color: "white", opacity: 0.85 }}
+        >
+          <Modal.Title className="fw-semibold">
+            Proof of Payment Preview
+          </Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body className="bg-light text-center">
+          {proofFiles.length === 0 ? (
+            <div className="py-5">
+              <i
+                className="bi bi-file-earmark-image text-secondary"
+                style={{ fontSize: "3rem" }}
+              ></i>
+              <p className="mt-3 text-muted fs-5">No images uploaded.</p>
+            </div>
+          ) : (
+            <div className="position-relative d-flex align-items-center justify-content-center">
+              {currentIndex > 0 && (
+                <button
+                  onClick={() => setCurrentIndex(currentIndex - 1)}
+                  className="btn btn-light rounded-circle shadow position-absolute"
+                  style={{ left: "15px", zIndex: 10 }}
+                >
+                  <FaChevronLeft size={20} />
+                </button>
+              )}
+
+              <div
+                className="bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-center"
+                style={{
+                  width: "600px",
+                  height: "600px",
+                  overflow: "hidden",
+                  border: "3px solid #ddd",
+                }}
+              >
+                <img
+                  src={URL.createObjectURL(proofFiles[currentIndex])}
+                  alt={`Proof ${currentIndex + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </div>
+
+              {currentIndex < proofFiles.length - 1 && (
+                <button
+                  onClick={() => setCurrentIndex(currentIndex + 1)}
+                  className="btn btn-light rounded-circle shadow position-absolute"
+                  style={{ right: "15px", zIndex: 10 }}
+                >
+                  <FaChevronRight size={20} />
+                </button>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+
+        <Modal.Footer className="bg-white border-top d-flex justify-content-between">
+          <span className="text-muted small">
+            {proofFiles.length > 0 &&
+              `Image ${currentIndex + 1} of ${proofFiles.length}`}
+          </span>
+          <Button
+            variant="secondary"
+            className="close-btn px-4 py-2 rounded-3 fw-semibold fs-6"
+            onClick={() => setShowPreviewModal(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={showReceiptModal}
+        onHide={() => setShowReceiptModal(false)}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton className="bg-light text-black no-print"></Modal.Header>
+
+        <Modal.Body id="receipt-section" className="bg-white text-black p-4">
+          <div className="receipt-top text-center mb-4 pb-2">
+            <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
+            <p className="mb-0">Official Down Payment Receipt</p>
+            <small>Date Generated: {new Date().toLocaleString()}</small>
+            <br />
+            <small className="text-muted">Down Payment Receipt No.: #{receiptNumber?.toString().padStart(5, "0")}</small>
+          </div>
+
+          <hr style={{ borderTop: "1px dashed rgb(153, 153, 153)", marginBottom: "20px" }} />
+
+
+          <div className="mb-3">
+            <p><b>Transaction No.:</b> {receiptData?.transaction_id || "N/A"}</p>
+            <p><b>Name:</b> {receiptData?.customer_name || "N/A"}</p>
+            <p><b>Payment Option:</b> {receiptData?.payment_option || "N/A"}</p>
+            <p><b>Initial Down Payment:</b> {formatCurrency(receiptData?.down_payment || 0)}</p>
+            <p><b>Additional Payment:</b> {formatCurrency(receiptData?.additional_payment || 0)}</p>
+            <p><b>Date of Additional Payment:</b> {receiptData?.additional_payment_date || "N/A"}</p>
+            <p><b>Remaining Balance:</b> {formatCurrency(receiptData?.balance || 0)}</p>
+            <p>
+              <b>Payment Status:</b>{" "}
+              {parseFloat(receiptData?.balance || 0) > 0 ? "Partially Paid" : "Fully Paid"}
+            </p>
+          </div>
+
+          <div className="signature-section mt-4">
+            <div className="row mt-5">
+              <div className="col-6 text-center">
+                <p>________________________</p>
+                <small>Prepared By</small>
+              </div>
+              <div className="col-6 text-center">
+                <p>________________________</p>
+                <small>Received By</small>
+              </div>
+            </div>
+            <hr style={{ borderTop: "2px dashed #999", marginTop: "30px" }} />
+            <div className="text-center mt-3">
+              <h6 className="fw-bold text-success mb-0">Thank you for trusting Envirocool!</h6>
+              <small>We appreciate your business.</small>
+            </div>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer className="no-print bg-light">
+          <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>
+            Close
+          </Button>
+          <Button variant="success" onClick={handlePrintReceipt}>
+            Print / Download
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
     </>
   );
 };

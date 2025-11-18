@@ -10,29 +10,33 @@ const DeliveryDetails = () => {
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
   const [filter, setFiltered] = useState([]);
-
   const [showModal, setShowModal] = useState(false);
   const [editableItems, setEditableItems] = useState([]);
   const [formData, setFormData] = useState({
+    transaction_id: "",
+    tracking_number: "",
     customer_name: "",
     customer_address: "",
     customer_contact: "",
+    date_of_order: "",
+    target_date_delivery: "",
+    dbilling_date: "",
     mode_of_payment: "",
+    payment_option: "",
     down_payment: "",
     balance: "",
     total: "",
+    proof_of_delivery: "",
     full_payment: "0",
     fbilling_date: "",
+    payments: [],
   });
-  const [transactionId, setTransactionId] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("All");
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
   const [showFAQ, setShowFAQ] = useState(false);
-
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
 
   const guideqst = [
@@ -58,17 +62,23 @@ const DeliveryDetails = () => {
         "Click the 'View' button on the corresponding transaction row to see all details.",
     },
     {
-      question:
-        "Why can’t I click the Update button for transactions marked as Cancelled, Delivered, or Out for Delivery?",
+      question: "Why is the 'Update Payment' button disabled for some records?",
       answer:
-        "The Update button is only available for pending transactions. Once an order is out for delivery, delivered, or cancelled, it can no longer be modified.",
+        "The 'Update Payment' button is only enabled for transactions with an existing balance. It becomes disabled once the balance has already been cleared.",
     },
   ];
 
+  const handleClose = () => setShowModal(false);
+
   const formatDate = (dateString) => {
-    if (!dateString) return "";
-    return dateString.split("T")[0] || dateString.split(" ")[0];
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
   };
+
   const fetchDeliveries = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
@@ -84,20 +94,55 @@ const DeliveryDetails = () => {
     fetchDeliveries();
   }, []);
 
+  const refetchData = () => fetchDeliveries();
+
+  const handleAddDelivery = () => navigate("/add-delivery");
+
   const handleUpdate = (id) => {
-    setTransactionId(id);
     fetch(
-      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`, // Added cache-busting
+      `http://localhost/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${id}&_=${Date.now()}`,
       {
         method: "GET",
-        headers: {
-          "Cache-Control": "no-cache",
-        },
+        headers: { "Cache-Control": "no-cache" },
       }
     )
       .then((res) => res.json())
       .then((data) => {
-        const fixedItems = data.items.map((item) => ({
+        if (!data || data.error) {
+          ToastHelper.error("Failed to fetch delivery details.");
+          return;
+        }
+
+        const parsedPayments = Array.isArray(data.payments)
+          ? data.payments
+          : (() => {
+              try {
+                return JSON.parse(data.payments || "[]");
+              } catch {
+                return [];
+              }
+            })();
+
+        setFormData({
+          transaction_id: data.transaction_id,
+          tracking_number: data.tracking_number,
+          customer_name: data.customer_name,
+          customer_address: data.customer_address,
+          customer_contact: data.customer_contact,
+          date_of_order: formatDate(data.date_of_order),
+          mode_of_payment: data.mode_of_payment,
+          payment_option: data.payment_option,
+          down_payment: data.down_payment,
+          full_payment: data.full_payment,
+          fbilling_date: data.fbilling_date,
+          balance: data.balance,
+          total: data.total,
+          target_date_delivery: formatDate(data.target_date_delivery),
+          dbilling_date: formatDate(data.dbilling_date),
+          payments: parsedPayments,
+        });
+
+        const fixedItems = (data.items || []).map((item) => ({
           quantity: item.quantity,
           type_of_product: item.type_of_product || "",
           description: item.description || "",
@@ -105,182 +150,13 @@ const DeliveryDetails = () => {
         }));
 
         setEditableItems(fixedItems);
-
-        setFormData({
-          tracking_number: data.tracking_number || "",
-          customer_name: data.customer_name || "",
-          customer_address: data.customer_address || "",
-          customer_contact: data.customer_contact || "",
-          date_of_order: data.date_of_order || "",
-          target_date_delivery: formatDate(data.target_date_delivery),
-          mode_of_payment: data.mode_of_payment || "",
-          payment_option: data.payment_option || "Full Payment",
-          down_payment: parseFloat(data.down_payment) || 0,
-          balance: parseFloat(data.balance) || 0,
-          total: parseFloat(data.total) || 0,
-          full_payment: parseFloat(data.full_payment) || 0, 
-          fbilling_date: data.fbilling_date || "", 
-        });
-
         setShowModal(true);
       })
-      .catch((err) => console.error("Failed to fetch order:", err));
-  };
-
-  const handleSubmit = () => {
-    const hasInvalidQuantity = editableItems.some((item) => item.quantity < 1);
-    if (hasInvalidQuantity) {
-      ToastHelper.error("One or more items have invalid quantity.", {
-        duration: 2500,
-        style: {
-          background: "#FFEAEA",
-          border: "1px solid #E57373",
-          color: "#C62828",
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "0 auto",
-          justifyContent: "center",
-          borderRadius: "8px",
-        },
-      });
-      return;
-    }
-
-    if (!/^09\d{9}$/.test(formData.customer_contact)) {
-      ToastHelper.error(
-        "Contact number must start with '09' and be exactly 11 digits.",
-        {
-          duration: 2500,
-          style: {
-            background: "#FFEAEA",
-            border: "1px solid #E57373",
-            color: "#C62828",
-            fontWeight: 600,
-            fontSize: "1.1rem",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "600px",
-            margin: "0 auto",
-            justifyContent: "center",
-            borderRadius: "8px",
-          },
-        }
-      );
-      return;
-    }
-
-    if (!transactionId) {
-      ToastHelper.error("Transaction ID is missing — please try again.", {
-        duration: 2500,
-        style: {
-          background: "#FFEAEA",
-          border: "1px solid #E57373",
-          color: "#C62828",
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "600px",
-          margin: "0 auto",
-          justifyContent: "center",
-          borderRadius: "8px",
-        },
-      });
-      return;
-    }
-
-    const total = editableItems.reduce(
-      (sum, item) => sum + item.quantity * item.unit_cost,
-      0
-    );
-
-    const down_payment = parseFloat(formData.down_payment) || 0;
-    const full_payment = parseFloat(formData.full_payment) || 0; 
-    const balance = total - down_payment - full_payment;
-
-    const payload = {
-      transaction_id: transactionId,
-      ...formData,
-      total,
-      balance, 
-      items: editableItems,
-    };
-
-    fetch("http://localhost/DeliveryTrackingSystem/update_delivery.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then((response) => {
-        if (response.status === "success") {
-          ToastHelper.success("Transaction updated successfully!", {
-            duration: 2500,
-            style: {
-              background: "#EBFAECFF",
-              border: "1px solid #91C793FF",
-              color: "#2E7D32",
-              fontWeight: 600,
-              fontSize: "1.1rem",
-              textAlign: "center",
-              width: "100%",
-              maxWidth: "600px",
-              margin: "0 auto",
-              justifyContent: "center",
-              borderRadius: "8px",
-            },
-          });
-
-          fetchDeliveries();
-          setShowModal(false);
-        } else {
-          console.error("Update failed:", response.message);
-          ToastHelper.error(
-            "Update failed: " + (response.message || "Unknown error"),
-            {
-              duration: 2500,
-              style: {
-                background: "#FFEAEA",
-                border: "1px solid #E57373",
-                color: "#C62828",
-                fontWeight: 600,
-                fontSize: "1.1rem",
-                textAlign: "center",
-                width: "100%",
-                maxWidth: "600px",
-                margin: "0 auto",
-                justifyContent: "center",
-                borderRadius: "8px",
-              },
-            }
-          );
-        }
-      })
       .catch((err) => {
-        console.error("Update error:", err);
-        ToastHelper.error("An unexpected error occurred.", {
-          duration: 2500,
-          style: {
-            background: "#FFEAEA",
-            border: "1px solid #E57373",
-            color: "#C62828",
-            fontWeight: 600,
-            fontSize: "1.1rem",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "600px",
-            margin: "0 auto",
-            justifyContent: "center",
-            borderRadius: "8px",
-          },
-        });
+        console.error("Error fetching order:", err);
+        ToastHelper.error("Something went wrong while fetching the delivery.");
       });
   };
-
-  const handleAddDelivery = () => navigate("/add-delivery");
 
   const applyFilters = (list, term, status) => {
     const lower = term.toLowerCase();
@@ -296,7 +172,6 @@ const DeliveryDetails = () => {
         (e.description && e.description.toLowerCase().includes(lower));
 
       const matchesStatus = status === "All" || e.delivery_status === status;
-
       return matchesSearch && matchesStatus;
     });
   };
@@ -312,23 +187,21 @@ const DeliveryDetails = () => {
 
   const groupedDeliveries = filter.reduce((acc, item) => {
     const id = item.transaction_id;
-
     if (!acc[id]) {
       acc[id] = {
         transaction_id: id,
         customer_name: item.customer_name,
         tracking_number: item.tracking_number,
         total: item.total,
+        balance: parseFloat(String(item.balance || "0").replace(/,/g, "")) || 0,
         delivery_status: item.delivery_status,
         items: [],
       };
     }
-
     acc[id].items.push({
       description: item.description,
       quantity: item.quantity,
     });
-
     return acc;
   }, {});
 
@@ -363,7 +236,7 @@ const DeliveryDetails = () => {
       showSearch={true}
       onSearch={handleSearch}
     >
-      <div className="mb-3 d-flex justify-content-end ">
+      <div className="mb-3 d-flex justify-content-end">
         <Form.Select
           value={statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}
@@ -398,79 +271,86 @@ const DeliveryDetails = () => {
         </thead>
         <tbody>
           {paginatedDeliveries.length > 0 ? (
-            paginatedDeliveries.map((group, index) => (
-              <tr key={index} className="delivery-table-hover">
-                <td>{group.transaction_id}</td>
-                <td>{group.tracking_number}</td>
-                <td>{group.customer_name}</td>
+            paginatedDeliveries.map((group, index) => {
+              const numericBalance =
+                parseFloat(String(group.balance || "0").replace(/,/g, "")) || 0;
 
-                <td>
-                  <span
-                    style={{
-                      backgroundColor:
-                        group.delivery_status === "Delivered"
-                          ? "#C6FCD3"
-                          : group.delivery_status === "Cancelled"
-                          ? "#FDE0E0"
-                          : group.delivery_status === "Pending"
-                          ? "#FFF5D7"
-                          : group.delivery_status === "Out for Delivery"
-                          ? "#d2e6f5ff"
-                          : "transparent",
-                      color:
-                        group.delivery_status === "Delivered"
-                          ? "#3E5F44"
-                          : group.delivery_status === "Cancelled"
-                          ? "red"
-                          : group.delivery_status === "Pending"
-                          ? "#FF9D23"
-                          : group.delivery_status === "Out for Delivery"
-                          ? "#1762b1ff"
-                          : "black",
-                      padding: "5px",
-                      borderRadius: "8px",
-                      display: "inline-block",
-                      minWidth: "80px",
-                      textAlign: "center",
-                      fontSize: "0.85rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {group.delivery_status}
-                  </span>
-                </td>
-                <td className="align-middle text-center">
-                  <div className="action-btn d-flex justify-content-center gap-2 py-2">
-                    <button
-                      className="btn btn-view"
-                      onClick={() =>
-                        navigate(`/view-delivery/${group.transaction_id}`)
-                      }
+              return (
+                <tr key={index} className="delivery-table-hover">
+                  <td>{group.transaction_id}</td>
+                  <td>{group.tracking_number}</td>
+                  <td>{group.customer_name}</td>
+                  <td>
+                    <span
+                      style={{
+                        backgroundColor:
+                          group.delivery_status === "Delivered"
+                            ? "#C6FCD3"
+                            : group.delivery_status === "Cancelled"
+                            ? "#FDE0E0"
+                            : group.delivery_status === "Pending"
+                            ? "#FFF5D7"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#d2e6f5ff"
+                            : "transparent",
+                        color:
+                          group.delivery_status === "Delivered"
+                            ? "#3E5F44"
+                            : group.delivery_status === "Cancelled"
+                            ? "red"
+                            : group.delivery_status === "Pending"
+                            ? "#FF9D23"
+                            : group.delivery_status === "Out for Delivery"
+                            ? "#1762b1ff"
+                            : "black",
+                        padding: "5px",
+                        borderRadius: "8px",
+                        display: "inline-block",
+                        minWidth: "80px",
+                        textAlign: "center",
+                        fontSize: "0.85rem",
+                        fontWeight: "600",
+                      }}
                     >
-                      View
-                    </button>
-                    {group.delivery_status === "Out for Delivery" ||
-                    group.delivery_status === "Delivered" ||
-                    group.delivery_status === "Cancelled" ? (
+                      {group.delivery_status}
+                    </span>
+                  </td>
+
+                  <td className="align-middle text-center">
+                    <div className="action-btn d-flex justify-content-center gap-2 py-2">
                       <button
-                        className="btn upd-btn"
-                        disabled
-                        style={{ opacity: 0.5, cursor: "not-allowed" }}
+                        className="btn btn-view"
+                        onClick={() =>
+                          navigate(`/view-delivery/${group.transaction_id}`)
+                        }
                       >
-                        Update
+                        View
                       </button>
-                    ) : (
+
                       <button
                         className="btn upd-btn"
                         onClick={() => handleUpdate(group.transaction_id)}
+                        disabled={
+                          [
+                            "Out for Delivery",
+                            "Delivered",
+                            "Cancelled",
+                          ].includes(group.delivery_status) ||
+                          numericBalance <= 0
+                        }
+                        style={
+                          numericBalance <= 0
+                            ? { opacity: 0.5, cursor: "not-allowed" }
+                            : {}
+                        }
                       >
-                        Update
+                        Update Payment
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td colSpan="7" className="text-center py-4">
@@ -503,8 +383,8 @@ const DeliveryDetails = () => {
 
       <UpdateOrderModal
         show={showModal}
-        handleClose={() => setShowModal(false)}
-        handleSubmit={handleSubmit}
+        handleClose={handleClose}
+        onSuccess={refetchData}
         formData={formData}
         setFormData={setFormData}
         editableItems={editableItems}
@@ -534,13 +414,17 @@ const DeliveryDetails = () => {
         <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
           <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
             The Delivery Details page provides a comprehensive overview of a
-            specific transaction, including customer details, delivery address,
-            order items, and payment history. You can monitor and manage each
-            stage of the delivery process. Once a transaction is marked as{" "}
-            <span className="fw-bold text-primary">Out for Delivery</span>,{" "}
-            <span className="fw-bold text-success">Delivered</span>, or{" "}
-            <span className="fw-bold text-danger">Cancelled</span>, editing
-            options become limited to preserve data integrity.
+            specific transaction, including transaction number, tracking number,
+            client name, and delivery status. You can view the full details of
+            each delivery by clicking the "View" button. <br />
+            <br />
+            To update the payment for a transaction, click the "Update Payment"
+            button. Transactions can only be updated if the{" "}
+            <span className="fw-bold text-success">payment option</span> is set
+            to <span className="fw-bold text-success">Down Payment</span>,
+            allowing you to record additional payments made by the customer.
+            Once the balance is fully paid, the transaction becomes read-only to
+            ensure data integrity.
           </p>
 
           <div className="px-3 mb-3">
@@ -616,12 +500,11 @@ const DeliveryDetails = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>

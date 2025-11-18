@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
-import { Button, Modal, Collapse, Form } from "react-bootstrap";
-import { Toaster, toast } from "sonner";
+import { Button, Modal, Form } from "react-bootstrap";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 
@@ -17,13 +16,21 @@ const ViewOrder = () => {
   const [showModal, setShowModal] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const [showFAQ, setShowFAQ] = useState(false);
+  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
   const [formData, setFormData] = useState({
+    transaction_id: "",
     tracking_number: "",
     customer_name: "",
     customer_address: "",
     customer_contact: "",
     date_of_order: "",
     target_date_delivery: "",
+    dbilling_date: "",
     mode_of_payment: "",
     payment_option: "",
     down_payment: "",
@@ -32,38 +39,16 @@ const ViewOrder = () => {
     proof_of_delivery: "",
     full_payment: "0",
     fbilling_date: "",
+    payments: [],
   });
-
-  const [showFAQ, setShowFAQ] = useState(false);
-  const [activeFAQIndex, setActiveFAQIndex] = useState(null);
-
-  const guideqst = [
-    {
-      question: "How can I update a delivery transaction?",
-      answer:
-        "Click the 'Update' button below the transaction details. A modal will appear where you can modify customer information, order details, or payment information.",
-    },
-    {
-      question:
-        "Where can I add another payment record for the remaining balance?",
-      answer:
-        "Click the 'Update Payment' button to enter the final payment made by the customer.",
-    },
-    {
-      question: "How can I add new ordered items to a transaction?",
-      answer:
-        "Click the add (+) icon in the 'Items Ordered' section to include additional items for the customer’s order.",
-    },
-    {
-      question: "How can I reschedule a delivery?",
-      answer:
-        "The 'Reschedule' button will appear if the order has been cancelled. Click it to select a new delivery date, then confirm your changes.",
-    },
-  ];
 
   const [showProofViewModal, setShowProofViewModal] = useState(false);
   const [proofUrl, setProofUrl] = useState("");
   const [modalTitle, setModalTitle] = useState("");
+
+  const refetchData = () => {
+    setRefetchTrigger((prev) => prev + 1);
+  };
 
   const openProofModal = (url, title) => {
     let normalized = url;
@@ -103,8 +88,24 @@ const ViewOrder = () => {
       .then((res) => res.json())
       .then((data) => {
         console.log("Fetched data:", data);
-        setOrderDetails(data);
+
+        const parsedPayments = Array.isArray(data.payments)
+          ? data.payments
+          : (() => {
+              try {
+                return JSON.parse(data.payments || "[]");
+              } catch {
+                return [];
+              }
+            })();
+
+        setOrderDetails({
+          ...data,
+          payments: parsedPayments,
+        });
+
         setFormData({
+          transaction_id: data.transaction_id || transaction_id,
           tracking_number: data.tracking_number,
           customer_name: data.customer_name,
           customer_address: data.customer_address,
@@ -116,9 +117,11 @@ const ViewOrder = () => {
           balance: data.balance,
           total: data.total,
           target_date_delivery: formatDate(data.target_date_delivery),
+          dbilling_date: formatDate(data.dbilling_date),
           proof_of_delivery: data.proof_of_delivery,
           full_payment: data.full_payment || "0",
           fbilling_date: data.fbilling_date || "",
+          payments: parsedPayments,
         });
       })
       .catch((err) => {
@@ -132,12 +135,31 @@ const ViewOrder = () => {
   }, [transaction_id, refetchTrigger]);
 
   const handleUpdate = () => {
+    if (!orderDetails || !orderDetails.transaction_id) {
+      ToastHelper.error(
+        "Cannot update: Transaction ID is missing. Please refresh and try again."
+      );
+      return;
+    }
+
     const fixedItems = orderDetails.items.map((item) => ({
       quantity: item.quantity,
       type_of_product: item.type_of_product || item.product_type || "",
       description: item.description || item.item_name || "",
       unit_cost: item.unit_cost,
     }));
+
+    setFormData({
+      transaction_id: orderDetails.transaction_id,
+      payment_option: orderDetails.payment_option,
+      down_payment: orderDetails.down_payment,
+      full_payment: orderDetails.full_payment,
+      fbilling_date: orderDetails.fbilling_date,
+      balance: orderDetails.balance,
+      total: orderDetails.total,
+      payments: orderDetails.payments || [],
+    });
+
     setEditableItems(fixedItems);
     setShowModal(true);
   };
@@ -184,6 +206,7 @@ const ViewOrder = () => {
       date_of_order: formatDateForDB(formData.date_of_order),
       target_date_delivery: formatDateForDB(formData.target_date_delivery),
       fbilling_date: formData.fbilling_date,
+      dbilling_date: formData.dbilling_date,
       items: editableItems,
     };
 
@@ -266,6 +289,56 @@ const ViewOrder = () => {
     }
   };
 
+  const guideqst = [
+    {
+      question: "Can I update a delivery transaction from this page?",
+      answer:
+        "No. Once a transaction is recorded, it cannot be edited. The View Order Details page is strictly for viewing information, ensuring that delivery data remains accurate and tamper-free.",
+    },
+
+    {
+      question: "When can I update a customer's payment?",
+      answer:
+        "You can only update payments if the payment option is set to Down Payment and the customer still has a remaining balance. Once the balance is fully paid, no further updates can be made.",
+    },
+
+    {
+      question: "How is the payment status determined?",
+      answer:
+        "The system automatically calculates payment progress based on recorded amounts. If the remaining balance is greater than ₱0, the transaction is marked as 'Partially Paid'. Otherwise, it is displayed as 'Fully Paid'.",
+    },
+    {
+      question: "How does the rescheduling process work?",
+      answer:
+        "If an order has been cancelled, a 'Reschedule' button will appear to allow setting a new delivery date for the same customer and order details.",
+    },
+    {
+      question: "How can I add an additional payment?",
+      answer:
+        "Click the Update Payment button to record the additional amount paid by the customer. You will be prompted to enter the new payment amount, select the payment date, and upload a valid proof of payment (JPEG or PNG only).",
+    },
+    {
+      question: "What rules apply to payment entries?",
+      answer:
+        "Follow these guidelines to ensure valid entries:\n• The additional payment cannot exceed the remaining balance.\n• The payment date must not be in the future.\n• The payment date must not fall on a weekend.\n• The payment date must not exceed the billing due date.\n• Proof of payment is required for every new payment update.",
+    },
+    {
+      question: "Can I edit or delete an existing payment?",
+      answer:
+        "No. Once a payment has been recorded and submitted, it cannot be modified or removed. Always double-check the entered amount and proof of payment before saving.",
+    },
+    {
+      question: "What happens after I update a payment?",
+      answer:
+        "Once the update is submitted, the system automatically recalculates the remaining balance and refreshes the payment records. If the customer has fully paid the total amount, the transaction becomes read-only and marked as 'Fully Paid'.",
+    },
+    {
+      question: "Can I still view all payments after the order is completed?",
+      answer:
+        "Yes. All payments, including past and recent ones, are displayed in the Payment Records section for reference — even after the order is marked as Delivered or Cancelled.",
+    },
+  ];
+
   return (
     <AdminLayout
       title={
@@ -327,11 +400,16 @@ const ViewOrder = () => {
                     {formatDate(orderDetails.target_date_delivery)}
                   </p>
                   <p>
-                    <span>Rescheduled Delivery Date: </span>
-                    {orderDetails.rescheduled_date
-                      ? formatDate(orderDetails.rescheduled_date)
-                      : "—"}
+                    <span>Payment Due Date: </span>
+                    {formatDate(orderDetails.dbilling_date)}
                   </p>
+                  {orderDetails.rescheduled_date && (
+                    <p>
+                      <span>Rescheduled Delivery Date: </span>
+                      {formatDate(orderDetails.rescheduled_date)}
+                    </p>
+                  )}
+
                   <br />
                   <h5 className="text-success fw-bold">Delivery Status</h5>
                   <p>
@@ -367,49 +445,83 @@ const ViewOrder = () => {
 
                   {orderDetails.payment_option !== "Full Payment" && (
                     <>
-                      {orderDetails.down_payment &&
-                        parseFloat(orderDetails.down_payment) > 0 && (
-                          <p>
-                            <span>Initial Payment (Down Payment):</span> ₱
-                            {Number(orderDetails.down_payment).toLocaleString()}
-                          </p>
-                        )}
+                      <span className="fw-bold text-success mb-2">
+                        Payment History
+                      </span>
 
-                      {orderDetails.full_payment &&
-                        parseFloat(orderDetails.full_payment) > 0 && (
-                          <>
-                            <p>
-                              <span>Final Payment (Balance Paid):</span> ₱
-                              {Number(
-                                orderDetails.full_payment
-                              ).toLocaleString()}
-                            </p>
-
-                            {calculatedBalance > 0 && (
-                              <p>
-                                <span>Remaining Balance:</span> ₱
-                                {calculatedBalance.toLocaleString()}
-                              </p>
-                            )}
-
-                            {orderDetails.fbilling_date &&
-                              orderDetails.fbilling_date !== "0000-00-00" && (
-                                <p>
-                                  <span>Date of Final Payment:</span>{" "}
-                                  {formatDate(orderDetails.fbilling_date)}
+                      <ul className="list-group shadow-sm mb-3 rounded-3">
+                        {orderDetails.down_payment &&
+                          parseFloat(orderDetails.down_payment) > 0 && (
+                            <li className="list-group-item d-flex justify-content-between align-items-center bg-light">
+                              <div>
+                                <strong>Initial Down Payment</strong>
+                                <br />
+                                <p className="text-dark fs-6 m-0">
+                                  {formatDate(orderDetails.date_of_order)}
                                 </p>
-                              )}
-                          </>
-                        )}
+                              </div>
+                              <p className="fw-semibold text-dark">
+                                ₱
+                                {parseFloat(
+                                  orderDetails.down_payment
+                                ).toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </p>
+                            </li>
+                          )}
 
-                      {orderDetails.payment_option === "Down Payment" &&
-                        (!orderDetails.full_payment ||
-                          parseFloat(orderDetails.full_payment) === 0) && (
-                          <p>
-                            <span>Remaining Balance:</span> ₱
-                            {calculatedBalance.toLocaleString()}
-                          </p>
+                        {Array.isArray(orderDetails.payments) &&
+                        orderDetails.payments.length > 0 ? (
+                          orderDetails.payments.map((p, i) => (
+                            <li
+                              key={i}
+                              className="list-group-item d-flex justify-content-between align-items-center"
+                            >
+                              <div>
+                                <strong>
+                                  {p.label || `Additional Payment`}
+                                </strong>
+                                <br />
+                                <p className="text-dark fs-6 m-0">
+                                  {formatDate(p.date)}
+                                </p>
+                              </div>
+                              <p className="fw-semibold text-dark">
+                                ₱
+                                {parseFloat(p.amount).toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </p>
+                            </li>
+                          ))
+                        ) : (
+                          <li className="list-group-item text-muted text-center fs-6">
+                            No additional payments yet.
+                          </li>
                         )}
+                      </ul>
+
+                      <p>
+                        <span className="fw-semibold">Remaining Balance: </span>
+                        ₱
+                        {calculatedBalance.toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+
+                      <p>
+                        <span className="fw-semibold">Payment Status: </span>
+                        {calculatedBalance === 0 ? (
+                          <strong style={{ color: "#189721FF" }}>
+                            Fully Paid
+                          </strong>
+                        ) : (
+                          <strong style={{ color: "#F7B264FF" }}>
+                            Partially Paid
+                          </strong>
+                        )}
+                      </p>
                     </>
                   )}
                 </div>
@@ -494,14 +606,16 @@ const ViewOrder = () => {
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
               {!["Delivered", "Out for Delivery", "Cancelled"].includes(
                 orderDetails.status
-              ) && (
-                <button
-                  className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                  onClick={handleUpdate}
-                >
-                  Update
-                </button>
-              )}
+              ) &&
+                (parseFloat(orderDetails.balance) > 0 ||
+                  calculatedBalance > 0) && (
+                  <button
+                    className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                    onClick={handleUpdate}
+                  >
+                    Update Payment
+                  </button>
+                )}
 
               {orderDetails.status === "Cancelled" && (
                 <button
@@ -519,7 +633,7 @@ const ViewOrder = () => {
       <UpdateOrderModal
         show={showModal}
         handleClose={handleClose}
-        handleSubmit={handleSubmit}
+        onSuccess={refetchData}
         formData={formData}
         setFormData={setFormData}
         editableItems={editableItems}
@@ -540,105 +654,104 @@ const ViewOrder = () => {
         onHide={() => setShowProofViewModal(false)}
         centered
         size="lg"
+        className="proof-preview-modal"
       >
         <Modal.Header
           closeButton
-          className="bg-primary bg-opacity-75 text-white"
+          style={{
+            backgroundColor: "#00628FFF",
+            color: "white",
+            opacity: 0.85,
+          }}
         >
-          <Modal.Title>{modalTitle}</Modal.Title>
+          <Modal.Title className="fw-semibold">
+            {modalTitle || "Proof of Payment Preview"}
+          </Modal.Title>
         </Modal.Header>
-        <Modal.Body className="d-flex justify-content-center bg-light">
-          {Array.isArray(proofUrl) ||
-          (typeof proofUrl === "string" && proofUrl.startsWith("[")) ? (
-            <div className="d-flex align-items-center justify-content-center">
-              {proofUrl.length > 1 && (
+
+        <Modal.Body className="bg-light text-center">
+          {!proofUrl || proofUrl.length === 0 ? (
+            <div className="py-5">
+              <i
+                className="bi bi-file-earmark-image text-secondary"
+                style={{ fontSize: "3rem" }}
+              ></i>
+              <p className="mt-3 text-muted fs-5">No images uploaded.</p>
+            </div>
+          ) : (
+            <div className="position-relative d-flex align-items-center justify-content-center">
+              {currentIndex > 0 && (
                 <button
-                  className="btn btn-secondary me-2"
-                  onClick={() => {
-                    const container = document.getElementById(
-                      "proof-scroll-container"
-                    );
-                    const imageWidth = container.clientWidth;
-                    container.scrollBy({
-                      left: -imageWidth,
-                      behavior: "smooth",
-                    });
-                  }}
+                  onClick={() => setCurrentIndex(currentIndex - 1)}
+                  className="btn btn-light rounded-circle shadow position-absolute"
+                  style={{ left: "15px", zIndex: 10 }}
                 >
-                  ‹
+                  <FaChevronLeft size={20} />
                 </button>
               )}
+
               <div
-                id="proof-scroll-container"
+                className="bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-center"
                 style={{
-                  display: "flex",
-                  overflowX: "auto",
-                  scrollBehavior: "smooth",
-                  width: "700px",
-                  height: "720px",
-                  gap: "10px",
-                  padding: "5px",
-                  border: "2px solid #ccc",
-                  borderRadius: "10px",
+                  width: "600px",
+                  height: "600px",
+                  overflow: "hidden",
+                  border: "3px solid #ddd",
                 }}
               >
-                {proofUrl.map((url, index) => (
-                  <img
-                    key={index}
-                    src={url}
-                    alt={`${modalTitle} ${index + 1}`}
-                    style={{
-                      width: "700px",
-                      height: "680px",
-                      objectFit: "contain",
-                      flexShrink: 0,
-                      scrollSnapAlign: "center",
-                    }}
-                  />
-                ))}
-              </div>
-              {proofUrl.length > 1 && (
-                <button
-                  className="btn btn-secondary ms-2"
-                  onClick={() => {
-                    const container = document.getElementById(
-                      "proof-scroll-container"
-                    );
-                    const imageWidth = container.clientWidth;
-                    container.scrollBy({
-                      left: imageWidth,
-                      behavior: "smooth",
-                    });
+                <img
+                  src={
+                    Array.isArray(proofUrl)
+                      ? proofUrl[currentIndex]
+                      : typeof proofUrl === "string"
+                      ? proofUrl.replace(/[\[\]"]/g, "").split(",")[
+                          currentIndex
+                        ]
+                      : ""
+                  }
+                  alt={`Proof ${currentIndex + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
                   }}
+                />
+              </div>
+
+              {currentIndex <
+                (Array.isArray(proofUrl)
+                  ? proofUrl.length - 1
+                  : typeof proofUrl === "string" && proofUrl.startsWith("[")
+                  ? JSON.parse(proofUrl).length - 1
+                  : 0) && (
+                <button
+                  onClick={() => setCurrentIndex(currentIndex + 1)}
+                  className="btn btn-light rounded-circle shadow position-absolute"
+                  style={{ right: "15px", zIndex: 10 }}
                 >
-                  ›
+                  <FaChevronRight size={20} />
                 </button>
               )}
             </div>
-          ) : proofUrl ? (
-            <img
-              src={proofUrl}
-              alt={modalTitle}
-              className="w-100 h-auto"
-              style={{
-                maxHeight: "75vh",
-                maxWidth: "35rem",
-                objectFit: "fill",
-                border: "1px solid #9E9E9EFF",
-              }}
-            />
-          ) : (
-            <p className="text-muted">
-              No {modalTitle.toLowerCase()} available.
-            </p>
           )}
         </Modal.Body>
 
-        <Modal.Footer>
+        <Modal.Footer className="bg-white border-top d-flex justify-content-between">
+          <span className="text-muted small">
+            {proofUrl &&
+              proofUrl.length > 0 &&
+              `Image ${currentIndex + 1} of ${
+                Array.isArray(proofUrl)
+                  ? proofUrl.length
+                  : typeof proofUrl === "string" && proofUrl.startsWith("[")
+                  ? JSON.parse(proofUrl).length
+                  : 1
+              }`}
+          </span>
           <Button
             variant="secondary"
+            className="close-btn px-4 py-2 rounded-3 fw-semibold fs-6"
             onClick={() => setShowProofViewModal(false)}
-            className="close-btn px-3 py-2 rounded-2 fs-6"
           >
             Close
           </Button>
@@ -659,20 +772,25 @@ const ViewOrder = () => {
             borderBottom: "none",
           }}
         >
-          <Modal.Title>Guide for View Order Details</Modal.Title>
+          <Modal.Title className="fs-5">
+            Guide for View Order Details and Update Payment
+          </Modal.Title>
         </Modal.Header>
 
         <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
           <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
             The View Order Details page allows you to review all information
-            related to a specific order, including customer details, ordered
-            items, and payment records. From here, you can update pending
-            transactions, add new items, or record additional payments. Once the
-            order is marked as
-            <span className="fw-bold text-success"> Delivered</span>,{" "}
-            <span className="fw-bold text-danger">Cancelled</span>, or{" "}
-            <span className="fw-bold text-primary">Out for Delivery</span>,
-            editing options will be limited to preserve data accuracy.
+            related to a specific transaction, including customer details,
+            ordered items, and payment records. <br />
+            <br />
+            To update the payment for a transaction, click the{" "}
+            <span className="fw-bold text-success">"Update Payment"</span>{" "}
+            button. Transactions can only be updated if the{" "}
+            <span className="fw-bold text-success">payment option</span> is set
+            to <span className="fw-bold text-success">Down Payment</span>,
+            allowing you to record additional payments made by the customer.
+            Once the balance is fully paid, the transaction becomes read-only to
+            ensure data integrity.
           </p>
 
           <div className="px-3 mb-3">

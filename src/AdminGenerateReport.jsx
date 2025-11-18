@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
@@ -3269,7 +3270,6 @@ const GenerateReport = () => {
           </tbody>
         </Table>
 
-        {/* SALES PAGINATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -3463,7 +3463,6 @@ const GenerateReport = () => {
           </tbody>
         </Table>
 
-        {/* Pagination */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -3521,7 +3520,6 @@ const GenerateReport = () => {
               <th>Transaction No.</th>
               <th>Date of Order</th>
               <th>Client</th>
-              {/* <th>Item Name</th> */}
               <th>Delivery Status</th>
               <th>Initial Delivery Date</th>
               <th>Rescheduled Date</th>
@@ -3647,7 +3645,6 @@ const GenerateReport = () => {
           </tbody>
         </Table>
 
-        {/* CUSTOMER SATISFACTION PAGINATION */}
         <div className="custom-pagination">
           <button
             className="page-btn"
@@ -3695,7 +3692,6 @@ const GenerateReport = () => {
         .btn-primary:hover, .btn-success:hover, .btn-danger:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .card { border-radius: 0.75rem; cursor: default; }
       `}</style>
-      {/* BUTTONS  */}
       <br /> <br />
       <br />
       <div className="report-btn d-flex justify-content-between align-items-center mb-3 no-print mx-4">
@@ -3724,13 +3720,11 @@ const GenerateReport = () => {
           <FaPlus /> Add New Delivery
         </Button>
       </div>
-      {/* REPORT CONTENT  */}
       <div className="period-title text-center" ref={reportRef}>
         <h5 className="text-success fs-1 mt-3 mb-4 fw-semibold">
           {getReportTitle()}
         </h5>
       </div>
-      {/* TOTAL CARDS  */}
       <div className="mx-4">{renderTotalsCard()}</div>
       {loading ? (
         <div className="text-center py-5">
@@ -3837,7 +3831,6 @@ const GenerateReport = () => {
           )}
         </>
       )}
-      {/* FILTERING MODAL */}
       <Modal show={showFilter} onHide={() => setShowFilter(false)} centered>
         <Modal.Header closeButton className="bg-white text-success">
           <Modal.Title className="fw-bold">Filter Reports</Modal.Title>
