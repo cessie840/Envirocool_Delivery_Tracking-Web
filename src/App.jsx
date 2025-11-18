@@ -34,7 +34,6 @@ import DriverGuidePage from "./DriverGuidePage";
 // SETTINGS
 import EditProfileTab from "./settings/EditProfileTab";
 import ChangePasswordTab from "./settings/ChangePasswordTab";
-import AccountSecurityTab from "./settings/AccountSecurityTab";
 import BackupRestoreTab from "./settings/BackupRestoreTab";
 import ViewTermsTab from "./settings/ViewTermsTab";
 
@@ -125,7 +124,6 @@ function App() {
     // SETTINGS
     { path: "/settings/edit-profile", element: <EditProfileTab /> },
     { path: "/settings/change-password", element: <ChangePasswordTab /> },
-    { path: "/settings/account-security", element: <AccountSecurityTab /> },
     { path: "/settings/backup-restore", element: <BackupRestoreTab /> },
     { path: "/settings/view-terms", element: <ViewTermsTab /> },
   ];
