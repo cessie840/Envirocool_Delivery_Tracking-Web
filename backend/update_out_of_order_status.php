@@ -1,4 +1,9 @@
 <?php
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
+];
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);

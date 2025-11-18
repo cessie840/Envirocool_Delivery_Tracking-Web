@@ -1,7 +1,9 @@
 <?php
 session_start();
-$allowed_origins = ['http://localhost:5173', 'http://localhost:5174',
-   'https://cessie840.github.io/Envirocool_Delivery_Tracking-Web'];
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
+];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);

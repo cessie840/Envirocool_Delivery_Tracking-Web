@@ -1,4 +1,8 @@
 <?php
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
+];
 include 'database.php'; 
 date_default_timezone_set("Asia/Manila"); 
 

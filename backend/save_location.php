@@ -1,4 +1,9 @@
 <?php
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
+]; 
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
