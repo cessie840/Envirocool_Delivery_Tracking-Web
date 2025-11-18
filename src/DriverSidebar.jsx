@@ -230,7 +230,7 @@ const Sidebar = ({ show, onHide }) => {
                 { name: "Out For Delivery", path: "/out-for-delivery" },
                 { name: "Successful Delivered", path: "/successful-delivery" },
                 { name: "Failed Deliveries", path: "/failed-delivery" },
-                { name: "Guide", path: "/driver-guide" },
+                { name: "System Guide", path: "/driver-guide" },
                 { name: "Logout", path: "logout" },
               ].map((item, i) => (
                 <ListGroup.Item

@@ -644,6 +644,7 @@ const MonitorDelivery = () => {
                 t.assigned_device_id?.replace(/device[-_]?/i, "Truck ") ||
                   "Not assigned",
               ],
+              
             ].map(([label, value], i) => (
               <div className="row mb-2" key={i}>
                 <div className="col-5 fw-semibold text-success">{label}</div>
