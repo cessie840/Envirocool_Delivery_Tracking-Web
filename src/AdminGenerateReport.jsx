@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";

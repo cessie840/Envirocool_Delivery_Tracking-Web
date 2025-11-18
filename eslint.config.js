@@ -20,12 +20,8 @@ export default [
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
-    rules: {
-      ...js.configs.recommended.rules,
-      ...reactHooks.configs.recommended.rules,
-      'no-unused-vars': 'off',
-      "react-hooks/exhaustive-deps": "off",
-      'react-refresh/only-export-components': "off",
-    },
+    "rules": {
+    "no-unused-vars": "off"
+  },
   },
 ]

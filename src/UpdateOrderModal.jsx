@@ -302,7 +302,7 @@ const UpdateOrderModal = ({
           });
 
           const res = await fetch(
-            "http://localhost/DeliveryTrackingSystem/update_payment_proof.php",
+            "https://13.239.143.31/DeliveryTrackingSystem/update_payment_proof.php",
             {
               method: "POST",
               body: formDataToSend,
@@ -313,7 +313,7 @@ const UpdateOrderModal = ({
 
           if (data.status === "success") {
             const updatedRes = await fetch(
-              `http://localhost/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${formData.transaction_id}`
+              `https://13.239.143.31/DeliveryTrackingSystem/get_transaction_by_id.php?transaction_id=${formData.transaction_id}`
             );
             const updatedData = await updatedRes.json();
 

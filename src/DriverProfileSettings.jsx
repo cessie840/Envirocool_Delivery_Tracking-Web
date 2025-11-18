@@ -54,15 +54,15 @@ function DriverProfileSettings() {
 
       axios
         .post(
-          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
+          "https://13.239.143.31/DeliveryTrackingSystem/check_delivery_personnel.php",
           { pers_username: parsed.pers_username }
         )
         .then((res) => {
           if (res.data.success) {
             const u = res.data.user;
             const profilePicUrl = u.pers_profile_pic
-              ? `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${u.pers_profile_pic}`
-              : `http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
+              ? `https://13.239.143.31/DeliveryTrackingSystem/uploads/personnel_profile_pic/${u.pers_profile_pic}`
+              : `https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png`;
 
             setProfile({
               Name: `${u.pers_fname} ${u.pers_lname}`,
@@ -121,7 +121,7 @@ function DriverProfileSettings() {
 
     axios
       .post(
-        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/update_delivery_personnel.php",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       )
@@ -150,7 +150,7 @@ function DriverProfileSettings() {
 
     axios
       .post(
-        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/update_delivery_personnel.php",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       )
@@ -192,7 +192,7 @@ function DriverProfileSettings() {
 
     axios
       .post(
-        "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/upload_profile_pic.php",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       )
@@ -200,7 +200,7 @@ function DriverProfileSettings() {
         if (res.data.success) {
           ToastHelper.success("Profile picture updated successfully!");
           const filename = res.data.filename;
-          const newUrl = `http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/${filename}`;
+          const newUrl = `https://13.239.143.31/DeliveryTrackingSystem/uploads/personnel_profile_pic/${filename}`;
           setProfile((prev) => ({
             ...prev,
             profilePic: newUrl,
@@ -260,11 +260,11 @@ function DriverProfileSettings() {
                   <Image
                     src={
                       profile.profilePic ||
-                      "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                      "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                     }
                     onError={(e) =>
                       (e.target.src =
-                        "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png")
+                        "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png")
                     }
                     alt="Profile"
                     style={{
