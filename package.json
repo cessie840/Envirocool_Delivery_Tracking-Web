@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "deployment-branch -d dist"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
