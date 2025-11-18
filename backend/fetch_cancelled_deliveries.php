@@ -2,8 +2,8 @@
 header("Content-Type: application/json");
 
 $allowed_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {

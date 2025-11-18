@@ -3,9 +3,8 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 $allowed_origins = [
-  "http://localhost:5173",
-  "https://cessie840.github.io",
-  "http://localhost:5173/Envirocool-Tracking-Page"
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
