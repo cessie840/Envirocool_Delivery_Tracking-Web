@@ -548,7 +548,7 @@ const AdminDashboard = () => {
             }}
           >
             Close
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
     </AdminLayout>
