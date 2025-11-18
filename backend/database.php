@@ -1,7 +1,7 @@
 <?php
 $host = 'localhost';
 $user = 'root';
-$password = '091203';
+$password = 'mabangis';
 $database = 'DeliveryTrackingSystem';
 
 $conn = new mysqli($host, $user, $password, $database);

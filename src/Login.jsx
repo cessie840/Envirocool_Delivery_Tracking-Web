@@ -41,7 +41,7 @@ const Login = () => {
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/login.php",
+        "https://ec2-13-239-143-31.ap-southeast-2.compute.amazonaws.com/DeliveryTrackingSystem/login.php",
         { username, password },
         {
           headers: { "Content-Type": "application/json" },
