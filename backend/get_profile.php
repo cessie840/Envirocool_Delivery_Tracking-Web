@@ -4,7 +4,7 @@ include 'database.php';
 $allowed_origins = [
     "https://cessie840.github.io",
     "http://localhost:5173",
-    "https://envirocool-delivery-tracking-web.vercel.app/"
+  'https://cessie840.github.io/Envirocool_Delivery_Tracking-Web'
 
 ];
 

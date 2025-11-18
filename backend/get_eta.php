@@ -6,7 +6,7 @@ include 'database.php';
 $allowed_origins = [
     "https://cessie840.github.io",
     "http://localhost:5173",
-    "http://localhost:5173/add-delivery", 'https://envirocool-delivery-tracking-web.vercel.app/'
+    "http://localhost:5173/add-delivery", 'https://cessie840.github.io/Envirocool_Delivery_Tracking-Web'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {

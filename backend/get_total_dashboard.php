@@ -1,7 +1,7 @@
 <?php
 $allowed_origins = [
     'http://localhost:5173',
-    'http://localhost:5174', 'https://envirocool-delivery-tracking-web.vercel.app/'
+    'http://localhost:5174', 'https://cessie840.github.io/Envirocool_Delivery_Tracking-Web'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
