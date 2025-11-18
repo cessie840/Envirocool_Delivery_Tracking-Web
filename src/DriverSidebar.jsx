@@ -25,7 +25,7 @@ const Sidebar = ({ show, onHide }) => {
 
       axios
         .post(
-          "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
+          "https://13.239.143.31/DeliveryTrackingSystem/check_delivery_personnel.php",
           {
             pers_username: parsed.pers_username,
           }
@@ -37,8 +37,8 @@ const Sidebar = ({ show, onHide }) => {
             const user = data.user;
 
             const profilePicUrl = user.pers_profile_pic
-              ? `http://localhost//DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
-              : `http://localhost//DeliveryTrackingSystem/default-profile-pic.png`;
+              ? `https://13.239.143.31//DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
+              : `https://13.239.143.31//DeliveryTrackingSystem/default-profile-pic.png`;
 
             setProfile({
               name: `${user.pers_fname} ${user.pers_lname}`,
@@ -74,7 +74,7 @@ const Sidebar = ({ show, onHide }) => {
 
     try {
       const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
+        "https://13.239.143.31/DeliveryTrackingSystem/upload_profile_pic.php",
         formData,
         {
           headers: {
@@ -172,7 +172,7 @@ const Sidebar = ({ show, onHide }) => {
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src =
-                        "http://localhost/DeliveryTrackingSystem/default-profile-pic.png";
+                        "https://13.239.143.31/DeliveryTrackingSystem/default-profile-pic.png";
                     }}
                     style={{
                       width: "100%",
