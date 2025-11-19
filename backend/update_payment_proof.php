@@ -55,7 +55,7 @@ if ($payments_json) {
     }
 }
 
-$uploadDir = 'uploads/proof_of_payment/';
+$uploadDir = '/uploads/proof_of_payment/';
 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
 $query = "SELECT total, down_payment, full_payment, balance, proof_of_payment, payments 

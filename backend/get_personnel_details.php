@@ -60,7 +60,7 @@ if ($result->num_rows === 0) {
 
 $user = $result->fetch_assoc();
 
-$baseURL = "http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/";
+$baseURL = "https://delivery-api.mooo.info/DeliveryTrackingSystem/uploads/personnel_profile_pic/";
 $defaultPic = $baseURL . "default-profile-pic.png";
 
 if (empty($user['pers_profile_pic'])) {

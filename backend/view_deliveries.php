@@ -30,7 +30,7 @@ if ($transaction_id <= 0) {
     exit;
 }
 
-$baseUrl = rtrim("http://localhost/DeliveryTrackingSystem", '/');
+$baseUrl = rtrim("https://delivery-api.mooo.info/DeliveryTrackingSystem", '/');
 
 function buildFileUrl($baseUrl, $path) {
     if (!$path) return null;

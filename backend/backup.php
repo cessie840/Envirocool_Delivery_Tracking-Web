@@ -21,12 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-
 include 'database.php';
 
 $backupFile = "backup_" . date("Y-m-d_H-i-s") . "_{$database}.sql";
 
-$mysqldumpPath = "C:\\xampp\\mysql\\bin\\mysqldump.exe";
+$mysqldumpPath = "/usr/bin/mysqldump";
 
 $command = "\"{$mysqldumpPath}\" --user={$user} --password={$password} --host={$host} {$database}";
 

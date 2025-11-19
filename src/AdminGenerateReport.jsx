@@ -3598,12 +3598,13 @@ const GenerateReport = () => {
       }, {})
     );
 
-    const startIndex = (customerPage - 1) * itemsPerPage;
+    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+    const currentPage = Math.max(1, Math.min(customerPage, totalPages || 1));
+    const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedData = groupedData.slice(
       startIndex,
       startIndex + itemsPerPage
     );
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
 
     return (
       <>
