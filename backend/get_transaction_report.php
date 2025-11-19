@@ -10,8 +10,8 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
 }
 
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, Cache-Control, X-Requested-With, Pragma");
 header("Content-Type: application/json");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -85,7 +85,6 @@ SELECT
     t.customer_address,
     t.customer_contact,
     t.date_of_order,
-    Choose rescheduled_date if exists, else target_date_delivery
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.type_of_product AS product_name,
     po.description AS item_name,
