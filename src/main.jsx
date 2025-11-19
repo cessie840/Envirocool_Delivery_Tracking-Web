@@ -8,7 +8,7 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Router basename="/Envirocool_Delivery_Tracking-Web">
+    <Router basename="/envirocool-delivery-tracking-web">
       <App />
     </Router>
   </React.StrictMode>
