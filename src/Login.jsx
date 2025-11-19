@@ -41,7 +41,7 @@ const Login = () => {
 
     try {
       const response = await axios.post(
-        "https://ec2-13-239-143-31.ap-southeast-2.compute.amazonaws.com/DeliveryTrackingSystem/login.php",
+        "http://envirocool-api.twilightparadox.com/DeliveryTrackingSystem/login.php",
         { username, password },
         {
           headers: { "Content-Type": "application/json" },
