@@ -13,7 +13,8 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 }
 
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, Cache-Control, X-Requested-With, Pragma");
+header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json");
 
 include 'database.php';
