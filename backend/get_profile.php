@@ -3,7 +3,7 @@ include 'database.php';
 
 $allowed_origins = [
     'http://localhost:5173',
-    'http://localhost:5174', 'https://cessie840.github.io'
+    'http://localhost:5174', 'https://cessie840.github.io','https://envirocool-delivery-tracking-web.vercel.app'
 ];
 
 
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
-    'domain' => '13.239.143.31',
+    'domain' => 'delivery-api.mooo.info',
     'secure' => true,         
     'httponly' => true,
     'samesite' => 'None'

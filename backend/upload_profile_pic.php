@@ -1,9 +1,13 @@
 <?php
 $allowed_origins = [
     'http://localhost:5173',
-    'http://localhost:5174', 'https://cessie840.github.io'
+    'http://localhost:5174', 'https://cessie840.github.io','https://envirocool-delivery-tracking-web.vercel.app'
 ];
-header("Access-Control-Allow-Origin: http://localhost:5173");
+
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
+
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
@@ -82,7 +86,7 @@ if ($fileUpload && isset($fileUpload["tmp_name"]) && $fileUpload["tmp_name"] !==
             "success" => true,
             "message" => "Profile picture uploaded successfully.",
             "filename" => $newFileName,
-            "image_url" => "http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/" . $newFileName
+            "image_url" => "https://delivery-api.mooo.info/DeliveryTrackingSystem/uploads/personnel_profile_pic/" . $newFileName
         ];
     } else {
         $response["message"] = "Database update failed.";

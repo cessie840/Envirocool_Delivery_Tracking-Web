@@ -3,14 +3,14 @@ include 'database.php';
 
 $allowed_origins = [
     'http://localhost:5173',
-    'http://localhost:5174', 'https://cessie840.github.io'
+    'http://localhost:5174', 'https://cessie840.github.io','https://envirocool-delivery-tracking-web.vercel.app'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
 }
 
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json");
 
@@ -21,11 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $sql = "
     SELECT 
-   
         t.transaction_id,
         t.tracking_number,
         t.customer_name,
         t.total,
+        t.balance,           
         t.status AS delivery_status, 
         p.description,
         p.quantity
@@ -33,6 +33,7 @@ $sql = "
     INNER JOIN PurchaseOrder p ON t.transaction_id = p.transaction_id
     ORDER BY t.transaction_id DESC
 ";
+
 
 $result = $conn->query($sql);
 

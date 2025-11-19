@@ -24,7 +24,7 @@ const EditProfileTab = () => {
     if (!silent) setLoading(true);
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_profile.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_profile.php",
         { withCredentials: true }
       );
       const data = res.data;
@@ -218,7 +218,7 @@ const EditProfileTab = () => {
     switch (role) {
       case "admin":
         updateUrl =
-          "https://13.239.143.31/DeliveryTrackingSystem/update_admin_profile.php";
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_admin_profile.php";
         payload = {
           ad_username: formData.username.trim(),
           ad_fname: formData.fname.trim(),
@@ -229,7 +229,7 @@ const EditProfileTab = () => {
         break;
       case "manager":
         updateUrl =
-          "https://13.239.143.31/DeliveryTrackingSystem/update_operational_profile.php";
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_operational_profile.php";
         payload = {
           manager_username: formData.username.trim(),
           manager_fname: formData.fname.trim(),
@@ -240,7 +240,7 @@ const EditProfileTab = () => {
         break;
       case "personnel":
         updateUrl =
-          "https://13.239.143.31/DeliveryTrackingSystem/update_personnel_profile.php";
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_personnel_profile.php";
         payload = {
           pers_username: formData.username.trim(),
           pers_fname: formData.fname.trim(),

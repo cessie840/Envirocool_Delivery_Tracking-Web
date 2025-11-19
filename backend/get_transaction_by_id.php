@@ -3,8 +3,9 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 $allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174', 'https://cessie840.github.io'
+  "http://localhost:5173",
+  "https://cessie840.github.io",
+  "https://envirocool-delivery-tracking-web.vercel.app"
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -50,7 +51,8 @@ $stmt = $conn->prepare("
         down_payment,
         dbilling_date AS dp_collection_date,
         balance,
-        total
+        total,
+        payment_status
     FROM Transactions
     WHERE transaction_id = ?
 ");
@@ -93,6 +95,25 @@ while ($row = $result2->fetch_assoc()) {
     $order_items[] = $row;
 }
 $stmt2->close();
+
+$latest_payment = null;
+$stmt3 = $conn->prepare("
+    SELECT amount, payment_date
+    FROM payment_history
+    WHERE transaction_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+");
+$stmt3->bind_param("i", $transaction_id);
+$stmt3->execute();
+$result3 = $stmt3->get_result();
+if ($result3->num_rows > 0) {
+    $latest_payment = $result3->fetch_assoc();
+}
+$stmt3->close();
+
+$form['additional_payment'] = $latest_payment ? $latest_payment['amount'] : 0;
+$form['additional_payment_date'] = $latest_payment ? $latest_payment['payment_date'] : null;
 
 echo json_encode([
     "form" => $form,

@@ -1,7 +1,7 @@
 <?php
 $allowed_origins = [
     'http://localhost:5173',
-    'http://localhost:5174', 'https://cessie840.github.io'
+    'http://localhost:5174', 'https://cessie840.github.io','https://envirocool-delivery-tracking-web.vercel.app'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -44,7 +44,7 @@ ORDER BY t.transaction_id DESC
 $result = $conn->query($sql);
 
 $profilePicDir = __DIR__ . "/uploads/personnel_profile_pic/";
-$baseUrl = "http://localhost/DeliveryTrackingSystem/uploads/personnel_profile_pic/";
+$baseUrl = "http://delivery-api.mooo.info/DeliveryTrackingSystem/uploads/personnel_profile_pic/";
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
@@ -80,7 +80,7 @@ if ($result && $result->num_rows > 0) {
         }
 
         $profilePic = trim($row['pers_profile_pic']);
-        $defaultPic = "http://localhost/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+        $defaultPic = "https://delivery-api.mooo.info/DeliveryTrackingSystem/uploads/default-profile-pic.png";
 
         if (!empty($profilePic)) {
             $picFilename = basename($profilePic);
