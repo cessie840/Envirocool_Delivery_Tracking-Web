@@ -138,6 +138,10 @@ const BackupRestoreTab = () => {
 
       if (res.data.success) {
         setRestoreStatus("Restore completed successfully.");
+        setRestoreFile(null);
+        const fileInput = document.querySelector('input[name="sqlFile"]');
+        if (fileInput) fileInput.value = "";
+
         toast.success("Database restored successfully!", {
           duration: 2500,
           style: {
@@ -194,7 +198,6 @@ const BackupRestoreTab = () => {
   return (
     <div className="p-3 position-relative">
       <Toaster position="top-center" richColors />{" "}
-     
       <h4 className="title mb-1">
         <FaDatabase /> Backup & Restore
       </h4>
@@ -210,7 +213,6 @@ const BackupRestoreTab = () => {
         </span>
       </div>
       <hr />
-   
       <section className="mb-5">
         <h5>Backup Data</h5>
         <button
@@ -222,7 +224,6 @@ const BackupRestoreTab = () => {
         </button>
       </section>
       <hr />
-
       <section>
         <h5>Restore Options</h5>
         <form onSubmit={handleRestoreSubmit}>
