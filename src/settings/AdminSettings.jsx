@@ -257,12 +257,11 @@ const AdminSettings = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>

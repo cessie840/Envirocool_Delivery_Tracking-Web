@@ -644,7 +644,6 @@ const MonitorDelivery = () => {
                 t.assigned_device_id?.replace(/device[-_]?/i, "Truck ") ||
                   "Not assigned",
               ],
-              
             ].map(([label, value], i) => (
               <div className="row mb-2" key={i}>
                 <div className="col-5 fw-semibold text-success">{label}</div>
@@ -999,12 +998,11 @@ const MonitorDelivery = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>

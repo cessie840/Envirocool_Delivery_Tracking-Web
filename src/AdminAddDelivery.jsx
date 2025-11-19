@@ -153,15 +153,15 @@ const AddDelivery = () => {
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
 
- useEffect(() => {
-  if (showReceiptModal) {
-    let storedCount = parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
-    const newCount = storedCount + 1;
-    localStorage.setItem("envirocoolReceiptCounter", newCount);
-    setReceiptNumber(newCount);
-  }
-}, [showReceiptModal]);
-
+  useEffect(() => {
+    if (showReceiptModal) {
+      let storedCount =
+        parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
+      const newCount = storedCount + 1;
+      localStorage.setItem("envirocoolReceiptCounter", newCount);
+      setReceiptNumber(newCount);
+    }
+  }, [showReceiptModal]);
 
   useEffect(() => {
     axios
@@ -476,7 +476,6 @@ const AddDelivery = () => {
     document.title = "Add Delivery";
     fetchLatestIDs();
 
-
     const fetchProducts = async () => {
       try {
         const res = await axios.get(
@@ -632,7 +631,9 @@ const AddDelivery = () => {
 
     const clonedElement = element.cloneNode(true);
 
-    clonedElement.querySelectorAll(".signature-section").forEach((el) => el.remove());
+    clonedElement
+      .querySelectorAll(".signature-section")
+      .forEach((el) => el.remove());
 
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
@@ -680,7 +681,7 @@ const AddDelivery = () => {
           th, td {
             border: 1px solid #5E5E5EFF;
             padding: 3px;
-            text-align: left;
+            text-align: center;
           }
           th {
             background-color: #EBEBEBFF;
@@ -730,7 +731,6 @@ const AddDelivery = () => {
 
     printWindow.document.close();
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1134,8 +1134,9 @@ const AddDelivery = () => {
               </label>
               <input
                 type="date"
-                className={`form-control ${form.date_of_order ? "text-black" : "text-muted"
-                  } ${orderDateError ? "is-invalid" : ""}`}
+                className={`form-control ${
+                  form.date_of_order ? "text-black" : "text-muted"
+                } ${orderDateError ? "is-invalid" : ""}`}
                 id="dateOfOrder"
                 name="date_of_order"
                 value={
@@ -1380,8 +1381,9 @@ const AddDelivery = () => {
                 type="date"
                 id="targetDate"
                 name="target_date_delivery"
-                className={`form-control ${form.target_date_delivery ? "text-black" : "text-muted"
-                  } ${dateError ? "is-invalid" : ""}`}
+                className={`form-control ${
+                  form.target_date_delivery ? "text-black" : "text-muted"
+                } ${dateError ? "is-invalid" : ""}`}
                 value={form.target_date_delivery || ""}
                 onChange={(e) => {
                   const selectedDate = new Date(e.target.value + "T00:00:00");
@@ -1555,8 +1557,8 @@ const AddDelivery = () => {
                             backgroundColor: state.isSelected
                               ? "#84cf95ff"
                               : state.isFocused
-                                ? "#bbd2c1ff"
-                                : "#e6f4ea",
+                              ? "#bbd2c1ff"
+                              : "#e6f4ea",
                             color: state.isSelected ? "#fff" : "#000",
                             cursor: "pointer",
                           }),
@@ -1569,15 +1571,15 @@ const AddDelivery = () => {
                         options={
                           item.type_of_product
                             ? itemOptions[item.type_of_product]?.filter(
-                              (opt) => opt.value && opt.value.trim() !== ""
-                            ) || []
+                                (opt) => opt.value && opt.value.trim() !== ""
+                              ) || []
                             : []
                         }
                         value={
                           item.description
                             ? itemOptions[item.type_of_product]?.find(
-                              (opt) => opt.value === item.description
-                            ) || null
+                                (opt) => opt.value === item.description
+                              ) || null
                             : null
                         }
                         onChange={(selected) => {
@@ -1671,8 +1673,8 @@ const AddDelivery = () => {
                             backgroundColor: state.isSelected
                               ? "#84cf95ff"
                               : state.isFocused
-                                ? "#bbd2c1ff"
-                                : "#e6f4ea",
+                              ? "#bbd2c1ff"
+                              : "#e6f4ea",
                             color: state.isSelected ? "#fff" : "#000",
                             cursor: "pointer",
                           }),
@@ -1747,7 +1749,7 @@ const AddDelivery = () => {
                                 setOrderItems((prev) =>
                                   prev.map((item) =>
                                     item.type_of_product ===
-                                      editModal.currentValue
+                                    editModal.currentValue
                                       ? { ...item, type_of_product: newValue }
                                       : item
                                   )
@@ -1955,15 +1957,16 @@ const AddDelivery = () => {
                 <input
                   style={{ color: "gray" }}
                   type="date"
-                  className={`form-control ${form.fp_collection_date ? "text-black" : "text-muted"
-                    } ${fpBillingError ? "is-invalid" : ""}`}
+                  className={`form-control ${
+                    form.fp_collection_date ? "text-black" : "text-muted"
+                  } ${fpBillingError ? "is-invalid" : ""}`}
                   id="fpBillingDate"
                   name="fp_collection_date"
                   value={
                     form.fp_collection_date
                       ? new Date(form.fp_collection_date)
-                        .toISOString()
-                        .split("T")[0]
+                          .toISOString()
+                          .split("T")[0]
                       : ""
                   }
                   onChange={(e) => {
@@ -2034,12 +2037,13 @@ const AddDelivery = () => {
                   disabled={form.payment_option !== "Down Payment"}
                   required={form.payment_option === "Down Payment"}
                   min={getLocalDate()}
-                  className={`form-control ${form.payment_option !== "Down Payment"
-                    ? "text-muted"
-                    : form.dp_collection_date
+                  className={`form-control ${
+                    form.payment_option !== "Down Payment"
+                      ? "text-muted"
+                      : form.dp_collection_date
                       ? "text-black"
                       : "text-muted"
-                    } ${dpDateError ? "is-invalid" : ""}`}
+                  } ${dpDateError ? "is-invalid" : ""}`}
                   style={{
                     backgroundColor:
                       form.payment_option === "Down Payment"
@@ -2091,9 +2095,9 @@ const AddDelivery = () => {
                   <span className="form-control bg-white text-start fw-semibold fs-6 p-2">
                     {form.payment_option === "Down Payment"
                       ? Number(form.balance).toLocaleString("en-PH", {
-                        style: "currency",
-                        currency: "PHP",
-                      })
+                          style: "currency",
+                          currency: "PHP",
+                        })
                       : "₱0.00"}
                   </span>
                 </div>
@@ -2481,15 +2485,30 @@ const AddDelivery = () => {
                 id="receipt-section"
                 className="bg-white text-black p-4"
               >
-                <div className="text-center mb-4">
-                  <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
-                  <p className="mb-0">Official Transaction Receipt</p>
+                <div className="text-center mb-2">
+                  <h3 className="fw-bold text-success mb-0 fs-2">ENVIROCOOL</h3>
+                  <small>
+                    FP Perez, Brgy. Parian, Calamba City, Laguna
+                  </small>{" "}
+                  <br />
+                  <small> Tel: (049) 540-306 / 0917-158-7013</small>
+                  <p className="mb-0 fs-5 fw-semibold">
+                    Official Transaction Receipt
+                  </p>
                   <small>Date Printed: {new Date().toLocaleString()}</small>
                   <br />
-                  <small className="text-muted">Transaction Receipt No.: #{receiptNumber?.toString().padStart(5, "0")}</small>
+                  <small className="text-muted">
+                    Transaction Receipt No.: #
+                    {receiptNumber?.toString().padStart(5, "0")}
+                  </small>
                 </div>
 
-                <hr style={{ borderTop: "1px dashed rgb(153, 153, 153)", marginBottom: "20px" }} />
+                <hr
+                  style={{
+                    borderTop: "1px dashed rgb(153, 153, 153)",
+                    marginBottom: "20px",
+                  }}
+                />
 
                 <div className="mb-3">
                   <p>
@@ -2567,12 +2586,12 @@ const AddDelivery = () => {
                   )}
                 </div>
 
-                <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
+                {/* <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b> */}
                 <table className="table table-bordered table-sm">
                   <thead className="table-light text-center">
                     <tr>
                       <th>Qty</th>
-                      <th>Item</th>
+                      <th>Description</th>
                       <th>Unit Price</th>
                       <th>Total</th>
                     </tr>
@@ -2598,8 +2617,8 @@ const AddDelivery = () => {
                           {formatPeso(
                             parseFloat(
                               item.total_cost ||
-                              item.quantity * item.unit_cost ||
-                              0
+                                item.quantity * item.unit_cost ||
+                                0
                             )
                           )}
                         </td>
@@ -2629,9 +2648,13 @@ const AddDelivery = () => {
                       <small>Received By</small>
                     </div>
                   </div>
-                  <hr style={{ borderTop: "2px dashed #999", marginTop: "30px" }} />
+                  <hr
+                    style={{ borderTop: "2px dashed #999", marginTop: "30px" }}
+                  />
                   <div className="text-center mt-3">
-                    <h6 className="fw-bold text-success mb-0">Thank you for trusting Envirocool!</h6>
+                    <h6 className="fw-bold text-success mb-0">
+                      Thank you for trusting Envirocool!
+                    </h6>
                     <small>We appreciate your business.</small>
                   </div>
                 </div>
@@ -2652,7 +2675,6 @@ const AddDelivery = () => {
                   </Button> */}
               </Modal.Footer>
             </Modal>
-
           </div>
         </form>
         <div className="btn-group mx-3 mt-4 gap-4">
@@ -2749,8 +2771,9 @@ const AddDelivery = () => {
                 >
                   <h2 className="accordion-header" id={`heading${index}`}>
                     <button
-                      className={`accordion-button ${activeFAQIndex === index ? "" : "collapsed"
-                        }`}
+                      className={`accordion-button ${
+                        activeFAQIndex === index ? "" : "collapsed"
+                      }`}
                       type="button"
                       onClick={() =>
                         setActiveFAQIndex(
@@ -2782,8 +2805,9 @@ const AddDelivery = () => {
                   </h2>
                   <div
                     id={`collapse${index}`}
-                    className={`accordion-collapse collapse ${activeFAQIndex === index ? "show" : ""
-                      }`}
+                    className={`accordion-collapse collapse ${
+                      activeFAQIndex === index ? "show" : ""
+                    }`}
                     aria-labelledby={`heading${index}`}
                     data-bs-parent="#faqAccordion"
                   >

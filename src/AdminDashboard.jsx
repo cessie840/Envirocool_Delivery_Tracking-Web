@@ -539,16 +539,15 @@ const AdminDashboard = () => {
         </Modal.Body>
 
         <Modal.Footer>
-          <button
-            type="button"
-            className="btn btn-outline-secondary"
+          <Button
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
-          </button>
+          </Button>
         </Modal.Footer>
       </Modal>
     </AdminLayout>

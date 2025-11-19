@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
@@ -866,9 +867,11 @@ const ViewOrder = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
-            onClick={() => setShowFAQ(false)}
-            className="px-4"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>
