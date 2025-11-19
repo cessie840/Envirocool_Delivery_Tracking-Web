@@ -1,10 +1,23 @@
 <?php
+include 'database.php';
+
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io','https://envirocool-delivery-tracking-web.vercel.app'
+];
+
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
+
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, Cache-Control, X-Requested-With, Pragma");
 header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Credentials: true");
-require 'database.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 $period = $_GET['period'] ?? 'monthly';
 $start = $_GET['start'] ?? null;
@@ -72,7 +85,6 @@ SELECT
     t.customer_address,
     t.customer_contact,
     t.date_of_order,
-    Choose rescheduled_date if exists, else target_date_delivery
     COALESCE(t.rescheduled_date, t.target_date_delivery) AS shipout_at,
     po.type_of_product AS product_name,
     po.description AS item_name,
