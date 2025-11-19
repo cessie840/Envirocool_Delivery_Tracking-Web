@@ -24,7 +24,7 @@ function DriverDashboard() {
     `₱${Number(amount).toLocaleString("en-PH")}`;
 
   const fetchAssignedDeliveries = () => {
-    const storedProfile = localStorage.getItem("username");
+    const storedProfile = localStorage.getItem("user");
     if (!storedProfile) return;
 
     const parsedProfile = JSON.parse(storedProfile);
