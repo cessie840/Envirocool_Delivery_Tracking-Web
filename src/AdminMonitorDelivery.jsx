@@ -262,13 +262,13 @@ const MonitorDelivery = () => {
       try {
         const [outRes, completedRes, cancelledRes] = await Promise.all([
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
+            "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_all_out_for_delivery.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
+            "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_all_completed_deliveries.php"
           ),
           axios.get(
-            "https://13.239.143.31/DeliveryTrackingSystem/get_cancelled_deliveries.php"
+            "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_cancelled_deliveries.php"
           ),
         ]);
 
@@ -363,7 +363,7 @@ const MonitorDelivery = () => {
 
       try {
         const res = await axios.get(
-          `https://13.239.143.31/DeliveryTrackingSystem/get_eta.php`,
+          `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_eta.php`,
           { params: { device_id: deviceId, distance_km: distanceKm } }
         );
 
@@ -387,7 +387,7 @@ const MonitorDelivery = () => {
     const interval = setInterval(async () => {
       try {
         const res = await axios.get(
-          `https://13.239.143.31/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
+          `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_current_location.php?device_id=${deviceId}`
         );
 
         const gpsData = res.data.data;
@@ -521,7 +521,7 @@ const MonitorDelivery = () => {
 
     try {
       const res = await axios.get(
-        `https://13.239.143.31/DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
+        `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_device_route.php?device_id=${deviceId}`
       );
 
       const route = (res.data || []).map((p) => [

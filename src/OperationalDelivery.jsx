@@ -66,7 +66,7 @@ const OperationalDelivery = () => {
   const fetchOrders = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_delivery_orders.php"
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_delivery_orders.php"
       );
       setOrders(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
@@ -78,7 +78,7 @@ const OperationalDelivery = () => {
   const fetchPersonnel = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_delivery_personnel.php"
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_delivery_personnel.php"
       );
       if (res.data.success && Array.isArray(res.data.data)) {
         setPersonnelList(res.data.data);
@@ -94,7 +94,7 @@ const OperationalDelivery = () => {
   const fetchDevices = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_device_ids.php"
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_device_ids.php"
       );
       if (Array.isArray(res.data)) {
         const uniqueDevices = res.data.filter(
@@ -128,7 +128,7 @@ const OperationalDelivery = () => {
 
     try {
       const res = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/assign_personnel.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/assign_personnel.php",
         {
           transaction_id: selectedOrder.transaction_id,
           personnelUsername: selectedPersonnel,
@@ -514,7 +514,7 @@ const OperationalDelivery = () => {
                               selectedOrder?.personnel_image &&
                               selectedOrder.personnel_image.trim() !== ""
                                 ? selectedOrder.personnel_image
-                                : "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png"
+                                : "https://delivery-api.mooo.info/DeliveryTrackingSystem/uploads/default-profile-pic.png"
                             }
                             alt={
                               selectedOrder?.assigned_personnel ||
@@ -523,7 +523,7 @@ const OperationalDelivery = () => {
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src =
-                                "https://13.239.143.31/DeliveryTrackingSystem/uploads/default-profile-pic.png";
+                                "https://delivery-api.mooo.info/DeliveryTrackingSystem/uploads/default-profile-pic.png";
                             }}
                             className="rounded-circle border border-2 border-dark"
                             style={{

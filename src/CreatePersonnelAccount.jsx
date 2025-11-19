@@ -86,7 +86,7 @@ const CreatePersonnelAccount = () => {
 
     try {
       const response = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/create_delivery_personnel.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/create_delivery_personnel.php",
         formData
       );
 

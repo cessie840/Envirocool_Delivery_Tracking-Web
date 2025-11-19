@@ -28,12 +28,10 @@ function OutForDelivery() {
   const [proofFile, setProofFile] = useState(null);
   const [deliveryToMark, setDeliveryToMark] = useState(null);
 
-  
   const [toastMessage, setToastMessage] = useState("");
-  const [toastVariant, setToastVariant] = useState("success"); 
+  const [toastVariant, setToastVariant] = useState("success");
   const [showToast, setShowToast] = useState(false);
 
-  
   const [cameraActive, setCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState("environment");
   const [showCameraConfirm, setShowCameraConfirm] = useState(false);
@@ -52,7 +50,7 @@ function OutForDelivery() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_out_for_delivery.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_out_for_delivery.php",
         { pers_username: user.pers_username }
       )
       .then((res) => {
@@ -78,7 +76,6 @@ function OutForDelivery() {
       setFilteredDeliveries(filtered);
     }
   }, [searchTerm, deliveries]);
-
 
   const showToastMessage = (variant, message) => {
     setToastVariant(variant);
@@ -141,10 +138,13 @@ function OutForDelivery() {
     }
 
     axios
-      .post("https://13.239.143.31/DeliveryTrackingSystem/cancelled_delivery.php", {
-        transaction_id: selectedDelivery.transactionNo,
-        reason: cancelReason,
-      })
+      .post(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/cancelled_delivery.php",
+        {
+          transaction_id: selectedDelivery.transactionNo,
+          reason: cancelReason,
+        }
+      )
       .then((res) => {
         if (res.data.success) {
           setDeliveries(
@@ -164,9 +164,7 @@ function OutForDelivery() {
           showToastMessage("success", "Delivery cancelled successfully.");
           setTimeout(() => {
             navigate("/failed-delivery");
-          }, 1000); 
-
-
+          }, 1000);
         } else {
           showToastMessage(
             "danger",
@@ -180,62 +178,60 @@ function OutForDelivery() {
       });
   };
 
- const handleProofSubmit = () => {
-   if (!proofFile) {
-     showToastMessage("danger", "Please capture a photo first.");
-     return;
-   }
+  const handleProofSubmit = () => {
+    if (!proofFile) {
+      showToastMessage("danger", "Please capture a photo first.");
+      return;
+    }
 
-   const formData = new FormData();
-   formData.append("transaction_id", deliveryToMark.transactionNo);
-   formData.append("proof_of_delivery", proofFile);
+    const formData = new FormData();
+    formData.append("transaction_id", deliveryToMark.transactionNo);
+    formData.append("proof_of_delivery", proofFile);
 
-   axios
-     .post(
-       "https://13.239.143.31/DeliveryTrackingSystem/upload_proof.php",
-       formData,
-       {
-         headers: { "Content-Type": "multipart/form-data" },
-       }
-     )
-     .then((res) => {
-       if (res.data.success) {
-         showToastMessage("success", "Proof submitted successfully!");
-            setTimeout(() => {
-              navigate("/successful-delivery");
-            }, 1000); 
-         setDeliveries(
-           deliveries.filter(
-             (d) => d.transactionNo !== deliveryToMark.transactionNo
-           )
-         );
-         setFilteredDeliveries(
-           filteredDeliveries.filter(
-             (d) => d.transactionNo !== deliveryToMark.transactionNo
-           )
-         );
-         setProofFile(null);
-         setDeliveryToMark(null);
-         stopCamera();
-         setShowProofModal(false); 
-      
-       } else {
-         showToastMessage(
-           "danger",
-           res.data.message || "Failed to upload proof."
-         );
-         stopCamera();
-         setShowProofModal(false); 
-       }
-     })
-     .catch((err) => {
-       console.error(err);
-       showToastMessage("danger", "Failed to submit proof.");
-       stopCamera();
-       setShowProofModal(false); 
-     });
- };
-
+    axios
+      .post(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/upload_proof.php",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          showToastMessage("success", "Proof submitted successfully!");
+          setTimeout(() => {
+            navigate("/successful-delivery");
+          }, 1000);
+          setDeliveries(
+            deliveries.filter(
+              (d) => d.transactionNo !== deliveryToMark.transactionNo
+            )
+          );
+          setFilteredDeliveries(
+            filteredDeliveries.filter(
+              (d) => d.transactionNo !== deliveryToMark.transactionNo
+            )
+          );
+          setProofFile(null);
+          setDeliveryToMark(null);
+          stopCamera();
+          setShowProofModal(false);
+        } else {
+          showToastMessage(
+            "danger",
+            res.data.message || "Failed to upload proof."
+          );
+          stopCamera();
+          setShowProofModal(false);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        showToastMessage("danger", "Failed to submit proof.");
+        stopCamera();
+        setShowProofModal(false);
+      });
+  };
 
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>

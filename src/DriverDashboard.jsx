@@ -33,7 +33,7 @@ function DriverDashboard() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/fetch_personnel_deliveries.php",
         { pers_username: username }
       )
       .then((res) => {
@@ -129,7 +129,7 @@ function DriverDashboard() {
 
     axios
       .post(
-        "https://13.239.143.31/DeliveryTrackingSystem/update_out_of_order_status.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_out_of_order_status.php",
         { transaction_id: selectedTxn }
       )
       .then((res) => {

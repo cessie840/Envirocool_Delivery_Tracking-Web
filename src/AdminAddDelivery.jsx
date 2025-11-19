@@ -165,7 +165,9 @@ const AddDelivery = () => {
 
   useEffect(() => {
     axios
-      .get("https://13.239.143.31/DeliveryTrackingSystem/get_provinces.php")
+      .get(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_provinces.php"
+      )
       .then((res) => setProvinceOptions(res.data))
       .catch((err) => console.error(err));
   }, []);
@@ -174,7 +176,7 @@ const AddDelivery = () => {
     if (form.province) {
       axios
         .get(
-          `https://13.239.143.31/DeliveryTrackingSystem/get_city.php?province=${form.province}`
+          `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_city.php?province=${form.province}`
         )
         .then((res) => setCityOptions(res.data))
         .catch((err) => console.error(err));
@@ -187,7 +189,7 @@ const AddDelivery = () => {
     if (form.city && form.province) {
       axios
         .get(
-          `https://13.239.143.31/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
+          `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
         )
         .then((res) => setBarangayOptions(res.data))
         .catch((err) => console.error(err));
@@ -203,7 +205,7 @@ const AddDelivery = () => {
   const fetchProvinces = async () => {
     try {
       const response = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_provinces.php"
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_provinces.php"
       );
       const data = response.data;
       setProvinceOptions(data);
@@ -234,7 +236,7 @@ const AddDelivery = () => {
 
     try {
       await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/delete_product.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/delete_product.php",
         {
           type_of_product: typeOfProduct || value,
           description: type === "item" ? value : "",
@@ -479,12 +481,12 @@ const AddDelivery = () => {
     const fetchProducts = async () => {
       try {
         const res = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_products.php"
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_products.php"
         );
         setProductOptions(res.data);
 
         const itemsRes = await axios.get(
-          "https://13.239.143.31/DeliveryTrackingSystem/get_items.php"
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_items.php"
         );
         setItemOptions(itemsRes.data);
       } catch (err) {
@@ -498,7 +500,7 @@ const AddDelivery = () => {
   const fetchLatestIDs = async () => {
     try {
       const res = await axios.get(
-        "https://13.239.143.31/DeliveryTrackingSystem/get_latest_ids.php"
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_latest_ids.php"
       );
       setTransactionId(res.data.transaction_id);
       setPoId(res.data.po_id);
@@ -889,7 +891,7 @@ const AddDelivery = () => {
 
     try {
       const res = await axios.post(
-        "https://13.239.143.31/DeliveryTrackingSystem/add_delivery.php",
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/add_delivery.php",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -1494,7 +1496,7 @@ const AddDelivery = () => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "https://delivery-api.mooo.info/DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: newValue,
                                 description: "",
@@ -1610,7 +1612,7 @@ const AddDelivery = () => {
 
                           try {
                             await axios.post(
-                              "https://13.239.143.31/DeliveryTrackingSystem/save_product.php",
+                              "https://delivery-api.mooo.info/DeliveryTrackingSystem/save_product.php",
                               {
                                 type_of_product: item.type_of_product,
                                 description: newValue,
@@ -1718,7 +1720,7 @@ const AddDelivery = () => {
                           onClick={async () => {
                             try {
                               await axios.post(
-                                "https://13.239.143.31/DeliveryTrackingSystem/update_product.php",
+                                "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_product.php",
                                 {
                                   type_of_product_current:
                                     editModal.type === "product"

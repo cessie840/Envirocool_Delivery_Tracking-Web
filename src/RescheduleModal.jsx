@@ -16,14 +16,17 @@ const RescheduleModal = ({
       return;
     }
 
-    fetch("https://13.239.143.31/DeliveryTrackingSystem/reschedule_delivery.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        transaction_id,
-        target_date_delivery: newDate,
-      }),
-    })
+    fetch(
+      "https://delivery-api.mooo.info/DeliveryTrackingSystem/reschedule_delivery.php",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transaction_id,
+          target_date_delivery: newDate,
+        }),
+      }
+    )
       .then((res) => res.json())
       .then((response) => {
         if (response.success) {

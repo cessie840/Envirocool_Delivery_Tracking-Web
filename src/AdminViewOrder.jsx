@@ -77,7 +77,7 @@ const ViewOrder = () => {
 
   const fetchOrderDetails = () => {
     fetch(
-      `https://13.239.143.31/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}&_=${Date.now()}`,
+      `https://delivery-api.mooo.info/DeliveryTrackingSystem/view_deliveries.php?transaction_id=${transaction_id}&_=${Date.now()}`,
       {
         method: "GET",
         headers: {
@@ -210,11 +210,14 @@ const ViewOrder = () => {
       items: editableItems,
     };
 
-    fetch("https://13.239.143.31/DeliveryTrackingSystem/update_delivery.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    fetch(
+      "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_delivery.php",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    )
       .then((res) => res.json())
       .then((response) => {
         if (response.status === "success") {
