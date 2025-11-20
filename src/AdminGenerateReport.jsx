@@ -1022,16 +1022,19 @@ const GenerateReport = () => {
         today.getMonth() + 1
       ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
+      // Filter only today's sales with Delivered status
       const todaySales = salesData.filter((s) => {
         const d = new Date(s.date_of_order);
         return (
           d.getFullYear() === today.getFullYear() &&
           d.getMonth() === today.getMonth() &&
-          d.getDate() === today.getDate()
+          d.getDate() === today.getDate() &&
+          s.delivery_status?.toLowerCase() === "delivered" // only delivered
         );
       });
 
       if (todaySales.length > 0) {
+        // Add each sale row
         todaySales.forEach((sale) => {
           addRow(
             todayStr,
@@ -1042,6 +1045,7 @@ const GenerateReport = () => {
           );
         });
 
+        // Add total row
         const totals = todaySales.reduce(
           (acc, s) => ({
             quote: acc.quote + s.unit_cost * s.qty,
@@ -1060,6 +1064,7 @@ const GenerateReport = () => {
           totals.balance
         );
       } else {
+        // No delivered orders today
         addRow(todayStr, 0, 0, 0, 0);
       }
     }
