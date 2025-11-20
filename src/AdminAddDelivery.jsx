@@ -885,8 +885,8 @@ const AddDelivery = () => {
         .join(", ")
     );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
-    proofFiles.forEach((file, index) => {
-      formData.append(`proofOfPayment[${index}]`, file);
+    proofFiles.forEach((file) => {
+      formData.append("proofOfPayment[]", file);
     });
 
     try {

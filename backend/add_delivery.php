@@ -119,7 +119,7 @@ try {
     }
 
     $proof_paths = [];
-    if (!empty($_FILES['proofOfPayment']['name'][0])) { 
+    if (isset($_FILES['proofOfPayment']) && !empty($_FILES['proofOfPayment']['name'][0])) { 
         $uploadDir = __DIR__ . '/uploads/proof_of_payment/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
