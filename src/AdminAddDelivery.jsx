@@ -873,12 +873,11 @@ const AddDelivery = () => {
     formData.append(
       "customer_address",
       [
-        form.province,
-        form.city,
-        form.barangay,
         form.house_no,
         form.street_name,
         form.barangay,
+        form.city,
+        form.province,
         "Philippines",
       ]
         .filter(Boolean)
