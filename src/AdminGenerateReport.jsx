@@ -1,3778 +1,1069 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
+import axios from "axios";
 import {
-  FaPlus,
-  FaFilePdf,
-  FaFilter,
-  FaChartLine,
-  FaUserFriends,
-  FaShoppingCart,
-  FaTruck,
-  FaFileInvoice,
-  FaCheckCircle,
-  FaTimesCircle,
+  FaRegTrashAlt,
+  FaArrowLeft,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
-import {
-  Modal,
-  Button,
-  Form,
-  Table,
-  Row,
-  Col,
-  Spinner,
-  Card,
-  Collapse,
-} from "react-bootstrap";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
-
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import html2canvas from "html2canvas";
-import { Toaster, toast } from "sonner";
-
-import logo from "./assets/envirocool-logo.png";
+import { Button, Modal, Collapse } from "react-bootstrap";
+import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import "./loading-overlay.css";
+import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 
-const REPORT_TYPES = [
-  { value: "sales", label: "Sales Report" },
-  { value: "transaction", label: "Transaction Report" },
-  { value: "service", label: "Delivery Service Report" },
-  { value: "customer", label: "Client Satisfaction Report" },
-  { value: "all", label: "Overall Reports" },
+const paymentOptions = [
+  { label: "Cash", value: "Cash" },
+  { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
-const PERIODS = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-  { value: "quarterly", label: "Quarterly" },
-  { value: "annually", label: "Annual" },
-];
+import { components } from "react-select";
 
-const COLORS = ["#4CAF50", "#E57373", "#FFC107", "#2196F3", "#9C27B0"];
+const CustomMenuList = (props) => {
+  const { children, selectProps } = props;
 
-const GenerateReport = () => {
+  return (
+    <components.MenuList {...props}>
+      {children}
+
+      <div
+        className="d-flex justify-content-around mt-2 py-2 px-2  border-top"
+        style={{ gap: "8px" }}
+      >
+        <button
+          type="button"
+          className="btn btn-success btn-sm"
+          style={{
+            flex: 1,
+            transition: "background-color 0.2s",
+          }}
+          onClick={() => selectProps.onEdit?.()}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = "white";
+            e.currentTarget.style.color = "#135d2aff";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = "#198754";
+            e.currentTarget.style.color = "white";
+          }}
+        >
+          EDIT
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          style={{
+            flex: 1,
+            transition: "background-color 0.2s",
+          }}
+          onClick={() => selectProps.onDelete?.()}
+          onMouseOver={(e) => {
+            (e.currentTarget.style.color = "#a71d2a"),
+              (e.currentTarget.style.backgroundColor = "white");
+          }}
+          onMouseOut={(e) => {
+            (e.currentTarget.style.backgroundColor = "#dc3545"),
+              (e.currentTarget.style.color = "white");
+          }}
+        >
+          DELETE
+        </button>
+      </div>
+    </components.MenuList>
+  );
+};
+
+const AddDelivery = () => {
+  const proofFileRef = useRef(null);
+
+  const [products, setProducts] = useState([]);
+  const [itemOptions, setItemOptions] = useState({});
+  const [productOptions, setProductOptions] = useState([]);
+  const [dpError, setDpError] = useState("");
+  const [dpDateError, setDpDateError] = useState("");
+  const [contactError, setContactError] = useState("");
+
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const [transactionId, setTransactionId] = useState("Loading...");
+  const [poId, setPoId] = useState("Loading...");
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  const [editModal, setEditModal] = useState({
+    show: false,
+    type: "",
+    currentValue: "",
+    index: null,
+    typeOfProduct: "",
+  });
+  const [newValue, setNewValue] = useState("");
+
+  const [proofFiles, setProofFiles] = useState([]);
+  const [proofPreviews, setProofPreviews] = useState([]);
+  const [selectedFileNames, setSelectedFileNames] = useState([]);
+
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [dateError, setDateError] = useState("");
+  const [orderDateError, setOrderDateError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [fpBillingError, setFpBillingError] = useState("");
+
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const [receiptItems, setReceiptItems] = useState([]);
+  const [receiptNumber, setReceiptNumber] = useState(null);
+
+  const [provinceOptions, setProvinceOptions] = useState([]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const AUTO_DOWNLOAD_RECEIPT = false;
+
+  const [form, setForm] = useState({
+    customer_name: "",
+    house_no: "",
+    street_name: "",
+    barangay: "",
+    city: "",
+    province: "",
+    customer_contact: "",
+    date_of_order: "",
+    target_date_delivery: "",
+    payment_method: "",
+    payment_option: "",
+    full_payment: "",
+    fp_collection_date: "",
+    down_payment: "",
+    dp_collection_date: "",
+    balance: "",
+    total: "",
+  });
+
+  const [lagunaData, setLagunaData] = useState({});
+  const [cityOptions, setCityOptions] = useState([]);
+  const [barangayOptions, setBarangayOptions] = useState([]);
+
+  useEffect(() => {
+    if (showReceiptModal) {
+      let storedCount =
+        parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
+      const newCount = storedCount + 1;
+      localStorage.setItem("envirocoolReceiptCounter", newCount);
+      setReceiptNumber(newCount);
+    }
+  }, [showReceiptModal]);
+
+  useEffect(() => {
+    axios
+      .get(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_provinces.php"
+      )
+      .then((res) => setProvinceOptions(res.data))
+      .catch((err) => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    if (form.province) {
+      axios
+        .get(
+          `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_city.php?province=${form.province}`
+        )
+        .then((res) => setCityOptions(res.data))
+        .catch((err) => console.error(err));
+    } else {
+      setCityOptions([]);
+    }
+  }, [form.province]);
+
+  useEffect(() => {
+    if (form.city && form.province) {
+      axios
+        .get(
+          `https://delivery-api.mooo.info/DeliveryTrackingSystem/get_barangays.php?province=${form.province}&city=${form.city}`
+        )
+        .then((res) => setBarangayOptions(res.data))
+        .catch((err) => console.error(err));
+    } else {
+      setBarangayOptions([]);
+    }
+  }, [form.city]);
+
+  useEffect(() => {
+    fetchProvinces();
+  }, []);
+
+  const fetchProvinces = async () => {
+    try {
+      const response = await axios.get(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_provinces.php"
+      );
+      const data = response.data;
+      setProvinceOptions(data);
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+    }
+  };
+
+  const handleCityChange = (selected) => {
+    const city = selected.value;
+    setForm((prev) => ({ ...prev, city, barangay: "" }));
+
+    const barangays = lagunaData[city] || [];
+    setBarangayOptions(barangays.map((b) => ({ label: b, value: b })));
+  };
+
+  const handleBarangayChange = (selected) => {
+    setForm((prev) => ({ ...prev, barangay: selected.value }));
+  };
+
+  const handleEditClick = (type, currentValue, index, typeOfProduct = "") => {
+    setEditModal({ show: true, type, currentValue, index, typeOfProduct });
+    setNewValue(currentValue);
+  };
+
+  const handleDeleteClick = async (type, value, index, typeOfProduct = "") => {
+    if (!window.confirm(`Are you sure you want to delete "${value}"?`)) return;
+
+    try {
+      await axios.post(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/delete_product.php",
+        {
+          type_of_product: typeOfProduct || value,
+          description: type === "item" ? value : "",
+        }
+      );
+
+      if (type === "product") {
+        setProductOptions((prev) => prev.filter((opt) => opt.value !== value));
+        setOrderItems((prev) =>
+          prev.map((item) =>
+            item.type_of_product === value
+              ? { ...item, type_of_product: "" }
+              : item
+          )
+        );
+      } else {
+        setItemOptions((prev) => ({
+          ...prev,
+          [typeOfProduct]: prev[typeOfProduct].filter(
+            (opt) => opt.value !== value
+          ),
+        }));
+        setOrderItems((prev) =>
+          prev.map((item) =>
+            item.type_of_product === typeOfProduct && item.description === value
+              ? { ...item, description: "" }
+              : item
+          )
+        );
+      }
+
+      ToastHelper.success("Deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      ToastHelper.error("Error deleting item");
+    }
+  };
+
+  const handleContactChange = (e) => {
+    let value = e.target.value || "";
+
+    value = value.replace(/\s+/g, "").trim();
+
+    if (value === "") {
+      setForm((prev) => ({ ...prev, customer_contact: "" }));
+      setContactError("");
+      return;
+    }
+
+    if (!/^\d+$/.test(value)) {
+      setContactError("Contact number should contain numbers only.");
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, customer_contact: value }));
+
+    if (!value.startsWith("09")) {
+      setContactError("Contact number must start with '09'.");
+    } else if (value.length > 11) {
+      setContactError("Contact number cannot exceed 11 digits.");
+    } else if (value.length < 11) {
+      setContactError("Contact number must have 11 digits.");
+    } else {
+      setContactError("");
+    }
+  };
+
+  const handleProofFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const validPreviews = [];
+    const validNames = [];
+
+    files.forEach((file) => {
+      if (file.type === "image/jpeg" || file.type === "image/png") {
+        validFiles.push(file);
+        validNames.push(file.name);
+        const previewUrl = URL.createObjectURL(file);
+        validPreviews.push(previewUrl);
+      } else {
+        ToastHelper.error(
+          `File "${file.name}" is not a valid JPEG or PNG image.`,
+          {
+            className: "toast-error",
+          }
+        );
+      }
+    });
+
+    proofPreviews.forEach((url) => URL.revokeObjectURL(url));
+
+    setProofFiles(validFiles);
+    setProofPreviews(validPreviews);
+    setSelectedFileNames(validNames);
+  };
+
+  const handleUnitCostChange = (index, e) => {
+    const rawValue = parsePeso(e.target.value);
+    const updatedItems = [...orderItems];
+
+    updatedItems[index].unit_cost = rawValue;
+
+    const quantity = parseInt(updatedItems[index].quantity) || 0;
+    const unitCost = parseFloat(rawValue) || 0;
+    updatedItems[index].total_cost = (unitCost * quantity).toFixed(2);
+
+    setOrderItems(updatedItems);
+    recalcTotal(updatedItems);
+  };
+
+  const handleUnitCostBlur = (index) => {
+    const updatedItems = [...orderItems];
+    updatedItems[index].unit_cost = formatPeso(
+      parseFloat(updatedItems[index].unit_cost)
+    );
+    setOrderItems(updatedItems);
+  };
+
+  const handleUnitCostFocus = (index) => {
+    const updatedItems = [...orderItems];
+    updatedItems[index].unit_cost = parsePeso(updatedItems[index].unit_cost);
+    setOrderItems(updatedItems);
+  };
+
+  const handleDownPaymentFocus = () => {
+    setForm((prev) => ({
+      ...prev,
+      down_payment: parsePeso(prev.down_payment),
+    }));
+  };
+
+  const handleDownPaymentBlur = () => {
+    setForm((prev) => ({
+      ...prev,
+      down_payment: formatPeso(prev.down_payment),
+    }));
+  };
+
+  const handleItemChange = (index, e) => {
+    const { name, value } = e.target;
+    const updatedItems = [...orderItems];
+    updatedItems[index][name] = value;
+
+    if (name === "quantity" || name === "unit_cost") {
+      const quantity = parseInt(updatedItems[index].quantity) || 0;
+      const unitCost =
+        parseFloat(parsePeso(updatedItems[index].unit_cost)) || 0;
+      updatedItems[index].total_cost = (unitCost * quantity).toFixed(2);
+    }
+
+    setOrderItems(updatedItems);
+    recalcTotal(updatedItems);
+  };
+
+  const recalcTotal = (updatedItems) => {
+    const totalCost = updatedItems.reduce((sum, item) => {
+      const cost = parseFloat(item.total_cost);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
+    const downPayment = parseFloat(form.down_payment) || 0;
+    const isDownPayment = form.payment_option === "Down Payment";
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      total: totalCost.toFixed(2),
+      balance: isDownPayment
+        ? (totalCost - downPayment).toFixed(2)
+        : prevForm.balance || "",
+    }));
+  };
+
+  const formatPeso = (value) => {
+    if (value === "" || value === null || isNaN(value)) return "";
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const parsePeso = (value) => {
+    if (!value) return "";
+    return value.toString().replace(/[^0-9.]/g, "");
+  };
+
+  const handleConfirmCancel = () => {
+    setShowCancelModal(false);
+
+    setForm({
+      customer_name: "",
+      customer_address: "",
+      customer_contact: "",
+      date_of_order: "",
+      target_date_delivery: "",
+      payment_method: "",
+      payment_option: "",
+      full_payment: "",
+      fp_collection_date: "",
+      down_payment: "",
+      dp_collection_date: "",
+
+      balance: "",
+      total: "",
+    });
+
+    setOrderItems([
+      {
+        quantity: "",
+        type_of_product: "",
+        description: "",
+        unit_cost: "",
+        total_cost: "",
+      },
+    ]);
+
+    navigate("/delivery-details");
+  };
+
+  const [orderItems, setOrderItems] = useState([
+    {
+      quantity: "",
+      type_of_product: "",
+      description: "",
+      unit_cost: "",
+      total_cost: "",
+    },
+  ]);
+
+  const getLocalDate = () => {
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+  };
+
+  useEffect(() => {
+    recalcTotal(orderItems);
+  }, [form.payment_option]);
+
+  useEffect(() => {
+    document.title = "Add Delivery";
+    fetchLatestIDs();
+
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get(
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_products.php"
+        );
+        setProductOptions(res.data);
+
+        const itemsRes = await axios.get(
+          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_items.php"
+        );
+        setItemOptions(itemsRes.data);
+      } catch (err) {
+        console.error("Error loading products", err);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const fetchLatestIDs = async () => {
+    try {
+      const res = await axios.get(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_latest_ids.php"
+      );
+      setTransactionId(res.data.transaction_id);
+      setPoId(res.data.po_id);
+    } catch (error) {
+      console.error("Error fetching latest IDs", error);
+      setTransactionId("Error");
+      setPoId("Error");
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    let updatedForm = {
+      ...form,
+      [name]: value,
+    };
+
+    if (name === "down_payment") {
+      const downPayment = parseFloat(value) || 0;
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost) || 0;
+        return sum + cost;
+      }, 0);
+
+      if (downPayment > totalCost) {
+        setDpError("Down Payment cannot exceed Total Amount");
+      } else {
+        setDpError("");
+      }
+
+      updatedForm.balance = (totalCost - downPayment).toFixed(2);
+      updatedForm.total = totalCost.toFixed(2);
+    }
+
+    if (name === "down_payment" || name === "payment_option") {
+      const downPayment = parseFloat(
+        name === "down_payment" ? value : form.down_payment
+      );
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost);
+        return sum + (isNaN(cost) ? 0 : cost);
+      }, 0);
+
+      updatedForm.total = totalCost.toFixed(2);
+
+      if (value === "Full Payment") {
+        updatedForm.balance = "";
+        updatedForm.full_payment = totalCost.toFixed(2);
+        updatedForm.down_payment = "";
+        updatedForm.dp_collection_date = "";
+      } else if (value === "Down Payment") {
+        updatedForm.full_payment = "";
+        updatedForm.fp_collection_date = "";
+        updatedForm.balance = !isNaN(downPayment)
+          ? (totalCost - downPayment).toFixed(2)
+          : totalCost.toFixed(2);
+      }
+    }
+
+    if (name === "down_payment" || name === "payment_option") {
+      const downPayment = parseFloat(
+        name === "down_payment" ? value : form.down_payment
+      );
+
+      const totalCost = orderItems.reduce((sum, item) => {
+        const cost = parseFloat(item.total_cost);
+        return sum + (isNaN(cost) ? 0 : cost);
+      }, 0);
+
+      if (
+        (name === "payment_option" && value === "Full Payment") ||
+        form.payment_option === "Full Payment"
+      ) {
+        updatedForm.balance = "";
+        updatedForm.total = totalCost.toFixed(2);
+      } else if (!isNaN(downPayment) && !isNaN(totalCost)) {
+        updatedForm.balance = (totalCost - downPayment).toFixed(2);
+        updatedForm.total = totalCost.toFixed(2);
+      } else {
+        updatedForm.balance = "";
+        updatedForm.total = totalCost.toFixed(2);
+      }
+    }
+
+    setForm(updatedForm);
+  };
+
+  const addNewItem = () => {
+    setOrderItems([
+      ...orderItems,
+      {
+        quantity: "",
+        type_of_product: "",
+        description: "",
+        unit_cost: "",
+        total_cost: "",
+      },
+    ]);
+  };
+
+  const removeItem = (index) => {
+    const updatedItems = orderItems.filter((_, i) => i !== index);
+    setOrderItems(updatedItems);
+
+    const totalCostSum = updatedItems.reduce((sum, item) => {
+      const cost = parseFloat(item.total_cost);
+      return sum + (isNaN(cost) ? 0 : cost);
+    }, 0);
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      total: totalCostSum.toFixed(2),
+      balance: (totalCostSum - parseFloat(prevForm.down_payment || 0)).toFixed(
+        2
+      ),
+    }));
+  };
+
+  const handlePrintReceipt = () => {
+    const element = document.getElementById("receipt-section");
+    if (!element) {
+      console.error("Receipt section not found!");
+      return;
+    }
+
+    const transactionId = receiptData?.transaction_id || "N/A";
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `Receipt_TN${transactionId}_${today}`;
+
+    const clonedElement = element.cloneNode(true);
+
+    clonedElement
+      .querySelectorAll(".signature-section")
+      .forEach((el) => el.remove());
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>${filename}</title>
+        <style>
+          @page {
+            size: auto;
+            margin: 10mm;
+          }
+          body {
+            font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #000;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+          }
+          .receipt {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .receipt p {
+            margin: 3px 0;
+          }
+          h3 {
+            font-size: 18px;
+            margin-bottom: 3px;
+          }
+          p, th {
+            font-size: 11px;
+          }
+          table, td {
+            font-size: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          th, td {
+            border: 1px solid #5E5E5EFF;
+            padding: 3px;
+            text-align: left;
+          }
+          th {
+            background-color: #EBEBEBFF;
+            font-weight: bold;
+          }
+          .text-center { text-align: center; }
+          .text-end { text-align: right; }
+          hr.dashed {
+            border-top: 1px dashed #999;
+            margin: 20px 0;
+          }
+          .signature-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+          }
+          .signature {
+            text-align: center;
+            width: 35%;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            font-size: 11px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          ${clonedElement.innerHTML}
+          <div class="signature-container">
+            <div class="signature">Prepared By</div>
+            <div class="signature">Received By</div>
+          </div>
+          <hr class="dashed" />
+          <div class="text-center mt-3">
+            <h4>Thank you for trusting Envirocool!</h4>
+            <small>We appreciate your business.</small>
+          </div>
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `);
+
+    printWindow.document.close();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!/^09\d{9}$/.test(form.customer_contact)) {
+      ToastHelper.error(
+        "Contact number must start with '09' and be exactly 11 digits.",
+        { className: "toast-error" }
+      );
+      setLoading(false);
+      return;
+    }
+
+    const fullAddress =
+      `${form.street}, ${form.barangay}, ${form.city}, ${form.province}`.trim();
+    if (!fullAddress.replace(/[, ]/g, "")) {
+      ToastHelper.error(
+        "Please complete the customer's address before proceeding.",
+        {
+          className: "toast-error",
+        }
+      );
+      setLoading(false);
+      return;
+    }
+    form.customer_address = fullAddress;
+
+    if (!form.payment_method) {
+      ToastHelper.error("Please select a payment method.", {
+        className: "toast-error",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (form.payment_method && proofFiles.length === 0) {
+      ToastHelper.error("Please upload proof of payment.", {
+        className: "toast-error",
+      });
+      setLoading(false);
+      return;
+    }
+
+    for (const [index, item] of orderItems.entries()) {
+      const quantity = parseInt(item.quantity);
+      const unitCost = parseFloat(parsePeso(item.unit_cost));
+      const typeOfProduct = item.type_of_product?.trim();
+      const description = item.description?.trim();
+
+      if (!typeOfProduct) {
+        ToastHelper.error(
+          `Please select a type of product for item #${index + 1}`,
+          {
+            className: "toast-error",
+          }
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!description) {
+        ToastHelper.error(`Please select an item name for item #${index + 1}`, {
+          className: "toast-error",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (isNaN(quantity) || quantity < 1) {
+        ToastHelper.error(
+          `Quantity for item #${index + 1} must be at least 1`,
+          {
+            className: "toast-error",
+          }
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (isNaN(unitCost) || unitCost < 0) {
+        ToastHelper.error(
+          `Unit cost for item #${index + 1} must be a non-negative number`,
+          {
+            className: "toast-error",
+          }
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      down_payment: parsePeso(prev.down_payment) || 0,
+    }));
+
+    setLoading(false);
+    setShowSummaryModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowSummaryModal(false);
+    setLoading(true);
+
+    const normalizedOrderItems = orderItems.map((item) => ({
+      quantity: parseInt(item.quantity) || 0,
+      type_of_product: item.type_of_product,
+      description: item.description,
+      unit_cost: parseFloat(parsePeso(item.unit_cost)) || 0,
+      total_cost: parseFloat(item.total_cost) || 0,
+    }));
+
+    const formData = new FormData();
+    formData.append("customer_name", form.customer_name);
+    formData.append("house_no", form.house_no);
+    formData.append("street_name", form.street_name);
+    formData.append("barangay", form.barangay);
+    formData.append("city", form.city);
+    formData.append("province", form.province);
+    formData.append("customer_contact", form.customer_contact);
+    formData.append("date_of_order", form.date_of_order);
+    formData.append("target_date_delivery", form.target_date_delivery);
+    formData.append("payment_method", form.payment_method);
+    formData.append("payment_option", form.payment_option);
+    formData.append(
+      "full_payment",
+      parseFloat(parsePeso(form.full_payment)) || 0
+    );
+    formData.append("fp_collection_date", form.fp_collection_date);
+    formData.append(
+      "down_payment",
+      parseFloat(parsePeso(form.down_payment)) || 0
+    );
+    formData.append("dp_collection_date", form.dp_collection_date);
+    formData.append("balance", parseFloat(parsePeso(form.balance)) || 0);
+    formData.append("total", parseFloat(parsePeso(form.total)) || 0);
+    formData.append(
+      "customer_address",
+      [
+        form.province,
+        form.city,
+        form.barangay,
+        form.house_no,
+        form.street_name,
+        form.barangay,
+        "Philippines",
+      ]
+        .filter(Boolean)
+        .join(", ")
+    );
+    formData.append("order_items", JSON.stringify(normalizedOrderItems));
+    proofFiles.forEach((file, index) => {
+      formData.append(`proofOfPayment[${index}]`, file);
+    });
+
+    try {
+      const res = await axios.post(
+        "https://delivery-api.mooo.info/DeliveryTrackingSystem/add_delivery.php",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
+
+      ToastHelper.success("Delivery added successfully!", {
+        duration: 2500,
+        style: {
+          background: "#EBFAECFF",
+          border: "1px solid #91C793FF",
+          color: "#2E7D32",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+      fetchProvinces();
+
+      setReceiptData({
+        transaction_id: transactionId,
+        customer_name: form.customer_name,
+        house_no: form.house_no,
+        street_name: form.street_name,
+        barangay: form.barangay,
+        city: form.city,
+        province: form.province,
+        customer_contact: form.customer_contact,
+        date_of_order: form.date_of_order,
+        target_date_delivery: form.target_date_delivery,
+        payment_method: form.payment_method,
+        payment_option: form.payment_option,
+        full_payment: form.full_payment,
+        fp_collection_date: form.fp_collection_date,
+        down_payment: form.down_payment,
+        dp_collection_date: form.dp_collection_date,
+        balance: form.balance,
+        total: form.total,
+      });
+      setReceiptItems(
+        orderItems.map((item) => ({
+          quantity: item.quantity,
+          type_of_product: item.type_of_product,
+          description: item.description,
+          unit_cost: item.unit_cost,
+          total_cost: item.total_cost,
+        }))
+      );
+      setShowReceiptModal(true);
+      if (AUTO_DOWNLOAD_RECEIPT) {
+        setTimeout(() => window.print(), 1000);
+      }
+
+      setForm({
+        customer_name: "",
+        house_no: "",
+        street_name: "",
+        barangay: "",
+        city: "",
+        province: "",
+        customer_contact: "",
+        date_of_order: "",
+        target_date_delivery: "",
+        payment_method: "",
+        payment_option: "",
+        full_payment: "",
+        fp_collection_date: "",
+        down_payment: "",
+        dp_collection_date: "",
+        balance: "",
+        total: "",
+      });
+      setOrderItems([
+        {
+          quantity: "",
+          type_of_product: "",
+          description: "",
+          unit_cost: "",
+          total_cost: "",
+        },
+      ]);
+
+      setProofFiles([]);
+      setProofPreviews([]);
+      setSelectedFileNames([]);
+      proofPreviews.forEach((url) => URL.revokeObjectURL(url));
+
+      if (proofFileRef.current) {
+        proofFileRef.current.value = "";
+      }
+
+      fetchLatestIDs();
+    } catch (error) {
+      console.error("Error submitting form", error);
+      ToastHelper.error("Error saving delivery.", {
+        duration: 2500,
+        style: {
+          background: "#FFEAEA",
+          border: "1px solid #E57373",
+          color: "#C62828",
+          fontWeight: 600,
+          fontSize: "1.1rem",
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+          justifyContent: "center",
+          borderRadius: "8px",
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   const [showFAQ, setShowFAQ] = useState(false);
 
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
 
   const guideqst = [
     {
-      question: "How can I filter the reports?",
+      question: "How can I add a delivery?",
       answer:
-        "Click the 'Filter Reports' button at the top-left. You can filter by Start Date, End Date, Period (Annually, Quarterly, Monthly, Weekly, Daily), Report Type, Payment Option, Delivery Status, Delivery Personnel, and Reason for Cancellation.",
+        "Complete all the required fields, then click the 'Add' button below to create a delivery transaction.",
     },
     {
-      question: "What does the Sales Report Table show?",
+      question: "How can I add a new product type?",
       answer:
-        "It displays all successfully delivered transactions that generated sales within the selected filtered period.",
+        "In the 'Order Details' section, under 'Type of Product', type the new product name. An option to create it will appear—click it, and it will automatically be added to the product selection.",
     },
     {
-      question: "What does Sales Growth Over Time show?",
+      question: "How can I add a new item name?",
       answer:
-        "It shows the growth of sales within the selected filtered period based on successfully delivered transactions.",
+        "In the 'Order Details' section, first select the product you want to add an item to. Then, type the new item name in the item selection field. An option to create it will appear—click it, and it will automatically be saved under that product.",
     },
     {
-      question: "What does Top Selling Item show?",
+      question: "How can I add multiple orders to the same transaction?",
       answer:
-        "It highlights the top three best-selling items most frequently purchased by customers.",
+        "Click the 'Add New Item' button in the 'Order Details' section to add additional orders to the same transaction.",
     },
     {
-      question: "How can I generate a PDF?",
+      question: "How can I input customer's address?",
       answer:
-        "Click the 'Generate Report' button at the top-left. The report is generated based on the applied filters and includes a 'Prepared By' section for the employee to sign.",
+        "Start by selecting the province, then choose the city and barangay. You can also manually type a new location if it isn’t listed. Add a house number, street name, or subdivision for a complete address.",
     },
     {
-      question: "What does the Transaction Report show?",
+      question: "How does the payment option work?",
       answer:
-        "It displays all transactions recorded within the selected filtered period and provides an analysis comparing delivered vs. cancelled transactions.",
+        "Choose a Payment Method (e.g., Cash or Bank Transfer), then select a Payment Option:\n• Full Payment – Pay the entire amount; no (₱0.00) balance is recorded.\n• Down Payment – Pay a portion; the system automatically calculates the remaining balance.",
     },
     {
-      question: "What does the Delivery Service Report show?",
+      question: "Can I still edit or delete a delivery after saving?",
       answer:
-        "It displays all transactions within the selected filtered period, including cancelled dates, rescheduled dates, and reasons, along with an analysis of cancellation reasons.",
+        "No, once a delivery has been added, it can no longer be edited. All details should be reviewed in the Transaction Summary to confirm the details before the final submission. Only the customer's payment information can be updated later if the 'Down Payment' option was selected.",
     },
     {
-      question: "What does the Customer Satisfaction Report show?",
+      question: "What are the valid date rules when adding a delivery?",
       answer:
-        "It displays all successfully delivered transactions with customer ratings and feedback based on the selected filters, including an analysis of the rating percentages.",
+        "\n• Date of Order & Billing Date – Cannot be set in the future.\n• Date of Delivery – Cannot be set in the past.\n• Payment Due Date – Cannot exceed the Date of Delivery and must not be set in the past.",
     },
   ];
-
-  const navigate = useNavigate();
-  const reportRef = useRef(null);
-
-  const [showFilter, setShowFilter] = useState(false);
-  const [period, setPeriod] = useState(() => {
-    return localStorage.getItem("reportPeriod") || "monthly";
-  });
-
-  const [reportType, setReportType] = useState(() => {
-    return localStorage.getItem("reportType") || "all";
-  });
-
-  const [startDate, setStartDate] = useState(() => {
-    return localStorage.getItem("reportStartDate") || "";
-  });
-
-  const [endDate, setEndDate] = useState(() => {
-    return localStorage.getItem("reportEndDate") || "";
-  });
-
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem("reportActiveTab") || "overall";
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState({});
-  const [salesData, setSalesData] = useState([]);
-  const [topSelling, setTopSelling] = useState([]);
-  const [transactionData, setTransactionData] = useState([]);
-  const [serviceData, setServiceData] = useState([]);
-  const [customerData, setCustomerData] = useState([]);
-  const [deliveryStatus, setDeliveryStatus] = useState("");
-  const [deliveryPersonnel, setDeliveryPersonnel] = useState("");
-  const [cancellationReasonFilter, setCancellationReasonFilter] = useState("");
-  const [deliveryPersonnelOptions, setDeliveryPersonnelOptions] = useState([]);
-  const [cancellationReasonOptions, setCancellationReasonOptions] = useState(
-    []
-  );
-  const [paymentOptionFilter, setPaymentOptionFilter] = useState("");
-
-  const salesRef = useRef(null);
-  const transactionRef = useRef(null);
-  const serviceRef = useRef(null);
-  const customerRef = useRef(null);
-  const [salesPage, setSalesPage] = useState(1);
-  const [transactionPage, setTransactionPage] = useState(1);
-  const [servicePage, setServicePage] = useState(1);
-  const [customerPage, setCustomerPage] = useState(1);
-
-  const [failedReasons, setFailedReasons] = useState({});
-
-  useEffect(() => {
-    fetchData();
-  }, [
-    startDate,
-    endDate,
-    period,
-    reportType,
-    paymentOptionFilter,
-    deliveryStatus,
-    deliveryPersonnel,
-    cancellationReasonFilter,
-  ]);
-
-  useEffect(() => {}, [
-    salesData,
-    topSelling,
-    transactionData,
-    serviceData,
-    customerData,
-  ]);
-
-  useEffect(() => {
-    localStorage.setItem("reportPeriod", period);
-  }, [period]);
-
-  useEffect(() => {
-    localStorage.setItem("reportType", reportType);
-  }, [reportType]);
-
-  useEffect(() => {
-    localStorage.setItem("reportStartDate", startDate);
-  }, [startDate]);
-
-  useEffect(() => {
-    localStorage.setItem("reportEndDate", endDate);
-  }, [endDate]);
-
-  useEffect(() => {
-    localStorage.setItem("reportActiveTab", activeTab);
-  }, [activeTab]);
-
-  useEffect(() => {
-    const handleRescheduleEvent = () => {
-      fetchServiceData();
-    };
-
-    window.addEventListener("deliveryRescheduled", handleRescheduleEvent);
-
-    return () => {
-      window.removeEventListener("deliveryRescheduled", handleRescheduleEvent);
-    };
-  }, []);
-
-  const getReportTitle = () => {
-    const reportLabel =
-      REPORT_TYPES.find((r) => r.value === reportType)?.label || "Report";
-
-    if (startDate && endDate) {
-      return `${reportLabel} for the period ${formatDate(
-        startDate
-      )} - ${formatDate(endDate)}`;
-    }
-
-    const periodLabel = PERIODS.find((p) => p.value === period)?.label || "";
-    return `${reportLabel} for the ${periodLabel} Period`;
-  };
-
-  const normalizeSales = (raw = []) =>
-    (Array.isArray(raw) ? raw : [])
-      .map((r) => ({
-        transaction_id: r.transaction_id ?? r.id ?? null,
-        date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
-        customer_name: r.customer_name ?? r.customer ?? "Unknown",
-        item_name: `${r.product_name || ""} ${
-          r.item_name || r.description || "-"
-        }`.trim(),
-        qty: Number(r.qty ?? r.quantity ?? 0),
-        unit_cost: Number(r.unit_cost ?? r.unit_price ?? 0),
-        total_cost: Number(r.total_cost ?? r.total ?? 0),
-        delivery_status: (
-          r.delivery_status ??
-          r.status ??
-          "delivered"
-        ).toLowerCase(),
-        payment_option: r.payment_option ?? r.mode_of_payment ?? "Full Payment",
-        down_payment: Number(r.down_payment ?? 0),
-        balance: Number(r.balance ?? 0),
-      }))
-      .filter((sale) => sale.delivery_status === "delivered");
-
-  const normalizeTopSelling = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
-      item_name: r.item_name ?? r.name ?? "Unknown",
-      quantity_sold: Number(r.quantity_sold ?? r.qty ?? r.count ?? 0),
-    }));
-
-  const normalizeTransactions = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
-      transaction_id: r.transaction_id ?? r.id ?? null,
-      tracking_number: r.tracking_number ?? "-",
-      customer_name: r.customer_name ?? r.customer ?? "Unknown",
-      customer_address: r.customer_address ?? r.address ?? "-",
-      customer_contact: r.customer_contact ?? r.contact ?? "-",
-      date_of_order: r.date_of_order
-        ? new Date(r.date_of_order).toISOString().slice(0, 10)
-        : null,
-
-      item_name: `${r.product_name || ""} ${
-        r.item_name || r.description || "-"
-      }`.trim(),
-
-      qty: Number(r.qty ?? r.quantity ?? 0),
-      unit_cost: Number(r.unit_cost ?? 0),
-      subtotal: Number(r.subtotal ?? (r.qty ?? 0) * (r.unit_cost ?? 0)),
-      total_cost: Number(r.total_cost ?? r.total ?? 0),
-
-      mode_of_payment: r.mode_of_payment ?? r.payment ?? "-",
-      delivery_status: r.delivery_status ?? r.status ?? "Pending",
-
-      shipout_at: r.shipout_at
-        ? new Date(r.shipout_at).toISOString().slice(0, 10)
-        : null,
-
-      completed_at: r.completed_at
-        ? new Date(r.completed_at).toISOString().slice(0, 10)
-        : null,
-
-      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-      delivery_personnel: r.delivery_personnel ?? r.delivery_person ?? "-",
-      payment_option: r.payment_option ?? "Full Payment",
-      down_payment: Number(r.down_payment ?? 0),
-      balance: Number(r.balance ?? 0),
-    }));
-
-  const normalizeService = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => {
-      let normalizedReason =
-        r.cancelled_reason ?? r.cancellation_reason ?? null;
-      if (normalizedReason) {
-        const lower = String(normalizedReason).toLowerCase();
-        if (lower.includes("vehicle")) {
-          normalizedReason = "Vehicle-related Issue";
-        } else if (lower.includes("location")) {
-          normalizedReason = "Location Inaccessible";
-        }
-      }
-
-      return {
-        transaction_id: r.transaction_id ?? null,
-        date_of_order: r.date_of_order
-          ? new Date(r.date_of_order).toISOString().slice(0, 10)
-          : null,
-        customer_name: r.customer_name ?? r.customer ?? "Unknown",
-        item_name: r.item_name ?? r.description ?? "-",
-        qty: Number(r.qty ?? r.quantity ?? 0),
-        delivery_status: r.delivery_status ?? r.status ?? "Pending",
-        cancelled_reason: normalizedReason ?? "-",
-        rescheduled_date: r.rescheduled_date ?? null,
-        target_date_delivery: r.target_date_delivery ?? null,
-      };
-    });
-
-  const normalizeCustomer = (raw = []) =>
-    (Array.isArray(raw) ? raw : []).map((r) => ({
-      transaction_id: r.transaction_id ?? null,
-      date_of_order: r.date_of_order ? formatDate(r.date_of_order) : "-",
-      customer_name: r.customer_name ?? r.customer ?? "Unknown",
-      item_name: r.item_name ?? r.description ?? "-",
-      customer_rating:
-        r.customer_rating != null ? Number(r.customer_rating) : null,
-      delivery_status: r.delivery_status ?? r.status ?? "Pending",
-      cancelled_reason: r.cancelled_reason ?? r.cancellation_reason ?? null,
-    }));
-
-  const safeJson = async (res) => {
-    try {
-      const json = await res.json();
-      return json;
-    } catch (err) {
-      console.error("JSON parse error", err);
-      return {};
-    }
-  };
-
-  const buildUrl = (endpoint) => {
-    let url = `${endpoint}?period=${period}`;
-    if (startDate && endDate) {
-      url += `&start=${startDate}&end=${endDate}`;
-    }
-    return url;
-  };
-
-  const fetchData = async () => {
-    setLoading(true);
-    let normalizedTransactions = [];
-    let deliveredTransactionIds = [];
-    let normalizedSales = [];
-
-    try {
-      if (reportType === "sales" || reportType === "all") {
-        const res = await fetch(
-          buildUrl(
-            "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_sales_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_sales_report failed");
-        const data = await safeJson(res);
-        let normalizedSales = normalizeSales(data.sales ?? []);
-        normalizedSales = normalizedSales.filter(
-          (sale) => sale.delivery_status.toLowerCase() === "delivered"
-        );
-        setSalesData(normalizedSales);
-        setTopSelling(normalizeTopSelling(data.topSelling ?? []));
-        if (reportType === "sales") setSummary(data.summary ?? {});
-      }
-
-      if (reportType === "transaction" || reportType === "all") {
-        const res = await fetch(
-          buildUrl(
-            "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_transaction_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_transaction_report failed");
-        const data = await safeJson(res);
-        const normalizedTransactions = normalizeTransactions(
-          data.transactions ?? []
-        );
-        setTransactionData(normalizedTransactions);
-        setSummary((prev) =>
-          reportType === "transaction"
-            ? data.summary ?? {}
-            : reportType === "all"
-            ? { ...prev, transactionSummary: data.summary ?? {} }
-            : prev
-        );
-
-        const personnelSet = new Set();
-        normalizedTransactions.forEach((t) => {
-          if (t.delivery_personnel && t.delivery_personnel !== "-") {
-            personnelSet.add(t.delivery_personnel);
-          }
-        });
-        setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
-      }
-
-      if (
-        reportType === "service" ||
-        reportType === "transaction" ||
-        reportType === "sales" ||
-        reportType === "all"
-      ) {
-        const res = await fetch(
-          buildUrl(
-            "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_service_delivery_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_service_delivery_report failed");
-        const data = await safeJson(res);
-
-        const normalizedService = normalizeService(
-          data.serviceDeliveries ?? data.data ?? []
-        );
-        setServiceData(normalizedService);
-
-        if (data.failedReasons) {
-          setFailedReasons(data.failedReasons);
-        }
-
-        setSummary((prev) =>
-          reportType === "service"
-            ? data.summary ?? {}
-            : reportType === "all"
-            ? { ...prev, serviceSummary: data.summary ?? {} }
-            : prev
-        );
-
-        setCancellationReasonOptions([
-          "Vehicle-related Issue",
-          "Location Inaccessible",
-        ]);
-      }
-
-      if (reportType === "customer" || reportType === "all") {
-        const res = await fetch(
-          buildUrl(
-            "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
-        const data = await safeJson(res);
-        setCustomerData(
-          normalizeCustomer(data.customerSatisfaction ?? data.data ?? [])
-        );
-        setSummary((prev) =>
-          reportType === "customer"
-            ? data.summary ?? {}
-            : reportType === "all"
-            ? { ...prev, customerSummary: data.summary ?? {} }
-            : prev
-        );
-      }
-    } catch (error) {
-      console.error("Fetch error:", error);
-      setSalesData([]);
-      setTopSelling([]);
-      setTransactionData([]);
-      setServiceData([]);
-      setCustomerData([]);
-      setDeliveryPersonnelOptions([]);
-      setCancellationReasonOptions([]);
-
-      console.log("Normalized Transactions:", normalizedTransactions);
-      console.log("Delivered Transaction IDs:", deliveredTransactionIds);
-      console.log("Normalized Sales:", normalizedSales);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (d) => {
-    if (!d) return "";
-    const dateObj = new Date(d);
-    if (isNaN(dateObj)) return "";
-
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    const year = dateObj.getFullYear();
-
-    return `${month}/${day}/${year}`;
-  };
-
-  const isDateInPeriod = (dateStr) => {
-    if (!dateStr) return false;
-    const date = new Date(dateStr);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    switch (period) {
-      case "daily":
-        return (
-          date.getFullYear() === start.getFullYear() &&
-          date.getMonth() === start.getMonth() &&
-          date.getDate() === start.getDate()
-        );
-      case "weekly": {
-        const getWeekStart = (d) => {
-          const dt = new Date(d);
-          dt.setHours(0, 0, 0, 0);
-          dt.setDate(dt.getDate() - dt.getDay());
-          return dt;
-        };
-        const weekStart = getWeekStart(start);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        return date >= weekStart && date <= weekEnd;
-      }
-      case "monthly":
-        return (
-          date.getFullYear() === start.getFullYear() &&
-          date.getMonth() === start.getMonth()
-        );
-      case "quarterly": {
-        const getQuarter = (d) => Math.floor(d.getMonth() / 3) + 1;
-        return (
-          date.getFullYear() === start.getFullYear() &&
-          getQuarter(date) === getQuarter(start)
-        );
-      }
-      case "annually":
-        return date.getFullYear() === start.getFullYear();
-      default:
-        return false;
-    }
-  };
-
-  const isValidDate = (d) => d instanceof Date && !isNaN(d);
-
-  const groupTransactions = (data) => {
-    return Object.values(
-      data.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) {
-          acc[id] = {
-            ...row,
-            item_name: [],
-            qty: [],
-            unit_cost: [],
-            total_cost: [],
-          };
-        }
-
-        const fullItemName = `${row.product_name || ""} ${
-          row.item_name || ""
-        }`.trim();
-        acc[id].item_name.push(fullItemName);
-        acc[id].qty.push(row.qty);
-        if (row.unit_cost) acc[id].unit_cost.push(row.unit_cost);
-        if (row.total_cost) acc[id].total_cost.push(row.total_cost);
-
-        return acc;
-      }, {})
-    ).map((row) => ({
-      ...row,
-      item_name: row.item_name.join(", "),
-      qty: row.qty.join(", "),
-      unit_cost: row.unit_cost.join(", "),
-      total_cost: row.total_cost.join(", "),
-    }));
-  };
-
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const matchesSearch = (row) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return Object.values(row).some((val) =>
-      String(val).toLowerCase().includes(query)
-    );
-  };
-
-  const filteredSalesData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? salesData.filter((row) => {
-          const rowDate = new Date(row.date_of_order);
-          if (
-            rowDate < new Date(startDate) ||
-            rowDate > new Date(endDate) ||
-            row.delivery_status.toLowerCase() !== "delivered"
-          )
-            return false;
-
-          if (
-            paymentOptionFilter &&
-            row.payment_option.toLowerCase() !==
-              paymentOptionFilter.toLowerCase()
-          )
-            return false;
-
-          return true;
-        })
-      : salesData.filter(
-          (row) =>
-            row.delivery_status.toLowerCase() === "delivered" &&
-            (!paymentOptionFilter ||
-              row.payment_option.toLowerCase() ===
-                paymentOptionFilter.toLowerCase())
-        )
-  ).filter(matchesSearch);
-
-  const filteredTransactionData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? transactionData.filter((row) => {
-          const rowDate = new Date(row.date_of_order || row.date_of_order);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (
-            deliveryStatus &&
-            row.delivery_status?.toLowerCase() === deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (
-            deliveryPersonnel &&
-            !row.delivery_personnel
-              .toLowerCase()
-              .includes(deliveryPersonnel.toLowerCase())
-          )
-            return false;
-
-          if (
-            paymentOptionFilter &&
-            row.payment_option.toLowerCase() !==
-              paymentOptionFilter.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-      : transactionData.filter((row) => {
-          if (
-            deliveryStatus &&
-            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (
-            deliveryPersonnel &&
-            !row.delivery_personnel
-              .toLowerCase()
-              .includes(deliveryPersonnel.toLowerCase())
-          )
-            return false;
-
-          if (
-            paymentOptionFilter &&
-            row.payment_option.toLowerCase() !==
-              paymentOptionFilter.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-  ).filter(matchesSearch);
-
-  const filteredServiceData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date_of_order);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (
-            deliveryStatus &&
-            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-      : serviceData.filter((row) => {
-          if (
-            deliveryStatus &&
-            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-          return true;
-        })
-  ).filter(matchesSearch);
-
-  const filteredCustomerData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? customerData.filter((row) => {
-          const rowDate = new Date(row.date_of_order);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (String(row.delivery_status).toLowerCase() !== "delivered")
-            return false;
-
-          return true;
-        })
-      : customerData.filter((row) => {
-          if (String(row.delivery_status).toLowerCase() !== "delivered")
-            return false;
-          return true;
-        })
-  ).filter(matchesSearch);
-
-  const overallClients = new Set(
-    transactionData.map((row) => row.customer_name)
-  ).size;
-
-  const totalSalesAmount = filteredSalesData.reduce(
-    (acc, cur) => acc + (Number(cur.total_cost) || 0),
-    0
-  );
-  const totalCustomersSales = new Set(
-    filteredSalesData.map((row) => row.customer_name)
-  ).size;
-
-  const totalTransactions = new Set(
-    filteredTransactionData.map((row) => row.transaction_id)
-  ).size;
-  const totalCustomersTransaction = new Set(
-    filteredTransactionData.map((row) => row.customer_name)
-  ).size;
-
-  const totalItemsTransaction = filteredTransactionData.reduce(
-    (acc, cur) => acc + (Number(cur.qty) || 0),
-    0
-  );
-
-  const successfulDeliveries = new Set(
-    filteredServiceData
-      .filter(
-        (row) => String(row.delivery_status).toLowerCase() === "delivered"
-      )
-      .map((row) => row.transaction_id)
-  ).size;
-
-  const failedDeliveries =
-    reportType === "all"
-      ? summary.serviceSummary?.failed_deliveries ?? 0
-      : summary.failed_deliveries ?? summary.cancelled_deliveries ?? 0;
-
-  const totalItemsOrdered = filteredTransactionData.reduce(
-    (sum, row) => sum + (Number(row.qty) || 0),
-    0
-  );
-  const totalItemsDelivered = filteredServiceData
-    .filter((row) => String(row.delivery_status).toLowerCase() === "delivered")
-    .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
-
-  const failedReasonsCount = {
-    "Vehicle-related Issue": 0,
-    "Location Inaccessible": 0,
-  };
-
-  filteredServiceData.forEach((row) => {
-    const status = String(row.delivery_status).toLowerCase();
-    if (status.includes("cancel") && row.cancelled_reason) {
-      const reason = String(row.cancelled_reason).toLowerCase();
-
-      if (reason.includes("vehicle")) {
-        failedReasonsCount["Vehicle-related Issue"]++;
-      } else if (reason.includes("location")) {
-        failedReasonsCount["Location Inaccessible"]++;
-      }
-    }
-  });
-
-  const ratingDistribution = filteredCustomerData.reduce((acc, cur) => {
-    const rating = cur.customer_rating ?? "No Rating";
-    const found = acc.find((a) => String(a.name) === String(rating));
-    if (found) {
-      found.value++;
-    } else {
-      acc.push({ name: rating, value: 1 });
-    }
-    return acc;
-  }, []);
-
-  const salesGrowthData = filteredSalesData.reduce((acc, cur) => {
-    const date = cur.date ?? "";
-    const found = acc.find((a) => a.date === date);
-    if (found) {
-      found.total_cost =
-        (Number(found.total_cost) || 0) + (Number(cur.total_cost) || 0);
-    } else {
-      acc.push({ date, total_cost: Number(cur.total_cost) || 0 });
-    }
-    return acc;
-  }, []);
-
-  const transactionStatusData = [
-    {
-      name: "Delivered",
-      count: filteredTransactionData.filter(
-        (row) => String(row.delivery_status).toLowerCase() === "delivered"
-      ).length,
-    },
-    {
-      name: "Cancelled",
-      count: filteredTransactionData.filter(
-        (row) => String(row.delivery_status).toLowerCase() === "cancelled"
-      ).length,
-    },
-  ];
-
-  const localDateStr = (date) => {
-    const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(d.getDate()).padStart(2, "0")}`;
-  };
-
-  const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
-    const rows = [];
-
-    // ============================================================
-    // SAFE DATE PARSER (Fix for daily not showing)
-    // ============================================================
-    const parseDateSafe = (value) => {
-      if (!value) return null;
-
-      // If already Date object
-      if (value instanceof Date && !isNaN(value)) return value;
-
-      // Try built-in parser
-      let d = new Date(value);
-      if (!isNaN(d)) return d;
-
-      // MySQL format "YYYY-MM-DD HH:mm:ss"
-      if (typeof value === "string" && value.includes(" ")) {
-        const fixed = value.replace(" ", "T"); // convert to ISO
-        d = new Date(fixed);
-        if (!isNaN(d)) return d;
-      }
-
-      // Manual fallback "YYYY-MM-DD" or similar
-      try {
-        const parts = value.split(/[- :/]/);
-        if (parts.length >= 3) {
-          return new Date(
-            Number(parts[0]),
-            Number(parts[1]) - 1,
-            Number(parts[2])
-          );
-        }
-      } catch {}
-
-      return null;
-    };
-
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
-
-    const formatDate = (date) => {
-      if (!date || isNaN(date)) return null;
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      return `${y}-${m}-${d}`;
-    };
-
-    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-      if (num == null || isNaN(num)) return "0.00";
-      let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00"))
-        fixed = fixed.replace(".00", "");
-      return Number(fixed).toLocaleString();
-    };
-
-    const addRow = (
-      label,
-      totalQuote,
-      totalAwarded,
-      totalActual,
-      totalBalance
-    ) => {
-      rows.push([
-        label,
-        formatNumber(totalQuote),
-        formatNumber(totalAwarded),
-        formatNumber(totalActual),
-        formatNumber(totalBalance),
-      ]);
-    };
-    // ============================================================
-    // NORMALIZE ALL SALES WITH SAFE YYYY-MM-DD STRING
-    // ============================================================
-    const normalizedSales = salesData
-      .map((s) => {
-        const d = parseDateSafe(s.date_of_order);
-        if (!d) return null;
-        return {
-          ...s,
-          __dateObj: d,
-          __date: formatDate(d),
-          __month: d.getMonth(),
-          __year: d.getFullYear(),
-        };
-      })
-      .filter(Boolean);
-
-    // ============================================================
-    // DAILY - NOW 100% WORKING (even today!)
-    // ============================================================
-    if (period === "daily") {
-      const dateMap = {};
-
-      normalizedSales.forEach((s) => {
-        const key = s.__date;
-        if (!dateMap[key]) {
-          dateMap[key] = { quote: 0, awarded: 0, actual: 0, balance: 0 };
-        }
-        const t = dateMap[key];
-        t.quote += (s.unit_cost || 0) * (s.qty || 0);
-        t.awarded += s.total_cost || 0;
-        t.actual += (s.total_cost || 0) - (s.balance || 0);
-        t.balance += s.balance || 0;
-      });
-
-      Object.keys(dateMap)
-        .sort() // chronological order
-        .forEach((dateStr) => {
-          const t = dateMap[dateStr];
-          // Format as MM/DD/YYYY to match your report screenshot
-          const displayDate = dateStr
-            .replace(/-/g, "/")
-            .replace(/^(\d{4})\/(\d{2})\/(\d{2})$/, "$2/$3/$1");
-          addRow(displayDate, t.quote, t.awarded, t.actual, t.balance);
-        });
-
-      return rows;
-    }
-
-    // ============================================================
-    // ANNUALLY
-    // ============================================================
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthSales = normalizedSales.filter((s) => s.__month === m);
-
-        const totals = monthSales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
-          }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
-        );
-
-        addRow(
-          getMonthName(m),
-          totals.quote,
-          totals.awarded,
-          totals.actual,
-          totals.balance
-        );
-      }
-    }
-
-    // ============================================================
-    // QUARTERLY
-    // ============================================================
-    else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthSales = normalizedSales.filter((s) => s.__month === m);
-
-        const totals = monthSales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
-          }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
-        );
-
-        addRow(
-          getMonthName(m),
-          totals.quote,
-          totals.awarded,
-          totals.actual,
-          totals.balance
-        );
-      });
-    }
-
-    // ============================================================
-    // MONTHLY
-    // ============================================================
-    else if (period === "monthly") {
-      const base = new Date(startDate || new Date());
-
-      const start = new Date(base.getFullYear(), base.getMonth(), 1);
-      const daysInMonth = new Date(
-        base.getFullYear(),
-        base.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dObj = new Date(start.getFullYear(), start.getMonth(), d);
-        const dateStr = formatDate(dObj);
-
-        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
-
-        const totals = daySales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
-          }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
-        );
-
-        addRow(
-          dateStr,
-          totals.quote,
-          totals.awarded,
-          totals.actual,
-          totals.balance
-        );
-      }
-    }
-
-    // ============================================================
-    // WEEKLY
-    // ============================================================
-    else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday start
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-
-        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
-
-        const totals = daySales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
-          }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
-        );
-
-        addRow(
-          dateStr,
-          totals.quote,
-          totals.awarded,
-          totals.actual,
-          totals.balance
-        );
-      }
-    }
-
-    return rows;
-  };
-
-  const generateTransactionPeriodRows = (
-    transactionData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
-
-    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-      if (num == null || isNaN(num)) return " ";
-      let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00"))
-        fixed = fixed.replace(".00", "");
-      return Number(fixed).toLocaleString();
-    };
-
-    const formatDate = (date) =>
-      date ? new Date(date).toISOString().split("T")[0] : "";
-
-    const pushTxRow = (label, tx) => {
-      rows.push([
-        label || "",
-        tx.transaction_id ?? "-",
-        tx.tracking_number ?? "-",
-        tx.date_of_order ?? "-",
-        tx.customer_name ?? "-",
-        tx.customer_address ?? "-",
-        tx.item_name ?? "-",
-        formatNumber(tx.qty, 0),
-        formatNumber(tx.unit_cost, 2),
-        formatNumber(tx.subtotal, 2),
-        tx.delivery_status ?? "-",
-        tx.shipout_at ?? "-",
-        tx.completed_at ?? "-",
-      ]);
-    };
-
-    const pushZeroRow = (label) => {
-      rows.push([
-        label,
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "0",
-        "0.00",
-        "0.00",
-        "-",
-        "-",
-        "-",
-      ]);
-    };
-
-    // === PERIOD LOGIC ===
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = transactionData.filter(
-          (t) => new Date(t.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([
-            getMonthName(m),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-          ]);
-          monthTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = transactionData.filter(
-          (t) => new Date(t.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([
-            getMonthName(m),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-          ]);
-          monthTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const dayTxs = transactionData.filter(
-          (t) => t.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-        const dayTxs = transactionData.filter(
-          (t) => formatDate(new Date(t.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = transactionData.filter(
-        (t) => formatDate(new Date(t.date_of_order)) === todayStr
-      );
-      if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-        dayTxs.forEach((tx) => pushTxRow("", tx));
-      } else {
-        pushZeroRow(todayStr);
-      }
-    }
-
-    // === TOTAL ROW (MODIFIED to depend on selected period) ===
-    // ✅ Added: compute totals based on period
-    const relevantTxs =
-      period === "daily"
-        ? transactionData.filter(
-            (t) =>
-              formatDate(new Date(t.date_of_order)) === formatDate(new Date())
-          )
-        : transactionData;
-
-    const totals = relevantTxs.reduce(
-      (acc, t) => ({
-        qty: acc.qty + (t.qty ?? 0),
-        subtotal: acc.subtotal + (t.subtotal ?? 0),
-      }),
-      { qty: 0, subtotal: 0 }
-    );
-
-    // ✅ Added: dynamic TOTAL row per period
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`, // ✅ Added: dynamic label
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      formatNumber(totals.qty, 0),
-      "-",
-      formatNumber(totals.subtotal, 2),
-      "-",
-      "-",
-      "-",
-    ]);
-
-    return rows;
-  };
-
-  // ============================================
-
-  const generateServicePeriodRows = (
-    serviceData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
-
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
-
-    const formatDate = (date) => {
-      if (!date) return "-";
-      const d = new Date(date);
-      if (isNaN(d)) return "-";
-      return d.toISOString().split("T")[0];
-    };
-
-    const pushServiceRow = (label, svc) => {
-      rows.push([
-        label || "",
-        svc.transaction_id ?? "-",
-        formatDate(svc.date_of_order),
-        svc.customer_name ?? "-",
-        svc.delivery_status ?? "-",
-        formatDate(svc.original_target_date ?? svc.target_date_delivery),
-        formatDate(svc.latest_rescheduled_date ?? svc.rescheduled_date),
-        svc.cancelled_reason ?? "-",
-      ]);
-    };
-
-    const pushZeroRow = (label) => {
-      rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
-    };
-
-    const normalizedData = serviceData.map((s) => ({
-      ...s,
-      date_of_order: formatDate(s.date_of_order),
-    }));
-
-    // --- (Period logic unchanged) ---
-
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = normalizedData.filter(
-          (s) => new Date(s.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
-          monthTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = normalizedData.filter(
-          (s) => new Date(s.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
-          monthTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-        const dayTxs = normalizedData.filter(
-          (s) => s.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", ""]);
-          dayTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-        const dayTxs = normalizedData.filter(
-          (s) => formatDate(new Date(s.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", ""]);
-          dayTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = normalizedData.filter(
-        (s) => formatDate(new Date(s.date_of_order)) === todayStr
-      );
-      if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", ""]);
-        dayTxs.forEach((svc) => pushServiceRow("", svc));
-      } else {
-        pushZeroRow(todayStr);
-      }
-    }
-
-    // ✅ Added: compute total dynamically
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
-    );
-
-    // ✅ Added: label and totals
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
-
-    return rows;
-  };
-
-  // ✅ Generate rows (WITH Item column, no double formatting)
-  const generateCustomerSatisfactionRows = (
-    satisfactionData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
-
-    // Helper to get month name
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
-
-    const formatDate = (date) => {
-      if (!date) return "-";
-      const d = new Date(date);
-      if (isNaN(d)) return "-";
-      return d.toISOString().split("T")[0];
-    };
-
-    // --- Row builders ---
-    const pushCustomerRow = (label, c) => {
-      rows.push([
-        label || "",
-        c.transaction_id ?? "-",
-        formatDate(c.date_of_order),
-        c.customer_name ?? "-",
-        c.item_name ?? "-",
-        c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
-        c.delivery_status ?? "-",
-      ]);
-    };
-
-    const pushZeroRow = (label) => {
-      rows.push([label, "-", "-", "-", "-", "-", "-"]);
-    };
-
-    // --- Normalize Data ---
-    const normalizedData = satisfactionData.map((c) => ({
-      ...c,
-      date_of_order: formatDate(c.date_of_order),
-    }));
-
-    // --- Period Logic ---
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = normalizedData.filter(
-          (c) => new Date(c.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", ""]);
-          monthTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = normalizedData.filter(
-          (c) => new Date(c.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", ""]);
-          monthTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-        const dayTxs = normalizedData.filter(
-          (c) => c.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", ""]);
-          dayTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-
-        const dayTxs = normalizedData.filter(
-          (c) => c.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", ""]);
-          dayTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
-      const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
-
-      if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", ""]);
-        dayTxs.forEach((c) => pushCustomerRow("", c));
-      } else {
-        pushZeroRow(todayStr);
-      }
-    }
-
-    // === ✅ Fixed: compute total dynamically based on period ===
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
-    );
-
-    // ✅ Fixed TOTAL label and count display
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
-
-    return rows;
-  };
-
-  const generateReport = async (reportType) => {
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: [330.2, 215.9],
-    });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    const getPeriodLabel = (periodValue) => {
-      const period = PERIODS.find((p) => p.value === periodValue);
-      return period ? period.label : "Period";
-    };
-
-    const getTodayDate = () => {
-      const today = new Date();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-      const year = today.getFullYear();
-      return `${year}-${month}-${day}`;
-    };
-
-    const getCurrentYear = () => new Date().getFullYear();
-    const formatDate = (date) =>
-      date ? new Date(date).toLocaleDateString() : "";
-
-    const getDateRangeText = () => {
-      if (period === "annually") {
-        const year = startDate
-          ? new Date(startDate).getFullYear()
-          : getCurrentYear();
-        return ` (January 1, ${year} - December 31, ${year})`;
-      }
-      if (period === "quarterly") {
-        const start = new Date(startDate || getTodayDate());
-        const monthNumber = start.toISOString().slice(5, 7);
-        let quarterMonths = [];
-
-        if (monthNumber >= "01" && monthNumber <= "03")
-          quarterMonths = ["January", "February", "March"];
-        else if (monthNumber >= "04" && monthNumber <= "06")
-          quarterMonths = ["April", "May", "June"];
-        else if (monthNumber >= "07" && monthNumber <= "09")
-          quarterMonths = ["July", "August", "September"];
-        else quarterMonths = ["October", "November", "December"];
-
-        return ` (${quarterMonths[0]} to ${
-          quarterMonths[quarterMonths.length - 1]
-        })`;
-      }
-
-      if (period === "monthly") {
-        const start = new Date(startDate || getTodayDate());
-        const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
-        const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
-        return ` (${formatDate(firstDay)} - ${formatDate(lastDay)})`;
-      }
-      if (period === "weekly") {
-        const start = new Date(startDate || getTodayDate());
-        start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        return ` (${formatDate(start)} - ${formatDate(end)})`;
-      }
-      if (period === "daily") {
-        const today = startDate ? new Date(startDate) : new Date();
-        const formattedDay = `${String(today.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}/${String(today.getDate()).padStart(2, "0")}/${today.getFullYear()}`;
-        return ` (${formattedDay})`;
-      }
-
-      return "";
-    };
-
-    const renderHeader = (withTitle = false, title = "") => {
-      const now = new Date();
-      const generatedDate =
-        now.toLocaleDateString("en-US", {
-          month: "numeric",
-          day: "numeric",
-          year: "numeric",
-        }) +
-        ", " +
-        now.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        });
-
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Generated: ${generatedDate}`, pageWidth - 3, 5, {
-        align: "right",
-      });
-
-      let yPos = 8;
-      try {
-        const logoWidth = 25;
-        const logoHeight = 12;
-        const logoX = pageWidth / 2 - logoWidth / 2;
-        if (logo) doc.addImage(logo, "PNG", logoX, yPos, logoWidth, logoHeight);
-      } catch (error) {
-        const logoX = pageWidth / 2 - 12.5;
-        doc.setDrawColor(200, 200, 200);
-        doc.setFillColor(240, 240, 240);
-        doc.rect(logoX, yPos, 25, 12, "F");
-      }
-
-      yPos += 16;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text("Envirocool Corporation", pageWidth / 2, yPos, {
-        align: "center",
-      });
-      yPos += 3;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text("Calamba Sales Office", pageWidth / 2, yPos, {
-        align: "center",
-      });
-      yPos += 3;
-      doc.setFontSize(7);
-      doc.text(
-        "FP Perez, Brgy. Parian, Calamba City, Laguna",
-        pageWidth / 2,
-        yPos,
-        { align: "center" }
-      );
-      yPos += 3;
-      doc.text("Tel: (049) 540-306 / 0917-158-7013", pageWidth / 2, yPos, {
-        align: "center",
-      });
-      yPos += 4;
-      doc.setDrawColor(150, 150, 150);
-      doc.setLineWidth(0.2);
-      doc.line(15, yPos, pageWidth - 15, yPos);
-      yPos += 6;
-
-      if (withTitle) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        const periodLabel = getPeriodLabel(period);
-        const dateRangeText = getDateRangeText();
-        doc.text(
-          `${title} Report - ${periodLabel}${dateRangeText}`,
-          pageWidth / 2,
-          yPos,
-          { align: "center" }
-        );
-        yPos += 6;
-      }
-
-      return yPos;
-    };
-
-    const applyHeaderFooterToAllPages = (reports) => {
-      const totalPages = doc.getNumberOfPages();
-      if (!reports || reports.length === 0) return;
-
-      let reportIndex = 0;
-
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        if (i === reports[reportIndex].startPage) {
-          renderHeader(true, reports[reportIndex].title);
-        } else {
-          renderHeader(false);
-        }
-
-        addFooter(i, totalPages);
-
-        if (
-          reportIndex < reports.length - 1 &&
-          i === reports[reportIndex + 1].startPage
-        ) {
-          reportIndex++;
-        }
-      }
-    };
-
-    const addSignatureSection = (doc, pageWidth, pageHeight, tableBottomY) => {
-      const bottomSafeMargin = 40;
-      let startY = tableBottomY + 15;
-
-      if (startY > pageHeight - bottomSafeMargin) {
-        doc.addPage();
-        startY = 80;
-      }
-
-      const lineWidth = 60;
-      const lineX = (pageWidth - lineWidth) / 2;
-      const lineY = startY + 10;
-
-      doc.setLineWidth(0.3);
-      doc.line(lineX, lineY, lineX + lineWidth, lineY);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text("Prepared By:", pageWidth / 2, lineY + 5, { align: "center" });
-      doc.setFont("helvetica", "normal");
-    };
-
-    const addFooter = (pageNum, totalPages) => {
-      doc.setDrawColor(50, 50, 50);
-      doc.setLineWidth(0.3);
-      doc.line(15, pageHeight - 12, pageWidth - 15, pageHeight - 12);
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(8);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Envirocool Corporation", pageWidth / 2, pageHeight - 8, {
-        align: "center",
-      });
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text(
-        `Page ${pageNum} of ${totalPages}`,
-        pageWidth / 2,
-        pageHeight - 4,
-        {
-          align: "center",
-        }
-      );
-
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
-    };
-
-    const fetchSalesData = async () => {
-      try {
-        const res = await fetch(
-          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_sales_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_sales_report failed");
-
-        const data = await res.json();
-        let normalizedSales = normalizeSales(data.sales ?? []);
-        normalizedSales = normalizedSales.filter(
-          (sale) => sale.delivery_status.toLowerCase() === "delivered"
-        );
-
-        return generateSalesPeriodRows(
-          normalizedSales,
-          period,
-          startDate,
-          endDate
-        );
-      } catch (error) {
-        console.error("Error fetching sales data:", error);
-        return [];
-      }
-    };
-
-    const fetchTransactionData = async () => {
-      try {
-        const res = await fetch(
-          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_transaction_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_transaction_report failed");
-
-        const data = await res.json();
-        const normalizedTransactions = normalizeTransactions(
-          data.transactions ?? []
-        );
-
-        const transactionRows = generateTransactionPeriodRows(
-          normalizedTransactions,
-          period,
-          startDate,
-          endDate
-        );
-
-        return transactionRows;
-      } catch (error) {
-        console.error("Error fetching transaction data:", error);
-        return [];
-      }
-    };
-
-    const fetchServiceData = async () => {
-      try {
-        const res = await fetch(
-          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_service_delivery_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_service_delivery_report failed");
-
-        const data = await res.json();
-        const normalizedService = normalizeService(
-          data.serviceDeliveries ?? data.data ?? []
-        );
-
-        return generateServicePeriodRows(
-          normalizedService,
-          period,
-          startDate,
-          endDate
-        );
-      } catch (error) {
-        console.error("Error fetching service data:", error);
-        return [];
-      }
-    };
-
-    const fetchCustomerSatisfactionData = async () => {
-      try {
-        const res = await fetch(
-          "https://delivery-api.mooo.info/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
-
-        const data = await res.json();
-        const normalizedSatisfaction = normalizeCustomer(
-          data.customerSatisfaction ?? data.satisfaction ?? data.data ?? []
-        );
-
-        return generateCustomerSatisfactionRows(
-          normalizedSatisfaction,
-          period,
-          startDate,
-          endDate
-        );
-      } catch (error) {
-        console.error("Error fetching satisfaction data:", error);
-        return [];
-      }
-    };
-
-    const type = (
-      typeof reportType === "string" ? reportType : ""
-    ).toLowerCase();
-
-    const getFormattedDateTime = () => {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      let hours = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      hours = hours % 12 || 12;
-      return `${year}-${month}-${day}_${hours}-${minutes}${ampm}`;
-    };
-
-    try {
-      if (type === "all") {
-        const reports = [
-          { title: "Sales", type: "sales" },
-          { title: "Transaction", type: "transaction" },
-          { title: "Delivery Service", type: "service" },
-          { title: "Client Satisfaction", type: "customer" },
-        ];
-
-        for (let idx = 0; idx < reports.length; idx++) {
-          const r = reports[idx];
-          if (idx > 0) doc.addPage();
-
-          r.startPage = doc.internal.getCurrentPageInfo().pageNumber;
-
-          let headerY = renderHeader(true, r.title);
-
-          if (r.type === "sales") {
-            let salesData = await fetchSalesData();
-            if (period === "daily") {
-              salesData = salesData.map((row) => [
-                new Date().toLocaleDateString("en-US"),
-                row.quoteAmount || "0.00",
-                row.awardedAmount || "0.00",
-                row.actualCollection || "0.00",
-                row.balance || "0.00",
-              ]);
-            }
-            const { finalYPosition } = await createSalesReportTable(
-              doc,
-              pageWidth,
-              pageHeight,
-              headerY,
-              salesData,
-              period
-            );
-            addSignatureSection(doc, pageWidth, pageHeight, finalYPosition);
-          } else if (r.type === "transaction") {
-            const transactionRows = await fetchTransactionData();
-            const transactionEndY = await createTransactionReportTable(
-              doc,
-              pageWidth,
-              pageHeight,
-              headerY,
-              transactionRows,
-              period
-            );
-            addSignatureSection(doc, pageWidth, pageHeight, transactionEndY);
-          } else if (r.type === "service") {
-            const serviceRows = await fetchServiceData();
-            const serviceEndY = await createDeliveryServiceReportTable(
-              doc,
-              pageWidth,
-              pageHeight,
-              headerY,
-              serviceRows,
-              period
-            );
-            addSignatureSection(doc, pageWidth, pageHeight, serviceEndY);
-          } else if (r.type === "customer") {
-            const satisfactionRows = await fetchCustomerSatisfactionData();
-            const satisfactionEndY =
-              await createCustomerSatisfactionReportTable(
-                doc,
-                pageWidth,
-                pageHeight,
-                headerY,
-                satisfactionRows,
-                period
-              );
-            addSignatureSection(doc, pageWidth, pageHeight, satisfactionEndY);
-          } else {
-            doc.setFontSize(12);
-            doc.setFont("helvetica", "normal");
-            doc.text(
-              `${r.title} content would go here...`,
-              pageWidth / 2,
-              headerY + 10,
-              { align: "center" }
-            );
-          }
-          addFooter(idx + 1, reports.length);
-        }
-        applyHeaderFooterToAllPages(reports);
-        const dateTimeStamp = getFormattedDateTime();
-        doc.save(`envirocool-overall-report-${dateTimeStamp}.pdf`);
-        toast(
-          <div className="custom-banner-toast">
-            Overall Report PDF (${getPeriodLabel(period)}) has been generated
-            and downloaded successfully!
-          </div>,
-          {
-            className: "report-toast",
-            duration: 2500,
-          }
-        );
-      } else {
-        let title;
-        switch (type) {
-          case "sales":
-            title = "Sales";
-            break;
-          case "transaction":
-            title = "Transaction";
-            break;
-          case "service":
-            title = "Delivery Service";
-            break;
-          case "customer":
-            title = "Client Satisfaction";
-            break;
-          default:
-            toast.error("Please select a report type.", {
-              duration: 2500,
-              style: {
-                background: "#FDECEA",
-                border: "1px solid #F5C6CB",
-                color: "#A94442",
-                fontWeight: 600,
-                fontSize: "1rem",
-                textAlign: "center",
-                width: "100%",
-                maxWidth: "500px",
-                margin: "0 auto",
-                justifyContent: "center",
-              },
-            });
-            return;
-        }
-
-        let headerY = renderHeader(true, title);
-
-        if (type === "sales") {
-          let salesData = await fetchSalesData();
-          if (period === "daily") {
-            salesData = salesData.map((row) => [
-              new Date().toLocaleDateString("en-US"),
-              row.quoteAmount || "0.00",
-              row.awardedAmount || "0.00",
-              row.actualCollection || "0.00",
-              row.balance || "0.00",
-            ]);
-          }
-          const { finalYPosition } = await createSalesReportTable(
-            doc,
-            pageWidth,
-            pageHeight,
-            headerY,
-            salesData,
-            period
-          );
-          addSignatureSection(doc, pageWidth, pageHeight, finalYPosition);
-        } else if (type === "transaction") {
-          const transactionRows = await fetchTransactionData();
-          const transactionEndY = await createTransactionReportTable(
-            doc,
-            pageWidth,
-            pageHeight,
-            headerY,
-            transactionRows,
-            period
-          );
-          addSignatureSection(doc, pageWidth, pageHeight, transactionEndY);
-        } else if (type === "service") {
-          const serviceRows = await fetchServiceData();
-          const serviceEndY = await createDeliveryServiceReportTable(
-            doc,
-            pageWidth,
-            pageHeight,
-            headerY,
-            serviceRows,
-            period
-          );
-          addSignatureSection(doc, pageWidth, pageHeight, serviceEndY);
-        } else if (type === "customer") {
-          const satisfactionRows = await fetchCustomerSatisfactionData();
-          const satisfactionEndY = await createCustomerSatisfactionReportTable(
-            doc,
-            pageWidth,
-            pageHeight,
-            headerY,
-            satisfactionRows,
-            period
-          );
-          addSignatureSection(doc, pageWidth, pageHeight, satisfactionEndY);
-        } else {
-          doc.setFontSize(12);
-          doc.setFont("helvetica", "normal");
-          doc.text(
-            `${title} content would go here...`,
-            pageWidth / 2,
-            headerY + 10,
-            { align: "center" }
-          );
-        }
-
-        const totalPages = doc.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-
-          if (i === 1) {
-            renderHeader(true, title);
-          } else {
-            renderHeader(false);
-          }
-          addFooter(i, totalPages);
-        }
-
-        const dateTimeStamp = getFormattedDateTime();
-        const fileName = `envirocool-${type}-report-${period}-${dateTimeStamp}.pdf`;
-        doc.save(fileName);
-        toast(
-          <div className="custom-banner-toast">
-            {`${title} Report PDF (${getPeriodLabel(
-              period
-            )}) has been generated and downloaded successfully!`}
-          </div>,
-          {
-            className: "report-toast",
-            duration: 2500,
-          }
-        );
-      }
-    } catch (error) {
-      console.error("PDF generation error:", error);
-      toast.error("Error generating PDF. Please try again.", {
-        duration: 2500,
-        style: {
-          background: "#FDECEA",
-          border: "1px solid #F5C6CB",
-          color: "#A94442",
-          fontWeight: 600,
-          fontSize: "1rem",
-          textAlign: "center",
-          width: "100%",
-          maxWidth: "500px",
-          margin: "0 auto",
-          justifyContent: "center",
-        },
-      });
-    }
-  };
-
-  const createSalesReportTable = async (
-    doc,
-    pageWidth,
-    pageHeight,
-    yStartPosition,
-    aggregatedData,
-    period
-  ) => {
-    let yPosition = yStartPosition;
-    const headerTopMargin = yStartPosition;
-
-    const tableConfig = {
-      marginLeft: 15,
-      marginRight: 15,
-      rowHeight: 8,
-      headerHeight: 12,
-      headerFontSize: 10,
-      subHeaderFontSize: 9,
-      cellFontSize: 8,
-    };
-
-    const availableWidth =
-      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
-    const colWidths = [
-      availableWidth * 0.2,
-      availableWidth * 0.2,
-      availableWidth * 0.2,
-      availableWidth * 0.2,
-      availableWidth * 0.2,
-    ];
-
-    const drawCenteredText = (text, x, y, width, fontSize) => {
-      doc.setFontSize(fontSize);
-      const textWidth = doc.getTextWidth(text);
-      const textX = x + (width - textWidth) / 2;
-      doc.text(text, textX, y, { maxWidth: width - 4 });
-    };
-
-    const drawHeaders = () => {
-      let currentY = yPosition;
-      doc.setFont("helvetica", "bold");
-
-      const awardedX = tableConfig.marginLeft + colWidths[0];
-
-      doc.setFillColor(173, 216, 230);
-      doc.setTextColor(0, 0, 0);
-      doc.rect(
-        tableConfig.marginLeft,
-        currentY,
-        colWidths[0],
-        tableConfig.headerHeight,
-        "FD"
-      );
-      drawCenteredText(
-        "SALES OPPORTUNITY",
-        tableConfig.marginLeft,
-        currentY + 8,
-        colWidths[0],
-        tableConfig.headerFontSize
-      );
-
-      doc.setFillColor(221, 160, 221);
-      doc.rect(
-        awardedX,
-        currentY,
-        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
-        tableConfig.headerHeight,
-        "FD"
-      );
-      drawCenteredText(
-        "AWARDED SALES",
-        awardedX,
-        currentY + 8,
-        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
-        tableConfig.headerFontSize
-      );
-
-      currentY += tableConfig.headerHeight;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(tableConfig.subHeaderFontSize);
-
-      doc.setFillColor(255, 255, 255);
-      doc.rect(
-        tableConfig.marginLeft,
-        currentY,
-        colWidths[0],
-        tableConfig.rowHeight,
-        "FD"
-      );
-      drawCenteredText(
-        "RESPONSIBLES",
-        tableConfig.marginLeft,
-        currentY + 6,
-        colWidths[0],
-        tableConfig.subHeaderFontSize
-      );
-
-      doc.setFillColor(255, 255, 255);
-      doc.rect(
-        awardedX,
-        currentY,
-        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
-        tableConfig.rowHeight,
-        "FD"
-      );
-      drawCenteredText(
-        "ALL",
-        awardedX,
-        currentY + 6,
-        colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4],
-        tableConfig.subHeaderFontSize
-      );
-
-      currentY += tableConfig.rowHeight;
-
-      let periodLabel = "MONTHS";
-      if (period === "monthly") periodLabel = "DAYS";
-      else if (period === "weekly") periodLabel = "WEEKDAYS";
-      else if (period === "daily") periodLabel = "DATE";
-      else if (period === "quarterly") periodLabel = "QUARTERS";
-
-      const headers = [
-        periodLabel,
-        "QUOTE AMOUNT",
-        "AWARDED AMOUNT",
-        "ACTUAL COLLECTION",
-        "BALANCE FOR COLLECTION",
-      ];
-
-      let xPos = tableConfig.marginLeft;
-      headers.forEach((header, i) => {
-        doc.setFillColor(255, 255, 255);
-        doc.rect(xPos, currentY, colWidths[i], tableConfig.rowHeight, "FD");
-        drawCenteredText(
-          header,
-          xPos,
-          currentY + 6,
-          colWidths[i],
-          tableConfig.subHeaderFontSize
-        );
-        xPos += colWidths[i];
-      });
-
-      currentY += tableConfig.rowHeight;
-      yPosition = currentY;
-    };
-
-    drawHeaders();
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(tableConfig.cellFontSize);
-    const formatNumber = (num) => {
-      if (num == null || isNaN(num)) return "0.00";
-      return Number(num).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    };
-
-    let totalQuote = 0;
-    let totalAwarded = 0;
-    let totalActual = 0;
-    let totalBalance = 0;
-
-    if (Array.isArray(aggregatedData)) {
-      aggregatedData.forEach((row, rowIndex) => {
-        const rowHeight = tableConfig.rowHeight;
-
-        if (yPosition + rowHeight > pageHeight - 20) {
-          doc.addPage();
-          yPosition = headerTopMargin;
-          drawHeaders();
-        }
-
-        let x = tableConfig.marginLeft;
-
-        totalQuote += parseFloat(row[1]?.replace(/,/g, "")) || 0;
-        totalAwarded += parseFloat(row[2]?.replace(/,/g, "")) || 0;
-        totalActual += parseFloat(row[3]?.replace(/,/g, "")) || 0;
-        totalBalance += parseFloat(row[4]?.replace(/,/g, "")) || 0;
-
-        row.forEach((cell, i) => {
-          doc.setFillColor(rowIndex % 2 === 1 ? 248 : 255, 248, 248);
-          doc.rect(x, yPosition, colWidths[i], rowHeight, "FD");
-          doc.setDrawColor(0, 0, 0);
-          doc.rect(x, yPosition, colWidths[i], rowHeight, "S");
-
-          let displayText = cell || "";
-
-          if (i === 4 && parseFloat(cell) === 0) {
-            doc.setTextColor(255, 0, 0);
-          } else {
-            doc.setTextColor(0, 0, 0);
-          }
-
-          drawCenteredText(
-            displayText,
-            x,
-            yPosition + 6,
-            colWidths[i],
-            tableConfig.cellFontSize
-          );
-          doc.setTextColor(0, 0, 0);
-
-          x += colWidths[i];
-        });
-
-        yPosition += rowHeight;
-      });
-    }
-
-    if (yPosition + tableConfig.rowHeight > pageHeight - 20) {
-      doc.addPage();
-      yPosition = headerTopMargin;
-      drawHeaders();
-    }
-
-    doc.setFont("helvetica", "bolditalic");
-    doc.setTextColor(0, 0, 0);
-
-    const totalsRow = [
-      "TOTAL",
-      formatNumber(totalQuote),
-      formatNumber(totalAwarded),
-      formatNumber(totalActual),
-      formatNumber(totalBalance),
-    ];
-
-    let x = tableConfig.marginLeft;
-    totalsRow.forEach((cell, i) => {
-      doc.setFillColor(255, 255, 204);
-      doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "FD");
-      doc.setDrawColor(0, 0, 0);
-      doc.rect(x, yPosition, colWidths[i], tableConfig.rowHeight, "S");
-
-      if (i === 0) {
-        doc.text(cell, x + colWidths[i] - 4, yPosition + 6, {
-          align: "right",
-        });
-      } else {
-        drawCenteredText(
-          cell,
-          x,
-          yPosition + 6,
-          colWidths[i],
-          tableConfig.cellFontSize
-        );
-      }
-
-      x += colWidths[i];
-    });
-
-    yPosition += tableConfig.rowHeight;
-
-    return {
-      finalYPosition: yPosition,
-      tableHeight: yPosition - yStartPosition,
-      rowCount: aggregatedData ? aggregatedData.length + 5 : 5,
-    };
-  };
-
-  const createTransactionReportTable = async (
-    doc,
-    pageWidth,
-    pageHeight,
-    yStartPosition,
-    transactionData,
-    period
-  ) => {
-    let yPosition = yStartPosition;
-
-    const tableConfig = {
-      marginLeft: 10,
-      marginRight: 10,
-      rowHeight: 8,
-      headerHeight: 15,
-      headerFontSize: 10,
-      subHeaderFontSize: 9,
-      cellFontSize: 10,
-      lineSpacing: 1.2,
-    };
-
-    let periodLabel = "MONTHS";
-    if (period === "monthly") periodLabel = "DAYS";
-    else if (period === "weekly") periodLabel = "WEEKDAYS";
-    else if (period === "daily") periodLabel = "DATE";
-    else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS";
-
-    const headers = [
-      periodLabel,
-      "Transaction No",
-      "Tracking No",
-      "Date of Order",
-      "Client",
-      "Address",
-      "Item Name",
-      "Quantity",
-      "Unit Cost",
-      "Subtotal",
-      "Delivery Status",
-      "Ship Out At",
-      "Completed At",
-    ];
-
-    const availableWidth =
-      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
-
-    const originalWidths = [20, 22, 20, 22, 29, 25, 25, 20, 20, 20, 25, 20, 22];
-    const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
-    const colWidths = originalWidths.map(
-      (w) => (w / totalOriginal) * availableWidth
-    );
-
-    const tableStartX = tableConfig.marginLeft;
-
-    const drawCenteredText = (text, x, y, width, fontSize) => {
-      doc.setFontSize(fontSize);
-      const textWidth = doc.getTextWidth(text);
-      const textX = x + (width - textWidth) / 2;
-      doc.text(text, textX, y, { maxWidth: width - 4 });
-    };
-
-    const headerColors = [
-      [173, 216, 230], // Filter
-      [221, 160, 221], // Transaction No
-      [144, 238, 144], // Tracking No
-      [255, 218, 185], // Date of Order
-      [176, 224, 230], // Client
-      [240, 230, 140], // Address
-      [250, 200, 200], // Item Name
-      [200, 255, 200], // Quantity
-      [200, 200, 255], // Unit Cost
-      [255, 200, 150], // Subtotal
-      [210, 180, 140], // Delivery Status
-      [135, 206, 250], // Ship Out At
-      [255, 182, 193], // Completed At
-    ];
-
-    const drawHeaders = () => {
-      let xPos = tableStartX;
-      doc.setFont("helvetica", "bold");
-      headers.forEach((header, i) => {
-        const fillColor = headerColors[i] || [200, 200, 200];
-        doc.setFillColor(...fillColor);
-        doc.setTextColor(0, 0, 0);
-        doc.rect(xPos, yPosition, colWidths[i], tableConfig.headerHeight, "FD");
-        drawCenteredText(
-          header,
-          xPos,
-          yPosition + tableConfig.headerHeight / 2 + 2,
-          colWidths[i],
-          tableConfig.subHeaderFontSize
-        );
-        xPos += colWidths[i];
-      });
-      yPosition += tableConfig.headerHeight;
-    };
-
-    drawHeaders();
-
-    transactionData.forEach((row, rowIndex) => {
-      let xPos = tableStartX;
-      let maxLines = 1;
-
-      const cellLinesArray = row.map((cell, i) => {
-        const text = cell !== null && cell !== undefined ? cell.toString() : "";
-        const lines = doc.splitTextToSize(text, colWidths[i] - 2);
-        maxLines = Math.max(maxLines, lines.length);
-        return lines;
-      });
-
-      const rowHeight =
-        tableConfig.cellFontSize * 0.5 * maxLines * tableConfig.lineSpacing + 2;
-
-      const isEvenRow = rowIndex % 2 === 0;
-      const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
-
-      row.forEach((cell, i) => {
-        doc.setFillColor(...bgColor);
-        doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(tableConfig.cellFontSize);
-        doc.text(
-          cellLinesArray[i],
-          xPos + 1,
-          yPosition + tableConfig.cellFontSize * 0.4,
-          { maxWidth: colWidths[i] - 2 }
-        );
-        xPos += colWidths[i];
-      });
-
-      yPosition += rowHeight;
-
-      if (yPosition + rowHeight > pageHeight - 20) {
-        doc.addPage();
-        const topMargin = 50;
-        yPosition = topMargin;
-        drawHeaders();
-      }
-    });
-
-    return yPosition;
-  };
-
-  const createDeliveryServiceReportTable = async (
-    doc,
-    pageWidth,
-    pageHeight,
-    yStartPosition,
-    serviceData,
-    period
-  ) => {
-    let yPosition = yStartPosition;
-
-    const tableConfig = {
-      marginLeft: 10,
-      marginRight: 10,
-      rowHeight: 8,
-      headerHeight: 15,
-      headerFontSize: 11,
-      subHeaderFontSize: 10,
-      cellFontSize: 10,
-      lineSpacing: 1.2,
-    };
-
-    let periodLabel = "MONTHS";
-    if (period === "monthly") periodLabel = "DAYS";
-    else if (period === "weekly") periodLabel = "WEEKDAYS";
-    else if (period === "daily") periodLabel = "DATE";
-    else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS";
-
-    const headers = [
-      periodLabel,
-      "Transaction No.",
-      "Date of Order",
-      "Client",
-      "Delivery Status",
-      "Initial Delivery Date",
-      "Rescheduled Date",
-      "Reason for Cancellation",
-    ];
-
-    const availableWidth =
-      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
-
-    const originalWidths = [25, 28, 30, 28, 32, 32, 32, 40];
-    const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
-    const colWidths = originalWidths.map(
-      (w) => (w / totalOriginal) * availableWidth
-    );
-
-    const tableStartX = tableConfig.marginLeft;
-
-    const drawCenteredText = (text, x, y, width, fontSize) => {
-      doc.setFontSize(fontSize);
-      const textWidth = doc.getTextWidth(text);
-      const textX = x + (width - textWidth) / 2;
-      doc.text(text, textX, y, { maxWidth: width - 4 });
-    };
-
-    const headerColors = [
-      [173, 216, 230], // Filter (periodLabel)
-      [221, 160, 221], // Transaction No.
-      [144, 238, 144], // Date of Order
-      [255, 218, 185], // Client
-      [176, 224, 230], // Delivery Status
-      [240, 230, 140], // Initial Delivery Date
-      [250, 200, 200], // Rescheduled Date
-      [255, 182, 193], // Reason for Cancellation
-    ];
-
-    const drawHeaders = () => {
-      let xPos = tableStartX;
-      doc.setFont("helvetica", "bold");
-      headers.forEach((header, i) => {
-        const fillColor = headerColors[i] || [200, 200, 200];
-        doc.setFillColor(...fillColor);
-        doc.setTextColor(0, 0, 0);
-        doc.rect(xPos, yPosition, colWidths[i], tableConfig.headerHeight, "FD");
-        drawCenteredText(
-          header,
-          xPos,
-          yPosition + tableConfig.headerHeight / 2 + 3,
-          colWidths[i],
-          tableConfig.subHeaderFontSize
-        );
-        xPos += colWidths[i];
-      });
-      yPosition += tableConfig.headerHeight;
-    };
-
-    drawHeaders();
-
-    serviceData.forEach((row, rowIndex) => {
-      let xPos = tableStartX;
-      let maxLines = 1;
-
-      const cellLinesArray = row.map((cell, i) => {
-        const text = cell !== null && cell !== undefined ? cell.toString() : "";
-        const lines = doc.splitTextToSize(text, colWidths[i] - 2);
-        maxLines = Math.max(maxLines, lines.length);
-        return lines;
-      });
-
-      const rowHeight =
-        maxLines * tableConfig.cellFontSize * tableConfig.lineSpacing * 0.5 + 4;
-
-      if (yPosition + rowHeight > pageHeight - 20) {
-        doc.addPage();
-        const topMargin = 50;
-        yPosition = topMargin;
-        drawHeaders();
-      }
-
-      const isEvenRow = rowIndex % 2 === 0;
-      const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
-
-      row.forEach((cell, i) => {
-        doc.setFillColor(...bgColor);
-        doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(tableConfig.cellFontSize);
-        doc.text(cellLinesArray[i], xPos + 1, yPosition + 5, {
-          maxWidth: colWidths[i] - 2,
-        });
-        xPos += colWidths[i];
-      });
-
-      yPosition += rowHeight;
-    });
-    return yPosition;
-  };
-
-  const createCustomerSatisfactionReportTable = async (
-    doc,
-    pageWidth,
-    pageHeight,
-    yStartPosition,
-    satisfactionRows,
-    period
-  ) => {
-    let yPosition = yStartPosition;
-
-    const tableConfig = {
-      marginLeft: 10,
-      marginRight: 10,
-      rowHeight: 8,
-      headerHeight: 15,
-      headerFontSize: 11,
-      subHeaderFontSize: 10,
-      cellFontSize: 10,
-      lineSpacing: 1.2,
-    };
-
-    let periodLabel = "MONTHS";
-    if (period === "monthly") periodLabel = "DAYS";
-    else if (period === "weekly") periodLabel = "WEEKDAYS";
-    else if (period === "daily") periodLabel = "DATE";
-    else if (period === "quarterly") periodLabel = "QUARTERS";
-    else if (period === "annually") periodLabel = "MONTHS";
-
-    const headers = [
-      periodLabel,
-      "Transaction No.",
-      "Date of Order",
-      "Client",
-      "Item",
-      "Customer Rating",
-      "Delivery Status",
-    ];
-
-    const availableWidth =
-      pageWidth - tableConfig.marginLeft - tableConfig.marginRight;
-
-    const originalWidths = [20, 25, 30, 30, 30, 25, 30];
-    const totalOriginal = originalWidths.reduce((a, b) => a + b, 0);
-    const colWidths = originalWidths.map(
-      (w) => (w / totalOriginal) * availableWidth
-    );
-
-    const tableStartX = tableConfig.marginLeft;
-
-    const drawCenteredText = (text, x, y, width, fontSize) => {
-      doc.setFontSize(fontSize);
-      const textWidth = doc.getTextWidth(text);
-      const textX = x + (width - textWidth) / 2;
-      doc.text(text, textX, y, { maxWidth: width - 4 });
-    };
-
-    const headerColors = [
-      [173, 216, 230],
-      [221, 160, 221],
-      [255, 250, 205],
-      [144, 238, 144],
-      [255, 182, 193],
-      [255, 218, 185],
-      [176, 224, 230],
-    ];
-
-    const drawHeaders = () => {
-      let xPos = tableStartX;
-      doc.setFont("helvetica", "bold");
-      headers.forEach((header, i) => {
-        const fillColor = headerColors[i] || [200, 200, 200];
-        doc.setFillColor(...fillColor);
-        doc.setTextColor(0, 0, 0);
-        doc.rect(xPos, yPosition, colWidths[i], tableConfig.headerHeight, "FD");
-        drawCenteredText(
-          header,
-          xPos,
-          yPosition + tableConfig.headerHeight / 2 + 3,
-          colWidths[i],
-          tableConfig.subHeaderFontSize
-        );
-        xPos += colWidths[i];
-      });
-      yPosition += tableConfig.headerHeight;
-    };
-
-    drawHeaders();
-
-    satisfactionRows.forEach((row, rowIndex) => {
-      let xPos = tableStartX;
-      let maxLines = 1;
-
-      const cellLinesArray = row.map((cell, i) => {
-        const text = cell !== null && cell !== undefined ? cell.toString() : "";
-        const lines = doc.splitTextToSize(text, colWidths[i] - 2);
-        maxLines = Math.max(maxLines, lines.length);
-        return lines;
-      });
-
-      const rowHeight =
-        maxLines * tableConfig.cellFontSize * tableConfig.lineSpacing * 0.5 + 4;
-
-      const isEvenRow = rowIndex % 2 === 0;
-      const bgColor = isEvenRow ? [245, 245, 245] : [255, 255, 255];
-
-      if (yPosition + rowHeight > pageHeight - 20) {
-        doc.addPage();
-        const topMargin = 50;
-        yPosition = topMargin;
-        drawHeaders();
-      }
-      row.forEach((cell, i) => {
-        doc.setFillColor(...bgColor);
-        doc.rect(xPos, yPosition, colWidths[i], rowHeight, "FD");
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(tableConfig.cellFontSize);
-        doc.text(cellLinesArray[i], xPos + 1, yPosition + 5, {
-          maxWidth: colWidths[i] - 2,
-        });
-        xPos += colWidths[i];
-      });
-
-      yPosition += rowHeight;
-    });
-
-    return yPosition;
-  };
-
-  const iconStyle = {
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    flexShrink: 0,
-    fontSize: 20,
-  };
-
-  const cardsData = {
-    totalSales: {
-      icon: <FaChartLine />,
-      color: "#4CAF50",
-      title: "Total Sales",
-      value: `₱${totalSalesAmount.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-    },
-    totalTransactions: {
-      icon: <FaFileInvoice />,
-      color: "#2196F3",
-      title: "Total Transactions",
-      value: totalTransactions,
-    },
-    successfulDeliveries: {
-      icon: <FaCheckCircle />,
-      color: "#4CAF50",
-      title: "Successful Deliveries",
-      value: successfulDeliveries,
-    },
-    cancelledDeliveries: {
-      icon: <FaTimesCircle />,
-      color: "#F44336",
-      title: "Cancelled/Rescheduled Deliveries",
-      value: failedDeliveries,
-    },
-  };
-
-  const cardsByReportType = {
-    sales: ["totalSales", "totalClients", "totalItemsDelivered"],
-    transaction: [
-      "totalClients",
-      "totalItemsSold",
-      "totalTransactions",
-      "successfulDeliveries",
-      "cancelledDeliveries",
-    ],
-    service: [
-      "totalTransactions",
-      "successfulDeliveries",
-      "cancelledDeliveries",
-    ],
-    all: [
-      ["totalSales", "totalClients", "totalItemsSold", "totalItemsDelivered"],
-      ["totalTransactions", "successfulDeliveries", "cancelledDeliveries"],
-    ],
-    customer: [],
-  };
-
-  const renderTotalsCard = () => {
-    if (reportType === "customer") return null;
-
-    const cardGroups = cardsByReportType[reportType] || [];
-    if (cardGroups.length === 0) return null;
-
-    const getCardData = (key) => {
-      if (key === "totalClients") {
-        return {
-          icon: <FaUserFriends />,
-          color: "#2196F3",
-          title: "Total Clients",
-          value: reportType === "sales" ? totalCustomersSales : overallClients,
-        };
-      }
-      if (key === "totalItemsSold") {
-        return {
-          icon: <FaShoppingCart />,
-          color: "#FF9800",
-          title: "Total Items Ordered",
-          value: totalItemsOrdered,
-        };
-      }
-      if (key === "totalItemsDelivered") {
-        return {
-          icon: <FaTruck />,
-          color: "#009688",
-          title: "Total Items Delivered",
-          value: totalItemsDelivered,
-        };
-      }
-      if (key === "successfulDeliveries") {
-        return {
-          icon: <FaCheckCircle />,
-          color: "#4CAF50",
-          title: "Successful Deliveries",
-          value: successfulDeliveries,
-        };
-      }
-      if (key === "cancelledDeliveries") {
-        return {
-          icon: <FaTimesCircle />,
-          color: "#F44336",
-          title: "Cancelled/Rescheduled Deliveries",
-          value: failedDeliveries,
-        };
-      }
-      return cardsData[key];
-    };
-
-    const renderRow = (keys) => {
-      return (
-        <Row className="mb-3 g-3">
-          {keys.map((key) => {
-            const card = getCardData(key);
-            if (!card) return null;
-            return (
-              <Col key={key} className="d-flex">
-                <Card
-                  className="card-total p-3 flex-fill h-100"
-                  style={{ backgroundColor: "white" }}
-                >
-                  <div className="d-flex align-items-center">
-                    <div style={{ ...iconStyle, backgroundColor: card.color }}>
-                      {card.icon}
-                    </div>
-                    <div>
-                      <h6 className="fw-semibold">{card.title}</h6>
-                      <p className="mb-0 fw-semibold">{card.value}</p>
-                    </div>
-                  </div>
-                </Card>
-              </Col>
-            );
-          })}
-        </Row>
-      );
-    };
-
-    return Array.isArray(cardGroups[0])
-      ? cardGroups.map((row, idx) => <div key={idx}>{renderRow(row)}</div>)
-      : renderRow(cardGroups);
-  };
-
-  const renderSalesGrowthChart = () => (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart
-        data={salesGrowthData}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip formatter={(value) => `₱${Number(value).toFixed(2)}`} />
-        <Legend />
-        <Line
-          type="monotone"
-          dataKey="total_cost"
-          stroke="#4CAF50"
-          strokeWidth={3}
-          dot={{ r: 4 }}
-          activeDot={{ r: 6 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
-
-  const renderTopSellingChart = () => {
-    const top3Items = [...topSelling]
-      .sort((a, b) => b.quantity_sold - a.quantity_sold)
-      .slice(0, 3);
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={top3Items}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="item_name" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          <Bar
-            dataKey="quantity_sold"
-            fill="#4CAF50"
-            radius={[5, 5, 0, 0]}
-            name="Items Sold"
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  };
-
-  const renderTransactionStatusChart = () => (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart
-        data={transactionStatusData}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Legend />
-        <Bar
-          dataKey="count"
-          radius={[5, 5, 0, 0]}
-          name="Number of Transactions"
-          fill="darkblue"
-        >
-          {transactionStatusData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={index === 0 ? "#4CAF50" : "#E57373"}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  );
-
-  const renderServiceFailedReasonsChart = () => {
-    const data =
-      failedReasons && Object.keys(failedReasons).length > 0
-        ? Object.entries(failedReasons).map(([reason, count]) => ({
-            reason,
-            count,
-          }))
-        : [{ reason: "No Data", count: 0 }];
-
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={data}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="reason" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          <Bar
-            dataKey="count"
-            fill="#E6A152FF"
-            radius={[5, 5, 0, 0]}
-            name="Number of Transactions"
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  };
-
-  const renderCustomerRatingPieChart = () => {
-    const totalRatings =
-      ratingDistribution.reduce((acc, cur) => acc + cur.value, 0) || 0;
-    const dataWithPercent =
-      totalRatings === 0
-        ? [{ name: "No Ratings", value: 1, percent: "0.0" }]
-        : ratingDistribution.map((entry) => ({
-            ...entry,
-            percent: ((entry.value / totalRatings) * 100).toFixed(1),
-          }));
-
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={dataWithPercent}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            label={({ name, percent }) => `${name}: ${percent}%`}
-            labelLine={false}
-          >
-            {dataWithPercent.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value) => `${value} ratings`} />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    );
-  };
-
-  useEffect(() => {
-    setActiveTab("overall");
-  }, [reportType]);
-
-  const getItemsPerPage = () => {
-    return reportType === "all" ? 5 : 15;
-  };
-
-  const paginate = (data, currentPage) => {
-    const itemsPerPage = getItemsPerPage();
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return data.slice(startIndex, startIndex + itemsPerPage);
-  };
-
-  const renderSalesTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredSalesData.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) {
-          acc[id] = { ...row, items: [] };
-        }
-
-        acc[id].items.push({
-          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
-          qty: row.qty,
-          unit_cost: Number(row.unit_cost),
-        });
-
-        return acc;
-      }, {})
-    );
-
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(salesPage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    return (
-      <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
-          <thead className="table-success">
-            <tr>
-              <th>Transaction No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Item Name</th>
-              <th>Quantity</th>
-              <th>Unit Cost</th>
-              <th>Subtotal</th>
-              <th>Total Cost</th>
-              <th>Payment Option</th>
-              <th>Down Payment</th>
-              <th>Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={11} className="text-center">
-                  No sales data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                const subtotals = row.items.map(
-                  (item) => item.qty * item.unit_cost
-                );
-
-                const totalCost = subtotals.reduce((a, b) => a + b, 0);
-
-                return (
-                  <tr key={i} className="table-row-hover">
-                    <td>{row.transaction_id || "-"}</td>
-                    <td>{formatDate(row.date_of_order)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          {`${item.product_name || ""} ${
-                            item.name || ""
-                          }`.trim()}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>{item.qty}</div>
-                      ))}
-                    </td>
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          ₱
-                          {item.unit_cost.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      {subtotals.map((st, j) => (
-                        <div key={j}>
-                          ₱
-                          {st.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      ₱
-                      {totalCost.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td>{row.payment_option}</td>
-                    <td>
-                      ₱
-                      {Number(row.down_payment).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td>
-                      ₱
-                      {Number(row.balance).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setSalesPage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setSalesPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
-
-  const renderTransactionTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredTransactionData.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) {
-          acc[id] = { ...row, items: [] };
-        }
-
-        acc[id].items.push({
-          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
-          qty: Number(row.qty),
-          unit_cost: Number(row.unit_cost),
-        });
-
-        return acc;
-      }, {})
-    );
-
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(transactionPage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    return (
-      <>
-        <Table bordered hover responsive className="shadow-sm text-center">
-          <thead className="table-info">
-            <tr>
-              <th>Transaction No.</th>
-              <th>Tracking No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Address</th>
-              <th>Contact Number</th>
-              <th>Item Name</th>
-              <th>Quantity</th>
-              <th>Unit Cost</th>
-              <th>Subtotal</th>
-              <th>Total Cost</th>
-              <th>Mode of Payment</th>
-              <th>Payment Option</th>
-              <th>Down Payment</th>
-              <th>Balance</th>
-              <th>Delivery Personnel</th>
-              <th>Delivery Status</th>
-              <th>Ship Out At</th>
-              <th>Completed At</th>
-              <th>Reason for Cancellation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={20} className="text-center">
-                  No transaction data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                const subtotals = row.items.map(
-                  (item) => item.qty * item.unit_cost
-                );
-
-                const totalCost = subtotals.reduce((a, b) => a + b, 0);
-
-                return (
-                  <tr key={i}>
-                    <td>{row.transaction_id}</td>
-                    <td>{row.tracking_number || "-"}</td>
-                    <td>{formatDate(row.date_of_order)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>{row.customer_address}</td>
-                    <td>{row.customer_contact}</td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          {`${item.product_name || ""} ${
-                            item.name || ""
-                          }`.trim()}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>{item.qty}</div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          ₱
-                          {item.unit_cost.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {subtotals.map((st, j) => (
-                        <div key={j}>
-                          ₱
-                          {st.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      ₱
-                      {totalCost.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td>{row.mode_of_payment || "-"}</td>
-
-                    <td>{row.payment_option || "-"}</td>
-
-                    <td>
-                      ₱
-                      {Number(row.down_payment).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td>
-                      ₱
-                      {Number(row.balance).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td>{row.delivery_personnel || "-"}</td>
-
-                    <td>{row.delivery_status || "-"}</td>
-
-                    <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
-
-                    <td>
-                      {row.completed_at ? formatDate(row.completed_at) : "-"}
-                    </td>
-
-                    <td>
-                      {row.cancelled_reason &&
-                      row.cancelled_reason.trim() !== ""
-                        ? row.cancelled_reason
-                        : "No Cancellation"}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setTransactionPage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages}
-            onClick={() => setTransactionPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
-
-  const renderServiceTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredServiceData.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) acc[id] = { ...row, items: [] };
-
-        acc[id].items.push({
-          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
-          qty: row.qty,
-          unit_cost: Number(row.unit_cost),
-        });
-
-        return acc;
-      }, {})
-    );
-
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(servicePage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    return (
-      <>
-        <Table bordered hover responsive className="shadow-sm text-center">
-          <thead className="table-warning">
-            <tr>
-              <th>Transaction No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Delivery Status</th>
-              <th>Initial Delivery Date</th>
-              <th>Rescheduled Date</th>
-              <th>Reason for Cancellation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={8}>No delivery service data found.</td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                let displayStatus =
-                  row.delivery_status === "Cancelled"
-                    ? "Cancelled (For Rescheduling)"
-                    : row.delivery_status;
-                let targetDate = row.target_date_delivery
-                  ? formatDate(row.target_date_delivery)
-                  : "-";
-                let rescheduledDate = row.rescheduled_date
-                  ? formatDate(row.rescheduled_date)
-                  : "Not Rescheduled";
-
-                return (
-                  <tr key={i}>
-                    <td>{row.transaction_id}</td>
-                    <td>{formatDate(row.date_of_order)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>{displayStatus}</td>
-                    <td>{targetDate}</td>
-                    <td>{rescheduledDate}</td>
-                    <td>
-                      {row.cancelled_reason && row.cancelled_reason !== "-"
-                        ? row.cancelled_reason
-                        : "No Cancellation"}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setServicePage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages}
-            onClick={() => setServicePage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
-
-  const renderCustomerTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredCustomerData.reduce((acc, row) => {
-        if (!acc[row.transaction_id]) {
-          acc[row.transaction_id] = row;
-        }
-        return acc;
-      }, {})
-    );
-
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(customerPage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    return (
-      <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
-          <thead>
-            <tr className="customer-header">
-              <th>Transaction No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Ratings</th>
-              <th>Delivery Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center">
-                  No client satisfaction data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => (
-                <tr key={i} className="table-row-hover">
-                  <td>{row.transaction_id || "-"}</td>
-                  <td>{row.date_of_order}</td>
-                  <td>{row.customer_name}</td>
-                  <td>{row.customer_rating ?? "N/A"}</td>
-                  <td>{row.delivery_status}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={customerPage === 1}
-            onClick={() => setCustomerPage(customerPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {customerPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={customerPage === totalPages}
-            onClick={() => setCustomerPage(customerPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
 
   return (
     <AdminLayout
       title={
         <div className="d-flex align-items-center gap-2">
-          <span>Generate Report</span>
+          <span>Add Delivery</span>
           <HiQuestionMarkCircle
             style={{
               fontSize: "2rem",
@@ -3786,296 +1077,1657 @@ const GenerateReport = () => {
       }
       showSearch={false}
     >
-      <style>{`
-        .table-row-hover:hover { background-color: #f1f3f5 !important; transition: background-color 0.3s ease; }
-        .btn-primary, .btn-success, .btn-danger { transition: box-shadow 0.3s ease; }
-        .btn-primary:hover, .btn-success:hover, .btn-danger:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .card { border-radius: 0.75rem; cursor: default; }
-      `}</style>
-      <br /> <br />
-      <br />
-      <div className="report-btn d-flex justify-content-between align-items-center mb-3 no-print mx-4">
-        <div className="filter-generate">
-          <Button
-            variant="primary"
-            className="me-2 btn btn-view px-3 py-2 rounded"
-            onClick={() => setShowFilter(true)}
-          >
-            <FaFilter /> Filter Reports
-          </Button>
-          <Button
-            variant="danger"
-            className="btn cancel-btn px-3 py-2 rounded"
-            onClick={() => generateReport(reportType)}
-          >
-            <FaFilePdf /> Generate PDF
-          </Button>
-        </div>
-        <Button
-          variant="success"
-          onClick={() => navigate("/add-delivery")}
-          className="d-flex align-items-center gap-2 btn add-delivery px-3 py-2 rounded"
-          style={{ fontSize: "15px" }}
+      <div className="d-flex justify-content-start mt-4 ms-4">
+        <button
+          className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
+          onClick={() => navigate(-1)}
         >
-          <FaPlus /> Add New Delivery
-        </Button>
+          <FaArrowLeft /> Back
+        </button>
       </div>
-      <div className="period-title text-center" ref={reportRef}>
-        <h5 className="text-success fs-1 mt-3 mb-4 fw-semibold">
-          {getReportTitle()}
-        </h5>
-      </div>
-      <div className="mx-4">{renderTotalsCard()}</div>
-      {loading ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="success" />
+      <div className="add-delivery-container mt-4 p-4 mx-auto mb-3">
+        <div className="header-info m-3 d-flex justify-content-between">
+          <h4>
+            <strong>Transaction No.:</strong> {transactionId}
+          </h4>
+          <h4>
+            <strong>P.O. No.:</strong> {poId}
+          </h4>
         </div>
-      ) : (
-        <>
-          {(reportType === "sales" || reportType === "all") && (
-            <div
-              ref={salesRef}
-              className="report-container mb-5"
-              style={{
-                backgroundColor: "white",
-                padding: "15px",
-                borderRadius: "8px",
-              }}
-            >
-              <>
-                <h2 className="text-success mt-3 mb-3 text-center fw-semibold">
-                  Sales Report
-                </h2>
-                <h5 className="mb-2 text-center">Sales Growth Over Time</h5>
-                {renderSalesGrowthChart()}
-                <h5 className="mt-4 mb-2 text-center">Top Selling Items</h5>
-                {renderTopSellingChart()} <br /> <br />
-                {renderSalesTable()}
-              </>
-            </div>
-          )}
 
-          {(reportType === "transaction" || reportType === "all") && (
-            <div
-              ref={transactionRef}
-              className="report-container mb-5"
-              style={{
-                backgroundColor: "white",
-                padding: "15px",
-                borderRadius: "8px",
-              }}
-            >
-              <>
-                <h2
-                  className="mt-3 mb-3 text-center fw-semibold"
-                  style={{ color: "#3C75C0" }}
-                >
-                  Transaction Report
-                </h2>
-                <h5 className="mb-2 text-center">
-                  Delivery Status (Delivered vs Cancelled)
-                </h5>
-                {renderTransactionStatusChart()} <br /> <br />
-                {renderTransactionTable()}
-              </>
-            </div>
-          )}
+        <form
+          id="deliveryForm"
+          className="delivery-form bg-white"
+          onSubmit={handleSubmit}
+        >
+          <h4 className="mb-3">Customer Details</h4>
+          <div className="row mb-3">
+            <div className="col-md-6">
+              <label htmlFor="customerName" className="form-label">
+                Enter Client's Name:
+              </label>
+              <input
+                type="text"
+                className={`form-control ${nameError ? "is-invalid" : ""}`}
+                id="customerName"
+                name="customer_name"
+                value={form.customer_name}
+                placeholder="Client's Name"
+                onChange={(e) => {
+                  const value = e.target.value;
 
-          {(reportType === "service" || reportType === "all") && (
-            <div
-              ref={serviceRef}
-              className="report-container mb-5"
-              style={{
-                backgroundColor: "white",
-                padding: "15px",
-                borderRadius: "8px",
-              }}
-            >
-              <>
-                <h2
-                  className="mt-3 mb-3 text-center fw-semibold"
-                  style={{ color: "#DC9A34" }}
-                >
-                  Delivery Service Report
-                </h2>
-                <h5 className="mb-2 text-center">Cancellation Reasons</h5>
-                {renderServiceFailedReasonsChart()} <br /> <br />
-                {renderServiceTable()}
-              </>
-            </div>
-          )}
-
-          {(reportType === "customer" || reportType === "all") && (
-            <div
-              ref={customerRef}
-              className="report-container mb-5"
-              style={{
-                backgroundColor: "white",
-                padding: "15px",
-                borderRadius: "8px",
-              }}
-            >
-              <>
-                <h2
-                  className="mt-3 mb-3 text-center fw-semibold"
-                  style={{ color: "#CB5C5C" }}
-                >
-                  Client Satisfaction Report
-                </h2>
-                <h5 className="mb-2 text-center">Client Rating Distribution</h5>
-                {renderCustomerRatingPieChart()} <br />
-                <br />
-                {renderCustomerTable()}
-              </>
-            </div>
-          )}
-        </>
-      )}
-      <Modal show={showFilter} onHide={() => setShowFilter(false)} centered>
-        <Modal.Header closeButton className="bg-white text-success">
-          <Modal.Title className="fw-bold">Filter Reports</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-light">
-          <Form>
-            <Form.Group className="mb-3" controlId="filterStartDate">
-              <Form.Label className="text-success">Start Date</Form.Label>
-              <Form.Control
-                type="date"
-                value={startDate}
-                max={endDate || undefined}
-                onChange={(e) => setStartDate(e.target.value)}
+                  if (/^[A-Za-z-ñÑ\s]*$/.test(value)) {
+                    setForm((prev) => ({ ...prev, customer_name: value }));
+                    setNameError("");
+                  } else {
+                    setNameError(
+                      "Name should only contain letters and spaces."
+                    );
+                  }
+                }}
+                required
               />
-            </Form.Group>
+              {nameError && <div className="invalid-feedback">{nameError}</div>}
+            </div>
 
-            <Form.Group className="mb-3" controlId="filterEndDate">
-              <Form.Label className="text-success">End Date</Form.Label>
-              <Form.Control
+            <div className="col-md-6">
+              <label htmlFor="dateOfOrder" className="form-label">
+                Date of Order:
+              </label>
+              <input
                 type="date"
-                value={endDate}
-                min={startDate || undefined}
-                max={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => setEndDate(e.target.value)}
+                className={`form-control ${
+                  form.date_of_order ? "text-black" : "text-muted"
+                } ${orderDateError ? "is-invalid" : ""}`}
+                id="dateOfOrder"
+                name="date_of_order"
+                value={
+                  form.date_of_order
+                    ? new Date(form.date_of_order).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value + "T00:00:00");
+                  const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
+
+                  if (isNaN(selectedDate.getTime())) {
+                    setOrderDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setOrderDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, date_of_order: "" }));
+                    return;
+                  } else if (selectedDate > today) {
+                    setOrderDateError("Date of order cannot be in the future.");
+                  } else {
+                    setOrderDateError("");
+                    handleChange(e);
+                  }
+                }}
+                required
+                max={getLocalDate()}
               />
-            </Form.Group>
 
-            <Form.Group className="mb-3" controlId="filterPeriod">
-              <Form.Label className="text-success">Period</Form.Label>
-              <Form.Select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-              >
-                {PERIODS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
+              {orderDateError && (
+                <div className="invalid-feedback">{orderDateError}</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Customer Address:</label>
+            <div className="row g-2">
+              <div className="col-md-4">
+                <CreatableSelect
+                  placeholder="Province"
+                  options={provinceOptions}
+                  value={
+                    form.province
+                      ? { label: form.province, value: form.province }
+                      : null
+                  }
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      province: selected?.value || "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, province: inputValue }));
+                    }
+                  }}
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-4">
+                <Select
+                  options={cityOptions}
+                  value={
+                    form.city ? { label: form.city, value: form.city } : null
+                  }
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      city: selected?.value || "",
+                      barangay: "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, city: inputValue }));
+                    }
+                  }}
+                  placeholder={
+                    form.province ? "Select City" : "Select province first"
+                  }
+                  isDisabled={!form.province}
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  filterOption={(option, inputValue) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-4">
+                <Select
+                  options={barangayOptions}
+                  value={
+                    form.barangay
+                      ? { label: form.barangay, value: form.barangay }
+                      : null
+                  }
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      barangay: selected?.value || "",
+                    }))
+                  }
+                  onInputChange={(inputValue, { action }) => {
+                    if (action === "input-change") {
+                      setForm((prev) => ({ ...prev, barangay: inputValue }));
+                    }
+                  }}
+                  placeholder={
+                    form.city ? "Select Barangay" : "Select city first"
+                  }
+                  isDisabled={!form.city}
+                  isClearable
+                  isSearchable
+                  openMenuOnClick
+                  openMenuOnFocus
+                  filterOption={(option, inputValue) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                  }}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="House No./Street Name"
+                  name="house_no"
+                  value={form.house_no || ""}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Village/Subdivision"
+                  name="street_name"
+                  value={form.street_name || ""}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="row mb-4">
+            <div className="col-md-6">
+              <label htmlFor="contactNumber" className="form-label">
+                Enter Client's Contact Number:
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                pattern="\d*"
+                className={`form-control ${contactError ? "is-invalid" : ""}`}
+                id="contactNumber"
+                name="customer_contact"
+                value={form.customer_contact}
+                placeholder="Client's Contact No."
+                onChange={handleContactChange}
+                maxLength={11}
+                required
+              />
+
+              {contactError && (
+                <div className="invalid-feedback">{contactError}</div>
+              )}
+            </div>
+            <div className="col-md-6">
+              <label htmlFor="targetDate" className="form-label">
+                Date of Delivery:
+              </label>
+              <input
+                type="date"
+                id="targetDate"
+                name="target_date_delivery"
+                className={`form-control ${
+                  form.target_date_delivery ? "text-black" : "text-muted"
+                } ${dateError ? "is-invalid" : ""}`}
+                value={form.target_date_delivery || ""}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value + "T00:00:00");
+                  const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
+
+                  if (isNaN(selectedDate.getTime())) {
+                    setDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, target_date_delivery: "" }));
+                    return;
+                  } else if (selectedDate < today) {
+                    setDateError("Date of delivery cannot be in the past.");
+                  } else {
+                    setDateError("");
+                    handleChange(e);
+                  }
+                }}
+                required
+                min={getLocalDate()}
+              />
+              {dateError && <div className="invalid-feedback">{dateError}</div>}
+            </div>
+          </div>
+          <div className="order-details mt-5">
+            <h4 className="mb-4">Order Details</h4>
+            <table className="order-table table">
+              <thead>
+                <tr>
+                  <th style={{ width: "80px" }}>Quantity</th>
+                  <th style={{ width: "200px" }}>Type of Product</th>
+                  <th style={{ width: "200px" }}>Item Name</th>
+                  <th style={{ width: "150px" }}>Unit Cost</th>
+                  <th style={{ width: "150px" }}>Total Cost</th>
+                  {orderItems.length > 1 && <th className="no-header"></th>}
+                </tr>
+              </thead>
+
+              <tbody>
+                {orderItems.map((item, index) => (
+                  <tr key={index}>
+                    <td style={{ width: "80px" }}>
+                      <input
+                        type="text"
+                        name="quantity"
+                        placeholder="0"
+                        className="form-control"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          if (/^\d*$/.test(value)) {
+                            handleItemChange(index, {
+                              target: { name: "quantity", value },
+                            });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            ["e", "E", "+", "-", ".", " "].includes(e.key) ||
+                            (isNaN(e.key) &&
+                              e.key !== "Backspace" &&
+                              e.key !== "Delete" &&
+                              e.key !== "ArrowLeft" &&
+                              e.key !== "ArrowRight" &&
+                              e.key !== "Tab")
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
+                        required
+                      />
+                    </td>
+
+                    <td style={{ width: "200px" }}>
+                      <CreatableSelect
+                        options={[...productOptions]}
+                        value={
+                          productOptions.find(
+                            (opt) => opt.value === item.type_of_product
+                          ) || null
+                        }
+                        onChange={(selected) => {
+                          if (selected?.value === "__actions__") return;
+                          handleItemChange(index, {
+                            target: {
+                              name: "type_of_product",
+                              value: selected?.value || "",
+                            },
+                          });
+                        }}
+                        onCreateOption={async (newValue) => {
+                          const newOption = {
+                            label: newValue,
+                            value: newValue,
+                          };
+                          setProductOptions((prev) => [...prev, newOption]);
+                          handleItemChange(index, {
+                            target: {
+                              name: "type_of_product",
+                              value: newValue,
+                            },
+                          });
+
+                          try {
+                            await axios.post(
+                              "https://delivery-api.mooo.info/DeliveryTrackingSystem/save_product.php",
+                              {
+                                type_of_product: newValue,
+                                description: "",
+                                unit_cost: 0,
+                              }
+                            );
+                          } catch (err) {
+                            console.error("Error saving product type", err);
+                          }
+                        }}
+                        placeholder="SELECT PRODUCT"
+                        isSearchable
+                        components={{ MenuList: CustomMenuList }}
+                        onEdit={() =>
+                          handleEditClick(
+                            "product",
+                            item.type_of_product,
+                            index
+                          )
+                        }
+                        onDelete={() =>
+                          handleDeleteClick(
+                            "product",
+                            item.type_of_product,
+                            index
+                          )
+                        }
+                        styles={{
+                          control: (provided) => ({
+                            ...provided,
+
+                            minHeight: "41px",
+                            height: "41px",
+                          }),
+                          valueContainer: (provided) => ({
+                            ...provided,
+                            height: "41px",
+                            padding: "0 8px",
+                          }),
+                          input: (provided) => ({
+                            ...provided,
+                            margin: 0,
+                            padding: 0,
+                          }),
+                          indicatorsContainer: (provided) => ({
+                            ...provided,
+                            height: "41px",
+                          }),
+                          placeholder: (provided) => ({
+                            ...provided,
+                            textTransform: "none",
+                            color: "#b4b4b4",
+                            opacity: "1",
+                          }),
+
+                          option: (provided, state) => ({
+                            ...provided,
+
+                            border: "7px solid white",
+                            backgroundColor: state.isSelected
+                              ? "#84cf95ff"
+                              : state.isFocused
+                              ? "#bbd2c1ff"
+                              : "#e6f4ea",
+                            color: state.isSelected ? "#fff" : "#000",
+                            cursor: "pointer",
+                          }),
+                        }}
+                      />
+                    </td>
+
+                    <td>
+                      <CreatableSelect
+                        options={
+                          item.type_of_product
+                            ? itemOptions[item.type_of_product]?.filter(
+                                (opt) => opt.value && opt.value.trim() !== ""
+                              ) || []
+                            : []
+                        }
+                        value={
+                          item.description
+                            ? itemOptions[item.type_of_product]?.find(
+                                (opt) => opt.value === item.description
+                              ) || null
+                            : null
+                        }
+                        onChange={(selected) => {
+                          if (!selected) return;
+                          handleItemChange(index, {
+                            target: {
+                              name: "description",
+                              value: selected.value,
+                            },
+                          });
+                        }}
+                        onCreateOption={async (newValue) => {
+                          if (!newValue.trim()) return;
+                          const newOption = {
+                            label: newValue,
+                            value: newValue,
+                          };
+                          setItemOptions((prev) => ({
+                            ...prev,
+                            [item.type_of_product]: [
+                              ...(prev[item.type_of_product] || []),
+                              newOption,
+                            ],
+                          }));
+                          handleItemChange(index, {
+                            target: { name: "description", value: newValue },
+                          });
+
+                          try {
+                            await axios.post(
+                              "https://delivery-api.mooo.info/DeliveryTrackingSystem/save_product.php",
+                              {
+                                type_of_product: item.type_of_product,
+                                description: newValue,
+                                unit_cost: 0,
+                              }
+                            );
+                          } catch (err) {
+                            console.error("Error saving product item", err);
+                          }
+                        }}
+                        placeholder={
+                          item.type_of_product
+                            ? itemOptions[item.type_of_product]?.length > 0
+                              ? `${item.type_of_product} Items`
+                              : "No options"
+                            : "Select Item"
+                        }
+                        isDisabled={!item.type_of_product}
+                        isSearchable
+                        components={{ MenuList: CustomMenuList }}
+                        onEdit={() =>
+                          handleEditClick(
+                            "item",
+                            item.description,
+                            index,
+                            item.type_of_product
+                          )
+                        }
+                        onDelete={() =>
+                          handleDeleteClick(
+                            "item",
+                            item.description,
+                            index,
+                            item.type_of_product
+                          )
+                        }
+                        styles={{
+                          control: (provided) => ({
+                            ...provided,
+                            minHeight: "41px",
+                            height: "41px",
+                          }),
+                          valueContainer: (provided) => ({
+                            ...provided,
+                            height: "41px",
+                            padding: "0 8px",
+                          }),
+                          input: (provided) => ({
+                            ...provided,
+                            margin: 0,
+                            padding: 0,
+                          }),
+                          indicatorsContainer: (provided) => ({
+                            ...provided,
+                            height: "41px",
+                          }),
+                          option: (provided, state) => ({
+                            ...provided,
+                            border: "7px solid white",
+                            backgroundColor: state.isSelected
+                              ? "#84cf95ff"
+                              : state.isFocused
+                              ? "#bbd2c1ff"
+                              : "#e6f4ea",
+                            color: state.isSelected ? "#fff" : "#000",
+                            cursor: "pointer",
+                          }),
+                        }}
+                      />
+                    </td>
+
+                    <Modal
+                      show={editModal.show}
+                      onHide={() => setEditModal({ ...editModal, show: false })}
+                      centered
+                    >
+                      <Modal.Header closeButton>
+                        <Modal.Title>
+                          Edit
+                          {editModal.type === "product"
+                            ? "Product Type"
+                            : "Item"}
+                        </Modal.Title>
+                      </Modal.Header>
+                      <Modal.Body>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={newValue}
+                          onChange={(e) => setNewValue(e.target.value)}
+                        />
+                      </Modal.Body>
+                      <Modal.Footer>
+                        <Button
+                          className="hover-cancel-btn"
+                          variant="secondary"
+                          onClick={() =>
+                            setEditModal({ ...editModal, show: false })
+                          }
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="success"
+                          onClick={async () => {
+                            try {
+                              await axios.post(
+                                "https://delivery-api.mooo.info/DeliveryTrackingSystem/update_product.php",
+                                {
+                                  type_of_product_current:
+                                    editModal.type === "product"
+                                      ? editModal.currentValue
+                                      : editModal.typeOfProduct,
+                                  type_of_product_new:
+                                    editModal.type === "product"
+                                      ? newValue
+                                      : editModal.typeOfProduct,
+                                  description_current:
+                                    editModal.type === "item"
+                                      ? editModal.currentValue
+                                      : "",
+                                  description_new:
+                                    editModal.type === "item" ? newValue : "",
+                                }
+                              );
+
+                              if (editModal.type === "product") {
+                                setProductOptions((prev) =>
+                                  prev.map((opt) =>
+                                    opt.value === editModal.currentValue
+                                      ? { label: newValue, value: newValue }
+                                      : opt
+                                  )
+                                );
+
+                                setOrderItems((prev) =>
+                                  prev.map((item) =>
+                                    item.type_of_product ===
+                                    editModal.currentValue
+                                      ? { ...item, type_of_product: newValue }
+                                      : item
+                                  )
+                                );
+
+                                setItemOptions((prev) => {
+                                  const updated = { ...prev };
+                                  if (updated[editModal.currentValue]) {
+                                    updated[newValue] = [
+                                      ...updated[editModal.currentValue],
+                                    ];
+                                    delete updated[editModal.currentValue];
+                                  }
+                                  return updated;
+                                });
+                              }
+
+                              setEditModal({ ...editModal, show: false });
+                              ToastHelper.success("Updated successfully!");
+                            } catch (err) {
+                              console.error(err);
+                              ToastHelper.error("Error updating!");
+                            }
+                          }}
+                        >
+                          Save Changes
+                        </Button>
+                      </Modal.Footer>
+                    </Modal>
+
+                    <td>
+                      <input
+                        type="text"
+                        name="unit_cost"
+                        placeholder="₱0.00"
+                        className="form-control"
+                        value={orderItems[index].unit_cost}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, "");
+                          handleUnitCostChange(index, {
+                            target: { value },
+                          });
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            ["e", "E", "+", "-", " "].includes(e.key) ||
+                            (isNaN(e.key) &&
+                              e.key !== "Backspace" &&
+                              e.key !== "Delete" &&
+                              e.key !== ".")
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onBlur={() => handleUnitCostBlur(index)}
+                        onFocus={() => handleUnitCostFocus(index)}
+                        required
+                      />
+                    </td>
+
+                    <td>
+                      <input
+                        type="text"
+                        name="total_cost"
+                        placeholder="₱0.00"
+                        className="form-control"
+                        value={formatPeso(item.total_cost)}
+                        readOnly
+                      />
+                    </td>
+
+                    {orderItems.length > 1 && (
+                      <td className="align-middle remove-btn-cell">
+                        <button
+                          type="button"
+                          className="remove-btn"
+                          onClick={() => removeItem(index)}
+                        >
+                          <FaRegTrashAlt size={14} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
                 ))}
-              </Form.Select>
-            </Form.Group>
+              </tbody>
+              <tfoot>
+                <tr className="fw-bold">
+                  <td colSpan="4" className="text-end">
+                    TOTAL:
+                  </td>
+                  <td className="text-end">
+                    {form.total !== "" && form.total !== null
+                      ? formatPeso(form.total)
+                      : "₱0.00"}
+                  </td>
+                  {orderItems.length > 1 && (
+                    <td style={{ border: "none" }}></td>
+                  )}
+                </tr>
+              </tfoot>
+            </table>
 
-            <Form.Group controlId="filterReportType" className="mb-3">
-              <Form.Label className="text-success">Report Type</Form.Label>
-              <Form.Select
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value)}
+            <div className="d-flex justify-content-end mt-2">
+              <button
+                type="button"
+                className="btn add-item rounded-1"
+                onClick={addNewItem}
               >
-                {REPORT_TYPES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
+                ✚ Add Another Item
+              </button>
+            </div>
 
-            {["all", "transaction", "sales"].includes(reportType) && (
-              <Form.Group controlId="filterPaymentOption" className="mb-3">
-                <Form.Label className="text-success">Payment Option</Form.Label>
-                <Form.Select
-                  value={paymentOptionFilter}
-                  onChange={(e) => setPaymentOptionFilter(e.target.value)}
-                >
-                  <option value="">Select Payment Option</option>
-                  <option value="Full Payment">Full Payment</option>
-                  <option value="Down Payment">Down Payment</option>
-                </Form.Select>
-              </Form.Group>
-            )}
+            <h4 className="mb-4">Payment Details</h4>
 
-            {["all", "transaction"].includes(reportType) && (
-              <Form.Group controlId="filterDeliveryStatus" className="mb-3">
-                <Form.Label className="text-success">
-                  Delivery Status
-                </Form.Label>
-                <Form.Select
-                  value={deliveryStatus}
-                  onChange={(e) => setDeliveryStatus(e.target.value)}
-                >
-                  <option value="">Select Delivery Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </Form.Select>
-              </Form.Group>
-            )}
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label className="form-label d-block">Payment Method:</label>
+                <Select
+                  options={paymentOptions}
+                  onChange={(selected) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      payment_method: selected?.value || "",
+                    }))
+                  }
+                  value={
+                    paymentOptions
+                      .flatMap((opt) => (opt.options ? opt.options : opt))
+                      .find((opt) => opt.value === form.payment_method) || null
+                  }
+                  placeholder="Select Payment Method"
+                  isSearchable
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "41px",
+                      height: "41px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                    indicatorsContainer: (provided) => ({
+                      ...provided,
+                      height: "41px",
+                    }),
+                  }}
+                />
+              </div>
 
-            {["all", "transaction"].includes(reportType) && (
-              <Form.Group controlId="filterDeliveryPersonnel" className="mb-3">
-                <Form.Label className="text-success">
-                  Delivery Personnel
-                </Form.Label>
-                <Form.Select
-                  value={deliveryPersonnel}
-                  onChange={(e) => setDeliveryPersonnel(e.target.value)}
-                >
-                  <option value="">Select Delivery Personnel</option>
-                  {deliveryPersonnelOptions.map((person, idx) => (
-                    <option key={idx} value={person}>
-                      {person}
-                    </option>
+              <div className="col-md-6">
+                <label className="form-label d-block container-fluid">
+                  Payment Option:
+                </label>
+                <div className="MOP d-flex justify-content-center gap-5 gap-md-5 container-fluid">
+                  {["Full Payment", "Down Payment"].map((method) => (
+                    <div
+                      className="form-check d-flex align-items-center"
+                      key={method}
+                    >
+                      <input
+                        className="form-check-input me-2"
+                        type="radio"
+                        name="payment_option"
+                        id={method.toLowerCase().replace(" ", "_")}
+                        value={method}
+                        checked={form.payment_option === method}
+                        onChange={(e) => {
+                          handleChange(e);
+                          if (e.target.name === "payment_option") {
+                            setForm((prev) => ({
+                              ...prev,
+                              payment_option: e.target.value,
+                              dp_collection_date: prev.dp_collection_date || "",
+                              down_payment: prev.down_payment || "",
+                            }));
+                          }
+                        }}
+                        required
+                      />
+                      <label
+                        className="form-check-label"
+                        htmlFor={method.toLowerCase().replace(" ", "_")}
+                        style={{ fontSize: "17px", fontWeight: "normal" }}
+                      >
+                        {method}
+                      </label>
+                    </div>
                   ))}
-                </Form.Select>
-              </Form.Group>
-            )}
+                </div>
+              </div>
+            </div>
 
-            {["all", "transaction", "service"].includes(reportType) && (
-              <Form.Group controlId="filterCancellationReason" className="mb-3">
-                <Form.Label className="text-success">
-                  Reason for Cancellation
-                </Form.Label>
-                <Form.Select
-                  value={cancellationReasonFilter}
-                  onChange={(e) => setCancellationReasonFilter(e.target.value)}
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label htmlFor="fpBillingDate" className="form-label">
+                  Billing Date:
+                </label>
+                <input
+                  style={{ color: "gray" }}
+                  type="date"
+                  className={`form-control ${
+                    form.fp_collection_date ? "text-black" : "text-muted"
+                  } ${fpBillingError ? "is-invalid" : ""}`}
+                  id="fpBillingDate"
+                  name="fp_collection_date"
+                  value={
+                    form.fp_collection_date
+                      ? new Date(form.fp_collection_date)
+                          .toISOString()
+                          .split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
+
+                    if (isNaN(selectedDate.getTime())) {
+                      setFpBillingError("Please enter a valid date.");
+                    } else if (day === 0 || day === 6) {
+                      setFpBillingError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, fp_collection_date: "" }));
+                      return;
+                    } else if (selectedDate > today) {
+                      setFpBillingError(
+                        "Billing date cannot be in the future."
+                      );
+                    } else {
+                      setFpBillingError("");
+                      handleChange(e);
+                    }
+                  }}
+                  required
+                  max={getLocalDate()}
+                />
+                {fpBillingError && (
+                  <div className="invalid-feedback">{fpBillingError}</div>
+                )}
+              </div>
+
+              <div className="col-md-6">
+                <label htmlFor="dpBillingDate" className="form-label">
+                  Payment Due:
+                </label>
+                <input
+                  type="date"
+                  id="dpBillingDate"
+                  name="dp_collection_date"
+                  value={form.dp_collection_date || ""}
+                  onChange={(e) => {
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
+
+                    if (isNaN(selectedDate.getTime())) {
+                      setDpDateError("Please enter a valid date.");
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                    } else if (day === 0 || day === 6) {
+                      setDpDateError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                      return;
+                    } else if (selectedDate < today) {
+                      setDpDateError("Payment due date cannot be in the past.");
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, dp_collection_date: "" }));
+                    } else {
+                      setDpDateError("");
+                      handleChange(e);
+                    }
+                  }}
+                  disabled={form.payment_option !== "Down Payment"}
+                  required={form.payment_option === "Down Payment"}
+                  min={getLocalDate()}
+                  className={`form-control ${
+                    form.payment_option !== "Down Payment"
+                      ? "text-muted"
+                      : form.dp_collection_date
+                      ? "text-black"
+                      : "text-muted"
+                  } ${dpDateError ? "is-invalid" : ""}`}
+                  style={{
+                    backgroundColor:
+                      form.payment_option === "Down Payment"
+                        ? "white"
+                        : "#E9ECEF",
+                    cursor:
+                      form.payment_option === "Down Payment"
+                        ? "pointer"
+                        : "not-allowed",
+                  }}
+                />
+                {dpDateError && (
+                  <div className="invalid-feedback d-block">{dpDateError}</div>
+                )}
+              </div>
+            </div>
+
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label htmlFor="down_payment" className="form-label">
+                  Down Payment Amount:
+                </label>
+                <input
+                  type="text"
+                  name="down_payment"
+                  placeholder="₱0.00"
+                  value={form.down_payment}
+                  onChange={(e) => {
+                    const parsedValue = parsePeso(e.target.value);
+                    handleChange({
+                      target: { name: "down_payment", value: parsedValue },
+                    });
+                  }}
+                  onFocus={handleDownPaymentFocus}
+                  onBlur={handleDownPaymentBlur}
+                  disabled={form.payment_option !== "Down Payment"}
+                  required={form.payment_option === "Down Payment"}
+                  className={`form-control ${dpError ? "is-invalid" : ""}`}
+                />
+                {dpError && <div className="invalid-feedback">{dpError}</div>}
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Balance:</label>
+                <div className="input-group">
+                  <span className="input-group-text bg-secondary text-dark bg-opacity-25">
+                    ₱
+                  </span>
+                  <span className="form-control bg-white text-start fw-semibold fs-6 p-2">
+                    {form.payment_option === "Down Payment"
+                      ? Number(form.balance).toLocaleString("en-PH", {
+                          style: "currency",
+                          currency: "PHP",
+                        })
+                      : "₱0.00"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <h4 className="mt-5">PROOF OF PAYMENT</h4>
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label
+                  htmlFor="proofOfPayment"
+                  className="form-label"
+                  style={{ whiteSpace: "nowrap" }}
                 >
-                  <option value="">Select Reason for Cancellation</option>
-                  {cancellationReasonOptions.map((reason, idx) => (
-                    <option key={idx} value={reason}>
-                      {reason}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            )}
-          </Form>
-        </Modal.Body>
-        <Modal.Footer className="bg-white">
-          <Button
-            className="btn close-btn px-3 py-2 fs-6 rounded-2"
-            onClick={() => setShowFilter(false)}
+                  Upload Proof of Payment:
+                  <p className="text-secondary fs-6">
+                    (JPEG/PNG only, multiple allowed)
+                  </p>
+                </label>
+                <div className="d-flex align-items-center">
+                  <input
+                    type="file"
+                    className="form-control"
+                    id="proofOfPayment"
+                    name="proofOfPayment"
+                    accept="image/jpeg,image/png"
+                    multiple
+                    onChange={handleProofFileChange}
+                    ref={proofFileRef}
+                  />
+                  {selectedFileNames.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn add-item px-3 py-2 btn-sm ms-2 fs-6"
+                      style={{ whiteSpace: "nowrap" }}
+                      onClick={() => setShowPreviewModal(true)}
+                    >
+                      View
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Modal
+              show={showPreviewModal}
+              onHide={() => setShowPreviewModal(false)}
+              centered
+              size="lg"
+              className="proof-preview-modal"
+            >
+              <Modal.Header
+                closeButton
+                style={{
+                  backgroundColor: "#00628FFF",
+                  color: "white",
+                  opacity: 0.85,
+                }}
+              >
+                <Modal.Title className="fw-semibold">
+                  Proof of Payment Preview
+                </Modal.Title>
+              </Modal.Header>
+
+              <Modal.Body className="bg-light text-center">
+                {proofPreviews.length === 0 ? (
+                  <div className="py-5">
+                    <i
+                      className="bi bi-file-earmark-image text-secondary"
+                      style={{ fontSize: "3rem" }}
+                    ></i>
+                    <p className="mt-3 text-muted fs-5">No images uploaded.</p>
+                  </div>
+                ) : (
+                  <div className="position-relative d-flex align-items-center justify-content-center">
+                    {currentIndex > 0 && (
+                      <button
+                        onClick={() => setCurrentIndex(currentIndex - 1)}
+                        className="btn btn-light rounded-circle shadow position-absolute"
+                        style={{ left: "15px", zIndex: 10 }}
+                      >
+                        <FaChevronLeft size={20} />
+                      </button>
+                    )}
+
+                    <div
+                      className="bg-white rounded-3 shadow-sm d-flex align-items-center justify-content-center"
+                      style={{
+                        width: "700px",
+                        height: "700px",
+                        overflow: "hidden",
+                        border: "3px solid #ddd",
+                      }}
+                    >
+                      <img
+                        src={proofPreviews[currentIndex]}
+                        alt={`Proof ${currentIndex + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                        }}
+                      />
+                    </div>
+
+                    {currentIndex < proofPreviews.length - 1 && (
+                      <button
+                        onClick={() => setCurrentIndex(currentIndex + 1)}
+                        className="btn btn-light rounded-circle shadow position-absolute"
+                        style={{ right: "15px", zIndex: 10 }}
+                      >
+                        <FaChevronRight size={20} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </Modal.Body>
+
+              <Modal.Footer className="bg-white border-top d-flex justify-content-between">
+                <span className="text-muted small">
+                  {proofPreviews.length > 0 &&
+                    `Image ${currentIndex + 1} of ${proofPreviews.length}`}
+                </span>
+                <Button
+                  variant="secondary"
+                  className="px-4 py-2 rounded-3 fw-semibold fs-6"
+                  onClick={() => setShowPreviewModal(false)}
+                >
+                  Close
+                </Button>
+              </Modal.Footer>
+            </Modal>
+
+            <Modal
+              show={showSummaryModal}
+              onHide={() => setShowSummaryModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header closeButton className="bg-success text-white">
+                <Modal.Title>Transaction Summary</Modal.Title>
+              </Modal.Header>
+              <Modal.Body className="bg-white">
+                <div className="summary-content">
+                  <p>
+                    <strong>Transaction No.:</strong> {transactionId}
+                  </p>
+                  <p className="mb-3">
+                    <strong>P.O. No.:</strong> {poId}
+                  </p>
+                  <p>
+                    <strong>Customer Name:</strong> {form.customer_name}
+                  </p>
+                  <p>
+                    <strong>Address: </strong>
+                    {[
+                      form.house_no,
+                      form.street_name,
+                      form.barangay,
+                      form.city,
+                      form.province,
+
+                      "Philippines",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>
+                    <strong>Contact:</strong> {form.customer_contact}
+                  </p>
+                  <p>
+                    <strong>Date of Order:</strong> {form.date_of_order}
+                  </p>
+                  <p>
+                    <strong>Delivery Date:</strong> {form.target_date_delivery}
+                  </p>
+                  <p>
+                    <strong>Payment Method:</strong> {form.payment_method}
+                  </p>
+                  <p>
+                    <strong>Payment Option:</strong> {form.payment_option}
+                  </p>
+                  {form.payment_option === "Full Payment" && (
+                    <>
+                      <p>
+                        <strong>Full Payment: </strong>
+                        {formatPeso(form.full_payment)}
+                      </p>
+                      <p>
+                        <strong>Billing Date: </strong>{" "}
+                        {form.fp_collection_date}
+                      </p>
+                    </>
+                  )}
+                  {form.payment_option === "Down Payment" && (
+                    <>
+                      <p>
+                        <strong>Down Payment:</strong>{" "}
+                        {formatPeso(form.down_payment)}
+                      </p>
+                      <p>
+                        <strong>Payment Due:</strong> {form.dp_collection_date}
+                      </p>
+                      <p>
+                        <strong>Balance:</strong> {formatPeso(form.balance)}
+                      </p>
+                    </>
+                  )}
+                  {/* <strong className="fs-5">Order Items:</strong> */}
+                  <table className="table table-bordered table-sm mt-2">
+                    <thead className="table-success text-center align-middle">
+                      <tr>
+                        <th>Qty</th>
+                        <th>Item</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderItems.map((item, index) => (
+                        <tr key={index}>
+                          <td className="text-center">{item.quantity}</td>
+                          <td>
+                            {item.type_of_product} - {item.description}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(
+                              parseFloat(parsePeso(item.unit_cost)) || 0
+                            )}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(item.total_cost)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="3" className="text-end fw-bold">
+                          TOTAL:
+                        </td>
+                        <td className="text-end fw-bold">
+                          {formatPeso(form.total)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {proofFiles.length > 0 ? (
+                    <div className="mt-3">
+                      <Button
+                        variant={showImageViewer ? "success" : "success"}
+                        size="sm"
+                        onClick={() => setShowImageViewer((prev) => !prev)}
+                      >
+                        {showImageViewer
+                          ? "Hide Proof of Payment"
+                          : `View Proof of Payment`}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p>
+                      <strong>Proof of Payment:</strong> Not uploaded
+                    </p>
+                  )}
+                  {showImageViewer && proofFiles.length > 0 && (
+                    <div className="mt-3 border p-2 bg-success bg-opacity-10 rounded">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="text-center w-100 fs-5">
+                          Proof of Payment Preview ({proofFiles.length} images)
+                        </h6>
+                        <Button
+                          variant="close"
+                          onClick={() => setShowImageViewer(false)}
+                        />
+                      </div>
+                      <div className="d-flex align-items-center justify-content-center">
+                        {proofPreviews.length > 1 && (
+                          <button
+                            className="btn btn-secondary me-2"
+                            onClick={() => {
+                              const container = document.getElementById(
+                                "summary-scroll-container"
+                              );
+                              const imageWidth = container.offsetWidth;
+                              container.scrollBy({
+                                left: -imageWidth,
+                                behavior: "smooth",
+                              });
+                            }}
+                          >
+                            ‹
+                          </button>
+                        )}
+                        <div
+                          id="summary-scroll-container"
+                          style={{
+                            display: "flex",
+                            overflowX:
+                              proofPreviews.length > 1 ? "auto" : "hidden",
+                            scrollSnapType: "x mandatory",
+                            scrollBehavior: "smooth",
+                            width: "600px",
+                            height: "450px",
+                            gap: "10px",
+                            padding: "10px",
+                            border: "1px solid #ccc",
+                            borderRadius: "5px",
+                            justifyContent:
+                              proofPreviews.length === 1
+                                ? "center"
+                                : "flex-start",
+                            backgroundColor: "white",
+                          }}
+                        >
+                          {proofPreviews.map((preview, index) => (
+                            <img
+                              key={index}
+                              src={preview}
+                              alt={`Proof of Payment ${index + 1}`}
+                              style={{
+                                width: "600px",
+                                height: "400px",
+                                objectFit: "contain",
+                                flexShrink: 0,
+                                scrollSnapAlign: "center",
+                                border: "1px solid #aaa",
+                              }}
+                              className="img-fluid"
+                            />
+                          ))}
+                        </div>
+
+                        {proofPreviews.length > 1 && (
+                          <button
+                            className="btn btn-secondary ms-2"
+                            onClick={() => {
+                              const container = document.getElementById(
+                                "summary-scroll-container"
+                              );
+                              const imageWidth = container.offsetWidth;
+                              container.scrollBy({
+                                left: imageWidth,
+                                behavior: "smooth",
+                              });
+                            }}
+                          >
+                            ›
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button
+                  className="cancel-btn px-3 py-2 fs-6 rounded-1"
+                  onClick={() => setShowSummaryModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="add-btn px-3 py-2 fs-6 rounded-1"
+                  onClick={handleConfirmSubmit}
+                >
+                  Confirm
+                </Button>
+              </Modal.Footer>
+            </Modal>
+
+            <Modal
+              show={showReceiptModal}
+              onHide={() => setShowReceiptModal(false)}
+              centered
+              size="lg"
+            >
+              <Modal.Header
+                closeButton
+                className="bg-light text-black no-print"
+              >
+                <Modal.Title></Modal.Title>
+              </Modal.Header>
+
+              <Modal.Body
+                id="receipt-section"
+                className="bg-white text-black p-4"
+              >
+                <div className="text-center mb-4">
+                  <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
+                  <p className="mb-0">Official Transaction Receipt</p>
+                  <small>Date Printed: {new Date().toLocaleString()}</small>
+                  <br />
+                  <small className="text-muted">
+                    Transaction Receipt No.: #
+                    {receiptNumber?.toString().padStart(5, "0")}
+                  </small>
+                </div>
+
+                <hr
+                  style={{
+                    borderTop: "1px dashed rgb(153, 153, 153)",
+                    marginBottom: "20px",
+                  }}
+                />
+
+                <div className="mb-3">
+                  <p>
+                    <b>Customer Name:</b> {receiptData?.customer_name || ""}
+                  </p>
+                  <p>
+                    <b>Address:</b>{" "}
+                    {[
+                      receiptData?.house_no,
+                      receiptData?.street_name,
+                      receiptData?.barangay,
+                      receiptData?.city,
+                      receiptData?.province,
+
+                      "Philippines",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>
+                    <b>Contact:</b> {receiptData?.customer_contact || ""}
+                  </p>
+                  <p>
+                    <b>Date of Order:</b> {receiptData?.date_of_order || ""}
+                  </p>
+                  <p>
+                    <b>Delivery Date:</b>{" "}
+                    {receiptData?.target_date_delivery || ""}
+                  </p>
+                </div>
+
+                <div className="mb-3">
+                  <p>
+                    <b>Payment Method:</b>{" "}
+                    {receiptData?.mode_of_payment ||
+                      receiptData?.payment_method ||
+                      ""}
+                  </p>
+                  <p>
+                    <b>Payment Option:</b> {receiptData?.payment_option || ""}
+                  </p>
+
+                  {receiptData?.payment_option === "Down Payment" && (
+                    <>
+                      <p>
+                        <b>Down Payment:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.down_payment || 0))}
+                      </p>
+                      <p>
+                        <b>Payment Due:</b>{" "}
+                        {receiptData?.dbilling_date ||
+                          receiptData?.dp_collection_date ||
+                          ""}
+                      </p>
+                      <p>
+                        <b>Balance:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.balance || 0))}
+                      </p>
+                    </>
+                  )}
+
+                  {receiptData?.payment_option === "Full Payment" && (
+                    <>
+                      <p>
+                        <b>Full Payment:</b>{" "}
+                        {formatPeso(parseFloat(receiptData?.full_payment || 0))}
+                      </p>
+                      <p>
+                        <b>Billing Date:</b>{" "}
+                        {receiptData?.fbilling_date ||
+                          receiptData?.fp_collection_date ||
+                          ""}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
+                <table className="table table-bordered table-sm">
+                  <thead className="table-light text-center">
+                    <tr>
+                      <th>Qty</th>
+                      <th>Item</th>
+                      <th>Unit Price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receiptItems.map((item, i) => (
+                      <tr key={i}>
+                        <td className="text-center">{item.quantity}</td>
+                        <td>
+                          {item.type_of_product} - {item.description}
+                        </td>
+                        <td className="text-end">
+                          {formatPeso(
+                            parseFloat(
+                              (item.unit_cost || "0")
+                                .toString()
+                                .replace(/[^0-9.]/g, "")
+                            )
+                          )}
+                        </td>
+
+                        <td className="text-end">
+                          {formatPeso(
+                            parseFloat(
+                              item.total_cost ||
+                                item.quantity * item.unit_cost ||
+                                0
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="3" className="text-end fw-bold">
+                        TOTAL:
+                      </td>
+                      <td className="text-end fw-bold">
+                        {formatPeso(parseFloat(receiptData?.total || 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                <div className="signature-section mt-4">
+                  <div className="row">
+                    <div className="col-6 text-center">
+                      <p>________________________</p>
+                      <small>Prepared By</small>
+                    </div>
+                    <div className="col-6 text-center">
+                      <p>________________________</p>
+                      <small>Received By</small>
+                    </div>
+                  </div>
+                  <hr
+                    style={{ borderTop: "2px dashed #999", marginTop: "30px" }}
+                  />
+                  <div className="text-center mt-3">
+                    <h6 className="fw-bold text-success mb-0">
+                      Thank you for trusting Envirocool!
+                    </h6>
+                    <small>We appreciate your business.</small>
+                  </div>
+                </div>
+              </Modal.Body>
+
+              <Modal.Footer className="no-print bg-light">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowReceiptModal(false)}
+                >
+                  Close
+                </Button>
+                <Button variant="success" onClick={handlePrintReceipt}>
+                  Print / Download
+                </Button>
+                {/* <Button variant="primary" onClick={handleDownloadPDF}>
+                    Download PDF
+                  </Button> */}
+              </Modal.Footer>
+            </Modal>
+          </div>
+        </form>
+        <div className="btn-group mx-3 mt-4 gap-4">
+          <button
+            type="button"
+            className="cancel-btn px-3 py-1 bg-danger"
+            onClick={() => setShowCancelModal(true)}
           >
-            Close
-          </Button>
-          <Button
-            className="btn btn-view px-3 py-2 rounded-2 fs-6"
-            onClick={() => {
-              setShowFilter(false);
-              setActiveTab("overall");
-              fetchData();
-            }}
+            Cancel
+          </button>
+          <Modal
+            show={showCancelModal}
+            onHide={() => setShowCancelModal(false)}
+            centered
           >
-            Apply Filters
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Toaster position="top-center" />
+            <Modal.Header closeButton>
+              <Modal.Title className="text-danger">
+                Confirm Cancellation
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              Are you sure you want to cancel adding this delivery?
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                className="close-btn py-2 fs-6"
+                variant="secondary"
+                onClick={() => setShowCancelModal(false)}
+              >
+                No
+              </Button>
+              <Button
+                className="cancel-btn py-2 px-3 fs-6 shadow"
+                variant="danger"
+                onClick={handleConfirmCancel}
+              >
+                Yes, Cancel
+              </Button>
+            </Modal.Footer>
+          </Modal>
+          {loading ? (
+            <div className="loading-overlay">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="submit"
+              form="deliveryForm"
+              className="add-btn shadow"
+            >
+              Add
+            </button>
+          )}
+        </div>
+      </div>
+
       <Modal
         show={showFAQ}
         onHide={() => {
@@ -4093,17 +2745,16 @@ const GenerateReport = () => {
             borderBottom: "none",
           }}
         >
-          <Modal.Title>Guide for Generate Report</Modal.Title>
+          <Modal.Title>Guide for Adding a Delivery</Modal.Title>
         </Modal.Header>
 
         <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
           <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
-            The Generate Report page provides a detailed summary of all
-            transactions and delivery performance. You can filter reports by
-            date range, delivery status, or assigned personnel to analyze
-            trends. The system also allows exporting data in PDF or Excel format
-            for documentation or record-keeping. This helps monitor performance
-            metrics such as successful, cancelled, and rescheduled deliveries.
+            This page allows you to add a new delivery. Fill in all required
+            details such as <strong>customer information</strong>,{" "}
+            <strong>order items</strong>, and
+            <strong> payment details</strong>. Once submitted, the delivery will
+            be recorded and tracked in the system.
           </p>
 
           <div className="px-3 mb-3">
@@ -4128,7 +2779,7 @@ const GenerateReport = () => {
                       aria-controls={`collapse${index}`}
                       style={{
                         backgroundColor:
-                          activeFAQIndex === index ? "#116B8A" : "#e9f6f8",
+                          activeFAQIndex === index ? "#116B8A" : "#DCF0F3FF",
                         color: activeFAQIndex === index ? "white" : "#116B8A",
                         fontWeight: 600,
                         transition: "all 0.3s ease",
@@ -4179,12 +2830,11 @@ const GenerateReport = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
             onClick={() => {
               setShowFAQ(false);
               setActiveFAQIndex(null);
             }}
-            className="px-4"
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>
@@ -4194,4 +2844,4 @@ const GenerateReport = () => {
   );
 };
 
-export default GenerateReport;
+export default AddDelivery;
