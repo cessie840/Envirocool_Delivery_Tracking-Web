@@ -1022,12 +1022,12 @@ const GenerateReport = () => {
         today.getMonth() + 1
       ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-      // Filter only today's delivered sales
+      // Filter only sales that are delivered today
       const todaySales = salesData.filter((s) => {
         if (!s.date_of_order || !s.delivery_status) return false;
 
         const saleDate = new Date(s.date_of_order);
-        const isSameDay =
+        const isToday =
           saleDate.getFullYear() === today.getFullYear() &&
           saleDate.getMonth() === today.getMonth() &&
           saleDate.getDate() === today.getDate();
@@ -1035,10 +1035,11 @@ const GenerateReport = () => {
         const isDelivered =
           s.delivery_status.toString().trim().toLowerCase() === "delivered";
 
-        return isSameDay && isDelivered;
+        return isToday && isDelivered;
       });
 
       if (todaySales.length > 0) {
+        // Add each transaction
         todaySales.forEach((sale) => {
           addRow(
             todayStr,
@@ -1049,13 +1050,15 @@ const GenerateReport = () => {
           );
         });
 
+        // Add totals row
         const totals = todaySales.reduce(
-          (acc, s) => ({
-            quote: acc.quote + (s.unit_cost * s.qty || 0),
-            awarded: acc.awarded + (s.total_cost || 0),
-            actual: acc.actual + (s.total_cost - s.balance || 0),
-            balance: acc.balance + (s.balance || 0),
-          }),
+          (acc, s) => {
+            acc.quote += s.unit_cost * s.qty || 0;
+            acc.awarded += s.total_cost || 0;
+            acc.actual += s.total_cost - s.balance || 0;
+            acc.balance += s.balance || 0;
+            return acc;
+          },
           { quote: 0, awarded: 0, actual: 0, balance: 0 }
         );
 
@@ -1067,6 +1070,7 @@ const GenerateReport = () => {
           totals.balance
         );
       } else {
+        // No sales today
         addRow(todayStr, 0, 0, 0, 0);
       }
     }
