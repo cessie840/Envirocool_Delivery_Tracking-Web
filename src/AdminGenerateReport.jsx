@@ -867,220 +867,266 @@ const GenerateReport = () => {
     )}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
-const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
-  const rows = [];
+  const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
+    const rows = [];
 
-  const getMonthName = (monthIndex) =>
-    new Date(2000, monthIndex, 1).toLocaleString("default", {
-      month: "long",
-    });
+    // ============================================================
+    // SAFE DATE PARSER (Fix for daily not showing)
+    // ============================================================
+    const parseDateSafe = (value) => {
+      if (!value) return null;
 
-  const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date)) return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
+      // If already Date object
+      if (value instanceof Date && !isNaN(value)) return value;
 
-  const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-    if (num == null || isNaN(num)) return "0.00";
-    let fixed = Number(num).toFixed(decimals);
-    if (stripDecimals && fixed.endsWith(".00")) {
-      fixed = fixed.replace(".00", "");
-    }
-    return Number(fixed).toLocaleString();
-  };
+      // Try built-in parser
+      let d = new Date(value);
+      if (!isNaN(d)) return d;
 
-  const addRow = (label, totalQuote, totalAwarded, totalActual, totalBalance) => {
-    rows.push([
+      // MySQL format "YYYY-MM-DD HH:mm:ss"
+      if (typeof value === "string" && value.includes(" ")) {
+        const fixed = value.replace(" ", "T"); // convert to ISO
+        d = new Date(fixed);
+        if (!isNaN(d)) return d;
+      }
+
+      // Manual fallback "YYYY-MM-DD" or similar
+      try {
+        const parts = value.split(/[- :/]/);
+        if (parts.length >= 3) {
+          return new Date(
+            Number(parts[0]),
+            Number(parts[1]) - 1,
+            Number(parts[2])
+          );
+        }
+      } catch {}
+
+      return null;
+    };
+
+    const getMonthName = (monthIndex) =>
+      new Date(2000, monthIndex, 1).toLocaleString("default", {
+        month: "long",
+      });
+
+    const formatDate = (date) => {
+      if (!date || isNaN(date)) return null;
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
+    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
+      if (num == null || isNaN(num)) return "0.00";
+      let fixed = Number(num).toFixed(decimals);
+      if (stripDecimals && fixed.endsWith(".00"))
+        fixed = fixed.replace(".00", "");
+      return Number(fixed).toLocaleString();
+    };
+
+    const addRow = (
       label,
-      formatNumber(totalQuote, 2),
-      formatNumber(totalAwarded, 2),
-      formatNumber(totalActual, 2),
-      formatNumber(totalBalance, 2),
-    ]);
-  };
+      totalQuote,
+      totalAwarded,
+      totalActual,
+      totalBalance
+    ) => {
+      rows.push([
+        label,
+        formatNumber(totalQuote),
+        formatNumber(totalAwarded),
+        formatNumber(totalActual),
+        formatNumber(totalBalance),
+      ]);
+    };
 
-  // ============================================================
-  // ✅ Normalize dates BEFORE any processing (Fix for DAILY)
-  // ============================================================
-  const normalizedSales = salesData
-    .map((s) => {
-      const d = new Date(s.date_of_order);
-      const dateStr = formatDate(d);
-      if (!dateStr) return null; // skip invalid dates
-      return {
-        ...s,
-        __date: dateStr,
-        __month: d.getMonth(),
-      };
-    })
-    .filter(Boolean); // remove null entries
+    // ============================================================
+    // NORMALIZE SALES DATA (Fix for ALL period types)
+    // ============================================================
+    const normalizedSales = salesData
+      .map((s) => {
+        const d = parseDateSafe(s.date_of_order);
+        const dateStr = formatDate(d);
+        if (!dateStr) return null;
+        return {
+          ...s,
+          __date: dateStr,
+          __month: d.getMonth(),
+        };
+      })
+      .filter(Boolean);
 
-  // ============================================================
-  // DAILY (FIXED)
-  // ============================================================
-  if (period === "daily") {
-    const uniqueDates = [...new Set(normalizedSales.map((s) => s.__date))];
+    // ============================================================
+    // DAILY  (FULLY FIXED)
+    // ============================================================
+    if (period === "daily") {
+      const uniqueDates = [...new Set(normalizedSales.map((s) => s.__date))];
 
-    uniqueDates.forEach((dateStr) => {
-      const daySales = normalizedSales.filter((s) => s.__date === dateStr);
+      uniqueDates.forEach((dateStr) => {
+        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
 
-      const totals = daySales.reduce(
-        (acc, sale) => ({
-          quote: acc.quote + sale.unit_cost * sale.qty,
-          awarded: acc.awarded + sale.total_cost,
-          actual: acc.actual + (sale.total_cost - sale.balance),
-          balance: acc.balance + sale.balance,
-        }),
-        { quote: 0, awarded: 0, actual: 0, balance: 0 }
-      );
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
 
-      addRow(dateStr, totals.quote, totals.awarded, totals.actual, totals.balance);
-    });
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      });
+
+      return rows;
+    }
+
+    // ============================================================
+    // ANNUALLY
+    // ============================================================
+    if (period === "annually") {
+      for (let m = 0; m < 12; m++) {
+        const monthSales = normalizedSales.filter((s) => s.__month === m);
+
+        const totals = monthSales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+
+        addRow(
+          getMonthName(m),
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    }
+
+    // ============================================================
+    // QUARTERLY
+    // ============================================================
+    else if (period === "quarterly") {
+      const start = startDate ? new Date(startDate) : new Date();
+      const month = start.getMonth();
+
+      let quarterMonths = [];
+      if (month <= 2) quarterMonths = [0, 1, 2];
+      else if (month <= 5) quarterMonths = [3, 4, 5];
+      else if (month <= 8) quarterMonths = [6, 7, 8];
+      else quarterMonths = [9, 10, 11];
+
+      quarterMonths.forEach((m) => {
+        const monthSales = normalizedSales.filter((s) => s.__month === m);
+
+        const totals = monthSales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+
+        addRow(
+          getMonthName(m),
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      });
+    }
+
+    // ============================================================
+    // MONTHLY
+    // ============================================================
+    else if (period === "monthly") {
+      const base = new Date(startDate || new Date());
+
+      const start = new Date(base.getFullYear(), base.getMonth(), 1);
+      const daysInMonth = new Date(
+        base.getFullYear(),
+        base.getMonth() + 1,
+        0
+      ).getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dObj = new Date(start.getFullYear(), start.getMonth(), d);
+        const dateStr = formatDate(dObj);
+
+        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
+
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    }
+
+    // ============================================================
+    // WEEKLY
+    // ============================================================
+    else if (period === "weekly") {
+      const start = new Date(startDate || new Date());
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday start
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dateStr = formatDate(d);
+
+        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
+
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+        );
+
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      }
+    }
 
     return rows;
-  }
-
-  // ============================================================
-  // ANNUALLY
-  // ============================================================
-  if (period === "annually") {
-    for (let m = 0; m < 12; m++) {
-      const monthSales = normalizedSales.filter((s) => s.__month === m);
-
-      const totals = monthSales.reduce(
-        (acc, sale) => ({
-          quote: acc.quote + sale.unit_cost * sale.qty,
-          awarded: acc.awarded + sale.total_cost,
-          actual: acc.actual + (sale.total_cost - sale.balance),
-          balance: acc.balance + sale.balance,
-        }),
-        { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
-      );
-
-      addRow(
-        getMonthName(m),
-        totals.quote,
-        totals.awarded,
-        totals.actual,
-        totals.balance
-      );
-    }
-  }
-
-  // ============================================================
-  // QUARTERLY
-  // ============================================================
-  else if (period === "quarterly") {
-    const start = startDate ? new Date(startDate) : new Date();
-    const month = start.getMonth();
-
-    let quarterMonths = [];
-    if (month <= 2) quarterMonths = [0, 1, 2];
-    else if (month <= 5) quarterMonths = [3, 4, 5];
-    else if (month <= 8) quarterMonths = [6, 7, 8];
-    else quarterMonths = [9, 10, 11];
-
-    quarterMonths.forEach((m) => {
-      const monthSales = normalizedSales.filter((s) => s.__month === m);
-
-      const totals = monthSales.reduce(
-        (acc, sale) => ({
-          quote: acc.quote + sale.unit_cost * sale.qty,
-          awarded: acc.awarded + sale.total_cost,
-          actual: acc.actual + (sale.total_cost - sale.balance),
-          balance: acc.balance + sale.balance,
-        }),
-        { quote: 0, awarded: 0, actual: 0, balance: 0 }
-      );
-
-      addRow(
-        getMonthName(m),
-        totals.quote,
-        totals.awarded,
-        totals.actual,
-        totals.balance
-      );
-    });
-  }
-
-  // ============================================================
-  // MONTHLY
-  // ============================================================
-  else if (period === "monthly") {
-    const base = new Date(startDate || new Date());
-
-    const start = new Date(base.getFullYear(), base.getMonth(), 1);
-    const daysInMonth = new Date(
-      base.getFullYear(),
-      base.getMonth() + 1,
-      0
-    ).getDate();
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dObj = new Date(start.getFullYear(), start.getMonth(), d);
-      const dateStr = formatDate(dObj);
-
-      const daySales = normalizedSales.filter((s) => s.__date === dateStr);
-
-      const totals = daySales.reduce(
-        (acc, sale) => ({
-          quote: acc.quote + sale.unit_cost * sale.qty,
-          awarded: acc.awarded + sale.total_cost,
-          actual: acc.actual + (sale.total_cost - sale.balance),
-          balance: acc.balance + sale.balance,
-        }),
-        { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
-      );
-
-      addRow(
-        dateStr,
-        totals.quote,
-        totals.awarded,
-        totals.actual,
-        totals.balance
-      );
-    }
-  }
-
-  // ============================================================
-  // WEEKLY
-  // ============================================================
-  else if (period === "weekly") {
-    const start = new Date(startDate || new Date());
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday start
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dateStr = formatDate(d);
-
-      const daySales = normalizedSales.filter((s) => s.__date === dateStr);
-
-      const totals = daySales.reduce(
-        (acc, sale) => ({
-          quote: acc.quote + sale.unit_cost * sale.qty,
-          awarded: acc.awarded + sale.total_cost,
-          actual: acc.actual + (sale.total_cost - sale.balance),
-          balance: acc.balance + sale.balance,
-        }),
-        { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
-      );
-
-      addRow(
-        dateStr,
-        totals.quote,
-        totals.awarded,
-        totals.actual,
-        totals.balance
-      );
-    }
-  }
-
-  return rows;
-};
+  };
 
   const generateTransactionPeriodRows = (
     transactionData,
