@@ -1035,28 +1035,38 @@ const GenerateReport = () => {
         const isDelivered =
           s.delivery_status.toString().trim().toLowerCase() === "delivered";
 
+        console.log(
+          "Checking sale:",
+          s.date_of_order,
+          s.delivery_status,
+          "isToday:",
+          isToday,
+          "isDelivered:",
+          isDelivered
+        );
+
         return isToday && isDelivered;
       });
 
+      console.log("TodaySales:", todaySales);
+
       if (todaySales.length > 0) {
-        // Add each transaction
         todaySales.forEach((sale) => {
           addRow(
             todayStr,
-            sale.unit_cost * sale.qty,
-            sale.total_cost,
-            sale.total_cost - sale.balance,
-            sale.balance
+            Number(sale.unit_cost) * Number(sale.qty),
+            Number(sale.total_cost),
+            Number(sale.total_cost) - Number(sale.balance),
+            Number(sale.balance)
           );
         });
 
-        // Add totals row
         const totals = todaySales.reduce(
           (acc, s) => {
-            acc.quote += s.unit_cost * s.qty || 0;
-            acc.awarded += s.total_cost || 0;
-            acc.actual += s.total_cost - s.balance || 0;
-            acc.balance += s.balance || 0;
+            acc.quote += Number(s.unit_cost) * Number(s.qty);
+            acc.awarded += Number(s.total_cost);
+            acc.actual += Number(s.total_cost) - Number(s.balance);
+            acc.balance += Number(s.balance);
             return acc;
           },
           { quote: 0, awarded: 0, actual: 0, balance: 0 }
@@ -1070,7 +1080,6 @@ const GenerateReport = () => {
           totals.balance
         );
       } else {
-        // No sales today
         addRow(todayStr, 0, 0, 0, 0);
       }
     }
