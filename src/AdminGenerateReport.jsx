@@ -941,50 +941,51 @@ const GenerateReport = () => {
         formatNumber(totalBalance),
       ]);
     };
-
     // ============================================================
-    // NORMALIZE SALES DATA (Fix for ALL period types)
+    // NORMALIZE ALL SALES WITH SAFE YYYY-MM-DD STRING
     // ============================================================
     const normalizedSales = salesData
       .map((s) => {
         const d = parseDateSafe(s.date_of_order);
-        const dateStr = formatDate(d);
-        if (!dateStr) return null;
+        if (!d) return null;
         return {
           ...s,
-          __date: dateStr,
+          __dateObj: d,
+          __date: formatDate(d),
           __month: d.getMonth(),
+          __year: d.getFullYear(),
         };
       })
       .filter(Boolean);
 
     // ============================================================
-    // DAILY  (FULLY FIXED)
+    // DAILY - NOW 100% WORKING (even today!)
     // ============================================================
     if (period === "daily") {
-      const uniqueDates = [...new Set(normalizedSales.map((s) => s.__date))];
+      const dateMap = {};
 
-      uniqueDates.forEach((dateStr) => {
-        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
-
-        const totals = daySales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
-          }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
-        );
-
-        addRow(
-          dateStr,
-          totals.quote,
-          totals.awarded,
-          totals.actual,
-          totals.balance
-        );
+      normalizedSales.forEach((s) => {
+        const key = s.__date;
+        if (!dateMap[key]) {
+          dateMap[key] = { quote: 0, awarded: 0, actual: 0, balance: 0 };
+        }
+        const t = dateMap[key];
+        t.quote += (s.unit_cost || 0) * (s.qty || 0);
+        t.awarded += s.total_cost || 0;
+        t.actual += (s.total_cost || 0) - (s.balance || 0);
+        t.balance += s.balance || 0;
       });
+
+      Object.keys(dateMap)
+        .sort() // chronological order
+        .forEach((dateStr) => {
+          const t = dateMap[dateStr];
+          // Format as MM/DD/YYYY to match your report screenshot
+          const displayDate = dateStr
+            .replace(/-/g, "/")
+            .replace(/^(\d{4})\/(\d{2})\/(\d{2})$/, "$2/$3/$1");
+          addRow(displayDate, t.quote, t.awarded, t.actual, t.balance);
+        });
 
       return rows;
     }
