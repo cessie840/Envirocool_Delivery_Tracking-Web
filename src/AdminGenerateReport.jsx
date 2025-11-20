@@ -1022,19 +1022,23 @@ const GenerateReport = () => {
         today.getMonth() + 1
       ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-      // Filter only today's sales with Delivered status
+      // Filter only today's delivered sales
       const todaySales = salesData.filter((s) => {
-        const d = new Date(s.date_of_order);
-        return (
-          d.getFullYear() === today.getFullYear() &&
-          d.getMonth() === today.getMonth() &&
-          d.getDate() === today.getDate() &&
-          s.delivery_status?.toLowerCase() === "delivered" // only delivered
-        );
+        if (!s.date_of_order || !s.delivery_status) return false;
+
+        const saleDate = new Date(s.date_of_order);
+        const isSameDay =
+          saleDate.getFullYear() === today.getFullYear() &&
+          saleDate.getMonth() === today.getMonth() &&
+          saleDate.getDate() === today.getDate();
+
+        const isDelivered =
+          s.delivery_status.toString().trim().toLowerCase() === "delivered";
+
+        return isSameDay && isDelivered;
       });
 
       if (todaySales.length > 0) {
-        // Add each sale row
         todaySales.forEach((sale) => {
           addRow(
             todayStr,
@@ -1045,13 +1049,12 @@ const GenerateReport = () => {
           );
         });
 
-        // Add total row
         const totals = todaySales.reduce(
           (acc, s) => ({
-            quote: acc.quote + s.unit_cost * s.qty,
-            awarded: acc.awarded + s.total_cost,
-            actual: acc.actual + (s.total_cost - s.balance),
-            balance: acc.balance + s.balance,
+            quote: acc.quote + (s.unit_cost * s.qty || 0),
+            awarded: acc.awarded + (s.total_cost || 0),
+            actual: acc.actual + (s.total_cost - s.balance || 0),
+            balance: acc.balance + (s.balance || 0),
           }),
           { quote: 0, awarded: 0, actual: 0, balance: 0 }
         );
@@ -1064,7 +1067,6 @@ const GenerateReport = () => {
           totals.balance
         );
       } else {
-        // No delivered orders today
         addRow(todayStr, 0, 0, 0, 0);
       }
     }
