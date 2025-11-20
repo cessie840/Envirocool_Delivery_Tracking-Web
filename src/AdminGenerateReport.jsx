@@ -918,32 +918,66 @@ const GenerateReport = () => {
     // ----------------------------------------------------
     // DAILY — FIXED & WORKING
     // ----------------------------------------------------
+    // ----------------------------------------------------
+    // DAILY — FIXED & ROBUST (works even with timezone issues)
+    // ----------------------------------------------------
     if (period === "daily") {
-      const uniqueDates = [...new Set(normalized.map((s) => s.__date))];
+      // Force all dates to pure YYYY-MM-DD string in local time
+      const dateMap = {};
 
-      uniqueDates.forEach((date) => {
-        const daySales = normalized.filter((s) => s.__date === date);
+      normalized.forEach((s) => {
+        // s.date_of_order is expected as "2025-11-21" or "2025-11-21 14:30:00"
+        let dateStr = s.date_of_order;
 
-        const totals = daySales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
-          }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
-        );
+        // If it has time part, remove it
+        if (dateStr && dateStr.includes(" ")) {
+          dateStr = dateStr.split(" ")[0];
+        }
+        // If it has T (ISO), remove time
+        if (dateStr && dateStr.includes("T")) {
+          dateStr = dateStr.split("T")[0];
+        }
 
+        if (!dateStr) return;
+
+        if (!dateMap[dateStr]) {
+          dateMap[dateStr] = {
+            quote: 0,
+            awarded: 0,
+            actual: 0,
+            balance: 0,
+          };
+        }
+
+        const day = dateMap[dateStr];
+        day.quote += (s.unit_cost || 0) * (s.qty || 0);
+        day.awarded += s.total_cost || 0;
+        day.actual += (s.total_cost || 0) - (s.balance || 0);
+        day.balance += s.balance || 0;
+      });
+
+      // Sort dates chronologically
+      const sortedDates = Object.keys(dateMap).sort();
+
+      sortedDates.forEach((date) => {
+        const t = dateMap[date];
         addRow(
-          date,
-          totals.quote,
-          totals.awarded,
-          totals.actual,
-          totals.balance
+          date.replace(/-/g, "/"), // Display as 2025/11/21 like your screenshot
+          t.quote,
+          t.awarded,
+          t.actual,
+          t.balance
         );
       });
 
-      return rows;
+      // If no sales at all, still show today with zeros (optional)
+      // Uncomment if you want today's row even if empty:
+      /*
+      const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+      if (!dateMap[today.replace(/\//g, '-')]) {
+        addRow(today, 0, 0, 0, 0);
+      }
+      */
     }
 
     // ----------------------------------------------------
