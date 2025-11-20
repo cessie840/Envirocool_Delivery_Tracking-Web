@@ -59,7 +59,6 @@ const ForgotPassword = () => {
           break;
         case "locked":
           setErrorMessage(data.message);
-          setTimeout(() => navigate("/"), 3000);
           break;
         case "db_error":
           ToastHelper.error("Something went wrong. Try again later.");
