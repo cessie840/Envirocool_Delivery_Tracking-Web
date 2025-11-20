@@ -869,124 +869,50 @@ const GenerateReport = () => {
 
   const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
     const rows = [];
-
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
       });
 
     const formatDate = (date) => {
-      if (!date || isNaN(date)) return null;
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      return `${y}-${m}-${d}`;
+      if (!date) return "";
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     };
 
+    // ✅ Format numbers with commas
     const formatNumber = (num, decimals = 2, stripDecimals = true) => {
       if (num == null || isNaN(num)) return "0.00";
       let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00"))
+      if (stripDecimals && fixed.endsWith(".00")) {
         fixed = fixed.replace(".00", "");
+      }
       return Number(fixed).toLocaleString();
     };
 
-    const addRow = (label, quote, awarded, actual, balance) => {
+    const addRow = (
+      label,
+      totalQuote,
+      totalAwarded,
+      totalActual,
+      totalBalance
+    ) => {
       rows.push([
         label,
-        formatNumber(quote),
-        formatNumber(awarded),
-        formatNumber(actual),
-        formatNumber(balance),
+        formatNumber(totalQuote, 2),
+        formatNumber(totalAwarded, 2),
+        formatNumber(totalActual, 2),
+        formatNumber(totalBalance, 2),
       ]);
     };
 
-    // ----------------------------------------------------
-    // FIXED: PHP ALREADY RETURNS "YYYY-MM-DD"
-    // → No parsing needed, treat as clean text.
-    // ----------------------------------------------------
-    const normalized = salesData.map((s) => {
-      const dateStr = s.date_of_order; // already "YYYY-MM-DD"
-      const d = new Date(dateStr + "T00:00:00"); // safe for JS
-      return {
-        ...s,
-        __date: dateStr,
-        __month: d.getMonth(),
-      };
-    });
-
-    // ----------------------------------------------------
-    // DAILY — FIXED & WORKING
-    // ----------------------------------------------------
-    // ----------------------------------------------------
-    // DAILY — FIXED & ROBUST (works even with timezone issues)
-    // ----------------------------------------------------
-    if (period === "daily") {
-      // Force all dates to pure YYYY-MM-DD string in local time
-      const dateMap = {};
-
-      normalized.forEach((s) => {
-        // s.date_of_order is expected as "2025-11-21" or "2025-11-21 14:30:00"
-        let dateStr = s.date_of_order;
-
-        // If it has time part, remove it
-        if (dateStr && dateStr.includes(" ")) {
-          dateStr = dateStr.split(" ")[0];
-        }
-        // If it has T (ISO), remove time
-        if (dateStr && dateStr.includes("T")) {
-          dateStr = dateStr.split("T")[0];
-        }
-
-        if (!dateStr) return;
-
-        if (!dateMap[dateStr]) {
-          dateMap[dateStr] = {
-            quote: 0,
-            awarded: 0,
-            actual: 0,
-            balance: 0,
-          };
-        }
-
-        const day = dateMap[dateStr];
-        day.quote += (s.unit_cost || 0) * (s.qty || 0);
-        day.awarded += s.total_cost || 0;
-        day.actual += (s.total_cost || 0) - (s.balance || 0);
-        day.balance += s.balance || 0;
-      });
-
-      // Sort dates chronologically
-      const sortedDates = Object.keys(dateMap).sort();
-
-      sortedDates.forEach((date) => {
-        const t = dateMap[date];
-        addRow(
-          date.replace(/-/g, "/"), // Display as 2025/11/21 like your screenshot
-          t.quote,
-          t.awarded,
-          t.actual,
-          t.balance
-        );
-      });
-
-      // If no sales at all, still show today with zeros (optional)
-      // Uncomment if you want today's row even if empty:
-      /*
-      const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
-      if (!dateMap[today.replace(/\//g, '-')]) {
-        addRow(today, 0, 0, 0, 0);
-      }
-      */
-    }
-
-    // ----------------------------------------------------
-    // ANNUALLY
-    // ----------------------------------------------------
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
-        const monthSales = normalized.filter((s) => s.__month === m);
-
+        const monthSales = salesData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
         const totals = monthSales.reduce(
           (acc, sale) => ({
             quote: acc.quote + sale.unit_cost * sale.qty,
@@ -994,9 +920,8 @@ const GenerateReport = () => {
             actual: acc.actual + (sale.total_cost - sale.balance),
             balance: acc.balance + sale.balance,
           }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
         );
-
         addRow(
           getMonthName(m),
           totals.quote,
@@ -1005,24 +930,20 @@ const GenerateReport = () => {
           totals.balance
         );
       }
-    }
-
-    // ----------------------------------------------------
-    // QUARTERLY
-    // ----------------------------------------------------
-    else if (period === "quarterly") {
+    } else if (period === "quarterly") {
       const start = startDate ? new Date(startDate) : new Date();
       const month = start.getMonth();
-
       let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
+
+      if (month <= 2) quarterMonths = [0, 1, 2]; // Jan-Mar
+      else if (month <= 5) quarterMonths = [3, 4, 5]; // Apr-Jun
+      else if (month <= 8) quarterMonths = [6, 7, 8]; // Jul-Sep
+      else quarterMonths = [9, 10, 11]; // Oct-Dec
 
       quarterMonths.forEach((m) => {
-        const monthSales = normalized.filter((s) => s.__month === m);
-
+        const monthSales = salesData.filter(
+          (s) => new Date(s.date_of_order).getMonth() === m
+        );
         const totals = monthSales.reduce(
           (acc, sale) => ({
             quote: acc.quote + sale.unit_cost * sale.qty,
@@ -1032,7 +953,6 @@ const GenerateReport = () => {
           }),
           { quote: 0, awarded: 0, actual: 0, balance: 0 }
         );
-
         addRow(
           getMonthName(m),
           totals.quote,
@@ -1041,25 +961,27 @@ const GenerateReport = () => {
           totals.balance
         );
       });
-    }
-
-    // ----------------------------------------------------
-    // MONTHLY
-    // ----------------------------------------------------
-    else if (period === "monthly") {
+    } else if (period === "monthly") {
       const base = new Date(startDate || new Date());
+
+      // ✅ Force start at the 1st of the month
       const start = new Date(base.getFullYear(), base.getMonth(), 1);
+
+      // ✅ Get the last day of the same month
       const daysInMonth = new Date(
         base.getFullYear(),
         base.getMonth() + 1,
         0
       ).getDate();
 
+      // ✅ Loop through the whole month (always 1 → last day)
       for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = formatDate(
-          new Date(start.getFullYear(), start.getMonth(), d)
+        const dObj = new Date(start.getFullYear(), start.getMonth(), d);
+        const dateStr = formatDate(dObj);
+
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
         );
-        const daySales = normalized.filter((s) => s.__date === dateStr);
 
         const totals = daySales.reduce(
           (acc, sale) => ({
@@ -1068,7 +990,7 @@ const GenerateReport = () => {
             actual: acc.actual + (sale.total_cost - sale.balance),
             balance: acc.balance + sale.balance,
           }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
         );
 
         addRow(
@@ -1079,22 +1001,16 @@ const GenerateReport = () => {
           totals.balance
         );
       }
-    }
-
-    // ----------------------------------------------------
-    // WEEKLY
-    // ----------------------------------------------------
-    else if (period === "weekly") {
+    } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
       start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
-
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
         const dateStr = formatDate(d);
-
-        const daySales = normalized.filter((s) => s.__date === dateStr);
-
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
         const totals = daySales.reduce(
           (acc, sale) => ({
             quote: acc.quote + sale.unit_cost * sale.qty,
@@ -1102,9 +1018,8 @@ const GenerateReport = () => {
             actual: acc.actual + (sale.total_cost - sale.balance),
             balance: acc.balance + sale.balance,
           }),
-          { quote: 0, awarded: 0, actual: 0, balance: 0 }
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
         );
-
         addRow(
           dateStr,
           totals.quote,
@@ -1113,6 +1028,31 @@ const GenerateReport = () => {
           totals.balance
         );
       }
+    } else if (period === "daily") {
+      const uniqueDates = [
+        ...new Set(salesData.map((s) => formatDate(new Date(s.date_of_order)))),
+      ];
+      uniqueDates.forEach((dateStr) => {
+        const daySales = salesData.filter(
+          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+        );
+        const totals = daySales.reduce(
+          (acc, sale) => ({
+            quote: acc.quote + sale.unit_cost * sale.qty,
+            awarded: acc.awarded + sale.total_cost,
+            actual: acc.actual + (sale.total_cost - sale.balance),
+            balance: acc.balance + sale.balance,
+          }),
+          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
+        );
+        addRow(
+          dateStr,
+          totals.quote,
+          totals.awarded,
+          totals.actual,
+          totals.balance
+        );
+      });
     }
 
     return rows;
@@ -1130,11 +1070,13 @@ const GenerateReport = () => {
         month: "long",
       });
 
+    // ✅ Format numbers with commas
     const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-      if (num == null || isNaN(num)) return " ";
+      if (num == null || isNaN(num)) return " "; // blank instead of 0/-
       let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00"))
+      if (stripDecimals && fixed.endsWith(".00")) {
         fixed = fixed.replace(".00", "");
+      }
       return Number(fixed).toLocaleString();
     };
 
@@ -1150,9 +1092,9 @@ const GenerateReport = () => {
         tx.customer_name ?? "-",
         tx.customer_address ?? "-",
         tx.item_name ?? "-",
-        formatNumber(tx.qty, 0),
-        formatNumber(tx.unit_cost, 2),
-        formatNumber(tx.subtotal, 2),
+        formatNumber(tx.qty, 0), // ✅ Quantity as whole number
+        formatNumber(tx.unit_cost, 2), // ✅ Unit Cost (no ₱ sign)
+        formatNumber(tx.subtotal, 2), // ✅ Subtotal (no ₱ sign)
         tx.delivery_status ?? "-",
         tx.shipout_at ?? "-",
         tx.completed_at ?? "-",
@@ -1168,16 +1110,16 @@ const GenerateReport = () => {
         "-",
         "-",
         "-",
-        "0",
-        "0.00",
-        "0.00",
+        "0", // qty
+        "0.00", // unit cost
+        "0.00", // subtotal
         "-",
         "-",
         "-",
       ]);
     };
 
-    // === PERIOD LOGIC ===
+    // === PERIOD LOGIC (Annually, Quarterly, Monthly, Weekly, Daily) ===
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = transactionData.filter(
@@ -1277,48 +1219,61 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
+      const todayStr = formatDate(new Date()); // Always today's date
       const dayTxs = transactionData.filter(
         (t) => formatDate(new Date(t.date_of_order)) === todayStr
       );
+
       if (dayTxs.length > 0) {
         rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
         dayTxs.forEach((tx) => pushTxRow("", tx));
       } else {
         pushZeroRow(todayStr);
       }
+
+      // === DAILY TOTAL ===
+      const totals = dayTxs.reduce(
+        (acc, s) => {
+          acc.total++;
+          if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+          if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+          return acc;
+        },
+        { total: 0, cancelled: 0, completed: 0 }
+      );
+
+      rows.push([
+        "TOTAL",
+        "-",
+        "-",
+        "-",
+        `Completed: ${totals.completed}`,
+        "-",
+        "-",
+        `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+      ]);
+      return rows;
     }
 
-    // === TOTAL ROW (MODIFIED to depend on selected period) ===
-    // ✅ Added: compute totals based on period
-    const relevantTxs =
-      period === "daily"
-        ? transactionData.filter(
-            (t) =>
-              formatDate(new Date(t.date_of_order)) === formatDate(new Date())
-          )
-        : transactionData;
-
-    const totals = relevantTxs.reduce(
+    // === GRAND TOTAL ===
+    const totals = transactionData.reduce(
       (acc, t) => ({
         qty: acc.qty + (t.qty ?? 0),
         subtotal: acc.subtotal + (t.subtotal ?? 0),
       }),
       { qty: 0, subtotal: 0 }
     );
-
-    // ✅ Added: dynamic TOTAL row per period
     rows.push([
-      `TOTAL (${period.toUpperCase()})`, // ✅ Added: dynamic label
+      "TOTAL",
       "-",
       "-",
       "-",
       "-",
       "-",
       "-",
-      formatNumber(totals.qty, 0),
-      "-",
-      formatNumber(totals.subtotal, 2),
+      formatNumber(totals.qty, 0), // qty total
+      "-", // unit cost not summed
+      formatNumber(totals.subtotal, 2), // subtotal total
       "-",
       "-",
       "-",
@@ -1326,8 +1281,6 @@ const GenerateReport = () => {
 
     return rows;
   };
-
-  // ============================================
 
   const generateServicePeriodRows = (
     serviceData,
@@ -1337,6 +1290,7 @@ const GenerateReport = () => {
   ) => {
     const rows = [];
 
+    // --- Helpers ---
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
@@ -1345,8 +1299,8 @@ const GenerateReport = () => {
     const formatDate = (date) => {
       if (!date) return "-";
       const d = new Date(date);
-      if (isNaN(d)) return "-";
-      return d.toISOString().split("T")[0];
+      if (isNaN(d)) return "-"; // invalid date
+      return d.toISOString().split("T")[0]; // always YYYY-MM-DD
     };
 
     const pushServiceRow = (label, svc) => {
@@ -1366,13 +1320,13 @@ const GenerateReport = () => {
       rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
     };
 
+    // --- Normalize all data dates once ---
     const normalizedData = serviceData.map((s) => ({
       ...s,
       date_of_order: formatDate(s.date_of_order),
     }));
 
-    // --- (Period logic unchanged) ---
-
+    // --- Period Logic ---
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
         const monthTxs = normalizedData.filter(
@@ -1430,12 +1384,13 @@ const GenerateReport = () => {
       }
     } else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
         const dateStr = formatDate(d);
+
         const dayTxs = normalizedData.filter(
           (s) => formatDate(new Date(s.date_of_order)) === dateStr
         );
@@ -1447,10 +1402,11 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
+      const todayStr = formatDate(new Date()); // Always today's date
       const dayTxs = normalizedData.filter(
         (s) => formatDate(new Date(s.date_of_order)) === todayStr
       );
+
       if (dayTxs.length > 0) {
         rows.push([todayStr, "", "", "", "", "", "", ""]);
         dayTxs.forEach((svc) => pushServiceRow("", svc));
@@ -1459,15 +1415,8 @@ const GenerateReport = () => {
       }
     }
 
-    // ✅ Added: compute total dynamically
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
+    // --- Summary Row ---
+    const totals = normalizedData.reduce(
       (acc, s) => {
         acc.total++;
         if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
@@ -1477,9 +1426,8 @@ const GenerateReport = () => {
       { total: 0, cancelled: 0, completed: 0 }
     );
 
-    // ✅ Added: label and totals
     rows.push([
-      `TOTAL (${period.toUpperCase()})`,
+      "TOTAL",
       "-",
       "-",
       "-",
@@ -1501,25 +1449,17 @@ const GenerateReport = () => {
   ) => {
     const rows = [];
 
-    // Helper to get month name
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
       });
 
-    const formatDate = (date) => {
-      if (!date) return "-";
-      const d = new Date(date);
-      if (isNaN(d)) return "-";
-      return d.toISOString().split("T")[0];
-    };
-
-    // --- Row builders ---
+    // Row builders
     const pushCustomerRow = (label, c) => {
       rows.push([
         label || "",
         c.transaction_id ?? "-",
-        formatDate(c.date_of_order),
+        c.date_of_order ?? "-",
         c.customer_name ?? "-",
         c.item_name ?? "-",
         c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
@@ -1531,11 +1471,8 @@ const GenerateReport = () => {
       rows.push([label, "-", "-", "-", "-", "-", "-"]);
     };
 
-    // --- Normalize Data ---
-    const normalizedData = satisfactionData.map((c) => ({
-      ...c,
-      date_of_order: formatDate(c.date_of_order),
-    }));
+    // ✅ Already normalized → just use it
+    const normalizedData = satisfactionData;
 
     // --- Period Logic ---
     if (period === "annually") {
@@ -1600,7 +1537,7 @@ const GenerateReport = () => {
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
+        const dateStr = d.toISOString().split("T")[0];
 
         const dayTxs = normalizedData.filter(
           (c) => c.date_of_order === dateStr
@@ -1613,7 +1550,7 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date()); // Always today's date
+      const todayStr = new Date().toISOString().split("T")[0]; // Always today's date
       const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
 
       if (dayTxs.length > 0) {
@@ -1624,38 +1561,36 @@ const GenerateReport = () => {
       }
     }
 
-    // === ✅ Fixed: compute total dynamically based on period ===
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
-      (acc, s) => {
+    // --- Summary Row ---
+    const totals = normalizedData.reduce(
+      (acc, c) => {
         acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+        if (c.customer_rating != null) {
+          acc.rated++;
+          acc.ratingSum += c.customer_rating;
+        }
+        if (c.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+        if (c.delivery_status?.toLowerCase() === "delivered") acc.completed++;
         return acc;
       },
-      { total: 0, cancelled: 0, completed: 0 }
+      { total: 0, rated: 0, ratingSum: 0, cancelled: 0, completed: 0 }
     );
 
-    // ✅ Fixed TOTAL label and count display
+    const avgRating =
+      totals.rated > 0 ? (totals.ratingSum / totals.rated).toFixed(2) : "N/A";
+
     rows.push([
-      `TOTAL (${period.toUpperCase()})`,
+      "TOTAL",
       "-",
       "-",
       "-",
-      `Completed: ${totals.completed}`,
       "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+      `Avg Rating: ${avgRating}`,
+      `Completed: ${totals.completed} / Cancelled: ${totals.cancelled} / All: ${totals.total}`,
     ]);
 
     return rows;
   };
-
   const generateReport = async (reportType) => {
     const doc = new jsPDF({
       orientation: "landscape",
