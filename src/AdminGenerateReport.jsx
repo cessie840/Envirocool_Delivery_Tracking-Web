@@ -859,6 +859,14 @@ const GenerateReport = () => {
     },
   ];
 
+  const localDateStr = (date) => {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
   const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
     const rows = [];
     const getMonthName = (monthIndex) =>
@@ -1017,38 +1025,15 @@ const GenerateReport = () => {
         );
       }
     } else if (period === "daily") {
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(
-        today.getMonth() + 1
-      ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const todayStr = localDateStr(new Date());
 
-      // Filter only sales that are delivered today
-      const todaySales = salesData.filter((s) => {
-        if (!s.date_of_order || !s.delivery_status) return false;
-
-        const saleDate = new Date(s.date_of_order);
-        const isToday =
-          saleDate.getFullYear() === today.getFullYear() &&
-          saleDate.getMonth() === today.getMonth() &&
-          saleDate.getDate() === today.getDate();
-
-        const isDelivered =
-          s.delivery_status.toString().trim().toLowerCase() === "delivered";
-
-        console.log(
-          "Checking sale:",
-          s.date_of_order,
-          s.delivery_status,
-          "isToday:",
-          isToday,
-          "isDelivered:",
-          isDelivered
-        );
-
-        return isToday && isDelivered;
-      });
-
-      console.log("TodaySales:", todaySales);
+      const todaySales = salesData.filter(
+        (s) =>
+          s.date_of_order &&
+          s.delivery_status &&
+          localDateStr(s.date_of_order) === todayStr &&
+          s.delivery_status.toString().trim().toLowerCase() === "delivered"
+      );
 
       if (todaySales.length > 0) {
         todaySales.forEach((sale) => {
@@ -1083,6 +1068,7 @@ const GenerateReport = () => {
         addRow(todayStr, 0, 0, 0, 0);
       }
     }
+
     return rows;
   };
 
@@ -1205,97 +1191,43 @@ const GenerateReport = () => {
           pushZeroRow(getMonthName(m));
         }
       });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const dayTxs = transactionData.filter(
-          (t) => t.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-        const dayTxs = transactionData.filter(
-          (t) => formatDate(new Date(t.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
     } else if (period === "daily") {
-      const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = localDateStr(new Date());
 
-      const todayTxs = transactionData.filter((t) => {
-        const d = new Date(t.date_of_order);
-        return (
-          d.getFullYear() === today.getFullYear() &&
-          d.getMonth() === today.getMonth() &&
-          d.getDate() === today.getDate()
-        );
-      });
+      const todayTxs = transactionData.filter(
+        (t) => t.date_of_order && localDateStr(t.date_of_order) === todayStr
+      );
 
       if (todayTxs.length > 0) {
         todayTxs.forEach((tx) => pushTxRow(todayStr, tx));
       } else {
         pushZeroRow(todayStr);
       }
+
+      const totals = todayTxs.reduce(
+        (acc, t) => ({
+          qty: acc.qty + (Number(t.qty) || 0),
+          subtotal: acc.subtotal + (Number(t.subtotal) || 0),
+        }),
+        { qty: 0, subtotal: 0 }
+      );
+
+      rows.push([
+        `TOTAL (DAILY)`,
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        totals.qty,
+        "-",
+        totals.subtotal,
+        "-",
+        "-",
+        "-",
+      ]);
     }
-
-    const relevantTxs =
-      period === "daily"
-        ? transactionData.filter(
-            (t) =>
-              formatDate(new Date(t.date_of_order)) === formatDate(new Date())
-          )
-        : transactionData;
-
-    const totals = relevantTxs.reduce(
-      (acc, t) => ({
-        qty: acc.qty + (t.qty ?? 0),
-        subtotal: acc.subtotal + (t.subtotal ?? 0),
-      }),
-      { qty: 0, subtotal: 0 }
-    );
-
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      formatNumber(totals.qty, 0),
-      "-",
-      formatNumber(totals.subtotal, 2),
-      "-",
-      "-",
-      "-",
-    ]);
-
-    return rows;
   };
 
   const generateServicePeriodRows = (
@@ -1414,54 +1346,39 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = localDateStr(new Date());
 
-      const todayTxs = serviceData.filter((s) => {
-        const d = new Date(s.date_of_order);
-        return (
-          d.getFullYear() === today.getFullYear() &&
-          d.getMonth() === today.getMonth() &&
-          d.getDate() === today.getDate()
-        );
-      });
+      const todaySvc = serviceData.filter(
+        (s) => s.date_of_order && localDateStr(s.date_of_order) === todayStr
+      );
 
-      if (todayTxs.length > 0) {
-        todayTxs.forEach((svc) => pushServiceRow(todayStr, svc));
+      if (todaySvc.length > 0) {
+        todaySvc.forEach((svc) => pushServiceRow(todayStr, svc));
       } else {
         pushZeroRow(todayStr);
       }
+
+      const totals = todaySvc.reduce(
+        (acc, s) => {
+          acc.total++;
+          if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+          if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+          return acc;
+        },
+        { total: 0, cancelled: 0, completed: 0 }
+      );
+
+      rows.push([
+        `TOTAL (DAILY)`,
+        "-",
+        "-",
+        "-",
+        `Completed: ${totals.completed}`,
+        "-",
+        "-",
+        `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+      ]);
     }
-
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
-    );
-
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
-
-    return rows;
   };
 
   const generateCustomerSatisfactionRows = (
@@ -1580,23 +1497,18 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = localDateStr(new Date());
 
-      const todayData = satisfactionData.filter((c) => {
-        const d = new Date(c.date_of_order);
-        return (
-          d.getFullYear() === today.getFullYear() &&
-          d.getMonth() === today.getMonth() &&
-          d.getDate() === today.getDate()
-        );
-      });
+      const todayData = satisfactionData.filter(
+        (c) => c.date_of_order && localDateStr(c.date_of_order) === todayStr
+      );
 
       if (todayData.length > 0) {
         todayData.forEach((c) => pushCustomerRow(todayStr, c));
       } else {
         pushZeroRow(todayStr);
       }
+
       const totals = todayData.reduce(
         (acc, s) => {
           acc.total++;
@@ -1617,7 +1529,6 @@ const GenerateReport = () => {
         `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
       ]);
     }
-    return rows;
   };
 
   const generateReport = async (reportType) => {
