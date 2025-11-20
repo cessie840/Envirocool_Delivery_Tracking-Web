@@ -1018,9 +1018,10 @@ const GenerateReport = () => {
       }
     } else if (period === "daily") {
       const today = new Date();
-      const todayStr = formatDate(today);
+      const todayStr = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-      // Filter by year, month, day only (ignore time)
       const todaySales = salesData.filter((s) => {
         const d = new Date(s.date_of_order);
         return (
@@ -1031,7 +1032,6 @@ const GenerateReport = () => {
       });
 
       if (todaySales.length > 0) {
-        rows.push([todayStr, "", "", "", ""]);
         todaySales.forEach((sale) => {
           addRow(
             todayStr,
@@ -1063,7 +1063,6 @@ const GenerateReport = () => {
         addRow(todayStr, 0, 0, 0, 0);
       }
     }
-
     return rows;
   };
 
@@ -1225,13 +1224,20 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = transactionData.filter(
-        (t) => formatDate(new Date(t.date_of_order)) === todayStr
-      );
-      if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-        dayTxs.forEach((tx) => pushTxRow("", tx));
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+
+      const todayTxs = transactionData.filter((t) => {
+        const d = new Date(t.date_of_order);
+        return (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
+        );
+      });
+
+      if (todayTxs.length > 0) {
+        todayTxs.forEach((tx) => pushTxRow(todayStr, tx));
       } else {
         pushZeroRow(todayStr);
       }
@@ -1388,13 +1394,20 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = normalizedData.filter(
-        (s) => formatDate(new Date(s.date_of_order)) === todayStr
-      );
-      if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", ""]);
-        dayTxs.forEach((svc) => pushServiceRow("", svc));
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+
+      const todayTxs = serviceData.filter((s) => {
+        const d = new Date(s.date_of_order);
+        return (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
+        );
+      });
+
+      if (todayTxs.length > 0) {
+        todayTxs.forEach((svc) => pushServiceRow(todayStr, svc));
       } else {
         pushZeroRow(todayStr);
       }
@@ -1548,9 +1561,9 @@ const GenerateReport = () => {
       }
     } else if (period === "daily") {
       const today = new Date();
-      const todayStr = formatDate(today);
+      const todayStr = today.toISOString().split("T")[0];
 
-      const todayData = normalizedData.filter((c) => {
+      const todayData = satisfactionData.filter((c) => {
         const d = new Date(c.date_of_order);
         return (
           d.getFullYear() === today.getFullYear() &&
@@ -1560,12 +1573,10 @@ const GenerateReport = () => {
       });
 
       if (todayData.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", ""]);
-        todayData.forEach((c) => pushCustomerRow("", c));
+        todayData.forEach((c) => pushCustomerRow(todayStr, c));
       } else {
         pushZeroRow(todayStr);
       }
-
       const totals = todayData.reduce(
         (acc, s) => {
           acc.total++;
