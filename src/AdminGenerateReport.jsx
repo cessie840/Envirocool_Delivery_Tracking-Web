@@ -870,41 +870,6 @@ const GenerateReport = () => {
   const generateSalesPeriodRows = (salesData, period, startDate, endDate) => {
     const rows = [];
 
-    // ============================================================
-    // SAFE DATE PARSER (Fix for daily not showing)
-    // ============================================================
-    const parseDateSafe = (value) => {
-      if (!value) return null;
-
-      // If already Date object
-      if (value instanceof Date && !isNaN(value)) return value;
-
-      // Try built-in parser
-      let d = new Date(value);
-      if (!isNaN(d)) return d;
-
-      // MySQL format "YYYY-MM-DD HH:mm:ss"
-      if (typeof value === "string" && value.includes(" ")) {
-        const fixed = value.replace(" ", "T"); // convert to ISO
-        d = new Date(fixed);
-        if (!isNaN(d)) return d;
-      }
-
-      // Manual fallback "YYYY-MM-DD" or similar
-      try {
-        const parts = value.split(/[- :/]/);
-        if (parts.length >= 3) {
-          return new Date(
-            Number(parts[0]),
-            Number(parts[1]) - 1,
-            Number(parts[2])
-          );
-        }
-      } catch {}
-
-      return null;
-    };
-
     const getMonthName = (monthIndex) =>
       new Date(2000, monthIndex, 1).toLocaleString("default", {
         month: "long",
@@ -926,46 +891,38 @@ const GenerateReport = () => {
       return Number(fixed).toLocaleString();
     };
 
-    const addRow = (
-      label,
-      totalQuote,
-      totalAwarded,
-      totalActual,
-      totalBalance
-    ) => {
+    const addRow = (label, quote, awarded, actual, balance) => {
       rows.push([
         label,
-        formatNumber(totalQuote),
-        formatNumber(totalAwarded),
-        formatNumber(totalActual),
-        formatNumber(totalBalance),
+        formatNumber(quote),
+        formatNumber(awarded),
+        formatNumber(actual),
+        formatNumber(balance),
       ]);
     };
 
-    // ============================================================
-    // NORMALIZE SALES DATA (Fix for ALL period types)
-    // ============================================================
-    const normalizedSales = salesData
-      .map((s) => {
-        const d = parseDateSafe(s.date_of_order);
-        const dateStr = formatDate(d);
-        if (!dateStr) return null;
-        return {
-          ...s,
-          __date: dateStr,
-          __month: d.getMonth(),
-        };
-      })
-      .filter(Boolean);
+    // ----------------------------------------------------
+    // FIXED: PHP ALREADY RETURNS "YYYY-MM-DD"
+    // → No parsing needed, treat as clean text.
+    // ----------------------------------------------------
+    const normalized = salesData.map((s) => {
+      const dateStr = s.date_of_order; // already "YYYY-MM-DD"
+      const d = new Date(dateStr + "T00:00:00"); // safe for JS
+      return {
+        ...s,
+        __date: dateStr,
+        __month: d.getMonth(),
+      };
+    });
 
-    // ============================================================
-    // DAILY  (FULLY FIXED)
-    // ============================================================
+    // ----------------------------------------------------
+    // DAILY — FIXED & WORKING
+    // ----------------------------------------------------
     if (period === "daily") {
-      const uniqueDates = [...new Set(normalizedSales.map((s) => s.__date))];
+      const uniqueDates = [...new Set(normalized.map((s) => s.__date))];
 
-      uniqueDates.forEach((dateStr) => {
-        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
+      uniqueDates.forEach((date) => {
+        const daySales = normalized.filter((s) => s.__date === date);
 
         const totals = daySales.reduce(
           (acc, sale) => ({
@@ -978,7 +935,7 @@ const GenerateReport = () => {
         );
 
         addRow(
-          dateStr,
+          date,
           totals.quote,
           totals.awarded,
           totals.actual,
@@ -989,12 +946,12 @@ const GenerateReport = () => {
       return rows;
     }
 
-    // ============================================================
+    // ----------------------------------------------------
     // ANNUALLY
-    // ============================================================
+    // ----------------------------------------------------
     if (period === "annually") {
       for (let m = 0; m < 12; m++) {
-        const monthSales = normalizedSales.filter((s) => s.__month === m);
+        const monthSales = normalized.filter((s) => s.__month === m);
 
         const totals = monthSales.reduce(
           (acc, sale) => ({
@@ -1016,9 +973,9 @@ const GenerateReport = () => {
       }
     }
 
-    // ============================================================
+    // ----------------------------------------------------
     // QUARTERLY
-    // ============================================================
+    // ----------------------------------------------------
     else if (period === "quarterly") {
       const start = startDate ? new Date(startDate) : new Date();
       const month = start.getMonth();
@@ -1030,7 +987,7 @@ const GenerateReport = () => {
       else quarterMonths = [9, 10, 11];
 
       quarterMonths.forEach((m) => {
-        const monthSales = normalizedSales.filter((s) => s.__month === m);
+        const monthSales = normalized.filter((s) => s.__month === m);
 
         const totals = monthSales.reduce(
           (acc, sale) => ({
@@ -1052,12 +1009,11 @@ const GenerateReport = () => {
       });
     }
 
-    // ============================================================
+    // ----------------------------------------------------
     // MONTHLY
-    // ============================================================
+    // ----------------------------------------------------
     else if (period === "monthly") {
       const base = new Date(startDate || new Date());
-
       const start = new Date(base.getFullYear(), base.getMonth(), 1);
       const daysInMonth = new Date(
         base.getFullYear(),
@@ -1066,10 +1022,10 @@ const GenerateReport = () => {
       ).getDate();
 
       for (let d = 1; d <= daysInMonth; d++) {
-        const dObj = new Date(start.getFullYear(), start.getMonth(), d);
-        const dateStr = formatDate(dObj);
-
-        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
+        const dateStr = formatDate(
+          new Date(start.getFullYear(), start.getMonth(), d)
+        );
+        const daySales = normalized.filter((s) => s.__date === dateStr);
 
         const totals = daySales.reduce(
           (acc, sale) => ({
@@ -1091,19 +1047,19 @@ const GenerateReport = () => {
       }
     }
 
-    // ============================================================
+    // ----------------------------------------------------
     // WEEKLY
-    // ============================================================
+    // ----------------------------------------------------
     else if (period === "weekly") {
       const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday start
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // Monday
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
         const dateStr = formatDate(d);
 
-        const daySales = normalizedSales.filter((s) => s.__date === dateStr);
+        const daySales = normalized.filter((s) => s.__date === dateStr);
 
         const totals = daySales.reduce(
           (acc, sale) => ({
