@@ -1017,30 +1017,51 @@ const GenerateReport = () => {
         );
       }
     } else if (period === "daily") {
-      const uniqueDates = [
-        ...new Set(salesData.map((s) => formatDate(new Date(s.date_of_order)))),
-      ];
-      uniqueDates.forEach((dateStr) => {
-        const daySales = salesData.filter(
-          (s) => formatDate(new Date(s.date_of_order)) === dateStr
+      const today = new Date();
+      const todayStr = formatDate(today);
+
+      // Filter by year, month, day only (ignore time)
+      const todaySales = salesData.filter((s) => {
+        const d = new Date(s.date_of_order);
+        return (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
         );
-        const totals = daySales.reduce(
-          (acc, sale) => ({
-            quote: acc.quote + sale.unit_cost * sale.qty,
-            awarded: acc.awarded + sale.total_cost,
-            actual: acc.actual + (sale.total_cost - sale.balance),
-            balance: acc.balance + sale.balance,
+      });
+
+      if (todaySales.length > 0) {
+        rows.push([todayStr, "", "", "", ""]);
+        todaySales.forEach((sale) => {
+          addRow(
+            todayStr,
+            sale.unit_cost * sale.qty,
+            sale.total_cost,
+            sale.total_cost - sale.balance,
+            sale.balance
+          );
+        });
+
+        const totals = todaySales.reduce(
+          (acc, s) => ({
+            quote: acc.quote + s.unit_cost * s.qty,
+            awarded: acc.awarded + s.total_cost,
+            actual: acc.actual + (s.total_cost - s.balance),
+            balance: acc.balance + s.balance,
           }),
-          { quote: 0.0, awarded: 0.0, actual: 0.0, balance: 0.0 }
+          { quote: 0, awarded: 0, actual: 0, balance: 0 }
         );
+
         addRow(
-          dateStr,
+          "TOTAL",
           totals.quote,
           totals.awarded,
           totals.actual,
           totals.balance
         );
-      });
+      } else {
+        addRow(todayStr, 0, 0, 0, 0);
+      }
     }
 
     return rows;
@@ -1526,44 +1547,45 @@ const GenerateReport = () => {
         }
       }
     } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
+      const today = new Date();
+      const todayStr = formatDate(today);
 
-      if (dayTxs.length > 0) {
+      const todayData = normalizedData.filter((c) => {
+        const d = new Date(c.date_of_order);
+        return (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
+        );
+      });
+
+      if (todayData.length > 0) {
         rows.push([todayStr, "", "", "", "", "", ""]);
-        dayTxs.forEach((c) => pushCustomerRow("", c));
+        todayData.forEach((c) => pushCustomerRow("", c));
       } else {
         pushZeroRow(todayStr);
       }
+
+      const totals = todayData.reduce(
+        (acc, s) => {
+          acc.total++;
+          if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+          if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+          return acc;
+        },
+        { total: 0, cancelled: 0, completed: 0 }
+      );
+
+      rows.push([
+        `TOTAL (DAILY)`,
+        "-",
+        "-",
+        "-",
+        `Completed: ${totals.completed}`,
+        "-",
+        `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+      ]);
     }
-
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
-    );
-
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
-
     return rows;
   };
 
