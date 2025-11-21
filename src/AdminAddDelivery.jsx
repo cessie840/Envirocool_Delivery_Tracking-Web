@@ -16,6 +16,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import html2pdf from "html2pdf.js";
 
 const paymentOptions = [
   { label: "Cash", value: "Cash" },
@@ -620,119 +621,70 @@ const AddDelivery = () => {
     }));
   };
 
-  const handlePrintReceipt = () => {
-    const element = document.getElementById("receipt-section");
-    if (!element) {
-      console.error("Receipt section not found!");
-      return;
-    }
 
-    const transactionId = receiptData?.transaction_id || "N/A";
-    const today = new Date().toISOString().split("T")[0];
-    const filename = `Receipt_TN${transactionId}_${today}`;
+const handlePrintReceipt = () => {
+  const element = document.getElementById("receipt-section");
+  if (!element) {
+    console.error("Receipt section not found!");
+    return;
+  }
 
-    const clonedElement = element.cloneNode(true);
+  const transactionId = receiptData?.transaction_id || "N/A";
+  const today = new Date().toISOString().split("T")[0];
+  const filename = `Receipt_TN${transactionId}_${today}.pdf`;
 
-    clonedElement
-      .querySelectorAll(".signature-section")
-      .forEach((el) => el.remove());
+  const clonedElement = element.cloneNode(true);
+  clonedElement.querySelectorAll(".signature-section").forEach(el => el.remove());
 
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-    <html>
-      <head>
-        <title>${filename}</title>
-        <style>
-          @page {
-            size: auto;
-            margin: 10mm;
-          }
-          body {
-            font-family: "Calibri", "Segoe UI", Arial, sans-serif;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #000;
-            display: flex;
-            justify-content: center;
-            padding: 0;
-            margin: 0;
-          }
-          .receipt {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          .receipt p {
-            margin: 3px 0;
-          }
-          h3 {
-            font-size: 18px;
-            margin-bottom: 3px;
-          }
-          p, th {
-            font-size: 11px;
-          }
-          table, td {
-            font-size: 10px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-          }
-          th, td {
-            border: 1px solid #5E5E5EFF;
-            padding: 3px;
-            text-align: left;
-          }
-          th {
-            background-color: #EBEBEBFF;
-            font-weight: bold;
-          }
-          .text-center { text-align: center; }
-          .text-end { text-align: right; }
-          hr.dashed {
-            border-top: 1px dashed #999;
-            margin: 20px 0;
-          }
-          .signature-container {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 30px;
-          }
-          .signature {
-            text-align: center;
-            width: 35%;
-            border-top: 1px solid #000;
-            padding-top: 4px;
-            font-size: 11px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="receipt">
-          ${clonedElement.innerHTML}
-          <div class="signature-container">
-            <div class="signature">Prepared By</div>
-            <div class="signature">Received By</div>
-          </div>
-          <hr class="dashed" />
-          <div class="text-center mt-3">
-            <h4>Thank you for trusting Envirocool!</h4>
-            <small>We appreciate your business.</small>
-          </div>
-        </div>
-        <script>
-          window.onload = () => {
-            window.print();
-          };
-        </script>
-      </body>
-    </html>
-  `);
+  // Optionally add signature and footer inside the cloned element
+  const signatureContainer = document.createElement("div");
+  signatureContainer.className = "signature-container";
+  signatureContainer.style.display = "flex";
+  signatureContainer.style.justifyContent = "space-around";
+  signatureContainer.style.marginTop = "30px";
 
-    printWindow.document.close();
+  const preparedBy = document.createElement("div");
+  preparedBy.className = "signature";
+  preparedBy.style.textAlign = "center";
+  preparedBy.style.width = "35%";
+  preparedBy.style.borderTop = "1px solid #000";
+  preparedBy.style.paddingTop = "4px";
+  preparedBy.style.fontSize = "11px";
+  preparedBy.innerText = "Prepared By";
+
+  const receivedBy = document.createElement("div");
+  receivedBy.className = "signature";
+  receivedBy.style.textAlign = "center";
+  receivedBy.style.width = "35%";
+  receivedBy.style.borderTop = "1px solid #000";
+  receivedBy.style.paddingTop = "4px";
+  receivedBy.style.fontSize = "11px";
+  receivedBy.innerText = "Received By";
+
+  signatureContainer.appendChild(preparedBy);
+  signatureContainer.appendChild(receivedBy);
+  clonedElement.appendChild(signatureContainer);
+
+  const footer = document.createElement("div");
+  footer.style.textAlign = "center";
+  footer.style.marginTop = "20px";
+  footer.innerHTML = `
+    <hr style="border-top: 1px dashed #999; margin: 20px 0;" />
+    <h4>Thank you for trusting Envirocool!</h4>
+    <small>We appreciate your business.</small>
+  `;
+  clonedElement.appendChild(footer);
+
+  const opt = {
+    margin: 10,
+    filename: filename,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
   };
+
+  html2pdf().set(opt).from(clonedElement).save();
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
