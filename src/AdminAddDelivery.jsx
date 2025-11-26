@@ -147,6 +147,7 @@ const AddDelivery = () => {
     dp_collection_date: "",
     balance: "",
     total: "",
+    payment_receipt_no: "",
   });
 
   const [lagunaData, setLagunaData] = useState({});
@@ -775,6 +776,14 @@ const AddDelivery = () => {
       return;
     }
 
+    if (!form.payment_receipt_no.trim()) {
+      ToastHelper.error("Please enter a receipt number.", {
+        className: "toast-error",
+      });
+      setLoading(false);
+      return;
+    }
+
     for (const [index, item] of orderItems.entries()) {
       const quantity = parseInt(item.quantity);
       const unitCost = parseFloat(parsePeso(item.unit_cost));
@@ -883,6 +892,7 @@ const AddDelivery = () => {
         .join(", ")
     );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
+    formData.append("payment_receipt_no", form.payment_receipt_no);
     proofFiles.forEach((file, index) => {
       formData.append(`proofOfPayment[${index}]`, file);
     });
@@ -934,6 +944,7 @@ const AddDelivery = () => {
         dp_collection_date: form.dp_collection_date,
         balance: form.balance,
         total: form.total,
+        payment_receipt_no: form.payment_receipt_no,
       });
       setReceiptItems(
         orderItems.map((item) => ({
@@ -967,6 +978,7 @@ const AddDelivery = () => {
         dp_collection_date: "",
         balance: "",
         total: "",
+        payment_receipt_no: "",
       });
       setOrderItems([
         {
@@ -1010,6 +1022,7 @@ const AddDelivery = () => {
       setLoading(false);
     }
   };
+
   const [showFAQ, setShowFAQ] = useState(false);
 
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
@@ -1682,104 +1695,6 @@ const AddDelivery = () => {
                       />
                     </td>
 
-                    <Modal
-                      show={editModal.show}
-                      onHide={() => setEditModal({ ...editModal, show: false })}
-                      centered
-                    >
-                      <Modal.Header closeButton>
-                        <Modal.Title>
-                          Edit
-                          {editModal.type === "product"
-                            ? "Product Type"
-                            : "Item"}
-                        </Modal.Title>
-                      </Modal.Header>
-                      <Modal.Body>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={newValue}
-                          onChange={(e) => setNewValue(e.target.value)}
-                        />
-                      </Modal.Body>
-                      <Modal.Footer>
-                        <Button
-                          className="hover-cancel-btn"
-                          variant="secondary"
-                          onClick={() =>
-                            setEditModal({ ...editModal, show: false })
-                          }
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="success"
-                          onClick={async () => {
-                            try {
-                              await axios.post(
-                                "http://localhost/DeliveryTrackingSystem/update_product.php",
-                                {
-                                  type_of_product_current:
-                                    editModal.type === "product"
-                                      ? editModal.currentValue
-                                      : editModal.typeOfProduct,
-                                  type_of_product_new:
-                                    editModal.type === "product"
-                                      ? newValue
-                                      : editModal.typeOfProduct,
-                                  description_current:
-                                    editModal.type === "item"
-                                      ? editModal.currentValue
-                                      : "",
-                                  description_new:
-                                    editModal.type === "item" ? newValue : "",
-                                }
-                              );
-
-                              if (editModal.type === "product") {
-                                setProductOptions((prev) =>
-                                  prev.map((opt) =>
-                                    opt.value === editModal.currentValue
-                                      ? { label: newValue, value: newValue }
-                                      : opt
-                                  )
-                                );
-
-                                setOrderItems((prev) =>
-                                  prev.map((item) =>
-                                    item.type_of_product ===
-                                    editModal.currentValue
-                                      ? { ...item, type_of_product: newValue }
-                                      : item
-                                  )
-                                );
-
-                                setItemOptions((prev) => {
-                                  const updated = { ...prev };
-                                  if (updated[editModal.currentValue]) {
-                                    updated[newValue] = [
-                                      ...updated[editModal.currentValue],
-                                    ];
-                                    delete updated[editModal.currentValue];
-                                  }
-                                  return updated;
-                                });
-                              }
-
-                              setEditModal({ ...editModal, show: false });
-                              ToastHelper.success("Updated successfully!");
-                            } catch (err) {
-                              console.error(err);
-                              ToastHelper.error("Error updating!");
-                            }
-                          }}
-                        >
-                          Save Changes
-                        </Button>
-                      </Modal.Footer>
-                    </Modal>
-
                     <td>
                       <input
                         type="text"
@@ -2140,6 +2055,26 @@ const AddDelivery = () => {
                   )}
                 </div>
               </div>
+
+              <h4 className="mt-5">TRANSACTION RECEIPT</h4>
+              <div className="col-md-6">
+                <label
+                  htmlFor="receiptNumber"
+                  className="form-label"
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  Enter the Payment Receipt Number:
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="receiptNumber"
+                  name="payment_receipt_no"
+                  value={form.payment_receipt_no}
+                  onChange={handleChange}
+                  placeholder="e.g., 2025112609876"
+                />
+              </div>
             </div>
 
             <Modal
@@ -2242,6 +2177,10 @@ const AddDelivery = () => {
               </Modal.Header>
               <Modal.Body className="bg-white">
                 <div className="summary-content">
+                  <p>
+                    <strong>Payment Receipt Number: </strong>{" "}
+                    {form.payment_receipt_no}
+                  </p>
                   <p>
                     <strong>Transaction No.:</strong> {transactionId}
                   </p>
@@ -2511,6 +2450,10 @@ const AddDelivery = () => {
                 />
 
                 <div className="mb-3">
+                   <p>
+                    <b>Payment Receipt Number: </b>{" "}
+                    {receiptData?.payment_receipt_no || ""}
+                  </p>
                   <p>
                     <b>Customer Name:</b> {receiptData?.customer_name || ""}
                   </p>

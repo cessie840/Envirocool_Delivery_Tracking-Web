@@ -4,9 +4,8 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 $allowed_origins = [
-    "https://cessie840.github.io",
-    "http://localhost:5173",
-    "http://localhost:5173/Envirocool-Tracking-Page"
+    'http://localhost:5173',
+    'http://localhost:5174', 'https://cessie840.github.io'
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -95,6 +94,7 @@ try {
     $down_payment    = isset($_POST['down_payment']) ? floatval($_POST['down_payment']) : 0;
     $balance         = isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
     $total           = isset($_POST['total']) ? floatval($_POST['total']) : 0;
+    $payment_receipt_no  = $_POST['payment_receipt_no'] ?? ''; 
 
     $order_items_json = $_POST['order_items'] ?? '[]';
     $order_items = json_decode($order_items_json, true);
@@ -151,12 +151,12 @@ try {
     $stmt = $conn->prepare("INSERT INTO Transactions
         (tracking_number, customer_name, customer_address, customer_contact, date_of_order, target_date_delivery,
          mode_of_payment, payment_option, full_payment, fbilling_date, down_payment, dbilling_date,
-         balance, total, latitude, longitude, proof_of_payment)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+         balance, total, latitude, longitude, proof_of_payment, payment_receipt_no)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if (!$stmt) throw new Exception($conn->error);
 
     $stmt->bind_param(
-        "ssssssssdsdsdddds",
+        "ssssssssdsdsddddss",
         $tracking_number,
         $customer_name,
         $customer_address,
@@ -173,7 +173,8 @@ try {
         $total,
         $latitude,
         $longitude,
-        $proof_path_json
+        $proof_path_json,
+        $payment_receipt_no
     );
 
     if (!$stmt->execute()) throw new Exception($stmt->error);
@@ -244,7 +245,8 @@ try {
         "tracking_number" => $tracking_number,
         "latitude" => $latitude,
         "longitude" => $longitude,
-        "proof_of_payment" => $proof_path_json
+        "proof_of_payment" => $proof_path_json,
+        "payment_receipt_no" => $payment_receipt_no 
     ]);
 
 } catch (Exception $e) {
