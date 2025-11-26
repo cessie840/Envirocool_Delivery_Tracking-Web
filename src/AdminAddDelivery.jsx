@@ -421,6 +421,7 @@ const AddDelivery = () => {
     if (!value) return "";
     return value.toString().replace(/[^0-9.]/g, "");
   };
+  const [receiptError, setReceiptError] = useState("");
 
   const handleConfirmCancel = () => {
     setShowCancelModal(false);
@@ -2067,13 +2068,30 @@ const AddDelivery = () => {
                 </label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${receiptError ? "is-invalid" : ""}`}
                   id="receiptNumber"
                   name="payment_receipt_no"
                   value={form.payment_receipt_no}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const filteredValue = newValue.replace(/[^a-zA-Z0-9]/g, "");
+                    if (newValue !== filteredValue) {
+                      setReceiptError(
+                        "Special characters are not allowed. Input must be letters or numbers only."
+                      );
+                    } else {
+                      setReceiptError("");
+                    }
+                    setForm((prev) => ({
+                      ...prev,
+                      payment_receipt_no: filteredValue,
+                    }));
+                  }}
                   placeholder="e.g., 2025112609876"
                 />
+                {receiptError && (
+                  <div className="invalid-feedback d-block">{receiptError}</div>
+                )}
               </div>
             </div>
 
@@ -2450,7 +2468,7 @@ const AddDelivery = () => {
                 />
 
                 <div className="mb-3">
-                   <p>
+                  <p>
                     <b>Payment Receipt Number: </b>{" "}
                     {receiptData?.payment_receipt_no || ""}
                   </p>
