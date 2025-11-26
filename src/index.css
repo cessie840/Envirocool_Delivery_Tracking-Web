@@ -1149,6 +1149,33 @@ input[type="date"].is-invalid {
   white-space: pre-line; 
 }
 
+.clear-btn {
+  background-color: #3e8553;
+  color: white;
+  border: none;
+  padding: 5px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-block;
+  vertical-align: middle;
+  box-sizing: border-box;
+
+  /* smooth animation */
+  transition: all 0.15s ease;
+  transform: translateY(0);
+}
+
+.clear-btn:hover {
+  background-color: #2b693d !important;
+  transform: translateY(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+
+
+
+
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {

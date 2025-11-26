@@ -24,7 +24,6 @@ const UpdateOrderModal = ({
   const [receiptData, setReceiptData] = useState({});
   const [receiptNumber, setReceiptNumber] = useState(null);
 
-
   const handleOpenPreviewModal = () => {
     setCurrentIndex(0);
     setShowPreviewModal(true);
@@ -53,15 +52,15 @@ const UpdateOrderModal = ({
     }
   }, [show, formData.dbilling_date]);
 
- useEffect(() => {
-  if (showReceiptModal) {
-    const storedCount = parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
-    const newCount = storedCount + 1;
-    localStorage.setItem("envirocoolReceiptCounter", newCount);
-    setReceiptNumber(newCount);
-  }
-}, [showReceiptModal]);
-
+  useEffect(() => {
+    if (showReceiptModal) {
+      const storedCount =
+        parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
+      const newCount = storedCount + 1;
+      localStorage.setItem("envirocoolReceiptCounter", newCount);
+      setReceiptNumber(newCount);
+    }
+  }, [showReceiptModal]);
 
   const handleProofFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -130,10 +129,10 @@ const UpdateOrderModal = ({
 
     const formatted = raw
       ? "₱" +
-      parseFloat(raw).toLocaleString("en-PH", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      })
+        parseFloat(raw).toLocaleString("en-PH", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })
       : "";
 
     setDisplayPayment(formatted);
@@ -345,15 +344,72 @@ const UpdateOrderModal = ({
     });
   };
 
+  const handleClearBalance = () => {
+    const remaining = remainingAfterCurrentPayment();
+
+    if (remaining <= 0) {
+      Swal.fire({
+        icon: "info",
+        title: "No Remaining Balance",
+        text: "There is no balance left to clear.",
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: "Clear Full Balance?",
+      text: `This will auto-fill the remaining balance: ₱${remaining.toLocaleString(
+        "en-PH",
+        { minimumFractionDigits: 2 }
+      )}.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#28a745",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, set it",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, "0");
+        const d = String(today.getDate()).padStart(2, "0");
+        const todayStr = `${y}-${m}-${d}`;
+
+        setFormData((prev) => ({
+          ...prev,
+          full_payment: remaining.toFixed(2),
+          fbilling_date: todayStr,
+        }));
+
+        setDisplayPayment(
+          "₱" +
+            remaining.toLocaleString("en-PH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
+        );
+
+        setPaymentError("");
+        setDateError("");
+
+        ToastHelper.success(
+          "Filled Automatically",
+          "Remaining balance and date have been applied.",
+          "success"
+        );
+      }
+    });
+  };
+
   const formatCurrency = (value) => {
     const num = parseFloat(value);
     return isNaN(num)
       ? "₱0.00"
       : "₱" +
-      num.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+          num.toLocaleString("en-PH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
   };
 
   const handlePrintReceipt = () => {
@@ -369,7 +425,9 @@ const UpdateOrderModal = ({
 
     const clonedElement = element.cloneNode(true);
 
-    clonedElement.querySelectorAll(".signature-section, .text-center.mt-4").forEach((el) => el.remove());
+    clonedElement
+      .querySelectorAll(".signature-section, .text-center.mt-4")
+      .forEach((el) => el.remove());
 
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
@@ -476,7 +534,6 @@ const UpdateOrderModal = ({
 
     printWindow.document.close();
   };
-
 
   return (
     <>
@@ -586,6 +643,16 @@ const UpdateOrderModal = ({
                   </Form.Group>
                 )}
 
+                <div className="mb-3">
+                  <Button
+                    variant="btn shadow"
+                    onClick={handleClearBalance}
+                    className="clear-btn w-100"
+                  >
+                    Clear Remaining Balance
+                  </Button>
+                </div>
+
                 <Form.Group className="mb-3">
                   <Form.Label
                     htmlFor="proofOfPayment"
@@ -653,7 +720,11 @@ const UpdateOrderModal = ({
       >
         <Modal.Header
           closeButton
-          style={{ backgroundColor: "#00628FFF", color: "white", opacity: 0.85 }}
+          style={{
+            backgroundColor: "#00628FFF",
+            color: "white",
+            opacity: 0.85,
+          }}
         >
           <Modal.Title className="fw-semibold">
             Proof of Payment Preview
@@ -734,7 +805,10 @@ const UpdateOrderModal = ({
         centered
         size="lg"
       >
-        <Modal.Header closeButton className="bg-light text-black no-print"></Modal.Header>
+        <Modal.Header
+          closeButton
+          className="bg-light text-black no-print"
+        ></Modal.Header>
 
         <Modal.Body id="receipt-section" className="bg-white text-black p-4">
           <div className="receipt-top text-center mb-4 pb-2">
@@ -742,23 +816,50 @@ const UpdateOrderModal = ({
             <p className="mb-0">Official Down Payment Receipt</p>
             <small>Date Generated: {new Date().toLocaleString()}</small>
             <br />
-            <small className="text-muted">Down Payment Receipt No.: #{receiptNumber?.toString().padStart(5, "0")}</small>
+            <small className="text-muted">
+              Down Payment Receipt No.: #
+              {receiptNumber?.toString().padStart(5, "0")}
+            </small>
           </div>
 
-          <hr style={{ borderTop: "1px dashed rgb(153, 153, 153)", marginBottom: "20px" }} />
-
+          <hr
+            style={{
+              borderTop: "1px dashed rgb(153, 153, 153)",
+              marginBottom: "20px",
+            }}
+          />
 
           <div className="mb-3">
-            <p><b>Transaction No.:</b> {receiptData?.transaction_id || "N/A"}</p>
-            <p><b>Name:</b> {receiptData?.customer_name || "N/A"}</p>
-            <p><b>Payment Option:</b> {receiptData?.payment_option || "N/A"}</p>
-            <p><b>Initial Down Payment:</b> {formatCurrency(receiptData?.down_payment || 0)}</p>
-            <p><b>Additional Payment:</b> {formatCurrency(receiptData?.additional_payment || 0)}</p>
-            <p><b>Date of Additional Payment:</b> {receiptData?.additional_payment_date || "N/A"}</p>
-            <p><b>Remaining Balance:</b> {formatCurrency(receiptData?.balance || 0)}</p>
+            <p>
+              <b>Transaction No.:</b> {receiptData?.transaction_id || "N/A"}
+            </p>
+            <p>
+              <b>Name:</b> {receiptData?.customer_name || "N/A"}
+            </p>
+            <p>
+              <b>Payment Option:</b> {receiptData?.payment_option || "N/A"}
+            </p>
+            <p>
+              <b>Initial Down Payment:</b>{" "}
+              {formatCurrency(receiptData?.down_payment || 0)}
+            </p>
+            <p>
+              <b>Additional Payment:</b>{" "}
+              {formatCurrency(receiptData?.additional_payment || 0)}
+            </p>
+            <p>
+              <b>Date of Additional Payment:</b>{" "}
+              {receiptData?.additional_payment_date || "N/A"}
+            </p>
+            <p>
+              <b>Remaining Balance:</b>{" "}
+              {formatCurrency(receiptData?.balance || 0)}
+            </p>
             <p>
               <b>Payment Status:</b>{" "}
-              {parseFloat(receiptData?.balance || 0) > 0 ? "Partially Paid" : "Fully Paid"}
+              {parseFloat(receiptData?.balance || 0) > 0
+                ? "Partially Paid"
+                : "Fully Paid"}
             </p>
           </div>
 
@@ -775,14 +876,19 @@ const UpdateOrderModal = ({
             </div>
             <hr style={{ borderTop: "2px dashed #999", marginTop: "30px" }} />
             <div className="text-center mt-3">
-              <h6 className="fw-bold text-success mb-0">Thank you for trusting Envirocool!</h6>
+              <h6 className="fw-bold text-success mb-0">
+                Thank you for trusting Envirocool!
+              </h6>
               <small>We appreciate your business.</small>
             </div>
           </div>
         </Modal.Body>
 
         <Modal.Footer className="no-print bg-light">
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowReceiptModal(false)}
+          >
             Close
           </Button>
           <Button variant="success" onClick={handlePrintReceipt}>
@@ -790,7 +896,6 @@ const UpdateOrderModal = ({
           </Button>
         </Modal.Footer>
       </Modal>
-
     </>
   );
 };
