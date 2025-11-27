@@ -14,7 +14,7 @@ import {
   FaAlignJustify,
   FaTimes,
   FaPlus,
-  FaUsers,
+  FaUserFriends,
 } from "react-icons/fa";
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
@@ -165,7 +165,7 @@ const AdminLayout = ({
             }`}
             onClick={() => navigate("/user-management")}
           >
-            <FaUsers className="icon" />
+            <FaUserFriends className="icon" />
             <span className="nav-text"> DELIVERY PERSONNEL ACCOUNTS</span>
             <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
