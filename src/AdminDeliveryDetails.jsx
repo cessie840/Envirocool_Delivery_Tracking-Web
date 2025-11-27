@@ -5,6 +5,7 @@ import AdminLayout from "./AdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import { FaFilter } from "react-icons/fa";
 
 const DeliveryDetails = () => {
   const navigate = useNavigate();
@@ -38,6 +39,15 @@ const DeliveryDetails = () => {
 
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  // QBE state: multiple fields in one modal
+  const [showQbeModal, setShowQbeModal] = useState(false);
+  const [qbeName, setQbeName] = useState("");
+  const [qbeAddress, setQbeAddress] = useState("");
+  const [qbePaymentMethod, setQbePaymentMethod] = useState("");
+  const [qbePaymentOption, setQbePaymentOption] = useState("");
+  const [qbeItems, setQbeItems] = useState("");
+  const [qbeTotal, setQbeTotal] = useState("");
 
   const guideqst = [
     {
@@ -83,8 +93,8 @@ const DeliveryDetails = () => {
     fetch("http://localhost/DeliveryTrackingSystem/get_deliveries.php")
       .then((res) => res.json())
       .then((data) => {
-        setDeliveries(data);
-        setFiltered(data);
+        setDeliveries(data || []);
+        setFiltered(data || []);
       })
       .catch((err) => console.error("Failed to fetch deliveries:", err));
   };
@@ -159,20 +169,141 @@ const DeliveryDetails = () => {
   };
 
   const applyFilters = (list, term, status) => {
-    const lower = term.toLowerCase();
+    const lower = String(term || "")
+      .toLowerCase()
+      .trim();
     return list.filter((e) => {
       const matchesSearch =
         (e.transaction_id &&
-          e.transaction_id.toString().toLowerCase().includes(lower)) ||
+          String(e.transaction_id).toLowerCase().includes(lower)) ||
         (e.tracking_number &&
-          e.tracking_number.toString().toLowerCase().includes(lower)) ||
-        (e.customer_name && e.customer_name.toLowerCase().includes(lower)) ||
+          String(e.tracking_number).toLowerCase().includes(lower)) ||
+        (e.customer_name &&
+          String(e.customer_name).toLowerCase().includes(lower)) ||
         (e.delivery_status &&
-          e.delivery_status.toLowerCase().includes(lower)) ||
-        (e.description && e.description.toLowerCase().includes(lower));
+          String(e.delivery_status).toLowerCase().includes(lower)) ||
+        (e.description && String(e.description).toLowerCase().includes(lower));
 
       const matchesStatus = status === "All" || e.delivery_status === status;
       return matchesSearch && matchesStatus;
+    });
+  };
+
+  // New QBE filter: accepts multiple fields and applies them as AND conditions
+  const applyQBEFilter = (list, qbeFields, status) => {
+    const {
+      name = "",
+      address = "",
+      paymentMethod = "",
+      paymentOption = "",
+      items = "",
+      total = "",
+    } = qbeFields || {};
+
+    const nameLower = String(name || "")
+      .toLowerCase()
+      .trim();
+    const addressLower = String(address || "")
+      .toLowerCase()
+      .trim();
+    const paymentMethodLower = String(paymentMethod || "")
+      .toLowerCase()
+      .trim();
+    const paymentOptionLower = String(paymentOption || "")
+      .toLowerCase()
+      .trim();
+    const itemsLower = String(items || "")
+      .toLowerCase()
+      .trim();
+    const totalLower = String(total || "")
+      .toLowerCase()
+      .trim();
+
+    return list.filter((e) => {
+      if (status !== "All" && e.delivery_status !== status) return false;
+
+      // build haystack for flexible searching
+      const parts = [];
+      if (e.transaction_id) parts.push(String(e.transaction_id));
+      if (e.tracking_number) parts.push(String(e.tracking_number));
+      if (e.customer_name) parts.push(String(e.customer_name));
+      if (e.customer_address) parts.push(String(e.customer_address));
+      if (e.mode_of_payment) parts.push(String(e.mode_of_payment));
+      if (e.payment_option) parts.push(String(e.payment_option));
+      if (e.description) parts.push(String(e.description));
+      if (e.total) parts.push(String(e.total));
+
+      if (e.items) {
+        try {
+          if (Array.isArray(e.items)) {
+            parts.push(
+              e.items
+                .map(
+                  (it) =>
+                    `${it.description || ""} ${it.quantity || ""} ${
+                      it.type_of_product || ""
+                    }`
+                )
+                .join(" ")
+            );
+          } else {
+            parts.push(String(e.items));
+          }
+        } catch {
+          parts.push(String(e.items));
+        }
+      }
+
+      const hay = parts.join(" ").toLowerCase();
+
+      // For each provided field, require a match (AND logic). If the field is blank, treat as pass.
+      if (
+        nameLower &&
+        !(
+          e.customer_name &&
+          String(e.customer_name).toLowerCase().includes(nameLower)
+        )
+      )
+        return false;
+      if (
+        addressLower &&
+        !(
+          e.customer_address &&
+          String(e.customer_address).toLowerCase().includes(addressLower)
+        )
+      )
+        return false;
+      if (
+        paymentMethodLower &&
+        !(
+          e.mode_of_payment &&
+          String(e.mode_of_payment).toLowerCase().includes(paymentMethodLower)
+        )
+      )
+        return false;
+      if (
+        paymentOptionLower &&
+        !(
+          e.payment_option &&
+          String(e.payment_option).toLowerCase().includes(paymentOptionLower)
+        )
+      )
+        return false;
+      if (itemsLower && !hay.includes(itemsLower)) return false;
+
+      if (totalLower) {
+        // allow number-ish comparisons or substring
+        const normTotal = String(e.total || "")
+          .replace(/,/g, "")
+          .toLowerCase();
+        if (normTotal.includes(totalLower.replace(/,/g, ""))) {
+          // ok
+        } else if (!hay.includes(totalLower)) {
+          return false;
+        }
+      }
+
+      return true;
     });
   };
 
@@ -182,7 +313,57 @@ const DeliveryDetails = () => {
 
   const handleStatusFilter = (status) => {
     setStatusFilter(status);
-    setFiltered(applyFilters(deliveries, "", status));
+    // re-apply current QBE if any, otherwise simple status filter
+    const hasQBE =
+      qbeName ||
+      qbeAddress ||
+      qbePaymentMethod ||
+      qbePaymentOption ||
+      qbeItems ||
+      qbeTotal;
+    if (hasQBE) {
+      const qbeFields = {
+        name: qbeName,
+        address: qbeAddress,
+        paymentMethod: qbePaymentMethod,
+        paymentOption: qbePaymentOption,
+        items: qbeItems,
+        total: qbeTotal,
+      };
+      setFiltered(applyQBEFilter(deliveries, qbeFields, status));
+    } else {
+      setFiltered(applyFilters(deliveries, "", status));
+    }
+  };
+
+  const openQbeModal = () => {
+    setShowQbeModal(true);
+    // keep existing values so user can edit previous query
+  };
+
+  const handleQBEApply = () => {
+    const qbeFields = {
+      name: qbeName,
+      address: qbeAddress,
+      paymentMethod: qbePaymentMethod,
+      paymentOption: qbePaymentOption,
+      items: qbeItems,
+      total: qbeTotal,
+    };
+
+    const filtered = applyQBEFilter(deliveries, qbeFields, statusFilter);
+    setFiltered(filtered);
+    setShowQbeModal(false);
+  };
+
+  const clearQBE = () => {
+    setQbeName("");
+    setQbeAddress("");
+    setQbePaymentMethod("");
+    setQbePaymentOption("");
+    setQbeItems("");
+    setQbeTotal("");
+    setFiltered(applyFilters(deliveries, "", statusFilter));
   };
 
   const groupedDeliveries = filter.reduce((acc, item) => {
@@ -236,7 +417,29 @@ const DeliveryDetails = () => {
       showSearch={true}
       onSearch={handleSearch}
     >
-      <div className="mb-3 d-flex justify-content-end">
+      <div className="mb-3 d-flex justify-content-end align-items-center">
+        {/* Single QBE Button (left of the status filter) */}
+        <div className="me-2">
+          <button
+            className="btn d-flex align-items-center"
+            title="Advanced Filter (QBE)"
+            onClick={openQbeModal}
+            style={{
+              backgroundColor: "#116B8A",
+              color: "white",
+              border: "none",
+              padding: "8px 12px",
+              borderRadius: 6,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <FaFilter />
+            Advanced Filter
+          </button>
+        </div>
+
         <Form.Select
           value={statusFilter}
           onChange={(e) => handleStatusFilter(e.target.value)}
@@ -391,6 +594,89 @@ const DeliveryDetails = () => {
         setEditableItems={setEditableItems}
       />
 
+      {/* Single QBE Modal */}
+      <Modal show={showQbeModal} onHide={() => setShowQbeModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Advanced Filter (QBE)</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Customer name"
+              value={qbeName}
+              onChange={(e) => setQbeName(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Address</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Customer address"
+              value={qbeAddress}
+              onChange={(e) => setQbeAddress(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Payment Method</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="e.g. Cash, Bank Transfer"
+              value={qbePaymentMethod}
+              onChange={(e) => setQbePaymentMethod(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Payment Option</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="e.g. Down Payment, Bank"
+              value={qbePaymentOption}
+              onChange={(e) => setQbePaymentOption(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Items Ordered</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Item description or type"
+              value={qbeItems}
+              onChange={(e) => setQbeItems(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Total Cost</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="e.g. 1000 or 1,000"
+              value={qbeTotal}
+              onChange={(e) => setQbeTotal(e.target.value)}
+            />
+            <Form.Text className="text-muted">
+              Leave fields blank to ignore them in the query.
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowQbeModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="light" onClick={clearQBE}>
+            Clear
+          </Button>
+          <Button variant="primary" onClick={handleQBEApply}>
+            Apply
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* FAQ Modal */}
       <Modal
         show={showFAQ}
         onHide={() => {

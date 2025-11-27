@@ -3,8 +3,8 @@ import AdminLayout from "./AdminLayout";
 import ViewPersonnelModal from "./ViewPersonnelModal";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaUserPlus, FaCheck, FaTimes } from "react-icons/fa";
-import { Table, Modal, Button } from "react-bootstrap";
+import { FaUserPlus, FaFilter } from "react-icons/fa";
+import { Table, Modal, Button, Form } from "react-bootstrap";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 
@@ -17,6 +17,14 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
+
+  // QBE state
+  const [showQbeModal, setShowQbeModal] = useState(false);
+  const [qbeName, setQbeName] = useState("");
+  const [qbeEmail, setQbeEmail] = useState("");
+  const [qbeUsername, setQbeUsername] = useState("");
+  const [qbeStatus, setQbeStatus] = useState("");
+  const [qbeAssignmentStatus, setQbeAssignmentStatus] = useState("");
 
   const guideqst = [
     {
@@ -59,22 +67,63 @@ const UserManagement = () => {
       .catch((err) => console.error("Error fetching personnel:", err));
   };
 
-  const filteredPersonnel = personnel.filter((person) => {
-    const fullName = `${person.pers_fname || ""} ${
-      person.pers_lname || ""
-    }`.toLowerCase();
-    const email = (person.pers_email || "").toLowerCase();
-    const username = (person.pers_username || "").toLowerCase();
-    const status = (person.status || "").toLowerCase();
-    const assignmentStatus = (person.assignment_status || "").toLowerCase();
-    const search = searchTerm.toLowerCase();
+  // small helper: case-insensitive contains (safe when value might be undefined)
+  const contains = (hay, needle) =>
+    String(hay || "")
+      .toLowerCase()
+      .includes(String(needle || "").toLowerCase());
 
+  // Determine if any QBE field is active
+  const hasQBE =
+    qbeName.trim() ||
+    qbeEmail.trim() ||
+    qbeUsername.trim() ||
+    qbeStatus.trim() ||
+    qbeAssignmentStatus.trim();
+
+  // Combined filteredPersonnel: if QBE fields provided, apply QBE (AND across filled fields),
+  // otherwise apply the simple searchTerm filter.
+  const filteredPersonnel = personnel.filter((person) => {
+    // normalize fields
+    const fullName = `${person.pers_fname || ""} ${person.pers_lname || ""}`;
+    const email = person.pers_email || "";
+    const username = person.pers_username || "";
+    const status = person.status || "";
+    const assignmentStatus = person.assignment_status || "";
+
+    // If any QBE fields exist, apply QBE (AND across non-empty QBE fields)
+    if (hasQBE) {
+      if (qbeName && !contains(fullName, qbeName)) return false;
+      if (qbeEmail && !contains(email, qbeEmail)) return false;
+      if (qbeUsername && !contains(username, qbeUsername)) return false;
+      if (qbeStatus && !contains(status, qbeStatus)) return false;
+      if (
+        qbeAssignmentStatus &&
+        !contains(assignmentStatus, qbeAssignmentStatus)
+      )
+        return false;
+      // Also allow searchTerm to further filter (optional)
+      if (searchTerm) {
+        const search = String(searchTerm).toLowerCase();
+        return (
+          fullName.toLowerCase().includes(search) ||
+          email.toLowerCase().includes(search) ||
+          username.toLowerCase().includes(search) ||
+          status.toLowerCase().includes(search) ||
+          assignmentStatus.toLowerCase().includes(search)
+        );
+      }
+      return true;
+    }
+
+    // Otherwise use existing simple search behavior (searchTerm)
+    const search = String(searchTerm).toLowerCase();
     return (
-      fullName.includes(search) ||
-      email.includes(search) ||
-      username.includes(search) ||
-      status.includes(search) ||
-      assignmentStatus.includes(search)
+      fullName.toLowerCase().includes(search) ||
+      email.toLowerCase().includes(search) ||
+      username.toLowerCase().includes(search) ||
+      status.toLowerCase().includes(search) ||
+      assignmentStatus.toLowerCase().includes(search)
     );
   });
 
@@ -127,7 +176,27 @@ const UserManagement = () => {
           fetchPersonnel();
         }
       })
-      .catch((err) => console.error("Error updating status:", err));
+      .catch((err) => {
+        console.error("Error updating status:", err);
+        fetchPersonnel();
+      });
+  };
+
+  // QBE modal actions
+  const openQbeModal = () => setShowQbeModal(true);
+  const closeQbeModal = () => setShowQbeModal(false);
+
+  const clearQBE = () => {
+    setQbeName("");
+    setQbeEmail("");
+    setQbeUsername("");
+    setQbeStatus("");
+    setQbeAssignmentStatus("");
+  };
+
+  const applyQBE = () => {
+    // Filtering is reactive — we just close modal; filteredPersonnel uses QBE state.
+    setShowQbeModal(false);
   };
 
   return (
@@ -144,8 +213,27 @@ const UserManagement = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
     >
-      {/* Create Account Button */}
-      <div className="d-flex justify-content-end mx-4 my-4">
+      {/* Top controls */}
+      <div className="d-flex justify-content-end mx-4 my-4 align-items-center gap-2">
+        <button
+          className="btn d-flex align-items-center"
+          title="Advanced Filter (QBE)"
+          onClick={openQbeModal}
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            border: "none",
+            padding: "8px 12px",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <FaFilter />
+          Advanced Filter
+        </button>
+
         <Button
           variant="success"
           className="d-flex align-items-center gap-2"
@@ -242,32 +330,29 @@ const UserManagement = () => {
                             color: person.status === "Active" ? "green" : "red",
                           }}
                         >
-                          {person.status === "Active" ? (
-                            <FaCheck />
-                          ) : (
-                            <FaTimes />
-                          )}
+                          {person.status === "Active" ? "✓" : "✕"}
                         </span>
                       </div>
                     </div>
                   </td>
-                  <td className="text-center">
-                    <Button
-                      variant="primary"
+                  <td className="action-btn p-2 d-flex gap-2 align-items-center justify-content-center">
+                    <button
+                      id="personnel-view"
+                      className="btn btn-view"
                       onClick={() => {
                         setSelectedUser(person.pers_username);
                         setShowModal(true);
                       }}
                     >
                       View
-                    </Button>
+                    </button>
                   </td>
                 </tr>
               ))
           ) : (
             <tr>
               <td colSpan="6" className="text-center">
-                {searchTerm
+                {searchTerm || hasQBE
                   ? "No matching personnel found."
                   : "No delivery personnel accounts found."}
               </td>
@@ -282,6 +367,98 @@ const UserManagement = () => {
         onHide={() => setShowModal(false)}
         username={selectedUser}
       />
+
+      {/* QBE Modal */}
+      <Modal show={showQbeModal} onHide={closeQbeModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Advanced Filter (QBE)</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Full name or part"
+              value={qbeName}
+              onChange={(e) => setQbeName(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Email</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Email or part"
+              value={qbeEmail}
+              onChange={(e) => setQbeEmail(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Username</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Username or part"
+              value={qbeUsername}
+              onChange={(e) => setQbeUsername(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Status</Form.Label>
+            <Form.Control
+              as="select"
+              value={qbeStatus}
+              onChange={(e) => setQbeStatus(e.target.value)}
+            >
+              <option value="">(Any)</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </Form.Control>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Assignment Status</Form.Label>
+            <Form.Control
+              as="select"
+              value={qbeAssignmentStatus}
+              onChange={(e) => setQbeAssignmentStatus(e.target.value)}
+            >
+              <option value="">(Any)</option>
+              <option value="Available">Available</option>
+              <option value="Out for Delivery">Out for Delivery</option>
+              <option value="Inactive">Inactive</option>
+            </Form.Control>
+            <Form.Text className="text-muted">
+              Fill any combination of fields. Filters are combined with AND
+              logic.
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeQbeModal}>
+            Cancel
+          </Button>
+          <Button
+            variant="light"
+            onClick={() => {
+              clearQBE();
+              // keep modal open so the user sees cleared fields, or close if you prefer:
+              // setShowQbeModal(false)
+            }}
+          >
+            Clear
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              applyQBE();
+            }}
+          >
+            Apply
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* FAQ Modal */}
       <Modal show={showFAQ} onHide={() => setShowFAQ(false)} centered>

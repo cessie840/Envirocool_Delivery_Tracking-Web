@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Tabs, Tab, Collapse } from "react-bootstrap";
+import { Modal, Button, Form, Tabs, Tab } from "react-bootstrap";
 import OperationalLayout from "./OperationalLayout";
 import axios from "axios";
 import { BsExclamationCircleFill, BsCheckCircleFill } from "react-icons/bs";
-import { Toaster, toast } from "sonner";
+import { Toaster } from "sonner";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 
@@ -21,6 +21,16 @@ const OperationalDelivery = () => {
   const [deviceList, setDeviceList] = useState([]);
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+
+  // QBE state (added)
+  const [showQbeModal, setShowQbeModal] = useState(false);
+  const [qbeName, setQbeName] = useState("");
+  const [qbeAddress, setQbeAddress] = useState("");
+  const [qbeTracking, setQbeTracking] = useState("");
+  const [qbePaymentMode, setQbePaymentMode] = useState("");
+  const [qbeAssignedPersonnel, setQbeAssignedPersonnel] = useState("");
+  const [qbeItems, setQbeItems] = useState("");
+  const [qbeTotal, setQbeTotal] = useState("");
 
   const guideqst = [
     {
@@ -159,6 +169,143 @@ const OperationalDelivery = () => {
     setShowDetailModal(true);
   };
 
+  // --- helpers for QBE matching ---
+  const safe = (v) => (v == null ? "" : String(v));
+  const contains = (hay, needle) =>
+    safe(hay).toLowerCase().includes(safe(needle).toLowerCase());
+
+  // parse total input for optional operator (>, <, >=, <=, =)
+  const parseTotalQuery = (raw) => {
+    const s = safe(raw).trim();
+    const m = s.match(/^\s*([<>]=?|=)?\s*([0-9,\.]+)\s*$/);
+    if (!m) return { op: null, num: null, raw: s.toLowerCase() };
+    return {
+      op: m[1] || "=",
+      num: parseFloat(m[2].replace(/,/g, "")),
+      raw: s.toLowerCase(),
+    };
+  };
+
+  // QBE filter function (AND across provided fields)
+  const applyQBEFilter = (list) => {
+    const nameQ = qbeName.trim().toLowerCase();
+    const addrQ = qbeAddress.trim().toLowerCase();
+    const trackQ = qbeTracking.trim().toLowerCase();
+    const payQ = qbePaymentMode.trim().toLowerCase();
+    const assignedQ = qbeAssignedPersonnel.trim().toLowerCase();
+    const itemsQ = qbeItems.trim().toLowerCase();
+    const totalQParsed = parseTotalQuery(qbeTotal);
+
+    return list.filter((o) => {
+      // name
+      if (nameQ && !contains(o.customer_name, nameQ)) return false;
+
+      // address: check common address fields and haystack
+      if (addrQ) {
+        const addrOk =
+          contains(o.customer_address, addrQ) ||
+          contains(o.delivery_address, addrQ) ||
+          contains(o.city, addrQ) ||
+          contains(o.barangay, addrQ);
+        if (!addrOk) {
+          // also check haystack of items/description/tracking etc
+          const hay = [
+            o.tracking_number,
+            o.payment_mode,
+            o.assigned_personnel,
+            o.status,
+            o.target_date_delivery,
+            o.customer_name,
+            o.customer_address,
+          ]
+            .concat(
+              Array.isArray(o.items)
+                ? o.items.map(
+                    (it) =>
+                      `${it.name || it.description || ""} ${it.quantity || ""}`
+                  )
+                : []
+            )
+            .join(" ");
+          if (!hay.toLowerCase().includes(addrQ)) return false;
+        }
+      }
+
+      // tracking
+      if (trackQ && !contains(o.tracking_number, trackQ)) return false;
+
+      // payment mode
+      if (
+        payQ &&
+        !contains(o.payment_mode, payQ) &&
+        !contains(o.mode_of_payment, payQ)
+      )
+        return false;
+
+      // assigned personnel
+      if (assignedQ && !contains(o.assigned_personnel, assignedQ)) return false;
+
+      // items: search item names/descriptions/ types and item quantities
+      if (itemsQ) {
+        const itemsHay = Array.isArray(o.items)
+          ? o.items
+              .map(
+                (it) =>
+                  `${it.name || it.description || it.type || ""} ${
+                    it.quantity || ""
+                  }`
+              )
+              .join(" ")
+          : safe(o.items);
+        if (!itemsHay.toLowerCase().includes(itemsQ)) return false;
+      }
+
+      // total: numeric operator (>, <, >=, <=, =) support or substring match
+      if (qbeTotal && qbeTotal.trim() !== "") {
+        const eTotal =
+          parseFloat(
+            safe(o.total_cost || o.total || o.amount || 0).replace(
+              /[^0-9.\-]+/g,
+              ""
+            )
+          ) || 0;
+        if (totalQParsed.num != null && totalQParsed.op) {
+          switch (totalQParsed.op) {
+            case ">":
+              if (!(eTotal > totalQParsed.num)) return false;
+              break;
+            case ">=":
+              if (!(eTotal >= totalQParsed.num)) return false;
+              break;
+            case "<":
+              if (!(eTotal < totalQParsed.num)) return false;
+              break;
+            case "<=":
+              if (!(eTotal <= totalQParsed.num)) return false;
+              break;
+            case "=":
+            default:
+              if (!(Math.abs(eTotal - totalQParsed.num) < 0.0001)) return false;
+          }
+        } else {
+          const hay = (
+            safe(o.total_cost) +
+            " " +
+            safe(o.total) +
+            " " +
+            safe(o.customer_name) +
+            " " +
+            safe(o.tracking_number)
+          ).toLowerCase();
+          if (!hay.includes(totalQParsed.raw)) return false;
+        }
+      }
+
+      return true;
+    });
+  };
+
+  // Derived lists (unchanged logic, QBE applied after searchTerm filtering)
   const unassignedOrders = orders
     .filter((o) => !o.assigned_personnel || o.assigned_personnel === null)
     .sort(
@@ -214,17 +361,31 @@ const OperationalDelivery = () => {
     );
   });
 
+  // Apply QBE if any QBE field is set
+  const hasQBE =
+    qbeName ||
+    qbeAddress ||
+    qbeTracking ||
+    qbePaymentMode ||
+    qbeAssignedPersonnel ||
+    qbeItems ||
+    qbeTotal;
+
+  let finalUnassigned = searchedUnassignedOrders;
+  let finalAssigned = searchedAssignedOrders;
+
+  if (hasQBE) {
+    finalUnassigned = applyQBEFilter(searchedUnassignedOrders);
+    finalAssigned = applyQBEFilter(searchedAssignedOrders);
+  }
+
   const filteredUnassignedOrders = filterDate
-    ? searchedUnassignedOrders.filter(
-        (o) => o.target_date_delivery === filterDate
-      )
-    : searchedUnassignedOrders;
+    ? finalUnassigned.filter((o) => o.target_date_delivery === filterDate)
+    : finalUnassigned;
 
   const filteredAssignedOrders = filterDate
-    ? searchedAssignedOrders.filter(
-        (o) => o.target_date_delivery === filterDate
-      )
-    : searchedAssignedOrders;
+    ? finalAssigned.filter((o) => o.target_date_delivery === filterDate)
+    : finalAssigned;
 
   return (
     <>
@@ -277,10 +438,18 @@ const OperationalDelivery = () => {
             </div>
 
             <div className="d-flex align-items-center ms-3">
+              <Button
+                className="me-2"
+                variant="outline-primary"
+                size="sm"
+                onClick={() => setShowQbeModal(true)}
+              >
+                Advanced Filter
+              </Button>
+
               <Form.Control
                 type="date"
                 value={filterDate}
-                placeholder="valaka"
                 onChange={(e) => setFilterDate(e.target.value)}
                 style={{ width: "180px", height: "38px" }}
               />
@@ -634,6 +803,120 @@ const OperationalDelivery = () => {
             </Modal.Footer>
           </Modal>
         </div>
+
+        {/* QBE Modal (added) */}
+        <Modal
+          show={showQbeModal}
+          onHide={() => setShowQbeModal(false)}
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Advanced Filter (QBE)</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-2">
+              <Form.Label>Customer Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Customer name"
+                value={qbeName}
+                onChange={(e) => setQbeName(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Address</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Address or city"
+                value={qbeAddress}
+                onChange={(e) => setQbeAddress(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Tracking No.</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Tracking number"
+                value={qbeTracking}
+                onChange={(e) => setQbeTracking(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Payment Mode</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. Cash, Bank Transfer"
+                value={qbePaymentMode}
+                onChange={(e) => setQbePaymentMode(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Assigned Personnel</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Personnel username or name"
+                value={qbeAssignedPersonnel}
+                onChange={(e) => setQbeAssignedPersonnel(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Items (name/description)</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Item description or type"
+                value={qbeItems}
+                onChange={(e) => setQbeItems(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-2">
+              <Form.Label>Total Cost</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. >1000 or 1000"
+                value={qbeTotal}
+                onChange={(e) => setQbeTotal(e.target.value)}
+              />
+              <Form.Text className="text-muted">
+                You can use operators: &gt; &lt; &gt;= &lt;= or exact number.
+              </Form.Text>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowQbeModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="light"
+              onClick={() => {
+                setQbeName("");
+                setQbeAddress("");
+                setQbeTracking("");
+                setQbePaymentMode("");
+                setQbeAssignedPersonnel("");
+                setQbeItems("");
+                setQbeTotal("");
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowQbeModal(false); /* filtering is reactive */
+              }}
+            >
+              Apply
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* FAQ Modal (unchanged) */}
         <Modal
           show={showFAQ}
           onHide={() => {
@@ -690,16 +973,6 @@ const OperationalDelivery = () => {
                           color: activeFAQIndex === index ? "white" : "#116B8A",
                           fontWeight: 600,
                           transition: "all 0.3s ease",
-                        }}
-                        onMouseOver={(e) => {
-                          if (activeFAQIndex !== index) {
-                            e.currentTarget.style.backgroundColor = "#d9eff1";
-                          }
-                        }}
-                        onMouseOut={(e) => {
-                          if (activeFAQIndex !== index) {
-                            e.currentTarget.style.backgroundColor = "#e9f6f8";
-                          }
                         }}
                       >
                         {faq.question}
