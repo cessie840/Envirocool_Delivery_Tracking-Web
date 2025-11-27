@@ -166,8 +166,8 @@ const AdminLayout = ({
             onClick={() => navigate("/user-management")}
           >
             <FaUsers className="icon" />
-            <span className="nav-text"> USER MANAGEMENT</span>
-            <span className="tooltip-text">User Management</span>
+            <span className="nav-text"> DELIVERY PERSONNEL ACCOUNTS</span>
+            <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
 
           <button

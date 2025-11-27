@@ -39,7 +39,7 @@ const UserManagement = () => {
   ];
 
   useEffect(() => {
-    document.title = "User Management";
+    document.title = "Delivery Personnel Accounts";
     fetchPersonnel();
   }, []);
 
@@ -134,7 +134,7 @@ const UserManagement = () => {
     <AdminLayout
       title={
         <div className="d-flex align-items-center gap-2">
-          <span>User Management</span>
+          <span>Delivery Personnel Accounts</span>
           <HiQuestionMarkCircle
             style={{ fontSize: "2rem", color: "#07720885", cursor: "pointer" }}
             onClick={() => setShowFAQ(true)}
