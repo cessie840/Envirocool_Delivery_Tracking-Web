@@ -3,14 +3,28 @@ import OperationalLayout from "./OperationalLayout";
 import ViewPersonnelModal from "./ViewPersonnelModal";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaUserPlus, FaCheck, FaTimes } from "react-icons/fa";
-import { Table, Modal, Button } from "react-bootstrap";
+import { FaUserPlus, FaCheck, FaTimes, FaFilter } from "react-icons/fa";
+import { Table, Modal, Button, Form } from "react-bootstrap";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const PersonnelAccounts = () => {
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+  const [personnel, setPersonnel] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const navigate = useNavigate();
+
+  // QBE state
+  const [showQbeModal, setShowQbeModal] = useState(false);
+  const [qbeName, setQbeName] = useState("");
+  const [qbeEmail, setQbeEmail] = useState("");
+  const [qbeUsername, setQbeUsername] = useState("");
+  const [qbeStatus, setQbeStatus] = useState("");
+  const [qbeAssignmentStatus, setQbeAssignmentStatus] = useState("");
 
   const guideqst = [
     {
@@ -31,11 +45,6 @@ const PersonnelAccounts = () => {
         "This situation is beyond the system’s control, as it requires direct communication with the delivery personnel involved since they are the account holder responsible for the delivery.",
     },
   ];
-  const navigate = useNavigate();
-  const [personnel, setPersonnel] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
@@ -55,27 +64,58 @@ const PersonnelAccounts = () => {
         }));
         setPersonnel(dataWithStatus);
       })
-      .catch((error) => {
-        console.error("Error fetching personnel:", error);
-      });
+      .catch((error) => console.error("Error fetching personnel:", error));
   };
 
-  const filteredPersonnel = personnel.filter((person) => {
-    const fullName = `${person.pers_fname || ""} ${
-      person.pers_lname || ""
-    }`.toLowerCase();
-    const email = (person.pers_email || "").toLowerCase();
-    const username = (person.pers_username || "").toLowerCase();
-    const status = (person.status || "").toLowerCase();
-    const assignmentStatus = (person.assignment_status || "").toLowerCase();
-    const search = searchTerm.toLowerCase();
+  const contains = (hay, needle) =>
+    String(hay || "")
+      .toLowerCase()
+      .includes(String(needle || "").toLowerCase());
 
+  const hasQBE =
+    qbeName.trim() ||
+    qbeEmail.trim() ||
+    qbeUsername.trim() ||
+    qbeStatus.trim() ||
+    qbeAssignmentStatus.trim();
+
+  const filteredPersonnel = personnel.filter((person) => {
+    const fullName = `${person.pers_fname || ""} ${person.pers_lname || ""}`;
+    const email = person.pers_email || "";
+    const username = person.pers_username || "";
+    const status = person.status || "";
+    const assignmentStatus = person.assignment_status || "";
+
+    if (hasQBE) {
+      if (qbeName && !contains(fullName, qbeName)) return false;
+      if (qbeEmail && !contains(email, qbeEmail)) return false;
+      if (qbeUsername && !contains(username, qbeUsername)) return false;
+      if (qbeStatus && !contains(status, qbeStatus)) return false;
+      if (
+        qbeAssignmentStatus &&
+        !contains(assignmentStatus, qbeAssignmentStatus)
+      )
+        return false;
+      if (searchTerm) {
+        const search = String(searchTerm).toLowerCase();
+        return (
+          fullName.toLowerCase().includes(search) ||
+          email.toLowerCase().includes(search) ||
+          username.toLowerCase().includes(search) ||
+          status.toLowerCase().includes(search) ||
+          assignmentStatus.toLowerCase().includes(search)
+        );
+      }
+      return true;
+    }
+
+    const search = String(searchTerm).toLowerCase();
     return (
-      fullName.includes(search) ||
-      email.includes(search) ||
-      username.includes(search) ||
-      status.includes(search) ||
-      assignmentStatus.includes(search)
+      fullName.toLowerCase().includes(search) ||
+      email.toLowerCase().includes(search) ||
+      username.toLowerCase().includes(search) ||
+      status.toLowerCase().includes(search) ||
+      assignmentStatus.toLowerCase().includes(search)
     );
   });
 
@@ -104,13 +144,10 @@ const PersonnelAccounts = () => {
     axios
       .post(
         "http://localhost/DeliveryTrackingSystem/update_personnel_status.php",
-        {
-          username,
-          status: newStatus,
-        }
+        { username, status: newStatus }
       )
-      .then((response) => {
-        if (response.data.success) {
+      .then((res) => {
+        if (res.data.success) {
           setPersonnel((prev) =>
             prev.map((p) =>
               p.pers_username === username
@@ -120,26 +157,33 @@ const PersonnelAccounts = () => {
                     assignment_status:
                       newStatus === "Inactive"
                         ? "Inactive"
-                        : response.data.assignment_status || "Available",
+                        : res.data.assignment_status || "Available",
                   }
                 : p
             )
           );
-
-          ToastHelper.success(
-            `${username} is now ${
-              newStatus === "Active" ? "ACTIVE" : "INACTIVE"
-            }.`
-          );
+          ToastHelper.success(`${username} is now ${newStatus.toUpperCase()}.`);
         } else {
-          ToastHelper.error(response.data.message);
+          ToastHelper.error(res.data.message);
           fetchPersonnel();
         }
       })
-      .catch((error) => {
-        console.error("Error updating status:", error);
+      .catch((err) => {
+        console.error("Error updating status:", err);
+        fetchPersonnel();
       });
   };
+
+  const openQbeModal = () => setShowQbeModal(true);
+  const closeQbeModal = () => setShowQbeModal(false);
+  const clearQBE = () => {
+    setQbeName("");
+    setQbeEmail("");
+    setQbeUsername("");
+    setQbeStatus("");
+    setQbeAssignmentStatus("");
+  };
+  const applyQBE = () => setShowQbeModal(false);
 
   return (
     <OperationalLayout
@@ -147,12 +191,7 @@ const PersonnelAccounts = () => {
         <div className="d-flex align-items-center gap-2">
           <span>Delivery Personnel Accounts</span>
           <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
+            style={{ fontSize: "2rem", color: "#07720885", cursor: "pointer" }}
             onClick={() => setShowFAQ(true)}
           />
         </div>
@@ -160,7 +199,26 @@ const PersonnelAccounts = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
     >
-      <div className="d-flex justify-content-end mx-4 my-5">
+      <div className="d-flex justify-content-end mx-4 my-5 align-items-center gap-2">
+        <button
+          className="btn d-flex align-items-center"
+          title="Advanced Filter (QBE)"
+          onClick={openQbeModal}
+          style={{
+            backgroundColor: "#116B8A",
+            color: "white",
+            border: "none",
+            padding: "8px 12px",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <FaFilter />
+          Advanced Filter
+        </button>
+
         <button
           className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
           onClick={() => navigate("/create-personnel-account")}
@@ -200,15 +258,11 @@ const PersonnelAccounts = () => {
                   </td>
                   <td>{person.pers_email}</td>
                   <td>{person.pers_username}</td>
-
                   <td
                     className={`text-center fw-bold ${
                       person.assignment_status?.trim().toLowerCase() ===
                       "available"
                         ? "text-success"
-                        : person.assignment_status?.trim().toLowerCase() ===
-                          "out for delivery"
-                        ? "text-danger"
                         : "text-danger"
                     }`}
                   >
@@ -217,26 +271,16 @@ const PersonnelAccounts = () => {
                       ? "On Delivery"
                       : person.assignment_status}
                   </td>
-
                   <td className="text-center">
                     <div className="d-flex flex-column align-items-center">
                       <div
-                        onClick={() => {
-                          if (
-                            person.assignment_status?.trim().toLowerCase() ===
-                            "out for delivery"
-                          ) {
-                            ToastHelper.error(
-                              "Cannot change the account status while personnel is on delivery."
-                            );
-                            return;
-                          }
+                        onClick={() =>
                           handleToggleStatus(
                             person.pers_username,
                             person.status,
                             person.assignment_status
-                          );
-                        }}
+                          )
+                        }
                         style={{
                           cursor:
                             person.assignment_status?.trim().toLowerCase() ===
@@ -305,7 +349,7 @@ const PersonnelAccounts = () => {
           ) : (
             <tr>
               <td colSpan="6" className="text-center">
-                {searchTerm
+                {searchTerm || hasQBE
                   ? "No matching personnel found."
                   : "No delivery personnel accounts found."}
               </td>
@@ -320,6 +364,92 @@ const PersonnelAccounts = () => {
         username={selectedUser}
       />
 
+      {/* QBE Modal */}
+      <Modal show={showQbeModal} onHide={closeQbeModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Advanced Filter (QBE)</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Full name or part"
+              value={qbeName}
+              onChange={(e) => setQbeName(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Email</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Email or part"
+              value={qbeEmail}
+              onChange={(e) => setQbeEmail(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Username</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Username or part"
+              value={qbeUsername}
+              onChange={(e) => setQbeUsername(e.target.value)}
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Status</Form.Label>
+            <Form.Control
+              as="select"
+              value={qbeStatus}
+              onChange={(e) => setQbeStatus(e.target.value)}
+            >
+              <option value="">(Any)</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </Form.Control>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Assignment Status</Form.Label>
+            <Form.Control
+              as="select"
+              value={qbeAssignmentStatus}
+              onChange={(e) => setQbeAssignmentStatus(e.target.value)}
+            >
+              <option value="">(Any)</option>
+              <option value="Available">Available</option>
+              <option value="Out for Delivery">Out for Delivery</option>
+              <option value="Inactive">Inactive</option>
+            </Form.Control>
+            <Form.Text className="text-muted">
+              Fill any combination of fields. Filters are combined with AND
+              logic.
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeQbeModal}>
+            Cancel
+          </Button>
+          <Button
+            variant="light"
+            onClick={() => {
+              clearQBE();
+            }}
+          >
+            Clear
+          </Button>
+          <Button variant="primary" onClick={applyQBE}>
+            Apply
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* FAQ Modal */}
       <Modal
         show={showFAQ}
         onHide={() => {
@@ -343,11 +473,7 @@ const PersonnelAccounts = () => {
         <Modal.Body style={{ backgroundColor: "#f8f9fa" }}>
           <p className="px-3 text-justify mb-4" style={{ color: "#333" }}>
             The Delivery Personnel Accounts page allows you to manage all
-            registered delivery personnel within the system. You can view their
-            account details, email addresses, assigned usernames, and current
-            availability status. From this page, you can also create new
-            accounts for delivery personnel or view existing profiles to ensure
-            that all delivery staff information is accurate and up to date.
+            registered delivery personnel within the system...
           </p>
 
           <div className="px-3 mb-3">
@@ -376,16 +502,6 @@ const PersonnelAccounts = () => {
                         color: activeFAQIndex === index ? "white" : "#116B8A",
                         fontWeight: 600,
                         transition: "all 0.3s ease",
-                      }}
-                      onMouseOver={(e) => {
-                        if (activeFAQIndex !== index) {
-                          e.currentTarget.style.backgroundColor = "#d9eff1";
-                        }
-                      }}
-                      onMouseOut={(e) => {
-                        if (activeFAQIndex !== index) {
-                          e.currentTarget.style.backgroundColor = "#e9f6f8";
-                        }
                       }}
                     >
                       {faq.question}
@@ -417,10 +533,7 @@ const PersonnelAccounts = () => {
         </Modal.Body>
 
         <Modal.Footer
-          style={{
-            backgroundColor: "#f8f9fa",
-            borderTop: "1px solid #dee2e6",
-          }}
+          style={{ backgroundColor: "#f8f9fa", borderTop: "1px solid #dee2e6" }}
         >
           <Button
             onClick={() => {
