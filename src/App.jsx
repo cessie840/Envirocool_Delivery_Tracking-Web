@@ -14,6 +14,8 @@ import DeliveryDetails from "./AdminDeliveryDetails";
 import ViewDelivery from "./AdminViewOrder";
 import MonitorDelivery from "./AdminMonitorDelivery";
 import GenerateReport from "./AdminGenerateReport";
+import UserCreatePersonnelAccount from "./UserCreatePersonnelAccount";
+import UserManagement from "./UserManagement";
 import AdminSettings from "./settings/AdminSettings";
 
 // OPERATIONAL
@@ -61,6 +63,13 @@ function App() {
     },
     { path: "/monitor-delivery", element: <MonitorDelivery />, role: "admin" },
     { path: "/generate-report", element: <GenerateReport />, role: "admin" },
+    { path: "/user-management", element: <UserManagement />, role: "admin" },
+    {
+      path: "/create-personnel-account",
+      element: <UserCreatePersonnelAccount />,
+      role: "admin",
+    },
+
     { path: "/admin-settings", element: <AdminSettings />, role: "admin" },
 
     // OPERATIONAL

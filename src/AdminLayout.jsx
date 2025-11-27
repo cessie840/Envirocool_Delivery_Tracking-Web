@@ -14,6 +14,7 @@ import {
   FaAlignJustify,
   FaTimes,
   FaPlus,
+  FaUsers,
 } from "react-icons/fa";
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
@@ -156,6 +157,17 @@ const AdminLayout = ({
             <FaChartBar className="icon" />
             <span className="nav-text"> DATA ANALYTICS & REPORT</span>
             <span className="tooltip-text">Data Analytics & Report</span>
+          </button>
+
+          <button
+            className={`nav-btn ${
+              isActive("/user-management") ? "active" : ""
+            }`}
+            onClick={() => navigate("/user-management")}
+          >
+            <FaUsers className="icon" />
+            <span className="nav-text"> USER MANAGEMENT</span>
+            <span className="tooltip-text">User Management</span>
           </button>
 
           <button
