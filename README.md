@@ -101,6 +101,7 @@ CREATE TABLE Transactions (
     latitude DOUBLE DEFAULT 0,
     longitude DOUBLE DEFAULT 0,
     payment_status ENUM('Fully Paid', 'Partially Paid')
+   order_type ENUM('Delivery','Pickup') NOT NULL DEFAULT 'Delivery';
 ) AUTO_INCREMENT = 4001;
 
 
