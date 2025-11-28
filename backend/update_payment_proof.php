@@ -31,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $transaction_id = $_POST['transaction_id'] ?? null;
 $full_payment   = $_POST['full_payment'] ?? 0;
-$balance        = $_POST['balance'] ?? null;
 $fbilling_date  = $_POST['fbilling_date'] ?? null;
 $payments_json  = $_POST['payments'] ?? null;
 
@@ -55,8 +54,11 @@ if ($payments_json) {
     }
 }
 
-$uploadDir = '/uploads/proof_of_payment/';
+$date = date('Y-m-d');
+$uploadDir = __DIR__ . '/uploads/proof_of_payment/';
 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+$newProofs = [];
 
 $query = "SELECT total, down_payment, full_payment, balance, proof_of_payment, payments 
           FROM Transactions WHERE transaction_id = ?";
@@ -83,9 +85,6 @@ if (!empty($row['proof_of_payment'])) {
 $existing_payments = json_decode($row['payments'] ?? '[]', true);
 if (!is_array($existing_payments)) $existing_payments = [];
 
-$newProofs = [];
-$date = date('Y-m-d');
-
 if (!empty($_FILES['proof_files']['name'][0])) {
     foreach ($_FILES['proof_files']['name'] as $i => $fileName) {
         $fileTmp = $_FILES['proof_files']['tmp_name'][$i];
@@ -101,7 +100,7 @@ if (!empty($_FILES['proof_files']['name'][0])) {
         $targetPath = $uploadDir . $newName;
 
         if (move_uploaded_file($fileTmp, $targetPath)) {
-            $newProofs[] = $targetPath;
+            $newProofs[] = 'uploads/proof_of_payment/' . $newName;
         } else {
             echo json_encode(['status' => 'error', 'message' => "Failed to upload $fileName"]);
             exit;

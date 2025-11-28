@@ -27,7 +27,6 @@ $raw = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
 $transactionId = isset($data['transaction_id']) ? intval($data['transaction_id']) : 0;
-
 if ($transactionId <= 0) {
     http_response_code(400);
     echo json_encode(["success" => false, "message" => "Invalid transaction ID"]);
@@ -52,7 +51,9 @@ try {
         if ($resCheck->num_rows === 0) {
             throw new Exception("Transaction not found or not updated.");
         }
+        $check->close();
     }
+
     $sql3 = "SELECT customer_name, customer_contact, tracking_number FROM Transactions WHERE transaction_id = ?";
     $stmt3 = $conn->prepare($sql3);
     $stmt3->bind_param("i", $transactionId);
@@ -68,6 +69,7 @@ try {
     $customerContact = $row['customer_contact'];
     $trackingNumber = $row['tracking_number'];
 
+    // Normalize Philippine mobile numbers
     $c = preg_replace('/[^0-9\+]/', '', $customerContact);
     if (preg_match('/^\+63[0-9]{10}$/', $c)) {
         $phoneNormalized = $c;
@@ -78,13 +80,14 @@ try {
     } elseif (preg_match('/^[0-9]{10}$/', $c)) {
         $phoneNormalized = '+63' . $c;
     } else {
-        $phoneNormalized = null; 
+        $phoneNormalized = null;
     }
 
     $conn->commit();
 
-    $trackingUrlSafe = "envirocool-tracking-page . vercel . app/";
-    $message = "Hi {$customerName}!\n\nYour order is now Out for Delivery.\nTracking No: {$trackingNumber}.\nTrack here: {$trackingUrlSafe}\n\nUse your tracking number to check your delivery status on the website.\n\nThis is a system notification from Envirocool Corp. Please do not reply.\n-Envirocool Corp.";
+    // Prepare message with safe link
+    $trackingUrlSafe = "envirocool-tracking-page(.)vercel(.)app";
+    $message = "Hi {$customerName}!  Your order is now Out for Delivery.  Tracking No: {$trackingNumber}.  Track here: {$trackingUrlSafe}.  Use your tracking number to check your delivery status on the website.  This is a system notification from Envirocool Corp.  Please do not reply.  -Envirocool Corp.";
 
     $smsResponse = null;
     if ($phoneNormalized) {
@@ -93,7 +96,7 @@ try {
             $apiKey = "Qyi5vgSUjNiXnezqcfElQ8rafEx31TPJH1kxVdJJVEt4GT6sgqXb7Hyzby1Jx2RH";
 
             $smsPayload = [
-                "to" => $phoneNormalized,
+                "to" => $phoneNormalized, // string format
                 "message" => $message
             ];
 
@@ -109,15 +112,15 @@ try {
                 CURLOPT_POSTFIELDS => json_encode($smsPayload, JSON_UNESCAPED_UNICODE),
                 CURLOPT_TIMEOUT => 30,
             ]);
+
             $smsResponse = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
             curl_close($ch);
 
-            @file_put_contents(__DIR__ . '/sms_debug_log.txt', "HTTP {$httpCode}\n{$smsResponse}\nError: {$curlError}\n\n", FILE_APPEND);
+            @file_put_contents(__DIR__ . '/sms_debug_log.txt', "Normalized number: {$phoneNormalized}\nHTTP {$httpCode}\nResponse: {$smsResponse}\nError: {$curlError}\n\n", FILE_APPEND);
 
             $historyReason = $curlError ? "cURL error: {$curlError}" : "HTTP {$httpCode} | Response: {$smsResponse}";
-
             $sqlHistory = "INSERT INTO DeliveryHistory (transaction_id, event_type, reason, event_timestamp) VALUES (?, 'SMS Sent', ?, NOW())";
             $stmtHist = $conn->prepare($sqlHistory);
             $stmtHist->bind_param("is", $transactionId, $historyReason);
@@ -137,8 +140,7 @@ try {
     ]);
 
 } catch (Exception $e) {
-    if (method_exists($conn, 'rollback'))
-        @$conn->rollback();
+    if (method_exists($conn, 'rollback')) $conn->rollback();
     http_response_code(500);
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
 } finally {
