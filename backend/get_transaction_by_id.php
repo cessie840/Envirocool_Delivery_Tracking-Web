@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 $allowed_origins = [
   "http://localhost:5173",
   "https://cessie840.github.io",
+  "http://localhost:5173/Envirocool-Tracking-Page"
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -34,6 +35,7 @@ if (!isset($_GET['transaction_id'])) {
 
 $transaction_id = intval($_GET['transaction_id']);
 
+// Fetch transaction details (removed 'payment_date' as it doesn't exist)
 $stmt = $conn->prepare("
     SELECT 
         transaction_id,
@@ -73,12 +75,14 @@ if (!$form) {
     exit;
 }
 
+// Parse address into components
 $addressParts = explode(',', $form['customer_address']);
 $form['house_no'] = trim($addressParts[0] ?? '');
 $form['street_name'] = trim($addressParts[1] ?? '');
 $form['barangay'] = trim($addressParts[2] ?? '');
 $form['city'] = trim($addressParts[3] ?? '');
 
+// Fetch order items
 $stmt2 = $conn->prepare("
     SELECT type_of_product, description, quantity, unit_cost,
            (quantity * unit_cost) AS total_cost
@@ -95,6 +99,7 @@ while ($row = $result2->fetch_assoc()) {
 }
 $stmt2->close();
 
+// Fetch the latest payment from payment_history (for receipt modal: recent additional payment)
 $latest_payment = null;
 $stmt3 = $conn->prepare("
     SELECT amount, payment_date
@@ -111,6 +116,7 @@ if ($result3->num_rows > 0) {
 }
 $stmt3->close();
 
+// Add latest payment to form data (for receipt: use this as 'additional_payment' instead of cumulative 'full_payment')
 $form['additional_payment'] = $latest_payment ? $latest_payment['amount'] : 0;
 $form['additional_payment_date'] = $latest_payment ? $latest_payment['payment_date'] : null;
 

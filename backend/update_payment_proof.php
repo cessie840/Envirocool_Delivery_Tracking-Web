@@ -1,24 +1,8 @@
 <?php
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-
-$allowed_origins = [
-    "http://localhost:5173",
-    "https://cessie840.github.io"
-];
-
-if (isset($_SERVER["HTTP_ORIGIN"]) && in_array($_SERVER["HTTP_ORIGIN"], $allowed_origins)) {
-    header("Access-Control-Allow-Origin: " . $_SERVER["HTTP_ORIGIN"]);
-}
-
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json");
-
-if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST');
+header('Access-Control-Allow-Headers: Content-Type');
 
 require_once 'database.php';
 
@@ -28,16 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $transaction_id = $_POST['transaction_id'] ?? null;
-$full_payment   = $_POST['full_payment'] ?? 0;
-$balance        = $_POST['balance'] ?? null;
-$fbilling_date  = $_POST['fbilling_date'] ?? null;
-$payments_json  = $_POST['payments'] ?? null;
+$full_payment = $_POST['full_payment'] ?? 0;
+$balance = $_POST['balance'] ?? null;
+$fbilling_date = $_POST['fbilling_date'] ?? null;
+$payments_json = $_POST['payments'] ?? null;
 
 if (!$transaction_id) {
     echo json_encode(['status' => 'error', 'message' => 'Transaction ID is required']);
     exit;
 }
 
+// Decode new payments
 $payments = [];
 if ($payments_json) {
     $decoded = json_decode($payments_json, true);
@@ -53,11 +38,14 @@ if ($payments_json) {
     }
 }
 
+// Upload directory
 $uploadDir = 'uploads/proof_of_payment/';
-if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+if (!is_dir($uploadDir))
+    mkdir($uploadDir, 0755, true);
 
+// Fetch current transaction
 $query = "SELECT total, down_payment, full_payment, balance, proof_of_payment, payments 
-          FROM Transactions WHERE transaction_id = ?";
+          FROM transactions WHERE transaction_id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param('s', $transaction_id);
 $stmt->execute();
@@ -72,24 +60,29 @@ $row = $result->fetch_assoc();
 $total = floatval($row['total']);
 $down_payment = floatval($row['down_payment']);
 
+// Existing proofs
 $existing_proof = [];
 if (!empty($row['proof_of_payment'])) {
     $decoded = json_decode($row['proof_of_payment'], true);
-    $existing_proof = is_array($decoded) ? $decoded : array_filter(explode(',', $row['proof_of_payment']));
+    $existing_proof = is_array($decoded)
+        ? $decoded
+        : array_filter(explode(',', $row['proof_of_payment']));
 }
 
+// Existing payments
 $existing_payments = json_decode($row['payments'] ?? '[]', true);
-if (!is_array($existing_payments)) $existing_payments = [];
+if (!is_array($existing_payments))
+    $existing_payments = [];
 
+// Handle file uploads
 $newProofs = [];
 $date = date('Y-m-d');
-
 if (!empty($_FILES['proof_files']['name'][0])) {
     foreach ($_FILES['proof_files']['name'] as $i => $fileName) {
         $fileTmp = $_FILES['proof_files']['tmp_name'][$i];
         $fileType = $_FILES['proof_files']['type'][$i];
 
-        if ($fileType && !in_array($fileType, ['image/jpeg', 'image/png'])) {
+        if (!in_array($fileType, ['image/jpeg', 'image/png'])) {
             echo json_encode(['status' => 'error', 'message' => "Invalid file type for $fileName"]);
             exit;
         }
@@ -107,21 +100,27 @@ if (!empty($_FILES['proof_files']['name'][0])) {
     }
 }
 
+// Merge proofs + payments
 $mergedProofs = array_values(array_merge($existing_proof, $newProofs));
 $mergedPayments = array_values(array_merge($existing_payments, $payments));
 
+// Recompute totals
 $total_paid = $down_payment;
-foreach ($mergedPayments as $p) $total_paid += floatval($p['amount']);
+foreach ($mergedPayments as $p)
+    $total_paid += floatval($p['amount']);
 
 $total_full_payment = 0;
-foreach ($mergedPayments as $p) $total_full_payment += floatval($p['amount']);
+foreach ($mergedPayments as $p)
+    $total_full_payment += floatval($p['amount']);
 
 $new_balance = max($total - $total_paid, 0);
 
+// Encode for DB
 $payments_encoded = json_encode($mergedPayments, JSON_UNESCAPED_UNICODE);
 $proof_encoded = json_encode($mergedProofs, JSON_UNESCAPED_UNICODE);
 
-$update = "UPDATE Transactions 
+// Update main transaction
+$update = "UPDATE transactions 
            SET payments = ?, 
                full_payment = ?, 
                balance = ?, 
@@ -130,10 +129,11 @@ $update = "UPDATE Transactions
            WHERE transaction_id = ?";
 
 $stmt = $conn->prepare($update);
-$stmt->bind_param('sddsss', $payments_encoded, $total_full_payment, $new_balance, $fbilling_date, $proof_encoded, $transaction_id);
+$stmt->bind_param('sddssi', $payments_encoded, $total_full_payment, $new_balance, $fbilling_date, $proof_encoded, $transaction_id);
 
 if ($stmt->execute()) {
 
+    // ✅ LOG PAYMENT HISTORY
     if ($full_payment > 0) {
         $proofLog = json_encode($newProofs, JSON_UNESCAPED_UNICODE);
         $log = $conn->prepare(

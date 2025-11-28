@@ -350,140 +350,136 @@ const GenerateReport = () => {
     }
   };
 
-  const buildUrl = (endpoint) => {
-    let url = `${endpoint}?period=${period}`;
-    if (startDate && endDate) {
-      url += `&start=${startDate}&end=${endDate}`;
+const buildUrl = (endpoint) => {
+  let url = `${endpoint}`;
+
+  // ✅ If user provided start & end dates → HIGHER PRIORITY
+  if (startDate && endDate) {
+    url += `?start=${startDate}&end=${endDate}`;
+    return url; // period ignored
+  }
+
+  // ✅ Otherwise, use period filter
+  if (period) {
+    url += `?period=${period}`;
+  }
+
+  return url;
+};
+
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    if (reportType === "sales" || reportType === "all") {
+      const res = await fetch(
+        buildUrl("http://localhost/DeliveryTrackingSystem/get_sales_report.php")
+      );
+      if (!res.ok) throw new Error("get_sales_report failed");
+      const data = await safeJson(res);
+      let normalizedSales = normalizeSales(data.sales ?? []);
+      setSalesData(normalizedSales);
+      setTopSelling(normalizeTopSelling(data.topSelling ?? []));
+      if (reportType === "sales") setSummary(data.summary ?? {});
     }
-    return url;
-  };
 
-  const fetchData = async () => {
-    setLoading(true);
-    let normalizedTransactions = [];
-    let deliveredTransactionIds = [];
-    let normalizedSales = [];
+    if (reportType === "transaction" || reportType === "all") {
+      const res = await fetch(
+        buildUrl(
+          "http://localhost/DeliveryTrackingSystem/get_transaction_report.php"
+        )
+      );
+      if (!res.ok) throw new Error("get_transaction_report failed");
+      const data = await safeJson(res);
+      const normalizedTransactions = normalizeTransactions(
+        data.transactions ?? []
+      );
+      setTransactionData(normalizedTransactions);
+      setSummary((prev) =>
+        reportType === "transaction"
+          ? data.summary ?? {}
+          : reportType === "all"
+          ? { ...prev, transactionSummary: data.summary ?? {} }
+          : prev
+      );
 
-    try {
-      if (reportType === "sales" || reportType === "all") {
-        const res = await fetch(
-          buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_sales_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_sales_report failed");
-        const data = await safeJson(res);
-        let normalizedSales = normalizeSales(data.sales ?? []);
-        normalizedSales = normalizedSales.filter(
-          (sale) => sale.delivery_status.toLowerCase() === "delivered"
-        );
-        setSalesData(normalizedSales);
-        setTopSelling(normalizeTopSelling(data.topSelling ?? []));
-        if (reportType === "sales") setSummary(data.summary ?? {});
-      }
-
-      if (reportType === "transaction" || reportType === "all") {
-        const res = await fetch(
-          buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_transaction_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_transaction_report failed");
-        const data = await safeJson(res);
-        const normalizedTransactions = normalizeTransactions(
-          data.transactions ?? []
-        );
-        setTransactionData(normalizedTransactions);
-        setSummary((prev) =>
-          reportType === "transaction"
-            ? data.summary ?? {}
-            : reportType === "all"
-            ? { ...prev, transactionSummary: data.summary ?? {} }
-            : prev
-        );
-
-        const personnelSet = new Set();
-        normalizedTransactions.forEach((t) => {
-          if (t.delivery_personnel && t.delivery_personnel !== "-") {
-            personnelSet.add(t.delivery_personnel);
-          }
-        });
-        setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
-      }
-
-      if (
-        reportType === "service" ||
-        reportType === "transaction" ||
-        reportType === "sales" ||
-        reportType === "all"
-      ) {
-        const res = await fetch(
-          buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_service_delivery_report failed");
-        const data = await safeJson(res);
-
-        const normalizedService = normalizeService(
-          data.serviceDeliveries ?? data.data ?? []
-        );
-        setServiceData(normalizedService);
-
-        if (data.failedReasons) {
-          setFailedReasons(data.failedReasons);
+      const personnelSet = new Set();
+      normalizedTransactions.forEach((t) => {
+        if (t.delivery_personnel && t.delivery_personnel !== "-") {
+          personnelSet.add(t.delivery_personnel);
         }
-
-        setSummary((prev) =>
-          reportType === "service"
-            ? data.summary ?? {}
-            : reportType === "all"
-            ? { ...prev, serviceSummary: data.summary ?? {} }
-            : prev
-        );
-
-        setCancellationReasonOptions([
-          "Vehicle-related Issue",
-          "Location Inaccessible",
-        ]);
-      }
-
-      if (reportType === "customer" || reportType === "all") {
-        const res = await fetch(
-          buildUrl(
-            "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
-          )
-        );
-        if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
-        const data = await safeJson(res);
-        setCustomerData(
-          normalizeCustomer(data.customerSatisfaction ?? data.data ?? [])
-        );
-        setSummary((prev) =>
-          reportType === "customer"
-            ? data.summary ?? {}
-            : reportType === "all"
-            ? { ...prev, customerSummary: data.summary ?? {} }
-            : prev
-        );
-      }
-    } catch (error) {
-      console.error("Fetch error:", error);
-      setSalesData([]);
-      setTopSelling([]);
-      setTransactionData([]);
-      setServiceData([]);
-      setCustomerData([]);
-      setDeliveryPersonnelOptions([]);
-      setCancellationReasonOptions([]);
-
-      console.log("Normalized Transactions:", normalizedTransactions);
-      console.log("Delivered Transaction IDs:", deliveredTransactionIds);
-      console.log("Normalized Sales:", normalizedSales);
-    } finally {
-      setLoading(false);
+      });
+      setDeliveryPersonnelOptions(Array.from(personnelSet).sort());
     }
-  };
+
+    if (
+      reportType === "service" ||
+      reportType === "transaction" ||
+      reportType === "sales" ||
+      reportType === "all"
+    ) {
+      const res = await fetch(
+        buildUrl(
+          "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php"
+        )
+      );
+      if (!res.ok) throw new Error("get_service_delivery_report failed");
+      const data = await safeJson(res);
+
+      const normalizedService = normalizeService(
+        data.serviceDeliveries ?? data.data ?? []
+      );
+      setServiceData(normalizedService);
+
+      if (data.failedReasons) {
+        setFailedReasons(data.failedReasons);
+      }
+
+      setSummary((prev) =>
+        reportType === "service"
+          ? data.summary ?? {}
+          : reportType === "all"
+          ? { ...prev, serviceSummary: data.summary ?? {} }
+          : prev
+      );
+
+      setCancellationReasonOptions([
+        "Vehicle-related Issue",
+        "Location Inaccessible",
+      ]);
+    }
+
+    if (reportType === "customer" || reportType === "all") {
+      const res = await fetch(
+        buildUrl(
+          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php"
+        )
+      );
+      if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
+      const data = await safeJson(res);
+      setCustomerData(
+        normalizeCustomer(data.customerSatisfaction ?? data.data ?? [])
+      );
+      setSummary((prev) =>
+        reportType === "customer"
+          ? data.summary ?? {}
+          : reportType === "all"
+          ? { ...prev, customerSummary: data.summary ?? {} }
+          : prev
+      );
+    }
+  } catch (error) {
+    console.error("Fetch error:", error);
+    setSalesData([]);
+    setTopSelling([]);
+    setTransactionData([]);
+    setServiceData([]);
+    setCustomerData([]);
+    setDeliveryPersonnelOptions([]);
+    setCancellationReasonOptions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const formatDate = (d) => {
     if (!d) return "";
@@ -586,178 +582,73 @@ const GenerateReport = () => {
     );
   };
 
-  const filteredSalesData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? salesData.filter((row) => {
-          const rowDate = new Date(row.date_of_order);
-          if (
-            rowDate < new Date(startDate) ||
-            rowDate > new Date(endDate) ||
-            row.delivery_status.toLowerCase() !== "delivered"
-          )
-            return false;
+const filteredSalesData = salesData.filter((row) => {
+  // Backend already filters by date and status ('Delivered'), so only filter by payment option
+  if (
+    paymentOptionFilter &&
+    row.payment_option.toLowerCase() !== paymentOptionFilter.toLowerCase()
+  )
+    return false;
+  return matchesSearch(row);
+});
 
-          if (
-            paymentOptionFilter &&
-            row.payment_option.toLowerCase() !==
-              paymentOptionFilter.toLowerCase()
-          )
-            return false;
+const filteredTransactionData = transactionData.filter((row) => {
+  // Backend filters by date, so only filter by other criteria
+  if (
+    deliveryStatus &&
+    row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
+  )
+    return false;
+  if (
+    deliveryPersonnel &&
+    !row.delivery_personnel
+      .toLowerCase()
+      .includes(deliveryPersonnel.toLowerCase())
+  )
+    return false;
+  if (
+    paymentOptionFilter &&
+    row.payment_option.toLowerCase() !== paymentOptionFilter.toLowerCase()
+  )
+    return false;
+  if (cancellationReasonFilter && row.cancelled_reason) {
+    if (
+      !row.cancelled_reason
+        .toLowerCase()
+        .includes(cancellationReasonFilter.toLowerCase())
+    )
+      return false;
+  } else if (cancellationReasonFilter) {
+    return false;
+  }
+  return matchesSearch(row);
+});
 
-          return true;
-        })
-      : salesData.filter(
-          (row) =>
-            row.delivery_status.toLowerCase() === "delivered" &&
-            (!paymentOptionFilter ||
-              row.payment_option.toLowerCase() ===
-                paymentOptionFilter.toLowerCase())
-        )
-  ).filter(matchesSearch);
+const filteredServiceData = serviceData.filter((row) => {
+  // Backend filters by date, so only filter by other criteria
+  if (
+    deliveryStatus &&
+    row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
+  )
+    return false;
+  if (cancellationReasonFilter && row.cancelled_reason) {
+    if (
+      !row.cancelled_reason
+        .toLowerCase()
+        .includes(cancellationReasonFilter.toLowerCase())
+    )
+      return false;
+  } else if (cancellationReasonFilter) {
+    return false;
+  }
+  return matchesSearch(row);
+});
 
-  const filteredTransactionData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? transactionData.filter((row) => {
-          const rowDate = new Date(row.date_of_order || row.date_of_order);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (
-            deliveryStatus &&
-            row.delivery_status?.toLowerCase() === deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (
-            deliveryPersonnel &&
-            !row.delivery_personnel
-              .toLowerCase()
-              .includes(deliveryPersonnel.toLowerCase())
-          )
-            return false;
-
-          if (
-            paymentOptionFilter &&
-            row.payment_option.toLowerCase() !==
-              paymentOptionFilter.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-      : transactionData.filter((row) => {
-          if (
-            deliveryStatus &&
-            row.delivery_status.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (
-            deliveryPersonnel &&
-            !row.delivery_personnel
-              .toLowerCase()
-              .includes(deliveryPersonnel.toLowerCase())
-          )
-            return false;
-
-          if (
-            paymentOptionFilter &&
-            row.payment_option.toLowerCase() !==
-              paymentOptionFilter.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-  ).filter(matchesSearch);
-
-  const filteredServiceData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? serviceData.filter((row) => {
-          const rowDate = new Date(row.date_of_order);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (
-            deliveryStatus &&
-            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-
-          return true;
-        })
-      : serviceData.filter((row) => {
-          if (
-            deliveryStatus &&
-            row.delivery_status?.toLowerCase() !== deliveryStatus.toLowerCase()
-          )
-            return false;
-
-          if (cancellationReasonFilter && row.cancelled_reason) {
-            if (
-              !row.cancelled_reason
-                .toLowerCase()
-                .includes(cancellationReasonFilter.toLowerCase())
-            )
-              return false;
-          } else if (cancellationReasonFilter) {
-            return false;
-          }
-          return true;
-        })
-  ).filter(matchesSearch);
-
-  const filteredCustomerData = (
-    isValidDate(new Date(startDate)) && isValidDate(new Date(endDate))
-      ? customerData.filter((row) => {
-          const rowDate = new Date(row.date_of_order);
-          if (rowDate < new Date(startDate) || rowDate > new Date(endDate))
-            return false;
-
-          if (String(row.delivery_status).toLowerCase() !== "delivered")
-            return false;
-
-          return true;
-        })
-      : customerData.filter((row) => {
-          if (String(row.delivery_status).toLowerCase() !== "delivered")
-            return false;
-          return true;
-        })
-  ).filter(matchesSearch);
+const filteredCustomerData = customerData.filter((row) => {
+  // Backend filters by date and status ('Delivered' or 'Cancelled'), but customer report only shows 'Delivered' (as per original logic)
+  if (String(row.delivery_status).toLowerCase() !== "delivered") return false;
+  return matchesSearch(row);
+});
 
   const overallClients = new Set(
     transactionData.map((row) => row.customer_name)
@@ -1047,526 +938,509 @@ const GenerateReport = () => {
     return rows;
   };
 
-  const generateTransactionPeriodRows = (
-    transactionData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
+const generateTransactionPeriodRows = (
+  transactionData,
+  period,
+  startDate,
+  endDate
+) => {
+  const rows = [];
+  const getMonthName = (monthIndex) =>
+    new Date(2000, monthIndex, 1).toLocaleString("default", {
+      month: "long",
+    });
 
-    const formatNumber = (num, decimals = 2, stripDecimals = true) => {
-      if (num == null || isNaN(num)) return " ";
-      let fixed = Number(num).toFixed(decimals);
-      if (stripDecimals && fixed.endsWith(".00"))
-        fixed = fixed.replace(".00", "");
-      return Number(fixed).toLocaleString();
-    };
+  const formatNumber = (num, decimals = 2, stripDecimals = true) => {
+    if (num == null || isNaN(num)) return " ";
+    let fixed = Number(num).toFixed(decimals);
+    if (stripDecimals && fixed.endsWith(".00"))
+      fixed = fixed.replace(".00", "");
+    return Number(fixed).toLocaleString();
+  };
 
-    const formatDate = (date) =>
-      date ? new Date(date).toISOString().split("T")[0] : "";
+  const formatDate = (date) =>
+    date ? new Date(date).toISOString().split("T")[0] : "";
 
-    const pushTxRow = (label, tx) => {
-      rows.push([
-        label || "",
-        tx.transaction_id ?? "-",
-        tx.tracking_number ?? "-",
-        tx.date_of_order ?? "-",
-        tx.customer_name ?? "-",
-        tx.customer_address ?? "-",
-        tx.item_name ?? "-",
-        formatNumber(tx.qty, 0),
-        formatNumber(tx.unit_cost, 2),
-        formatNumber(tx.subtotal, 2),
-        tx.delivery_status ?? "-",
-        tx.shipout_at ?? "-",
-        tx.completed_at ?? "-",
-      ]);
-    };
+  const pushTxRow = (label, tx) => {
+    rows.push([
+      label || "",
+      tx.transaction_id ?? "-",
+      tx.tracking_number ?? "-",
+      tx.date_of_order ?? "-",
+      tx.customer_name ?? "-",
+      tx.customer_address ?? "-",
+      tx.item_name ?? "-",
+      formatNumber(tx.qty, 0),
+      formatNumber(tx.unit_cost, 2),
+      formatNumber(tx.subtotal, 2),
+      tx.delivery_status ?? "-",
+      tx.shipout_at ?? "-",
+      tx.completed_at ?? "-",
+    ]);
+  };
 
-    const pushZeroRow = (label) => {
-      rows.push([
-        label,
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "0",
-        "0.00",
-        "0.00",
-        "-",
-        "-",
-        "-",
-      ]);
-    };
+  const pushZeroRow = (label) => {
+    rows.push([
+      label,
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-",
+      "0",
+      "0.00",
+      "0.00",
+      "-",
+      "-",
+      "-",
+    ]);
+  };
 
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = transactionData.filter(
-          (t) => new Date(t.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([
-            getMonthName(m),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-          ]);
-          monthTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = transactionData.filter(
-          (t) => new Date(t.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([
-            getMonthName(m),
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-          ]);
-          monthTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const dayTxs = transactionData.filter(
-          (t) => t.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-        const dayTxs = transactionData.filter(
-          (t) => formatDate(new Date(t.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
-          dayTxs.forEach((tx) => pushTxRow("", tx));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = transactionData.filter(
-        (t) => formatDate(new Date(t.date_of_order)) === todayStr
+  if (period === "annually") {
+    for (let m = 0; m < 12; m++) {
+      const monthTxs = transactionData.filter(
+        (t) => new Date(t.date_of_order).getMonth() === m
       );
+      if (monthTxs.length > 0) {
+        rows.push([
+          getMonthName(m),
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ]);
+        monthTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    }
+  } else if (period === "quarterly") {
+    const start = startDate ? new Date(startDate) : new Date();
+    const month = start.getMonth();
+    let quarterMonths = [];
+    if (month <= 2) quarterMonths = [0, 1, 2];
+    else if (month <= 5) quarterMonths = [3, 4, 5];
+    else if (month <= 8) quarterMonths = [6, 7, 8];
+    else quarterMonths = [9, 10, 11];
+
+    quarterMonths.forEach((m) => {
+      const monthTxs = transactionData.filter(
+        (t) => new Date(t.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([
+          getMonthName(m),
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ]);
+        monthTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    });
+  } else if (period === "monthly") {
+    const start = new Date(startDate || new Date());
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${start.getFullYear()}-${String(
+        start.getMonth() + 1
+      ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dayTxs = transactionData.filter((t) => t.date_of_order === dateStr);
       if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+        rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
         dayTxs.forEach((tx) => pushTxRow("", tx));
       } else {
-        pushZeroRow(todayStr);
+        pushZeroRow(dateStr);
       }
     }
-
-    const relevantTxs =
-      period === "daily"
-        ? transactionData.filter(
-            (t) =>
-              formatDate(new Date(t.date_of_order)) === formatDate(new Date())
-          )
-        : transactionData;
-
-    const totals = relevantTxs.reduce(
-      (acc, t) => ({
-        qty: acc.qty + (t.qty ?? 0),
-        subtotal: acc.subtotal + (t.subtotal ?? 0),
-      }),
-      { qty: 0, subtotal: 0 }
-    );
-
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      "-",
-      formatNumber(totals.qty, 0),
-      "-",
-      formatNumber(totals.subtotal, 2),
-      "-",
-      "-",
-      "-",
-    ]);
-
-    return rows;
-  };
-
-  const generateServicePeriodRows = (
-    serviceData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
-
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
-
-    const formatDate = (date) => {
-      if (!date) return "-";
-      const d = new Date(date);
-      if (isNaN(d)) return "-";
-      return d.toISOString().split("T")[0];
-    };
-
-    const pushServiceRow = (label, svc) => {
-      rows.push([
-        label || "",
-        svc.transaction_id ?? "-",
-        formatDate(svc.date_of_order),
-        svc.customer_name ?? "-",
-        svc.delivery_status ?? "-",
-        formatDate(svc.original_target_date ?? svc.target_date_delivery),
-        formatDate(svc.latest_rescheduled_date ?? svc.rescheduled_date),
-        svc.cancelled_reason ?? "-",
-      ]);
-    };
-
-    const pushZeroRow = (label) => {
-      rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
-    };
-
-    const normalizedData = serviceData.map((s) => ({
-      ...s,
-      date_of_order: formatDate(s.date_of_order),
-    }));
-
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = normalizedData.filter(
-          (s) => new Date(s.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
-          monthTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
-
-      quarterMonths.forEach((m) => {
-        const monthTxs = normalizedData.filter(
-          (s) => new Date(s.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
-          monthTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-        const dayTxs = normalizedData.filter(
-          (s) => s.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", ""]);
-          dayTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
-        const dayTxs = normalizedData.filter(
-          (s) => formatDate(new Date(s.date_of_order)) === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", "", ""]);
-          dayTxs.forEach((svc) => pushServiceRow("", svc));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = normalizedData.filter(
-        (s) => formatDate(new Date(s.date_of_order)) === todayStr
+  } else if (period === "weekly") {
+    const start = new Date(startDate || new Date());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = formatDate(d);
+      const dayTxs = transactionData.filter(
+        (t) => formatDate(new Date(t.date_of_order)) === dateStr
       );
       if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", "", ""]);
+        rows.push([dateStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+        dayTxs.forEach((tx) => pushTxRow("", tx));
+      } else {
+        pushZeroRow(dateStr);
+      }
+    }
+  } else if (period === "daily") {
+    const todayStr = formatDate(new Date());
+    const dayTxs = transactionData.filter(
+      (t) => formatDate(new Date(t.date_of_order)) === todayStr
+    );
+    if (dayTxs.length > 0) {
+      rows.push([todayStr, "", "", "", "", "", "", "", "", "", "", "", ""]);
+      dayTxs.forEach((tx) => pushTxRow("", tx));
+    } else {
+      pushZeroRow(todayStr);
+    }
+  }
+
+  const relevantTxs =
+    period === "daily"
+      ? transactionData.filter(
+          (t) =>
+            formatDate(new Date(t.date_of_order)) === formatDate(new Date())
+        )
+      : transactionData;
+
+  const totals = relevantTxs.reduce(
+    (acc, t) => ({
+      qty: acc.qty + (t.qty ?? 0),
+      subtotal: acc.subtotal + (t.subtotal ?? 0),
+    }),
+    { qty: 0, subtotal: 0 }
+  );
+
+  rows.push([
+    `TOTAL (${period.toUpperCase()})`,
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    "-",
+    formatNumber(totals.qty, 0),
+    "-",
+    formatNumber(totals.subtotal, 2),
+    "-",
+    "-",
+    "-",
+  ]);
+
+  return rows;
+};
+
+const generateServicePeriodRows = (serviceData, period, startDate, endDate) => {
+  const rows = [];
+
+  const getMonthName = (monthIndex) =>
+    new Date(2000, monthIndex, 1).toLocaleString("default", {
+      month: "long",
+    });
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    if (isNaN(d)) return "-";
+    return d.toISOString().split("T")[0];
+  };
+
+  const pushServiceRow = (label, svc) => {
+    rows.push([
+      label || "",
+      svc.transaction_id ?? "-",
+      formatDate(svc.date_of_order),
+      svc.customer_name ?? "-",
+      svc.delivery_status ?? "-",
+      formatDate(svc.original_target_date ?? svc.target_date_delivery),
+      formatDate(svc.latest_rescheduled_date ?? svc.rescheduled_date),
+      svc.cancelled_reason ?? "-",
+    ]);
+  };
+
+  const pushZeroRow = (label) => {
+    rows.push([label, "-", "-", "-", "-", "-", "-", "-"]);
+  };
+
+  const normalizedData = serviceData.map((s) => ({
+    ...s,
+    date_of_order: formatDate(s.date_of_order),
+  }));
+
+  if (period === "annually") {
+    for (let m = 0; m < 12; m++) {
+      const monthTxs = normalizedData.filter(
+        (s) => new Date(s.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
+        monthTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    }
+  } else if (period === "quarterly") {
+    const start = startDate ? new Date(startDate) : new Date();
+    const month = start.getMonth();
+    let quarterMonths = [];
+    if (month <= 2) quarterMonths = [0, 1, 2];
+    else if (month <= 5) quarterMonths = [3, 4, 5];
+    else if (month <= 8) quarterMonths = [6, 7, 8];
+    else quarterMonths = [9, 10, 11];
+
+    quarterMonths.forEach((m) => {
+      const monthTxs = normalizedData.filter(
+        (s) => new Date(s.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", "", ""]);
+        monthTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(getMonthName(m));
+      }
+    });
+  } else if (period === "monthly") {
+    const start = new Date(startDate || new Date());
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${start.getFullYear()}-${String(
+        start.getMonth() + 1
+      ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+      const dayTxs = normalizedData.filter((s) => s.date_of_order === dateStr);
+      if (dayTxs.length > 0) {
+        rows.push([dateStr, "", "", "", "", "", "", ""]);
         dayTxs.forEach((svc) => pushServiceRow("", svc));
       } else {
-        pushZeroRow(todayStr);
+        pushZeroRow(dateStr);
       }
     }
+  } else if (period === "weekly") {
+    const start = new Date(startDate || new Date());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
-
-    const totals = relevantData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = formatDate(d);
+      const dayTxs = normalizedData.filter(
+        (s) => formatDate(new Date(s.date_of_order)) === dateStr
+      );
+      if (dayTxs.length > 0) {
+        rows.push([dateStr, "", "", "", "", "", "", ""]);
+        dayTxs.forEach((svc) => pushServiceRow("", svc));
+      } else {
+        pushZeroRow(dateStr);
+      }
+    }
+  } else if (period === "daily") {
+    const todayStr = formatDate(new Date());
+    const dayTxs = normalizedData.filter(
+      (s) => formatDate(new Date(s.date_of_order)) === todayStr
     );
+    if (dayTxs.length > 0) {
+      rows.push([todayStr, "", "", "", "", "", "", ""]);
+      dayTxs.forEach((svc) => pushServiceRow("", svc));
+    } else {
+      pushZeroRow(todayStr);
+    }
+  }
 
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
+  const relevantData =
+    period === "daily"
+      ? normalizedData.filter((s) => s.date_of_order === formatDate(new Date()))
+      : normalizedData;
 
-    return rows;
+  const totals = relevantData.reduce(
+    (acc, s) => {
+      acc.total++;
+      if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+      if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+      return acc;
+    },
+    { total: 0, cancelled: 0, completed: 0 }
+  );
+
+  rows.push([
+    `TOTAL (${period.toUpperCase()})`,
+    "-",
+    "-",
+    "-",
+    `Completed: ${totals.completed}`,
+    "-",
+    "-",
+    `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+  ]);
+
+  return rows;
+};
+
+const generateCustomerSatisfactionRows = (
+  satisfactionData,
+  period,
+  startDate,
+  endDate
+) => {
+  const rows = [];
+
+  const getMonthName = (monthIndex) =>
+    new Date(2000, monthIndex, 1).toLocaleString("default", {
+      month: "long",
+    });
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    if (isNaN(d)) return "-";
+    return d.toISOString().split("T")[0];
   };
 
-  const generateCustomerSatisfactionRows = (
-    satisfactionData,
-    period,
-    startDate,
-    endDate
-  ) => {
-    const rows = [];
+  const pushCustomerRow = (label, c) => {
+    rows.push([
+      label || "",
+      c.transaction_id ?? "-",
+      formatDate(c.date_of_order),
+      c.customer_name ?? "-",
+      c.item_name ?? "-",
+      c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
+      c.delivery_status ?? "-",
+    ]);
+  };
 
-    const getMonthName = (monthIndex) =>
-      new Date(2000, monthIndex, 1).toLocaleString("default", {
-        month: "long",
-      });
+  const pushZeroRow = (label) => {
+    rows.push([label, "-", "-", "-", "-", "-", "-"]);
+  };
 
-    const formatDate = (date) => {
-      if (!date) return "-";
-      const d = new Date(date);
-      if (isNaN(d)) return "-";
-      return d.toISOString().split("T")[0];
-    };
+  const normalizedData = satisfactionData.map((c) => ({
+    ...c,
+    date_of_order: formatDate(c.date_of_order),
+  }));
 
-    const pushCustomerRow = (label, c) => {
-      rows.push([
-        label || "",
-        c.transaction_id ?? "-",
-        formatDate(c.date_of_order),
-        c.customer_name ?? "-",
-        c.item_name ?? "-",
-        c.customer_rating != null ? `${c.customer_rating}/5` : "N/A",
-        c.delivery_status ?? "-",
-      ]);
-    };
-
-    const pushZeroRow = (label) => {
-      rows.push([label, "-", "-", "-", "-", "-", "-"]);
-    };
-
-    const normalizedData = satisfactionData.map((c) => ({
-      ...c,
-      date_of_order: formatDate(c.date_of_order),
-    }));
-
-    if (period === "annually") {
-      for (let m = 0; m < 12; m++) {
-        const monthTxs = normalizedData.filter(
-          (c) => new Date(c.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", ""]);
-          monthTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
+  if (period === "annually") {
+    for (let m = 0; m < 12; m++) {
+      const monthTxs = normalizedData.filter(
+        (c) => new Date(c.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", ""]);
+        monthTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(getMonthName(m));
       }
-    } else if (period === "quarterly") {
-      const start = startDate ? new Date(startDate) : new Date();
-      const month = start.getMonth();
-      let quarterMonths = [];
-      if (month <= 2) quarterMonths = [0, 1, 2];
-      else if (month <= 5) quarterMonths = [3, 4, 5];
-      else if (month <= 8) quarterMonths = [6, 7, 8];
-      else quarterMonths = [9, 10, 11];
+    }
+  } else if (period === "quarterly") {
+    const start = startDate ? new Date(startDate) : new Date();
+    const month = start.getMonth();
+    let quarterMonths = [];
+    if (month <= 2) quarterMonths = [0, 1, 2];
+    else if (month <= 5) quarterMonths = [3, 4, 5];
+    else if (month <= 8) quarterMonths = [6, 7, 8];
+    else quarterMonths = [9, 10, 11];
 
-      quarterMonths.forEach((m) => {
-        const monthTxs = normalizedData.filter(
-          (c) => new Date(c.date_of_order).getMonth() === m
-        );
-        if (monthTxs.length > 0) {
-          rows.push([getMonthName(m), "", "", "", "", "", ""]);
-          monthTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(getMonthName(m));
-        }
-      });
-    } else if (period === "monthly") {
-      const start = new Date(startDate || new Date());
-      const daysInMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0
-      ).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${start.getFullYear()}-${String(
-          start.getMonth() + 1
-        ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-        const dayTxs = normalizedData.filter(
-          (c) => c.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", ""]);
-          dayTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(dateStr);
-        }
+    quarterMonths.forEach((m) => {
+      const monthTxs = normalizedData.filter(
+        (c) => new Date(c.date_of_order).getMonth() === m
+      );
+      if (monthTxs.length > 0) {
+        rows.push([getMonthName(m), "", "", "", "", "", ""]);
+        monthTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(getMonthName(m));
       }
-    } else if (period === "weekly") {
-      const start = new Date(startDate || new Date());
-      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    });
+  } else if (period === "monthly") {
+    const start = new Date(startDate || new Date());
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
 
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const dateStr = formatDate(d);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${start.getFullYear()}-${String(
+        start.getMonth() + 1
+      ).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-        const dayTxs = normalizedData.filter(
-          (c) => c.date_of_order === dateStr
-        );
-        if (dayTxs.length > 0) {
-          rows.push([dateStr, "", "", "", "", "", ""]);
-          dayTxs.forEach((c) => pushCustomerRow("", c));
-        } else {
-          pushZeroRow(dateStr);
-        }
-      }
-    } else if (period === "daily") {
-      const todayStr = formatDate(new Date());
-      const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
-
+      const dayTxs = normalizedData.filter((c) => c.date_of_order === dateStr);
       if (dayTxs.length > 0) {
-        rows.push([todayStr, "", "", "", "", "", ""]);
+        rows.push([dateStr, "", "", "", "", "", ""]);
         dayTxs.forEach((c) => pushCustomerRow("", c));
       } else {
-        pushZeroRow(todayStr);
+        pushZeroRow(dateStr);
       }
     }
+  } else if (period === "weekly") {
+    const start = new Date(startDate || new Date());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
-    const relevantData =
-      period === "daily"
-        ? normalizedData.filter(
-            (s) => s.date_of_order === formatDate(new Date())
-          )
-        : normalizedData;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = formatDate(d);
 
-    const totals = relevantData.reduce(
-      (acc, s) => {
-        acc.total++;
-        if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
-        if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
-        return acc;
-      },
-      { total: 0, cancelled: 0, completed: 0 }
-    );
+      const dayTxs = normalizedData.filter((c) => c.date_of_order === dateStr);
+      if (dayTxs.length > 0) {
+        rows.push([dateStr, "", "", "", "", "", ""]);
+        dayTxs.forEach((c) => pushCustomerRow("", c));
+      } else {
+        pushZeroRow(dateStr);
+      }
+    }
+  } else if (period === "daily") {
+    const todayStr = formatDate(new Date());
+    const dayTxs = normalizedData.filter((c) => c.date_of_order === todayStr);
 
-    rows.push([
-      `TOTAL (${period.toUpperCase()})`,
-      "-",
-      "-",
-      "-",
-      `Completed: ${totals.completed}`,
-      "-",
-      `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
-    ]);
+    if (dayTxs.length > 0) {
+      rows.push([todayStr, "", "", "", "", "", ""]);
+      dayTxs.forEach((c) => pushCustomerRow("", c));
+    } else {
+      pushZeroRow(todayStr);
+    }
+  }
 
-    return rows;
-  };
+  const relevantData =
+    period === "daily"
+      ? normalizedData.filter((s) => s.date_of_order === formatDate(new Date()))
+      : normalizedData;
+
+  const totals = relevantData.reduce(
+    (acc, s) => {
+      acc.total++;
+      if (s.delivery_status?.toLowerCase() === "cancelled") acc.cancelled++;
+      if (s.delivery_status?.toLowerCase() === "delivered") acc.completed++;
+      return acc;
+    },
+    { total: 0, cancelled: 0, completed: 0 }
+  );
+
+  rows.push([
+    `TOTAL (${period.toUpperCase()})`,
+    "-",
+    "-",
+    "-",
+    `Completed: ${totals.completed}`,
+    "-",
+    `Cancelled: ${totals.cancelled} / All: ${totals.total}`,
+  ]);
+
+  return rows;
+};
 
   const generateReport = async (reportType) => {
     const doc = new jsPDF({
@@ -1800,18 +1674,21 @@ const GenerateReport = () => {
 
     const fetchSalesData = async () => {
       try {
+        const queryParams = new URLSearchParams({
+          period: period || "monthly",
+          start: startDate || "",
+          end: endDate || "",
+        });
         const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_sales_report.php",
+          `http://localhost/DeliveryTrackingSystem/get_sales_report.php?${queryParams}`,
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("get_sales_report failed");
-
         const data = await res.json();
         let normalizedSales = normalizeSales(data.sales ?? []);
         normalizedSales = normalizedSales.filter(
           (sale) => sale.delivery_status.toLowerCase() === "delivered"
         );
-
         return generateSalesPeriodRows(
           normalizedSales,
           period,
@@ -1824,82 +1701,90 @@ const GenerateReport = () => {
       }
     };
 
-    const fetchTransactionData = async () => {
-      try {
-        const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_transaction_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_transaction_report failed");
+const fetchTransactionData = async () => {
+  try {
+    const queryParams = new URLSearchParams({
+      period: period || "monthly",
+      start: startDate || "",
+      end: endDate || "",
+    });
+    const res = await fetch(
+      `http://localhost/DeliveryTrackingSystem/get_transaction_report.php?${queryParams}`,
+      { method: "GET", credentials: "include" }
+    );
+    if (!res.ok) throw new Error("get_transaction_report failed");
+    const data = await res.json();
+    const normalizedTransactions = normalizeTransactions(
+      data.transactions ?? []
+    );
+    const transactionRows = generateTransactionPeriodRows(
+      normalizedTransactions,
+      period,
+      startDate,
+      endDate
+    );
+    return transactionRows;
+  } catch (error) {
+    console.error("Error fetching transaction data:", error);
+    return [];
+  }
+};
 
-        const data = await res.json();
-        const normalizedTransactions = normalizeTransactions(
-          data.transactions ?? []
-        );
+  const fetchServiceData = async () => {
+    try {
+      const queryParams = new URLSearchParams({
+        period: period || "monthly",
+        start: startDate || "",
+        end: endDate || "",
+      });
+      const res = await fetch(
+        `http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php?${queryParams}`,
+        { method: "GET", credentials: "include" }
+      );
+      if (!res.ok) throw new Error("get_service_delivery_report failed");
+      const data = await res.json();
+      const normalizedService = normalizeService(
+        data.serviceDeliveries ?? data.data ?? []
+      );
+      return generateServicePeriodRows(
+        normalizedService,
+        period,
+        startDate,
+        endDate
+      );
+    } catch (error) {
+      console.error("Error fetching service data:", error);
+      return [];
+    }
+  };
 
-        const transactionRows = generateTransactionPeriodRows(
-          normalizedTransactions,
-          period,
-          startDate,
-          endDate
-        );
-
-        return transactionRows;
-      } catch (error) {
-        console.error("Error fetching transaction data:", error);
-        return [];
-      }
-    };
-
-    const fetchServiceData = async () => {
-      try {
-        const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_service_delivery_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_service_delivery_report failed");
-
-        const data = await res.json();
-        const normalizedService = normalizeService(
-          data.serviceDeliveries ?? data.data ?? []
-        );
-
-        return generateServicePeriodRows(
-          normalizedService,
-          period,
-          startDate,
-          endDate
-        );
-      } catch (error) {
-        console.error("Error fetching service data:", error);
-        return [];
-      }
-    };
-
-    const fetchCustomerSatisfactionData = async () => {
-      try {
-        const res = await fetch(
-          "http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php",
-          { method: "GET", credentials: "include" }
-        );
-        if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
-
-        const data = await res.json();
-        const normalizedSatisfaction = normalizeCustomer(
-          data.customerSatisfaction ?? data.satisfaction ?? data.data ?? []
-        );
-
-        return generateCustomerSatisfactionRows(
-          normalizedSatisfaction,
-          period,
-          startDate,
-          endDate
-        );
-      } catch (error) {
-        console.error("Error fetching satisfaction data:", error);
-        return [];
-      }
-    };
+const fetchCustomerSatisfactionData = async () => {
+  try {
+    const queryParams = new URLSearchParams({
+      period: period || "monthly",
+      start: startDate || "",
+      end: endDate || "",
+    });
+    const res = await fetch(
+      `http://localhost/DeliveryTrackingSystem/get_customer_satisfaction_report.php?${queryParams}`,
+      { method: "GET", credentials: "include" }
+    );
+    if (!res.ok) throw new Error("get_customer_satisfaction_report failed");
+    const data = await res.json();
+    const normalizedSatisfaction = normalizeCustomer(
+      data.customerSatisfaction ?? data.satisfaction ?? data.data ?? []
+    );
+    return generateCustomerSatisfactionRows(
+      normalizedSatisfaction,
+      period,
+      startDate,
+      endDate
+    );
+  } catch (error) {
+    console.error("Error fetching satisfaction data:", error);
+    return [];
+  }
+};
 
     const type = (
       typeof reportType === "string" ? reportType : ""
@@ -3132,541 +3017,541 @@ const GenerateReport = () => {
     return data.slice(startIndex, startIndex + itemsPerPage);
   };
 
-  const renderSalesTable = () => {
-    const itemsPerPage = getItemsPerPage();
+const renderSalesTable = () => {
+  const itemsPerPage = getItemsPerPage();
 
-    const groupedData = Object.values(
-      filteredSalesData.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) {
-          acc[id] = { ...row, items: [] };
-        }
+  const groupedData = Object.values(
+    filteredSalesData.reduce((acc, row) => {
+      const id = row.transaction_id;
+      if (!acc[id]) {
+        acc[id] = { ...row, items: [] };
+      }
 
-        acc[id].items.push({
-          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
-          qty: row.qty,
-          unit_cost: Number(row.unit_cost),
-        });
+      acc[id].items.push({
+        name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
+        qty: row.qty,
+        unit_cost: Number(row.unit_cost),
+      });
 
-        return acc;
-      }, {})
-    );
+      return acc;
+    }, {})
+  );
 
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(salesPage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
+  const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+  const currentPage =
+    totalPages === 0 ? 0 : Math.max(1, Math.min(salesPage, totalPages));
+  const startIndex = totalPages === 0 ? 0 : (currentPage - 1) * itemsPerPage;
+  const paginatedData = groupedData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
-    return (
-      <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
-          <thead className="table-success">
+  return (
+    <>
+      <Table
+        bordered
+        hover
+        responsive
+        className="shadow-sm text-center"
+        style={{ cursor: "default" }}
+      >
+        <thead className="table-success">
+          <tr>
+            <th>Transaction No.</th>
+            <th>Date of Order</th>
+            <th>Client</th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Unit Cost</th>
+            <th>Subtotal</th>
+            <th>Total Cost</th>
+            <th>Payment Option</th>
+            <th>Down Payment</th>
+            <th>Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
             <tr>
-              <th>Transaction No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Item Name</th>
-              <th>Quantity</th>
-              <th>Unit Cost</th>
-              <th>Subtotal</th>
-              <th>Total Cost</th>
-              <th>Payment Option</th>
-              <th>Down Payment</th>
-              <th>Balance</th>
+              <td colSpan={11} className="text-center">
+                No sales data found.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={11} className="text-center">
-                  No sales data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                const subtotals = row.items.map(
-                  (item) => item.qty * item.unit_cost
-                );
+          ) : (
+            paginatedData.map((row, i) => {
+              const subtotals = row.items.map(
+                (item) => item.qty * item.unit_cost
+              );
 
-                const totalCost = subtotals.reduce((a, b) => a + b, 0);
+              const totalCost = subtotals.reduce((a, b) => a + b, 0);
 
-                return (
-                  <tr key={i} className="table-row-hover">
-                    <td>{row.transaction_id || "-"}</td>
-                    <td>{formatDate(row.date_of_order)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          {`${item.product_name || ""} ${
-                            item.name || ""
-                          }`.trim()}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>{item.qty}</div>
-                      ))}
-                    </td>
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          ₱
-                          {item.unit_cost.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      {subtotals.map((st, j) => (
-                        <div key={j}>
-                          ₱
-                          {st.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      ₱
-                      {totalCost.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td>{row.payment_option}</td>
-                    <td>
-                      ₱
-                      {Number(row.down_payment).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td>
-                      ₱
-                      {Number(row.balance).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setSalesPage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setSalesPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
-
-  const renderTransactionTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredTransactionData.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) {
-          acc[id] = { ...row, items: [] };
-        }
-
-        acc[id].items.push({
-          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
-          qty: Number(row.qty),
-          unit_cost: Number(row.unit_cost),
-        });
-
-        return acc;
-      }, {})
-    );
-
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(transactionPage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    return (
-      <>
-        <Table bordered hover responsive className="shadow-sm text-center">
-          <thead className="table-info">
-            <tr>
-              <th>Transaction No.</th>
-              <th>Tracking No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Address</th>
-              <th>Contact Number</th>
-              <th>Item Name</th>
-              <th>Quantity</th>
-              <th>Unit Cost</th>
-              <th>Subtotal</th>
-              <th>Total Cost</th>
-              <th>Mode of Payment</th>
-              <th>Payment Option</th>
-              <th>Down Payment</th>
-              <th>Balance</th>
-              <th>Delivery Personnel</th>
-              <th>Delivery Status</th>
-              <th>Ship Out At</th>
-              <th>Completed At</th>
-              <th>Reason for Cancellation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={20} className="text-center">
-                  No transaction data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                const subtotals = row.items.map(
-                  (item) => item.qty * item.unit_cost
-                );
-
-                const totalCost = subtotals.reduce((a, b) => a + b, 0);
-
-                return (
-                  <tr key={i}>
-                    <td>{row.transaction_id}</td>
-                    <td>{row.tracking_number || "-"}</td>
-                    <td>{formatDate(row.date_of_order)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>{row.customer_address}</td>
-                    <td>{row.customer_contact}</td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          {`${item.product_name || ""} ${
-                            item.name || ""
-                          }`.trim()}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>{item.qty}</div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {row.items.map((item, j) => (
-                        <div key={j}>
-                          ₱
-                          {item.unit_cost.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      {subtotals.map((st, j) => (
-                        <div key={j}>
-                          ₱
-                          {st.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      ))}
-                    </td>
-
-                    <td>
-                      ₱
-                      {totalCost.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td>{row.mode_of_payment || "-"}</td>
-
-                    <td>{row.payment_option || "-"}</td>
-
-                    <td>
-                      ₱
-                      {Number(row.down_payment).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td>
-                      ₱
-                      {Number(row.balance).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-
-                    <td>{row.delivery_personnel || "-"}</td>
-
-                    <td>{row.delivery_status || "-"}</td>
-
-                    <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
-
-                    <td>
-                      {row.completed_at ? formatDate(row.completed_at) : "-"}
-                    </td>
-
-                    <td>
-                      {row.cancelled_reason &&
-                      row.cancelled_reason.trim() !== ""
-                        ? row.cancelled_reason
-                        : "No Cancellation"}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setTransactionPage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages}
-            onClick={() => setTransactionPage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
-
-  const renderServiceTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredServiceData.reduce((acc, row) => {
-        const id = row.transaction_id;
-        if (!acc[id]) acc[id] = { ...row, items: [] };
-
-        acc[id].items.push({
-          name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
-          qty: row.qty,
-          unit_cost: Number(row.unit_cost),
-        });
-
-        return acc;
-      }, {})
-    );
-
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-    const currentPage = Math.max(1, Math.min(servicePage, totalPages || 1));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    return (
-      <>
-        <Table bordered hover responsive className="shadow-sm text-center">
-          <thead className="table-warning">
-            <tr>
-              <th>Transaction No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Delivery Status</th>
-              <th>Initial Delivery Date</th>
-              <th>Rescheduled Date</th>
-              <th>Reason for Cancellation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={8}>No delivery service data found.</td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => {
-                let displayStatus =
-                  row.delivery_status === "Cancelled"
-                    ? "Cancelled (For Rescheduling)"
-                    : row.delivery_status;
-                let targetDate = row.target_date_delivery
-                  ? formatDate(row.target_date_delivery)
-                  : "-";
-                let rescheduledDate = row.rescheduled_date
-                  ? formatDate(row.rescheduled_date)
-                  : "Not Rescheduled";
-
-                return (
-                  <tr key={i}>
-                    <td>{row.transaction_id}</td>
-                    <td>{formatDate(row.date_of_order)}</td>
-                    <td>{row.customer_name}</td>
-                    <td>{displayStatus}</td>
-                    <td>{targetDate}</td>
-                    <td>{rescheduledDate}</td>
-                    <td>
-                      {row.cancelled_reason && row.cancelled_reason !== "-"
-                        ? row.cancelled_reason
-                        : "No Cancellation"}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
-
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setServicePage(currentPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={currentPage === totalPages}
-            onClick={() => setServicePage(currentPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
-
-  const renderCustomerTable = () => {
-    const itemsPerPage = getItemsPerPage();
-
-    const groupedData = Object.values(
-      filteredCustomerData.reduce((acc, row) => {
-        if (!acc[row.transaction_id]) {
-          acc[row.transaction_id] = row;
-        }
-        return acc;
-      }, {})
-    );
-
-    const startIndex = (customerPage - 1) * itemsPerPage;
-    const paginatedData = groupedData.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-    const totalPages = Math.ceil(groupedData.length / itemsPerPage);
-
-    return (
-      <>
-        <Table
-          bordered
-          hover
-          responsive
-          className="shadow-sm text-center"
-          style={{ cursor: "default" }}
-        >
-          <thead>
-            <tr className="customer-header">
-              <th>Transaction No.</th>
-              <th>Date of Order</th>
-              <th>Client</th>
-              <th>Ratings</th>
-              <th>Delivery Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center">
-                  No client satisfaction data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((row, i) => (
+              return (
                 <tr key={i} className="table-row-hover">
                   <td>{row.transaction_id || "-"}</td>
-                  <td>{row.date_of_order}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
                   <td>{row.customer_name}</td>
-                  <td>{row.customer_rating ?? "N/A"}</td>
-                  <td>{row.delivery_status}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>
+                        {`${item.product_name || ""} ${item.name || ""}`.trim()}
+                      </div>
+                    ))}
+                  </td>
 
-        <div className="custom-pagination">
-          <button
-            className="page-btn"
-            disabled={customerPage === 1}
-            onClick={() => setCustomerPage(customerPage - 1)}
-          >
-            ‹
-          </button>
-          <span className="page-info">
-            Page {customerPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            disabled={customerPage === totalPages}
-            onClick={() => setCustomerPage(customerPage + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </>
-    );
-  };
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>{item.qty}</div>
+                    ))}
+                  </td>
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>
+                        ₱
+                        {item.unit_cost.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    ))}
+                  </td>
+                  <td>
+                    {subtotals.map((st, j) => (
+                      <div key={j}>
+                        ₱
+                        {st.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    ))}
+                  </td>
+                  <td>
+                    ₱
+                    {totalCost.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>{row.payment_option}</td>
+                  <td>
+                    ₱
+                    {Number(row.down_payment).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>
+                    ₱
+                    {Number(row.balance).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </Table>
+
+      <div className="custom-pagination">
+        <button
+          className="page-btn"
+          disabled={currentPage <= 1 || totalPages === 0}
+          onClick={() => setSalesPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn"
+          disabled={currentPage >= totalPages || totalPages === 0}
+          onClick={() => setSalesPage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
+    </>
+  );
+};
+
+const renderTransactionTable = () => {
+  const itemsPerPage = getItemsPerPage();
+
+  const groupedData = Object.values(
+    filteredTransactionData.reduce((acc, row) => {
+      const id = row.transaction_id;
+      if (!acc[id]) {
+        acc[id] = { ...row, items: [] };
+      }
+
+      acc[id].items.push({
+        name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
+        qty: Number(row.qty),
+        unit_cost: Number(row.unit_cost),
+      });
+
+      return acc;
+    }, {})
+  );
+
+  const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+  const currentPage =
+    totalPages === 0 ? 0 : Math.max(1, Math.min(transactionPage, totalPages));
+  const startIndex = totalPages === 0 ? 0 : (currentPage - 1) * itemsPerPage;
+  const paginatedData = groupedData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  return (
+    <>
+      <Table bordered hover responsive className="shadow-sm text-center">
+        <thead className="table-info">
+          <tr>
+            <th>Transaction No.</th>
+            <th>Tracking No.</th>
+            <th>Date of Order</th>
+            <th>Client</th>
+            <th>Address</th>
+            <th>Contact Number</th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Unit Cost</th>
+            <th>Subtotal</th>
+            <th>Total Cost</th>
+            <th>Mode of Payment</th>
+            <th>Payment Option</th>
+            <th>Down Payment</th>
+            <th>Balance</th>
+            <th>Delivery Personnel</th>
+            <th>Delivery Status</th>
+            <th>Ship Out At</th>
+            <th>Completed At</th>
+            <th>Reason for Cancellation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
+            <tr>
+              <td colSpan={20} className="text-center">
+                No transaction data found.
+              </td>
+            </tr>
+          ) : (
+            paginatedData.map((row, i) => {
+              const subtotals = row.items.map(
+                (item) => item.qty * item.unit_cost
+              );
+
+              const totalCost = subtotals.reduce((a, b) => a + b, 0);
+
+              return (
+                <tr key={i}>
+                  <td>{row.transaction_id}</td>
+                  <td>{row.tracking_number || "-"}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{row.customer_address}</td>
+                  <td>{row.customer_contact}</td>
+
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>
+                        {`${item.product_name || ""} ${item.name || ""}`.trim()}
+                      </div>
+                    ))}
+                  </td>
+
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>{item.qty}</div>
+                    ))}
+                  </td>
+
+                  <td>
+                    {row.items.map((item, j) => (
+                      <div key={j}>
+                        ₱
+                        {item.unit_cost.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    ))}
+                  </td>
+
+                  <td>
+                    {subtotals.map((st, j) => (
+                      <div key={j}>
+                        ₱
+                        {st.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    ))}
+                  </td>
+
+                  <td>
+                    ₱
+                    {totalCost.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+
+                  <td>{row.mode_of_payment || "-"}</td>
+
+                  <td>{row.payment_option || "-"}</td>
+
+                  <td>
+                    ₱
+                    {Number(row.down_payment).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+
+                  <td>
+                    ₱
+                    {Number(row.balance).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+
+                  <td>{row.delivery_personnel || "-"}</td>
+
+                  <td>{row.delivery_status || "-"}</td>
+
+                  <td>{row.shipout_at ? formatDate(row.shipout_at) : "-"}</td>
+
+                  <td>
+                    {row.completed_at ? formatDate(row.completed_at) : "-"}
+                  </td>
+
+                  <td>
+                    {row.cancelled_reason && row.cancelled_reason.trim() !== ""
+                      ? row.cancelled_reason
+                      : "No Cancellation"}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </Table>
+
+      <div className="custom-pagination">
+        <button
+          className="page-btn"
+          disabled={currentPage <= 1 || totalPages === 0}
+          onClick={() => setTransactionPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn"
+          disabled={currentPage >= totalPages || totalPages === 0}
+          onClick={() => setTransactionPage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
+    </>
+  );
+};
+
+const renderServiceTable = () => {
+  const itemsPerPage = getItemsPerPage();
+
+  const groupedData = Object.values(
+    filteredServiceData.reduce((acc, row) => {
+      const id = row.transaction_id;
+      if (!acc[id]) acc[id] = { ...row, items: [] };
+
+      acc[id].items.push({
+        name: `${row.product_name || ""} ${row.item_name || ""}`.trim(),
+        qty: row.qty,
+        unit_cost: Number(row.unit_cost),
+      });
+
+      return acc;
+    }, {})
+  );
+
+  const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+  const currentPage =
+    totalPages === 0 ? 0 : Math.max(1, Math.min(servicePage, totalPages));
+  const startIndex = totalPages === 0 ? 0 : (currentPage - 1) * itemsPerPage;
+  const paginatedData = groupedData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  return (
+    <>
+      <Table bordered hover responsive className="shadow-sm text-center">
+        <thead className="table-warning">
+          <tr>
+            <th>Transaction No.</th>
+            <th>Date of Order</th>
+            <th>Client</th>
+            <th>Delivery Status</th>
+            <th>Initial Delivery Date</th>
+            <th>Rescheduled Date</th>
+            <th>Reason for Cancellation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
+            <tr>
+              <td colSpan={8}>No delivery service data found.</td>
+            </tr>
+          ) : (
+            paginatedData.map((row, i) => {
+              let displayStatus =
+                row.delivery_status === "Cancelled"
+                  ? "Cancelled (For Rescheduling)"
+                  : row.delivery_status;
+              let targetDate = row.target_date_delivery
+                ? formatDate(row.target_date_delivery)
+                : "-";
+              let rescheduledDate = row.rescheduled_date
+                ? formatDate(row.rescheduled_date)
+                : "Not Rescheduled";
+
+              return (
+                <tr key={i}>
+                  <td>{row.transaction_id}</td>
+                  <td>{formatDate(row.date_of_order)}</td>
+                  <td>{row.customer_name}</td>
+                  <td>{displayStatus}</td>
+                  <td>{targetDate}</td>
+                  <td>{rescheduledDate}</td>
+                  <td>
+                    {row.cancelled_reason && row.cancelled_reason !== "-"
+                      ? row.cancelled_reason
+                      : "No Cancellation"}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </Table>
+
+      <div className="custom-pagination">
+        <button
+          className="page-btn"
+          disabled={currentPage <= 1 || totalPages === 0}
+          onClick={() => setServicePage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn"
+          disabled={currentPage >= totalPages || totalPages === 0}
+          onClick={() => setServicePage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
+    </>
+  );
+};
+
+const renderCustomerTable = () => {
+  const itemsPerPage = getItemsPerPage();
+
+  const groupedData = Object.values(
+    filteredCustomerData.reduce((acc, row) => {
+      if (!acc[row.transaction_id]) {
+        acc[row.transaction_id] = row;
+      }
+      return acc;
+    }, {})
+  );
+
+  const totalPages = Math.ceil(groupedData.length / itemsPerPage);
+  const currentPage =
+    totalPages === 0 ? 0 : Math.max(1, Math.min(customerPage, totalPages));
+  const startIndex = totalPages === 0 ? 0 : (currentPage - 1) * itemsPerPage;
+  const paginatedData = groupedData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  return (
+    <>
+      <Table
+        bordered
+        hover
+        responsive
+        className="shadow-sm text-center"
+        style={{ cursor: "default" }}
+      >
+        <thead>
+          <tr className="customer-header">
+            <th>Transaction No.</th>
+            <th>Date of Order</th>
+            <th>Client</th>
+            <th>Ratings</th>
+            <th>Delivery Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="text-center">
+                No client satisfaction data found.
+              </td>
+            </tr>
+          ) : (
+            paginatedData.map((row, i) => (
+              <tr key={i} className="table-row-hover">
+                <td>{row.transaction_id || "-"}</td>
+                <td>{row.date_of_order}</td>
+                <td>{row.customer_name}</td>
+                <td>{row.customer_rating ?? "N/A"}</td>
+                <td>{row.delivery_status}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </Table>
+
+      <div className="custom-pagination">
+        <button
+          className="page-btn"
+          disabled={currentPage <= 1 || totalPages === 0}
+          onClick={() => setCustomerPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+        <span className="page-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          className="page-btn"
+          disabled={currentPage >= totalPages || totalPages === 0}
+          onClick={() => setCustomerPage(currentPage + 1)}
+        >
+          ›
+        </button>
+      </div>
+    </>
+  );
+};
 
   return (
     <AdminLayout

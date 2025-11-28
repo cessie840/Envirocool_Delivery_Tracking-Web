@@ -78,7 +78,7 @@ try {
 
     $conn->commit();
 
-     $trackingUrlSafe = "cessie840 . github . io / Envirocool-Tracking-Page /";
+     $trackingUrlSafe = "envirocool   -   delivery  -  tracking  - system  - web  . vercel . app     ";
     $message = "Hi {$customerName}!\n\nYour order is now Out for Delivery.\nTracking No: {$trackingNumber}.\nTrack here: {$trackingUrlSafe}\n\nUse your tracking number to check your delivery status on the website.\n\nThis is a system notification from Envirocool Corp. Please do not reply.\n-Envirocool Corp.";
 
     $smsResponse = null;

@@ -95,6 +95,7 @@ const AddDelivery = () => {
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderType, setOrderType] = useState("");
 
   const [editModal, setEditModal] = useState({
     show: false,
@@ -137,6 +138,7 @@ const AddDelivery = () => {
     city: "",
     province: "",
     customer_contact: "",
+    order_type: "",
     date_of_order: "",
     target_date_delivery: "",
     payment_method: "",
@@ -428,6 +430,7 @@ const AddDelivery = () => {
       customer_name: "",
       customer_address: "",
       customer_contact: "",
+      order_type:"",
       date_of_order: "",
       target_date_delivery: "",
       payment_method: "",
@@ -436,7 +439,6 @@ const AddDelivery = () => {
       fp_collection_date: "",
       down_payment: "",
       dp_collection_date: "",
-
       balance: "",
       total: "",
     });
@@ -852,6 +854,8 @@ const AddDelivery = () => {
     formData.append("city", form.city);
     formData.append("province", form.province);
     formData.append("customer_contact", form.customer_contact);
+    formData.append("order_type", form.order_type || "Delivery");
+
     formData.append("date_of_order", form.date_of_order);
     formData.append("target_date_delivery", form.target_date_delivery);
     formData.append("payment_method", form.payment_method);
@@ -871,20 +875,19 @@ const AddDelivery = () => {
     formData.append(
       "customer_address",
       [
-        form.province,
-        form.city,
-        form.barangay,
         form.house_no,
         form.street_name,
         form.barangay,
+        form.city,
+        form.province,
         "Philippines",
       ]
         .filter(Boolean)
         .join(", ")
     );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
-    proofFiles.forEach((file, index) => {
-      formData.append(`proofOfPayment[${index}]`, file);
+    proofFiles.forEach((file) => {
+      formData.append("proofOfPayment[]", file);
     });
 
     try {
@@ -924,6 +927,7 @@ const AddDelivery = () => {
         city: form.city,
         province: form.province,
         customer_contact: form.customer_contact,
+        order_type: form.order_type,
         date_of_order: form.date_of_order,
         target_date_delivery: form.target_date_delivery,
         payment_method: form.payment_method,
@@ -957,6 +961,7 @@ const AddDelivery = () => {
         city: "",
         province: "",
         customer_contact: "",
+        order_type: "",
         date_of_order: "",
         target_date_delivery: "",
         payment_method: "",
@@ -1129,48 +1134,26 @@ const AddDelivery = () => {
             </div>
 
             <div className="col-md-6">
-              <label htmlFor="dateOfOrder" className="form-label">
-                Date of Order:
+              <label htmlFor="contactNumber" className="form-label">
+                Enter Client's Contact Number:
               </label>
               <input
-                type="date"
-                className={`form-control ${
-                  form.date_of_order ? "text-black" : "text-muted"
-                } ${orderDateError ? "is-invalid" : ""}`}
-                id="dateOfOrder"
-                name="date_of_order"
-                value={
-                  form.date_of_order
-                    ? new Date(form.date_of_order).toISOString().split("T")[0]
-                    : ""
-                }
-                onChange={(e) => {
-                  const selectedDate = new Date(e.target.value + "T00:00:00");
-                  const today = new Date(getLocalDate() + "T00:00:00");
-                  const day = selectedDate.getDay();
-
-                  if (isNaN(selectedDate.getTime())) {
-                    setOrderDateError("Please enter a valid date.");
-                  } else if (day === 0 || day === 6) {
-                    setOrderDateError(
-                      "Weekends are not allowed. Please choose another day."
-                    );
-                    e.target.value = "";
-                    setForm((prev) => ({ ...prev, date_of_order: "" }));
-                    return;
-                  } else if (selectedDate > today) {
-                    setOrderDateError("Date of order cannot be in the future.");
-                  } else {
-                    setOrderDateError("");
-                    handleChange(e);
-                  }
-                }}
+                type="text"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                pattern="\d*"
+                className={`form-control ${contactError ? "is-invalid" : ""}`}
+                id="contactNumber"
+                name="customer_contact"
+                value={form.customer_contact}
+                placeholder="Client's Contact No."
+                onChange={handleContactChange}
+                maxLength={11}
                 required
-                max={getLocalDate()}
               />
 
-              {orderDateError && (
-                <div className="invalid-feedback">{orderDateError}</div>
+              {contactError && (
+                <div className="invalid-feedback">{contactError}</div>
               )}
             </div>
           </div>
@@ -1178,6 +1161,27 @@ const AddDelivery = () => {
           <div className="mb-3">
             <label className="form-label">Customer Address:</label>
             <div className="row g-2">
+              <div className="col-md-6">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="House No./Street Name"
+                  name="house_no"
+                  value={form.house_no || ""}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Village/Subdivision"
+                  name="street_name"
+                  value={form.street_name || ""}
+                  onChange={handleChange}
+                />
+              </div>
               <div className="col-md-4">
                 <CreatableSelect
                   placeholder="Province"
@@ -1324,94 +1328,9 @@ const AddDelivery = () => {
                   }}
                 />
               </div>
-
-              <div className="col-md-6">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="House No./Street Name"
-                  name="house_no"
-                  value={form.house_no || ""}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="col-md-6">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Village/Subdivision"
-                  name="street_name"
-                  value={form.street_name || ""}
-                  onChange={handleChange}
-                />
-              </div>
             </div>
           </div>
 
-          <div className="row mb-4">
-            <div className="col-md-6">
-              <label htmlFor="contactNumber" className="form-label">
-                Enter Client's Contact Number:
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                pattern="\d*"
-                className={`form-control ${contactError ? "is-invalid" : ""}`}
-                id="contactNumber"
-                name="customer_contact"
-                value={form.customer_contact}
-                placeholder="Client's Contact No."
-                onChange={handleContactChange}
-                maxLength={11}
-                required
-              />
-
-              {contactError && (
-                <div className="invalid-feedback">{contactError}</div>
-              )}
-            </div>
-            <div className="col-md-6">
-              <label htmlFor="targetDate" className="form-label">
-                Date of Delivery:
-              </label>
-              <input
-                type="date"
-                id="targetDate"
-                name="target_date_delivery"
-                className={`form-control ${
-                  form.target_date_delivery ? "text-black" : "text-muted"
-                } ${dateError ? "is-invalid" : ""}`}
-                value={form.target_date_delivery || ""}
-                onChange={(e) => {
-                  const selectedDate = new Date(e.target.value + "T00:00:00");
-                  const today = new Date(getLocalDate() + "T00:00:00");
-                  const day = selectedDate.getDay();
-
-                  if (isNaN(selectedDate.getTime())) {
-                    setDateError("Please enter a valid date.");
-                  } else if (day === 0 || day === 6) {
-                    setDateError(
-                      "Weekends are not allowed. Please choose another day."
-                    );
-                    e.target.value = "";
-                    setForm((prev) => ({ ...prev, target_date_delivery: "" }));
-                    return;
-                  } else if (selectedDate < today) {
-                    setDateError("Date of delivery cannot be in the past.");
-                  } else {
-                    setDateError("");
-                    handleChange(e);
-                  }
-                }}
-                required
-                min={getLocalDate()}
-              />
-              {dateError && <div className="invalid-feedback">{dateError}</div>}
-            </div>
-          </div>
           <div className="order-details mt-5">
             <h4 className="mb-4">Order Details</h4>
             <table className="order-table table">
@@ -1861,8 +1780,146 @@ const AddDelivery = () => {
                 ✚ Add Another Item
               </button>
             </div>
+            <h4 className="mb-4">Delivery Details</h4>
+            <div className="row mb-3">
+              <div className="col-md-4 mb-3">
+                <label className="form-label d-block">Delivery Type:</label>
+                <Select
+                  options={[
+                    { value: "Delivery", label: "For Delivery" },
+                    { value: "Pickup", label: "For Pickup" },
+                  ]}
+                  placeholder="Select Order Type"
+                  isSearchable
+                  value={
+                    [
+                      { value: "Delivery", label: "For Delivery" },
+                      { value: "Pickup", label: "For Pickup" },
+                    ].find((opt) => opt.value === form.order_type) || null
+                  }
+                  onChange={(selected) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      order_type: selected?.value || "",
+                    }));
+                  }}
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: "43px",
+                      height: "43px",
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      height: "43px",
+                      padding: "0 8px",
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      margin: 0,
+                      padding: 0,
+                    }),
+                    indicatorsContainer: (provided) => ({
+                      ...provided,
+                      height: "43px",
+                    }),
+                  }}
+                />
+              </div>
 
-            <h4 className="mb-4">Payment Details</h4>
+              <div className="col-md-4">
+                <label htmlFor="dateOfOrder" className="form-label">
+                  Date of Order:
+                </label>
+                <input
+                  type="date"
+                  className={`form-control ${
+                    form.date_of_order ? "text-black" : "text-muted"
+                  } ${orderDateError ? "is-invalid" : ""}`}
+                  id="dateOfOrder"
+                  name="date_of_order"
+                  value={
+                    form.date_of_order
+                      ? new Date(form.date_of_order).toISOString().split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
+
+                    if (isNaN(selectedDate.getTime())) {
+                      setOrderDateError("Please enter a valid date.");
+                    } else if (day === 0 || day === 6) {
+                      setOrderDateError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({ ...prev, date_of_order: "" }));
+                      return;
+                    } else if (selectedDate > today) {
+                      setOrderDateError(
+                        "Date of order cannot be in the future."
+                      );
+                    } else {
+                      setOrderDateError("");
+                      handleChange(e);
+                    }
+                  }}
+                  required
+                  max={getLocalDate()}
+                />
+
+                {orderDateError && (
+                  <div className="invalid-feedback">{orderDateError}</div>
+                )}
+              </div>
+              <div className="col-md-4">
+                <label htmlFor="targetDate" className="form-label">
+                  Date of Delivery:
+                </label>
+                <input
+                  type="date"
+                  id="targetDate"
+                  name="target_date_delivery"
+                  className={`form-control ${
+                    form.target_date_delivery ? "text-black" : "text-muted"
+                  } ${dateError ? "is-invalid" : ""}`}
+                  value={form.target_date_delivery || ""}
+                  onChange={(e) => {
+                    const selectedDate = new Date(e.target.value + "T00:00:00");
+                    const today = new Date(getLocalDate() + "T00:00:00");
+                    const day = selectedDate.getDay();
+
+                    if (isNaN(selectedDate.getTime())) {
+                      setDateError("Please enter a valid date.");
+                    } else if (day === 0 || day === 6) {
+                      setDateError(
+                        "Weekends are not allowed. Please choose another day."
+                      );
+                      e.target.value = "";
+                      setForm((prev) => ({
+                        ...prev,
+                        target_date_delivery: "",
+                      }));
+                      return;
+                    } else if (selectedDate < today) {
+                      setDateError("Date of delivery cannot be in the past.");
+                    } else {
+                      setDateError("");
+                      handleChange(e);
+                    }
+                  }}
+                  required
+                  min={getLocalDate()}
+                />
+                {dateError && (
+                  <div className="invalid-feedback">{dateError}</div>
+                )}
+              </div>
+            </div>
+
+            <h4 className="mb-4 mt-5">Payment Details</h4>
 
             <div className="row mb-3">
               <div className="col-md-6">
@@ -2269,6 +2326,9 @@ const AddDelivery = () => {
                     <strong>Contact:</strong> {form.customer_contact}
                   </p>
                   <p>
+                    <strong>Order Type:</strong> {form.order_type}
+                  </p>
+                  <p>
                     <strong>Date of Order:</strong> {form.date_of_order}
                   </p>
                   <p>
@@ -2530,6 +2590,9 @@ const AddDelivery = () => {
                   </p>
                   <p>
                     <b>Contact:</b> {receiptData?.customer_contact || ""}
+                  </p>
+                  <p>
+                    <b>Contact:</b> {receiptData?.order_type || ""}
                   </p>
                   <p>
                     <b>Date of Order:</b> {receiptData?.date_of_order || ""}

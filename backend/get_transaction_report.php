@@ -23,21 +23,20 @@ $period = $_GET['period'] ?? 'monthly';
 $start = $_GET['start'] ?? null;
 $end = $_GET['end'] ?? null;
 
-if (!$start || !$end) {
+// Compute startDate/endDate
+if (empty($start) || empty($end)) {
     $today = new DateTime();
-
     switch ($period) {
         case 'daily':
             $startDate = $today->format('Y-m-d');
             $endDate = $startDate;
             break;
         case 'weekly':
-            $weekStart = clone $today;
-            $weekStart->modify('monday this week');
-            $weekEnd = clone $weekStart;
-            $weekEnd->modify('sunday this week');
-            $startDate = $weekStart->format('Y-m-d');
-            $endDate = $weekEnd->format('Y-m-d');
+            $endDateObj = clone $today;
+            $startDateObj = clone $today;
+            $startDateObj->modify('-6 days');
+            $startDate = $startDateObj->format('Y-m-d');
+            $endDate = $endDateObj->format('Y-m-d');
             break;
         case 'monthly':
             $startDate = $today->format('Y-m-01');
@@ -70,8 +69,7 @@ if (!$start || !$end) {
 $whereClause = "";
 $params = [];
 $types = "";
-
-if ($start && $end) {
+if (!empty($startDate) && !empty($endDate)) {
     $whereClause = "WHERE DATE(t.date_of_order) BETWEEN ? AND ?";
     $params = [$startDate, $endDate];
     $types = "ss";
@@ -103,11 +101,15 @@ FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
 LEFT JOIN DeliveryAssignments da ON t.transaction_id = da.transaction_id
 LEFT JOIN DeliveryPersonnel dp ON da.personnel_username = dp.pers_username
-$whereClause
+" . $whereClause . "
 ORDER BY t.date_of_order ASC
 ";
 
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    echo json_encode(["error" => $conn->error]);
+    exit;
+}
 if ($types) {
     $stmt->bind_param($types, ...$params);
 }
@@ -126,9 +128,14 @@ SELECT
     SUM(CASE WHEN LOWER(t.status) = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_deliveries
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-$whereClause
+" . $whereClause . "
 ";
+
 $stmtSum = $conn->prepare($sqlSummary);
+if (!$stmtSum) {
+    echo json_encode(["error" => $conn->error]);
+    exit;
+}
 if ($types) {
     $stmtSum->bind_param($types, ...$params);
 }

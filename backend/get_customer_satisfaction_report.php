@@ -10,21 +10,20 @@ $period = $_GET['period'] ?? 'monthly';
 $start = $_GET['start'] ?? null;
 $end = $_GET['end'] ?? null;
 
-if (!$start || !$end) {
+// Compute startDate/endDate either from provided start/end or from period
+if (empty($start) || empty($end)) {
     $today = new DateTime();
-
     switch ($period) {
         case 'daily':
             $startDate = $today->format('Y-m-d');
             $endDate = $startDate;
             break;
         case 'weekly':
-            $weekStart = clone $today;
-            $weekStart->modify('monday this week');
-            $weekEnd = clone $weekStart;
-            $weekEnd->modify('sunday this week');
-            $startDate = $weekStart->format('Y-m-d');
-            $endDate = $weekEnd->format('Y-m-d');
+            $endDateObj = clone $today;
+            $startDateObj = clone $today;
+            $startDateObj->modify('-6 days');
+            $startDate = $startDateObj->format('Y-m-d');
+            $endDate = $endDateObj->format('Y-m-d');
             break;
         case 'monthly':
             $startDate = $today->format('Y-m-01');
@@ -57,9 +56,8 @@ if (!$start || !$end) {
 $whereClause = "";
 $params = [];
 $types = "";
-
-if ($start && $end) {
-    $whereClause = "AND DATE(t.date_of_order) BETWEEN ? AND ?";
+if (!empty($startDate) && !empty($endDate)) {
+    $whereClause = " AND DATE(t.date_of_order) BETWEEN ? AND ?";
     $params = [$startDate, $endDate];
     $types = "ss";
 }
@@ -75,11 +73,16 @@ SELECT
     t.cancelled_reason
 FROM Transactions t
 JOIN PurchaseOrder po ON t.transaction_id = po.transaction_id
-WHERE t.status IN ('Delivered', 'Cancelled') $whereClause
+WHERE t.status IN ('Delivered', 'Cancelled')
+{$whereClause}
 ORDER BY t.date_of_order ASC
 ";
 
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    echo json_encode(["error" => $conn->error]);
+    exit;
+}
 if ($types) {
     $stmt->bind_param($types, ...$params);
 }
@@ -94,9 +97,15 @@ SELECT
     COUNT(DISTINCT t.customer_name) AS total_customers,
     AVG(t.customer_rating) AS avg_rating
 FROM Transactions t
-WHERE t.status IN ('Delivered', 'Cancelled') $whereClause
+WHERE t.status IN ('Delivered', 'Cancelled')
+" . $whereClause . "
 ";
+
 $stmtSum = $conn->prepare($sqlSummary);
+if (!$stmtSum) {
+    echo json_encode(["error" => $conn->error]);
+    exit;
+}
 if ($types) {
     $stmtSum->bind_param($types, ...$params);
 }

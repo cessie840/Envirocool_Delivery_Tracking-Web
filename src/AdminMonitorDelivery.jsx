@@ -424,15 +424,14 @@ const MonitorDelivery = () => {
             const diffMin = (now - lastRecorded) / 60000;
 
             if (diffMin >= 20) {
-              status = "Inactive";
-            } else if (distanceKm < 0.005) {
-              if (diffMin >= 5) status = "Stopped";
-              else status = "Traffic";
-            } else if (distanceKm >= 0.005 && distanceKm < 0.05) {
-              status = "Traffic";
-            } else {
-              status = "Moving";
-            }
+            status = "Inactive";
+          } else if (distanceKm < 0.0003 && diffMin >= 5) {
+            status = "Stopped"; 
+          } else if (distanceKm >= 0.0003 && distanceKm < 0.001 && diffMin >= 5) {
+            status = "Traffic"; 
+          } else {
+            status = "Moving";
+          }
           }
 
           const newCurrentPositions = {

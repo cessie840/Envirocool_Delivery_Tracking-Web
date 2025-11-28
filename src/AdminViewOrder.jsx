@@ -29,6 +29,7 @@ const ViewOrder = () => {
     customer_name: "",
     customer_address: "",
     customer_contact: "",
+    order_type: "",
     date_of_order: "",
     target_date_delivery: "",
     dbilling_date: "",
@@ -111,6 +112,7 @@ const ViewOrder = () => {
           customer_name: data.customer_name,
           customer_address: data.customer_address,
           customer_contact: data.customer_contact,
+          order_type: data.order_type || "Delivery",
           date_of_order: formatDate(data.date_of_order),
           mode_of_payment: data.mode_of_payment,
           payment_option: data.payment_option,
@@ -381,7 +383,7 @@ const ViewOrder = () => {
 
             <div className="m-2 p-3 bg-white border rounded-3 shadow-sm">
               <div className="row">
-                <div className="col-md-6 order-1 order-md-1">
+                <div className="col-md-6 order-1 order-md-1 my-2">
                   <h5 className="text-success fw-bold">Client Details</h5>
                   <p>
                     <span>Name:</span> {orderDetails.customer_name}
@@ -392,18 +394,7 @@ const ViewOrder = () => {
                   <p>
                     <span>Contact:</span> {orderDetails.customer_contact}
                   </p>
-                  <p>
-                    <span>Date of Order:</span>{" "}
-                    {formatDate(orderDetails.date_of_order)}
-                  </p>
-                  <p>
-                    <span>Target Delivery Date: </span>
-                    {formatDate(orderDetails.target_date_delivery)}
-                  </p>
-                  <p>
-                    <span>Payment Due Date: </span>
-                    {formatDate(orderDetails.dbilling_date)}
-                  </p>
+
                   {orderDetails.rescheduled_date && (
                     <p>
                       <span>Rescheduled Delivery Date: </span>
@@ -414,7 +405,7 @@ const ViewOrder = () => {
                   <br />
                   <h5 className="text-success fw-bold">Delivery Status</h5>
                   <p>
-                    <span>Current Delivery Status: </span>
+                    <span>Current Status: </span>
                     {renderStatusBadge(orderDetails.status)}
                   </p>
                   {orderDetails.status === "Cancelled" &&
@@ -428,9 +419,14 @@ const ViewOrder = () => {
                     )}
                 </div>
 
-                <div className="col-md-6 order-2 order-md-2">
+                <div className="col-md-6 order-2 order-md-2 my-2">
                   <h5 className="text-success fw-bold">Payment Details</h5>
-
+                  {orderDetails.dbilling_date && (
+                    <p>
+                      <span>Payment Due Date: </span>
+                      {formatDate(orderDetails.dbilling_date)}
+                    </p>
+                  )}
                   <p>
                     <span>Payment Method:</span>{" "}
                     {orderDetails.mode_of_payment || "—"}
@@ -443,7 +439,6 @@ const ViewOrder = () => {
                     <span>Total:</span> ₱
                     {Number(orderDetails?.total || 0).toLocaleString()}
                   </p>
-
                   {orderDetails.payment_option !== "Full Payment" && (
                     <>
                       <span className="fw-bold text-success mb-2">
@@ -525,6 +520,19 @@ const ViewOrder = () => {
                       </p>
                     </>
                   )}
+                  <br /> <br />
+                  <h5 className="text-success fw-bold">Delivery Details</h5>
+                  <p>
+                    <span>Delivery Type:</span> {orderDetails.order_type}
+                  </p>
+                  <p>
+                    <span>Date of Order:</span>{" "}
+                    {formatDate(orderDetails.date_of_order)}
+                  </p>
+                  <p>
+                    <span>Target Delivery Date: </span>
+                    {formatDate(orderDetails.target_date_delivery)}
+                  </p>
                 </div>
 
                 <div className="col-md-12 order-3 order-md-3 mt-4">

@@ -38,6 +38,7 @@ LEFT JOIN gps_coordinates g
         WHERE gps_coordinates.device_id = da.device_id
     )
 WHERE t.balance = 0
+ AND t.order_type = 'Delivery'
 ORDER BY t.transaction_id DESC
 ";
 
@@ -100,6 +101,7 @@ if ($result && $result->num_rows > 0) {
             'customer_name' => $row['customer_name'],
             'customer_address' => $row['customer_address'],
             'contact_number' => $row['customer_contact'],
+            'order_type' => $row['order_type'],
             'payment_mode' => $row['mode_of_payment'],
             'down_payment' => floatval($row['down_payment']),
             'balance' => floatval($row['balance']),

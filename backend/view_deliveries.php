@@ -38,12 +38,12 @@ function buildFileUrl($baseUrl, $path) {
 }
 
 $sql_customer = "
-    SELECT transaction_id, tracking_number, customer_name, customer_address, customer_contact, 
+    SELECT transaction_id, tracking_number, customer_name, customer_address, customer_contact, order_type,
            date_of_order, target_date_delivery, dbilling_date, rescheduled_date, 
            mode_of_payment, payment_option, 
            down_payment, full_payment, fbilling_date, balance, total, 
            status, cancelled_reason, proof_of_delivery, proof_of_payment,
-           payments  -- 👈 added
+           payments
     FROM Transactions 
     WHERE transaction_id = ?
 ";
@@ -105,6 +105,7 @@ if ($result_customer->num_rows > 0) {
         'customer_name' => $customer['customer_name'],
         'customer_address' => $customer['customer_address'],
         'customer_contact' => $customer['customer_contact'],
+        'order_type' => $customer['order_type'] ?? 'Delivery',
         'date_of_order' => $customer['date_of_order'],
         'target_date_delivery' => $customer['target_date_delivery'],
         'rescheduled_date' => $customer['rescheduled_date'],

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from "sonner";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 // Public pages
 import Login from "./Login";

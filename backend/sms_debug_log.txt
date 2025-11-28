@@ -375,3 +375,61 @@ HTTP 200
 {"status":200,"message":"Message has been queued for sending!","data":false}
 Error: 
 
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+2025-11-21 01:28:43 | TX: 4077
+HTTP 402
+Response: {"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+2025-11-21 01:33:31 | TX: 4077
+HTTP 402
+Response: {"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 402
+{"success":false,"message":"Free tier weekly limit (10 messages) reached. Subscribe to a plan for more messages or wait until next week."}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+
+HTTP 200
+{"status":200,"message":"Message has been queued for sending!","data":false}
+Error: 
+

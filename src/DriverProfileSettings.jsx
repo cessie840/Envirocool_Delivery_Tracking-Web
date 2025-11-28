@@ -92,7 +92,38 @@ function DriverProfileSettings() {
     }
   }, []);
 
+  // Calculate Age automatically from Birthday
+  useEffect(() => {
+    if (profile.Birthday) {
+      const birthDate = new Date(profile.Birthday);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      setProfile((prev) => ({ ...prev, Age: age }));
+    }
+  }, [profile.Birthday]);
+
   const handleSave = () => {
+    // Contact validation: only 09XXXXXXXXX (11 digits)
+    if (modalField === "Contact") {
+      const contactRegex = /^09\d{9}$/;
+      if (!contactRegex.test(fieldValue)) {
+        ToastHelper.error(
+          "Invalid contact number. Must start with '09' and be exactly 11 digits."
+        );
+        return;
+      }
+    }
+
+    // Age cannot be edited manually
+    if (modalField === "Age") {
+      ToastHelper.error("Age is automatically calculated from Birthday.");
+      return;
+    }
+
     const updatedProfile = { ...profile, [modalField]: fieldValue };
     setProfile(updatedProfile);
 
@@ -138,34 +169,47 @@ function DriverProfileSettings() {
     setModalField(null);
   };
 
-  const handlePasswordSave = () => {
-    if (passwordForm.new !== passwordForm.confirm) {
-      ToastHelper.error("New password and confirm password do not match.");
-      return;
-    }
+ const handlePasswordSave = () => {
+   const { new: newPassword, confirm } = passwordForm;
 
-    const formData = new FormData();
-    formData.append("pers_username", profile.username);
-    formData.append("pers_password", passwordForm.new);
+   // Password validation
+   const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{6,}$/;
 
-    axios
-      .post(
-        "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      )
-      .then((res) => {
-        if (res.data.success) {
-          ToastHelper.success("Password successfully changed!");
-          localStorage.setItem("userPassword", passwordForm.new);
-          setPasswordForm({ old: passwordForm.new, new: "", confirm: "" });
-          setModalField(null);
-        } else {
-          ToastHelper.error("Update failed: " + res.data.message);
-        }
-      })
-      .catch((err) => console.error(err));
-  };
+   if (!passwordRegex.test(newPassword)) {
+     ToastHelper.error(
+       "Password must be at least 6 characters, contain 1 uppercase letter, 1 number, and 1 special character."
+     );
+     return;
+   }
+
+   if (newPassword !== confirm) {
+     ToastHelper.error("New password and confirm password do not match.");
+     return;
+   }
+
+   const formData = new FormData();
+   formData.append("pers_username", profile.username);
+   formData.append("pers_password", newPassword);
+
+   axios
+     .post(
+       "http://localhost/DeliveryTrackingSystem/update_delivery_personnel.php",
+       formData,
+       { headers: { "Content-Type": "multipart/form-data" } }
+     )
+     .then((res) => {
+       if (res.data.success) {
+         ToastHelper.success("Password successfully changed!");
+         localStorage.setItem("userPassword", newPassword);
+         setPasswordForm({ old: newPassword, new: "", confirm: "" });
+         setModalField(null);
+       } else {
+         ToastHelper.error("Update failed: " + res.data.message);
+       }
+     })
+     .catch((err) => console.error(err));
+ };
+
 
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0];
@@ -348,9 +392,11 @@ function DriverProfileSettings() {
                       backgroundColor: "#E8F8F5",
                     }}
                     onClick={() => {
+                      if (key === "Age") return; // Disable Age editing
                       setModalField(key);
                       setFieldValue(profile[key]);
                     }}
+                    disabled={key === "Age"} // Disable Age button
                   >
                     <FaEdit />
                   </Button>
@@ -398,6 +444,7 @@ function DriverProfileSettings() {
         </Card>
       </Container>
 
+      {/* Edit Field Modal */}
       <Modal
         show={modalField && modalField !== "password"}
         onHide={() => setModalField(null)}
@@ -421,6 +468,7 @@ function DriverProfileSettings() {
               <Form.Control
                 type="text"
                 value={fieldValue}
+                maxLength={modalField === "Contact" ? 11 : undefined} // Contact limit
                 onChange={(e) => setFieldValue(e.target.value)}
               />
             )}
@@ -436,6 +484,8 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
+      {/* Password Modal */}
+      {/* Password Modal */}
       <Modal
         show={modalField === "password"}
         onHide={() => setModalField(null)}
@@ -464,6 +514,40 @@ function DriverProfileSettings() {
                 {showPassword.new ? <FaEyeSlash /> : <FaEye />}
               </Button>
             </InputGroup>
+            {/* Live Password Hints */}
+            <ul
+              className="mt-2 mb-0"
+              style={{ fontSize: "0.85rem", paddingLeft: "20px" }}
+            >
+              {[
+                {
+                  label: "At least 6 characters",
+                  test: (pw) => pw.length >= 6,
+                },
+                {
+                  label: "Contains 1 uppercase letter",
+                  test: (pw) => /[A-Z]/.test(pw),
+                },
+                { label: "Contains 1 number", test: (pw) => /\d/.test(pw) },
+                {
+                  label: "Contains 1 special character (!@#$%^&*)",
+                  test: (pw) => /[!@#$%^&*]/.test(pw),
+                },
+              ].map((rule, idx) => {
+                const valid = rule.test(passwordForm.new);
+                return (
+                  <li
+                    key={idx}
+                    style={{
+                      color: valid ? "green" : "red",
+                      listStyleType: "disc",
+                    }}
+                  >
+                    {rule.label}
+                  </li>
+                );
+              })}
+            </ul>
           </Form.Group>
 
           <Form.Group>
@@ -473,10 +557,7 @@ function DriverProfileSettings() {
                 type={showPassword.confirm ? "text" : "password"}
                 value={passwordForm.confirm}
                 onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    confirm: e.target.value,
-                  })
+                  setPasswordForm({ ...passwordForm, confirm: e.target.value })
                 }
               />
               <Button
@@ -503,6 +584,7 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
+      {/* Logout Modal */}
       <Modal
         show={showLogoutModal}
         onHide={() => setShowLogoutModal(false)}

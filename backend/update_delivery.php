@@ -2,13 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-if (isset($_SERVER['HTTP_ORIGIN'])) {
-    $allowed_origins = ['http://localhost:5173', 'https://cessie840.github.io'];
-    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-    }
-}
-
+header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Cache-Control, Pragma, Expires");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Cache-Control: no-cache, no-store, must-revalidate");
@@ -20,7 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
-
 
 include 'database.php';
 
@@ -70,11 +63,13 @@ try {
 
     $conn->begin_transaction();
 
+    // 🧮 Calculate totals
     $total = 0;
     foreach ($items as $item) {
         $total += ((float)$item['unit_cost']) * ((int)$item['quantity']);
     }
 
+    // 🧾 Retrieve existing payments (if any)
     $existingQuery = $conn->prepare("SELECT payments, down_payment FROM Transactions WHERE transaction_id = ?");
     $existingQuery->bind_param("i", $transaction_id);
     $existingQuery->execute();
@@ -84,6 +79,7 @@ try {
     $payments = json_decode($existingResult['payments'] ?? '[]', true);
     if (!is_array($payments)) $payments = [];
 
+    // ➕ Append new payment entry (if non-zero)
     if ($new_payment_amount > 0) {
         $payments[] = [
             "label" => "Additional Payment",
@@ -92,6 +88,7 @@ try {
         ];
     }
 
+    // 💾 Compute total paid so far (down + all additional)
     $total_paid = $down_payment;
     foreach ($payments as $p) {
         $total_paid += (float)$p['amount'];
@@ -102,6 +99,7 @@ try {
 
     $payments_json = json_encode($payments, JSON_UNESCAPED_UNICODE);
 
+    // 📝 Update Transactions table
     $sql = "
         UPDATE Transactions 
         SET 
@@ -149,6 +147,7 @@ try {
     }
     $stmt->close();
 
+    // 🗑 Refresh PurchaseOrder items
     $deleteStmt = $conn->prepare("DELETE FROM PurchaseOrder WHERE transaction_id=?");
     $deleteStmt->bind_param("i", $transaction_id);
     $deleteStmt->execute();
