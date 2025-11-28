@@ -52,8 +52,7 @@ $stmt = $conn->prepare("
         down_payment,
         dbilling_date AS dp_collection_date,
         balance,
-        total,
-        payment_status
+        total
     FROM Transactions
     WHERE transaction_id = ?
 ");
@@ -99,7 +98,6 @@ while ($row = $result2->fetch_assoc()) {
 }
 $stmt2->close();
 
-// Fetch the latest payment from payment_history (for receipt modal: recent additional payment)
 $latest_payment = null;
 $stmt3 = $conn->prepare("
     SELECT amount, payment_date
@@ -116,7 +114,6 @@ if ($result3->num_rows > 0) {
 }
 $stmt3->close();
 
-// Add latest payment to form data (for receipt: use this as 'additional_payment' instead of cumulative 'full_payment')
 $form['additional_payment'] = $latest_payment ? $latest_payment['amount'] : 0;
 $form['additional_payment_date'] = $latest_payment ? $latest_payment['payment_date'] : null;
 

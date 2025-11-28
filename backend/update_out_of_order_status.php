@@ -78,8 +78,8 @@ try {
 
     $conn->commit();
 
-     $trackingUrlSafe = "envirocool   -   delivery  -  tracking  - system  - web  . vercel . app     ";
-    $message = "Hi {$customerName}!\n\nYour order is now Out for Delivery.\nTracking No: {$trackingNumber}.\nTrack here: {$trackingUrlSafe}\n\nUse your tracking number to check your delivery status on the website.\n\nThis is a system notification from Envirocool Corp. Please do not reply.\n-Envirocool Corp.";
+     $trackingUrlSafe = "cessie840 . github . io / Envirocool-Tracking-Page /";
+    $message = "Hi {$customerName}!\n \n Your order is now Out for Delivery.\n Tracking No: {$trackingNumber}.\n Track here: {$trackingUrlSafe}\n \n Use your tracking number to check your delivery status on the website.\n \n This is a system notification from Envirocool Corp. Please do not reply.\n -Envirocool Corp.";
 
     $smsResponse = null;
     if ($phoneNormalized) {

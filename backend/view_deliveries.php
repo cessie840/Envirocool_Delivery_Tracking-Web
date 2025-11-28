@@ -1,4 +1,5 @@
 <?php
+header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Headers: Content-Type, Cache-Control, Pragma, Expires");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Credentials: true");
@@ -6,15 +7,6 @@ header("Cache-Control: no-cache, no-store, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
 header("Content-Type: application/json");
-
-$allowedOrigins = [
-    "http://localhost:5173",
-    "https://cessie840.github.io"
-];
-
-if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowedOrigins)) {
-    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
-}
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
@@ -42,8 +34,7 @@ $sql_customer = "
            date_of_order, target_date_delivery, dbilling_date, rescheduled_date, 
            mode_of_payment, payment_option, 
            down_payment, full_payment, fbilling_date, balance, total, 
-           status, cancelled_reason, proof_of_delivery, proof_of_payment,
-           payments
+           status, cancelled_reason, proof_of_delivery, proof_of_payment
     FROM Transactions 
     WHERE transaction_id = ?
 ";
@@ -58,49 +49,41 @@ if ($result_customer->num_rows > 0) {
 
     $proofOfDeliveryUrl = $customer['proof_of_delivery'] ? buildFileUrl($baseUrl, $customer['proof_of_delivery']) : null;
 
-    $proofOfPaymentUrls = [];
+$proofOfPaymentUrls = [];
 
-    if (!empty($customer['proof_of_payment'])) {
-        $raw = trim($customer['proof_of_payment']);
+if (!empty($customer['proof_of_payment'])) {
+    $raw = trim($customer['proof_of_payment']);
 
-        $decoded = json_decode($raw, true);
+    $decoded = json_decode($raw, true);
 
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            foreach ($decoded as $path) {
-                if (!empty($path)) {
-                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
-                }
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        foreach ($decoded as $path) {
+            if (!empty($path)) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
+            }
+        }
+    } else {
+        preg_match_all(
+            '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
+            $raw,
+            $matches
+        );
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $relativePath) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $relativePath);
             }
         } else {
-            preg_match_all(
-                '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
-                $raw,
-                $matches
-            );
-            if (!empty($matches[0])) {
-                foreach ($matches[0] as $relativePath) {
-                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $relativePath);
-                }
-            } else {
-                if (str_contains($raw, 'uploads/')) {
-                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
-                }
+            if (str_contains($raw, 'uploads/')) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
             }
         }
     }
+}
 
-    $proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
+$proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
 
-    $payments = [];
-    if (!empty($customer['payments'])) {
-        $decoded = json_decode($customer['payments'], true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            $payments = $decoded;
-        }
-    }
 
     $response = [
-        'transaction_id' => $customer['transaction_id'],
         'tracking_number' => $customer['tracking_number'],
         'customer_name' => $customer['customer_name'],
         'customer_address' => $customer['customer_address'],
@@ -113,15 +96,13 @@ if ($result_customer->num_rows > 0) {
         'payment_option' => $customer['payment_option'],
         'down_payment' => $customer['down_payment'],
         'full_payment' => $customer['full_payment'],
-        'dbilling_date' => $customer['dbilling_date'],
         'fbilling_date' => $customer['fbilling_date'],
         'balance' => $customer['balance'],
         'total' => $customer['total'],
         'status' => $customer['status'],
         'cancelled_reason' => $customer['cancelled_reason'],
         'proof_of_delivery' => $proofOfDeliveryUrl,
-        'proof_of_payment' => $proofOfPaymentUrls,
-        'payments' => $payments, 
+        'proof_of_payment' => $proofOfPaymentUrls
     ];
 
     $sql_items = "

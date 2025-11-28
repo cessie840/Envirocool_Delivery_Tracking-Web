@@ -19,6 +19,7 @@ include 'database.php';
 
 try {
     $data = json_decode(file_get_contents("php://input"), true);
+
     if (!$data || !isset($data['transaction_id'])) {
         throw new Exception("Missing transaction ID in payload.");
     }
@@ -32,14 +33,12 @@ try {
     $mode_of_payment      = $data['mode_of_payment'] ?? '';
     $payment_option       = $data['payment_option'] ?? '';
     $down_payment         = is_numeric($data['down_payment'] ?? null) ? (float)$data['down_payment'] : 0;
-    $new_payment_amount   = is_numeric($data['full_payment'] ?? null) ? (float)$data['full_payment'] : 0;
-    $fbilling_date        = $data['fbilling_date'] ?? date('Y-m-d');
+    $full_payment         = is_numeric($data['full_payment'] ?? null) ? (float)$data['full_payment'] : 0;
+    $fbilling_date        = $data['fbilling_date'] ?? null;
     $items                = $data['items'] ?? [];
 
-    if (
-        empty($customer_name) || empty($customer_address) || empty($customer_contact) ||
-        empty($mode_of_payment) || empty($payment_option)
-    ) {
+    if (empty($customer_name) || empty($customer_address) || empty($customer_contact) ||
+        empty($mode_of_payment) || empty($payment_option)) {
         throw new Exception("Required fields are missing.");
     }
 
@@ -52,11 +51,9 @@ try {
     }
 
     foreach ($items as $item) {
-        if (
-            !isset($item['quantity']) || $item['quantity'] < 1 ||
+        if (!isset($item['quantity']) || $item['quantity'] < 1 ||
             !isset($item['unit_cost']) || $item['unit_cost'] < 0 ||
-            empty($item['type_of_product']) || empty($item['description'])
-        ) {
+            empty($item['type_of_product']) || empty($item['description'])) {
             throw new Exception("Invalid item data.");
         }
     }
@@ -102,30 +99,17 @@ try {
     // 📝 Update Transactions table
     $sql = "
         UPDATE Transactions 
-        SET 
-            customer_name = ?, 
-            customer_address = ?, 
-            customer_contact = ?, 
-            date_of_order = ?, 
-            target_date_delivery = ?, 
-            mode_of_payment = ?, 
-            payment_option = ?, 
-            down_payment = ?, 
-            balance = ?, 
-            total = ?, 
-            fbilling_date = ?, 
-            payment_status = ?, 
-            payments = ?
-        WHERE transaction_id = ?
-    ";
-
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
+        SET customer_name=?, customer_address=?, customer_contact=?, 
+            date_of_order=?, target_date_delivery=?, 
+            mode_of_payment=?, payment_option=?, 
+            down_payment=?, balance=?, total=?, 
+            full_payment=?, fbilling_date=? 
+        WHERE transaction_id=?
+    ");
+    if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
     $stmt->bind_param(
-        "sssssssdddsssi",
+        "sssssssddddsi",
         $customer_name,
         $customer_address,
         $customer_contact,
@@ -136,54 +120,47 @@ try {
         $down_payment,
         $balance,
         $total,
+        $full_payment,
         $fbilling_date,
-        $payment_status,
-        $payments_json,
         $transaction_id
     );
 
     if (!$stmt->execute()) {
-        throw new Exception("Update failed: " . $stmt->error);
+        throw new Exception("Transactions update failed: " . $stmt->error);
     }
     $stmt->close();
-
-    // 🗑 Refresh PurchaseOrder items
     $deleteStmt = $conn->prepare("DELETE FROM PurchaseOrder WHERE transaction_id=?");
     $deleteStmt->bind_param("i", $transaction_id);
-    $deleteStmt->execute();
+    if (!$deleteStmt->execute()) {
+        throw new Exception("Delete items failed: " . $deleteStmt->error);
+    }
     $deleteStmt->close();
 
     $insertStmt = $conn->prepare("
         INSERT INTO PurchaseOrder (transaction_id, quantity, type_of_product, description, unit_cost)
         VALUES (?, ?, ?, ?, ?)
     ");
+    if (!$insertStmt) throw new Exception("Prepare insert failed: " . $conn->error);
+
     foreach ($items as $item) {
         $quantity = (int)$item['quantity'];
         $type_of_product = trim($item['type_of_product']);
         $description = trim($item['description']);
         $unit_cost = (float)$item['unit_cost'];
         $insertStmt->bind_param("iissd", $transaction_id, $quantity, $type_of_product, $description, $unit_cost);
-        $insertStmt->execute();
+
+        if (!$insertStmt->execute()) {
+            throw new Exception("Insert item failed: " . $insertStmt->error);
+        }
     }
     $insertStmt->close();
 
     $conn->commit();
 
-    echo json_encode([
-        "status" => "success",
-        "message" => "Order updated successfully",
-        "payment_status" => $payment_status,
-        "payments" => $payments
-    ]);
-
+    echo json_encode(["status" => "success", "message" => "Order updated successfully"]);
 } catch (Exception $e) {
-    if (isset($conn)) {
-        $conn->rollback();
-    }
+    if (isset($conn)) $conn->rollback();
     http_response_code(500);
-    echo json_encode([
-        "status" => "error",
-        "message" => $e->getMessage()
-    ]);
+    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
 }
 ?>

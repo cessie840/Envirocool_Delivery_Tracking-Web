@@ -9,38 +9,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-include 'database.php';
-
-// CREATE DATABASE FOR TESTING 
-// $host = 'localhost';
-// $user = 'root';
-// $password = '';
-// $database = 'backuprestore'; 
+include 'database.php'; 
 
 header("Content-Type: application/json");
+
+
+$host = "localhost";
+$user = "root";
+$password = "091203"; 
+$database = "DeliveryTrackingSystem";
+$mysqlPath = "C:\\xampp\\mysql\\bin\\mysql.exe";
+
 
 if (!isset($_FILES['sqlFile']) || $_FILES['sqlFile']['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(["success" => false, "message" => "No file uploaded or upload error."]);
     exit;
 }
+$tmpPath = $_FILES['sqlFile']['tmp_name'];
 
-$sqlFile = $_FILES['sqlFile']['tmp_name'];
+$backupDir = "C:\\xampp\\htdocs\\DeliveryTrackingSystem\\backups";
+if (!is_dir($backupDir)) {
+    mkdir($backupDir, 0777, true);
+}
 
-$mysqlPath = "C:\\xampp\\mysql\\bin\\mysql.exe";
+$targetFile = $backupDir . "\\" . basename($_FILES['sqlFile']['name']);
+if (!move_uploaded_file($tmpPath, $targetFile)) {
+    echo json_encode(["success" => false, "message" => "Failed to move uploaded file."]);
+    exit;
+}
 
-$command = "cmd /c \"\"{$mysqlPath}\" --user={$user} --password={$password} --host={$host} {$database} < \"{$sqlFile}\"\"";
+$conn = new mysqli($host, $user, $password);
+if ($conn->connect_error) {
+    echo json_encode(["success" => false, "message" => "Database connection failed: " . $conn->connect_error]);
+    exit;
+}
+$conn->query("CREATE DATABASE IF NOT EXISTS `$database`");
+$conn->close();
 
-exec($command, $output, $result);
+$command = "\"{$mysqlPath}\" -u{$user}" . 
+           ($password !== "" ? " -p{$password}" : "") . 
+           " -h{$host} {$database} < \"{$targetFile}\"";
 
-if ($result === 0) {
-    echo json_encode(["success" => true, "message" => "Database restored successfully."]);
+
+$output = shell_exec("cmd /c {$command} 2>&1");
+
+if (strpos($output, 'ERROR') === false && strpos($output, 'error') === false) {
+    echo json_encode([
+        "success" => true,
+        "message" => "Database restored successfully.",
+        "command" => $command,
+        "output" => $output
+    ]);
 } else {
     echo json_encode([
         "success" => false,
         "message" => "Restore failed.",
         "command" => $command,
-        "output" => $output,
-        "result_code" => $result
+        "output" => $output
     ]);
 }
 ?>
