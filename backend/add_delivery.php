@@ -104,7 +104,7 @@ try {
     $down_payment = isset($_POST['down_payment']) ? floatval($_POST['down_payment']) : 0;
     $balance = isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
     $total = isset($_POST['total']) ? floatval($_POST['total']) : 0;
-
+    $payment_receipt_no  = $_POST['payment_receipt_no'] ?? ''; 
     $order_items_json = $_POST['order_items'] ?? '[]';
     $order_items = json_decode($order_items_json, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
@@ -192,13 +192,13 @@ if (!$latitude || !$longitude) {
     $stmt = $conn->prepare("INSERT INTO Transactions
         (tracking_number, customer_name, customer_address, customer_contact, date_of_order, target_date_delivery,
          mode_of_payment, payment_option, full_payment, fbilling_date, down_payment, dbilling_date,
-         balance, total, latitude, longitude, proof_of_payment, order_type, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+         balance, total, latitude, longitude, proof_of_payment, order_type, status, payment_receipt_no)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)");
     if (!$stmt)
         throw new Exception($conn->error);
 
     $stmt->bind_param(
-        "ssssssssdsdsddddsss",
+        "ssssssssdsdsddddssss",
         $tracking_number,
         $customer_name,
         $customer_address,
@@ -217,7 +217,8 @@ if (!$latitude || !$longitude) {
         $longitude,
         $proof_path_json,
         $order_type,
-        $status
+        $status,
+        $payment_receipt_no
     );
 
     if (!$stmt->execute())
