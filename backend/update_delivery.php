@@ -60,13 +60,13 @@ try {
 
     $conn->begin_transaction();
 
-    // 🧮 Calculate totals
+ 
     $total = 0;
     foreach ($items as $item) {
         $total += ((float)$item['unit_cost']) * ((int)$item['quantity']);
     }
 
-    // 🧾 Retrieve existing payments (if any)
+
     $existingQuery = $conn->prepare("SELECT payments, down_payment FROM Transactions WHERE transaction_id = ?");
     $existingQuery->bind_param("i", $transaction_id);
     $existingQuery->execute();
@@ -76,7 +76,7 @@ try {
     $payments = json_decode($existingResult['payments'] ?? '[]', true);
     if (!is_array($payments)) $payments = [];
 
-    // ➕ Append new payment entry (if non-zero)
+
     if ($new_payment_amount > 0) {
         $payments[] = [
             "label" => "Additional Payment",
@@ -85,7 +85,7 @@ try {
         ];
     }
 
-    // 💾 Compute total paid so far (down + all additional)
+
     $total_paid = $down_payment;
     foreach ($payments as $p) {
         $total_paid += (float)$p['amount'];
@@ -96,7 +96,7 @@ try {
 
     $payments_json = json_encode($payments, JSON_UNESCAPED_UNICODE);
 
-    // 📝 Update Transactions table
+  
     $sql = "
         UPDATE Transactions 
         SET customer_name=?, customer_address=?, customer_contact=?, 
@@ -105,7 +105,7 @@ try {
             down_payment=?, balance=?, total=?, 
             full_payment=?, fbilling_date=? 
         WHERE transaction_id=?
-    ");
+    ";
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
     $stmt->bind_param(
