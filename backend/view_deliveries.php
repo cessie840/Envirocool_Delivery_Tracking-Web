@@ -16,12 +16,12 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
     header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-include 'database.php';
+require_once "database.php";
 
 $transaction_id = isset($_GET['transaction_id']) ? intval($_GET['transaction_id']) : 0;
 if ($transaction_id <= 0) {
@@ -33,17 +33,18 @@ $baseUrl = rtrim("http://localhost/DeliveryTrackingSystem", '/');
 
 function buildFileUrl($baseUrl, $path) {
     if (!$path) return null;
-    $path = ltrim($path, '/\\');
-    return $baseUrl . '/' . str_replace('\\', '/', $path);
+    return $baseUrl . '/' . ltrim(str_replace('\\', '/', $path), '/');
 }
 
+// --- Fetch main delivery info ---
 $sql_customer = "
-    SELECT transaction_id, tracking_number, customer_name, customer_address, customer_contact, 
-           date_of_order, target_date_delivery, dbilling_date, rescheduled_date, 
-           mode_of_payment, payment_option, 
-           down_payment, full_payment, fbilling_date, balance, total, 
-           status, cancelled_reason, proof_of_delivery, proof_of_payment,
-           payments  -- 👈 added
+    SELECT 
+        transaction_id, tracking_number, customer_name, customer_address, customer_contact, 
+        date_of_order, target_date_delivery, dbilling_date, rescheduled_date,
+        mode_of_payment, payment_option,
+        down_payment, full_payment, fbilling_date, balance, total,
+        status, cancelled_reason, proof_of_delivery, proof_of_payment,
+        payments
     FROM Transactions 
     WHERE transaction_id = ?
 ";
@@ -53,105 +54,106 @@ $stmt->bind_param("i", $transaction_id);
 $stmt->execute();
 $result_customer = $stmt->get_result();
 
-if ($result_customer->num_rows > 0) {
-    $customer = $result_customer->fetch_assoc();
-
-    $proofOfDeliveryUrl = $customer['proof_of_delivery'] ? buildFileUrl($baseUrl, $customer['proof_of_delivery']) : null;
-
-    $proofOfPaymentUrls = [];
-
-    if (!empty($customer['proof_of_payment'])) {
-        $raw = trim($customer['proof_of_payment']);
-
-        $decoded = json_decode($raw, true);
-
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            foreach ($decoded as $path) {
-                if (!empty($path)) {
-                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
-                }
-            }
-        } else {
-            preg_match_all(
-                '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
-                $raw,
-                $matches
-            );
-            if (!empty($matches[0])) {
-                foreach ($matches[0] as $relativePath) {
-                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $relativePath);
-                }
-            } else {
-                if (str_contains($raw, 'uploads/')) {
-                    $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
-                }
-            }
-        }
-    }
-
-    $proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
-
-    $payments = [];
-    if (!empty($customer['payments'])) {
-        $decoded = json_decode($customer['payments'], true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            $payments = $decoded;
-        }
-    }
-
-    $response = [
-        'transaction_id' => $customer['transaction_id'],
-        'tracking_number' => $customer['tracking_number'],
-        'customer_name' => $customer['customer_name'],
-        'customer_address' => $customer['customer_address'],
-        'customer_contact' => $customer['customer_contact'],
-        'date_of_order' => $customer['date_of_order'],
-        'target_date_delivery' => $customer['target_date_delivery'],
-        'rescheduled_date' => $customer['rescheduled_date'],
-        'mode_of_payment' => $customer['mode_of_payment'],
-        'payment_option' => $customer['payment_option'],
-        'down_payment' => $customer['down_payment'],
-        'full_payment' => $customer['full_payment'],
-        'dbilling_date' => $customer['dbilling_date'],
-        'fbilling_date' => $customer['fbilling_date'],
-        'balance' => $customer['balance'],
-        'total' => $customer['total'],
-        'status' => $customer['status'],
-        'cancelled_reason' => $customer['cancelled_reason'],
-        'proof_of_delivery' => $proofOfDeliveryUrl,
-        'proof_of_payment' => $proofOfPaymentUrls,
-        'payments' => $payments, 
-    ];
-
-    $sql_items = "
-        SELECT type_of_product, description, quantity, unit_cost 
-        FROM PurchaseOrder 
-        WHERE transaction_id = ?
-    ";
-    $stmt_items = $conn->prepare($sql_items);
-    $stmt_items->bind_param("i", $transaction_id);
-    $stmt_items->execute();
-    $result_items = $stmt_items->get_result();
-
-    $items = [];
-    while ($row = $result_items->fetch_assoc()) {
-        $items[] = [
-            "type_of_product" => $row['type_of_product'],
-            "description" => $row['description'],
-            "quantity" => $row['quantity'],
-            "unit_cost" => $row['unit_cost']
-        ];
-    }
-
-    $response['items'] = $items;
-
-    echo json_encode($response);
-
-    $stmt_items->close();
-    $stmt->close();
-} else {
+if ($result_customer->num_rows === 0) {
     echo json_encode(["error" => "Transaction not found"]);
+    exit;
 }
 
+$customer = $result_customer->fetch_assoc();
+
+// --- Process proof of delivery ---
+$proofOfDeliveryUrl = $customer['proof_of_delivery']
+    ? buildFileUrl($baseUrl, $customer['proof_of_delivery'])
+    : null;
+
+// --- Process proof of payment (array or single) ---
+$proofOfPaymentUrls = [];
+if (!empty($customer['proof_of_payment'])) {
+    $raw = trim($customer['proof_of_payment']);
+
+    $decoded = json_decode($raw, true);
+
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        foreach ($decoded as $path) {
+            if ($path) $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $path);
+        }
+    } else {
+        preg_match_all(
+            '/uploads\/proof_of_payment\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif)/i',
+            $raw,
+            $matches
+        );
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $match) {
+                $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $match);
+            }
+        } elseif (str_contains($raw, 'uploads/')) {
+            $proofOfPaymentUrls[] = buildFileUrl($baseUrl, $raw);
+        }
+    }
+}
+$proofOfPaymentUrls = array_values(array_unique($proofOfPaymentUrls));
+
+// --- Parse payments JSON field ---
+$payments = [];
+if (!empty($customer['payments'])) {
+    $decoded = json_decode($customer['payments'], true);
+    if (json_last_error() === JSON_ERROR_NONE) {
+        $payments = $decoded;
+    }
+}
+
+// --- Base response ---
+$response = [
+    'transaction_id' => $customer['transaction_id'],
+    'tracking_number' => $customer['tracking_number'],
+    'customer_name' => $customer['customer_name'],
+    'customer_address' => $customer['customer_address'],
+    'customer_contact' => $customer['customer_contact'],
+    'date_of_order' => $customer['date_of_order'],
+    'target_date_delivery' => $customer['target_date_delivery'],
+    'rescheduled_date' => $customer['rescheduled_date'],
+    'dbilling_date' => $customer['dbilling_date'],
+    'fbilling_date' => $customer['fbilling_date'],
+    'down_payment' => $customer['down_payment'],
+    'full_payment' => $customer['full_payment'],
+    'mode_of_payment' => $customer['mode_of_payment'],
+    'payment_option' => $customer['payment_option'],
+    'balance' => $customer['balance'],
+    'total' => $customer['total'],
+    'status' => $customer['status'],
+    'cancelled_reason' => $customer['cancelled_reason'],
+    'proof_of_delivery' => $proofOfDeliveryUrl,
+    'proof_of_payment' => $proofOfPaymentUrls,
+    'payments' => $payments
+];
+
+// --- Fetch all items for this order ---
+$sql_items = "
+    SELECT type_of_product, description, quantity, unit_cost
+    FROM PurchaseOrder
+    WHERE transaction_id = ?
+";
+
+$stmt_items = $conn->prepare($sql_items);
+$stmt_items->bind_param("i", $transaction_id);
+$stmt_items->execute();
+$res_items = $stmt_items->get_result();
+
+$items = [];
+while ($row = $res_items->fetch_assoc()) {
+    $items[] = [
+        "type_of_product" => $row['type_of_product'],
+        "description" => $row['description'],
+        "quantity" => $row['quantity'],
+        "unit_cost" => $row['unit_cost']
+    ];
+}
+$response['items'] = $items;
+
+echo json_encode($response);
+
+$stmt_items->close();
+$stmt->close();
 $conn->close();
 ?>
