@@ -534,11 +534,10 @@ const DeliveryDetails = () => {
                         className="btn upd-btn"
                         onClick={() => handleUpdate(group.transaction_id)}
                         disabled={
-                          [
-                            "Out for Delivery",
-                            "Delivered",
-                            "Cancelled",
-                          ].includes(group.delivery_status) ||
+                          group.delivery_status === "Out for Delivery" ||
+                          group.delivery_status === "Cancelled" ||
+                          (group.delivery_status === "Delivered" &&
+                            group.payment_option === "Full Payment") ||
                           numericBalance <= 0
                         }
                         style={

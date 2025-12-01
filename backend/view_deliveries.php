@@ -39,7 +39,7 @@ function buildFileUrl($baseUrl, $path) {
 // --- Fetch main delivery info ---
 $sql_customer = "
     SELECT 
-        transaction_id, tracking_number, customer_name, customer_address, customer_contact, 
+        transaction_id, tracking_number, customer_name, customer_address, customer_contact, order_type,
         date_of_order, target_date_delivery, dbilling_date, rescheduled_date,
         mode_of_payment, payment_option,
         down_payment, full_payment, fbilling_date, balance, total,
@@ -110,6 +110,7 @@ $response = [
     'customer_name' => $customer['customer_name'],
     'customer_address' => $customer['customer_address'],
     'customer_contact' => $customer['customer_contact'],
+     'order_type' => $customer['order_type'] ?? 'Delivery',
     'date_of_order' => $customer['date_of_order'],
     'target_date_delivery' => $customer['target_date_delivery'],
     'rescheduled_date' => $customer['rescheduled_date'],
