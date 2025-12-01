@@ -45,6 +45,7 @@ function DriverProfileSettings() {
     confirm: false,
   });
 
+
   useEffect(() => {
     const storedProfile = localStorage.getItem("user");
     const storedPassword = localStorage.getItem("userPassword");
@@ -92,7 +93,7 @@ function DriverProfileSettings() {
     }
   }, []);
 
-  // Calculate Age automatically from Birthday
+ 
   useEffect(() => {
     if (profile.Birthday) {
       const birthDate = new Date(profile.Birthday);
@@ -107,7 +108,6 @@ function DriverProfileSettings() {
   }, [profile.Birthday]);
 
   const handleSave = () => {
-    // Contact validation: only 09XXXXXXXXX (11 digits)
     if (modalField === "Contact") {
       const contactRegex = /^09\d{9}$/;
       if (!contactRegex.test(fieldValue)) {
@@ -118,7 +118,6 @@ function DriverProfileSettings() {
       }
     }
 
-    // Age cannot be edited manually
     if (modalField === "Age") {
       ToastHelper.error("Age is automatically calculated from Birthday.");
       return;
@@ -134,7 +133,7 @@ function DriverProfileSettings() {
       Contact: "pers_phone",
       Age: "pers_age",
       Gender: "pers_gender",
-      Birthday: "pers_birthday",
+      Birthday: "pers_birthday", 
     };
 
     const formData = new FormData();
@@ -171,8 +170,6 @@ function DriverProfileSettings() {
 
   const handlePasswordSave = () => {
     const { new: newPassword, confirm } = passwordForm;
-
-    // Password validation
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{6,}$/;
 
     if (!passwordRegex.test(newPassword)) {
@@ -391,11 +388,21 @@ function DriverProfileSettings() {
                       backgroundColor: "#E8F8F5",
                     }}
                     onClick={() => {
-                      if (key === "Age") return; // Disable Age editing
+                      if (key === "Age") return;
+
                       setModalField(key);
-                      setFieldValue(profile[key]);
+
+                      if (key === "Birthday" && profile.Birthday) {
+                        const date = new Date(profile.Birthday);
+                        const yyyy = date.getFullYear();
+                        const mm = String(date.getMonth() + 1).padStart(2, "0");
+                        const dd = String(date.getDate()).padStart(2, "0");
+                        setFieldValue(`${yyyy}-${mm}-${dd}`);
+                      } else {
+                        setFieldValue(profile[key]);
+                      }
                     }}
-                    disabled={key === "Age"} // Disable Age button
+                    disabled={key === "Age"}
                   >
                     <FaEdit />
                   </Button>
@@ -463,11 +470,18 @@ function DriverProfileSettings() {
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
               </Form.Select>
+            ) : modalField === "Birthday" ? (
+              <Form.Control
+                type="date"
+                maxLength={10}
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+              />
             ) : (
               <Form.Control
                 type="text"
                 value={fieldValue}
-                maxLength={modalField === "Contact" ? 11 : undefined} // Contact limit
+                maxLength={modalField === "Contact" ? 11 : undefined}
                 onChange={(e) => setFieldValue(e.target.value)}
               />
             )}
@@ -483,7 +497,6 @@ function DriverProfileSettings() {
         </Modal.Footer>
       </Modal>
 
-      {/* Password Modal */}
       {/* Password Modal */}
       <Modal
         show={modalField === "password"}
@@ -513,7 +526,6 @@ function DriverProfileSettings() {
                 {showPassword.new ? <FaEyeSlash /> : <FaEye />}
               </Button>
             </InputGroup>
-            {/* Live Password Hints */}
             <ul
               className="mt-2 mb-0"
               style={{ fontSize: "0.85rem", paddingLeft: "20px" }}
@@ -578,7 +590,7 @@ function DriverProfileSettings() {
             Cancel
           </Button>
           <Button variant="success" onClick={handlePasswordSave}>
-            Save Password
+            Save
           </Button>
         </Modal.Footer>
       </Modal>
@@ -589,23 +601,17 @@ function DriverProfileSettings() {
         onHide={() => setShowLogoutModal(false)}
         centered
       >
-        <Modal.Header className="bg-light" closeButton>
-          <Modal.Title className="text-dark">Confirm Logout</Modal.Title>
+        <Modal.Header closeButton style={{ backgroundColor: "#E8F8F5" }}>
+          <Modal.Title>Logout Confirmation</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="bg-white">
+        <Modal.Body style={{ backgroundColor: "#F2FDF4" }}>
           Are you sure you want to logout?
         </Modal.Body>
-        <Modal.Footer className="bg-light">
-          <Button
-            className="cancel-logout btn btn-outline-secondary bg-white px-3 py-2 fs-6 fw-semibold"
-            onClick={() => setShowLogoutModal(false)}
-          >
+        <Modal.Footer style={{ backgroundColor: "#E8F8F5" }}>
+          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
             Cancel
           </Button>
-          <Button
-            className="logout-btn btn btn-danger px-3 py-2 fs-6 fw-semibold"
-            onClick={confirmLogout}
-          >
+          <Button variant="success" onClick={confirmLogout}>
             Logout
           </Button>
         </Modal.Footer>
