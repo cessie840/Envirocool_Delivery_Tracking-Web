@@ -94,7 +94,7 @@ function App() {
       role: "operationalmanager",
     },
     {
-      path: "/create-personnel-account",
+      path: "/create-personnel-account-ops",
       element: <CreatePersonnelAccount />,
       role: "operationalmanager",
     },

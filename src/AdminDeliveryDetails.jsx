@@ -630,16 +630,6 @@ const DeliveryDetails = () => {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Payment Option</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="e.g. Down Payment, Bank"
-              value={qbePaymentOption}
-              onChange={(e) => setQbePaymentOption(e.target.value)}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
             <Form.Label>Items Ordered</Form.Label>
             <Form.Control
               type="text"
@@ -663,13 +653,35 @@ const DeliveryDetails = () => {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowQbeModal(false)}>
+          <Button
+            className="cancel-btn py-2 rounded rounded-2 px-2"
+            variant="secondary"
+            onClick={() => setShowQbeModal(false)}
+          >
             Cancel
           </Button>
-          <Button variant="light" onClick={clearQBE}>
+          <Button
+            // className="btn secondary-outline"
+            variant="outline-secondary"
+            onClick={() => {
+              setQbeName("");
+              setQbeAddress("");
+              setQbeTracking("");
+              setQbePaymentMode("");
+              setQbeAssignedPersonnel("");
+              setQbeItems("");
+              setQbeTotal("");
+            }}
+          >
             Clear
           </Button>
-          <Button variant="primary" onClick={handleQBEApply}>
+          <Button
+            className="add-btn py-2 px-3"
+            variant="success"
+            onClick={() => {
+              setShowQbeModal(false); /* filtering is reactive */
+            }}
+          >
             Apply
           </Button>
         </Modal.Footer>

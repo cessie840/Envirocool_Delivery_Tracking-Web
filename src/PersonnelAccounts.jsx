@@ -200,28 +200,19 @@ const PersonnelAccounts = () => {
       onSearchChange={setSearchTerm}
     >
       <div className="d-flex justify-content-end mx-4 my-5 align-items-center gap-2">
-        <button
-          className="btn d-flex align-items-center"
-          title="Advanced Filter (QBE)"
-          onClick={openQbeModal}
-          style={{
-            backgroundColor: "#116B8A",
-            color: "white",
-            border: "none",
-            padding: "8px 12px",
-            borderRadius: 6,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
+        <Button
+          className="me-2 btn-view py-2 px-3 fs-6nrounded rounded-2"
+          // variant="outline-primary"
+          size="sm"
+          onClick={() => setShowQbeModal(true)}
         >
-          <FaFilter />
+          <FaFilter /> {"  "}
           Advanced Filter
-        </button>
+        </Button>
 
         <button
-          className="add-delivery rounded-3 px-4 py-2 d-flex align-items-center gap-2"
-          onClick={() => navigate("/create-personnel-account")}
+          className="add-delivery rounded rounded-2 px-4 py-2 d-flex align-items-center gap-2"
+          onClick={() => navigate("/create-personnel-account-ops")}
         >
           <FaUserPlus /> Create Account
         </button>
