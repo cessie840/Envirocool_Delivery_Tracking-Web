@@ -7,6 +7,8 @@ import {
   FaArrowLeft,
   FaChevronLeft,
   FaChevronRight,
+  FaTrash,
+  FaEdit,
 } from "react-icons/fa";
 import { Button, Modal, Collapse } from "react-bootstrap";
 import Select from "react-select";
@@ -16,6 +18,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import Swal from "sweetalert2";
 
 const paymentOptions = [
   { label: "Cash", value: "Cash" },
@@ -95,7 +98,16 @@ const AddDelivery = () => {
   const [transactionId, setTransactionId] = useState("Loading...");
   const [poId, setPoId] = useState("Loading...");
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [orderType, setOrderType] = useState("");
+
+  const [receiptNumbers, setReceiptNumbers] = useState([]);
+
+  const handleAddReceipt = () => {
+    if (!form.payment_receipt_no || receiptError) return;
+
+    setReceiptNumbers((prev) => [...prev, form.payment_receipt_no]);
+
+    setForm((prev) => ({ ...prev, payment_receipt_no: "" }));
+  };
 
   const [editModal, setEditModal] = useState({
     show: false,
@@ -138,7 +150,6 @@ const AddDelivery = () => {
     city: "",
     province: "",
     customer_contact: "",
-    order_type: "",
     date_of_order: "",
     target_date_delivery: "",
     payment_method: "",
@@ -156,15 +167,15 @@ const AddDelivery = () => {
   const [cityOptions, setCityOptions] = useState([]);
   const [barangayOptions, setBarangayOptions] = useState([]);
 
- useEffect(() => {
-  if (showReceiptModal) {
-    let storedCount = parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
-    const newCount = storedCount + 1;
-    localStorage.setItem("envirocoolReceiptCounter", newCount);
-    setReceiptNumber(newCount);
-  }
-}, [showReceiptModal]);
-
+  useEffect(() => {
+    if (showReceiptModal) {
+      let storedCount =
+        parseInt(localStorage.getItem("envirocoolReceiptCounter")) || 0;
+      const newCount = storedCount + 1;
+      localStorage.setItem("envirocoolReceiptCounter", newCount);
+      setReceiptNumber(newCount);
+    }
+  }, [showReceiptModal]);
 
   useEffect(() => {
     axios
@@ -423,6 +434,7 @@ const AddDelivery = () => {
     if (!value) return "";
     return value.toString().replace(/[^0-9.]/g, "");
   };
+  const [receiptError, setReceiptError] = useState("");
 
   const handleConfirmCancel = () => {
     setShowCancelModal(false);
@@ -431,7 +443,6 @@ const AddDelivery = () => {
       customer_name: "",
       customer_address: "",
       customer_contact: "",
-      order_type:"",
       date_of_order: "",
       target_date_delivery: "",
       payment_method: "",
@@ -440,6 +451,7 @@ const AddDelivery = () => {
       fp_collection_date: "",
       down_payment: "",
       dp_collection_date: "",
+
       balance: "",
       total: "",
     });
@@ -478,7 +490,6 @@ const AddDelivery = () => {
   useEffect(() => {
     document.title = "Add Delivery";
     fetchLatestIDs();
-
 
     const fetchProducts = async () => {
       try {
@@ -635,7 +646,9 @@ const AddDelivery = () => {
 
     const clonedElement = element.cloneNode(true);
 
-    clonedElement.querySelectorAll(".signature-section").forEach((el) => el.remove());
+    clonedElement
+      .querySelectorAll(".signature-section")
+      .forEach((el) => el.remove());
 
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
@@ -683,7 +696,7 @@ const AddDelivery = () => {
           th, td {
             border: 1px solid #5E5E5EFF;
             padding: 3px;
-            text-align: left;
+            text-align: center;
           }
           th {
             background-color: #EBEBEBFF;
@@ -734,7 +747,6 @@ const AddDelivery = () => {
     printWindow.document.close();
   };
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -777,13 +789,25 @@ const AddDelivery = () => {
       setLoading(false);
       return;
     }
-        if (!form.payment_receipt_no.trim()) {
-          ToastHelper.error("Please enter a receipt number.", {
-            className: "toast-error",
-          });
-          setLoading(false);
-          return;
-        }
+
+    // Must have at least one receipt
+    if (receiptNumbers.length === 0) {
+      ToastHelper.error("Please add at least one receipt number.", {
+        className: "toast-error",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Receipt count must match proof-of-payment file count
+    if (receiptNumbers.length !== proofFiles.length) {
+      ToastHelper.error(
+        `Number of receipt numbers (${receiptNumbers.length}) must match the number of proof of payment images (${proofFiles.length}).`,
+        { className: "toast-error" }
+      );
+      setLoading(false);
+      return;
+    }
 
     for (const [index, item] of orderItems.entries()) {
       const quantity = parseInt(item.quantity);
@@ -862,8 +886,6 @@ const AddDelivery = () => {
     formData.append("city", form.city);
     formData.append("province", form.province);
     formData.append("customer_contact", form.customer_contact);
-    formData.append("order_type", form.order_type || "Delivery");
-
     formData.append("date_of_order", form.date_of_order);
     formData.append("target_date_delivery", form.target_date_delivery);
     formData.append("payment_method", form.payment_method);
@@ -883,21 +905,24 @@ const AddDelivery = () => {
     formData.append(
       "customer_address",
       [
+        form.province,
+        form.city,
+        form.barangay,
         form.house_no,
         form.street_name,
         form.barangay,
-        form.city,
-        form.province,
         "Philippines",
       ]
         .filter(Boolean)
         .join(", ")
     );
     formData.append("order_items", JSON.stringify(normalizedOrderItems));
- formData.append("payment_receipt_no", form.payment_receipt_no);
- proofFiles.forEach((file, index) => {
-   formData.append(`proofOfPayment[${index}]`, file);
- });
+    receiptNumbers.forEach((num) => {
+      formData.append("payment_receipt_no[]", num);
+    });
+    proofFiles.forEach((file, index) => {
+      formData.append(`proofOfPayment[${index}]`, file);
+    });
 
     try {
       const res = await axios.post(
@@ -936,7 +961,6 @@ const AddDelivery = () => {
         city: form.city,
         province: form.province,
         customer_contact: form.customer_contact,
-        order_type: form.order_type,
         date_of_order: form.date_of_order,
         target_date_delivery: form.target_date_delivery,
         payment_method: form.payment_method,
@@ -971,7 +995,6 @@ const AddDelivery = () => {
         city: "",
         province: "",
         customer_contact: "",
-        order_type: "",
         date_of_order: "",
         target_date_delivery: "",
         payment_method: "",
@@ -1026,6 +1049,7 @@ const AddDelivery = () => {
       setLoading(false);
     }
   };
+
   const [showFAQ, setShowFAQ] = useState(false);
 
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
@@ -1145,26 +1169,48 @@ const AddDelivery = () => {
             </div>
 
             <div className="col-md-6">
-              <label htmlFor="contactNumber" className="form-label">
-                Enter Client's Contact Number:
+              <label htmlFor="dateOfOrder" className="form-label">
+                Date of Order:
               </label>
               <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                pattern="\d*"
-                className={`form-control ${contactError ? "is-invalid" : ""}`}
-                id="contactNumber"
-                name="customer_contact"
-                value={form.customer_contact}
-                placeholder="Client's Contact No."
-                onChange={handleContactChange}
-                maxLength={11}
+                type="date"
+                className={`form-control ${
+                  form.date_of_order ? "text-black" : "text-muted"
+                } ${orderDateError ? "is-invalid" : ""}`}
+                id="dateOfOrder"
+                name="date_of_order"
+                value={
+                  form.date_of_order
+                    ? new Date(form.date_of_order).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value + "T00:00:00");
+                  const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
+
+                  if (isNaN(selectedDate.getTime())) {
+                    setOrderDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setOrderDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, date_of_order: "" }));
+                    return;
+                  } else if (selectedDate > today) {
+                    setOrderDateError("Date of order cannot be in the future.");
+                  } else {
+                    setOrderDateError("");
+                    handleChange(e);
+                  }
+                }}
                 required
+                max={getLocalDate()}
               />
 
-              {contactError && (
-                <div className="invalid-feedback">{contactError}</div>
+              {orderDateError && (
+                <div className="invalid-feedback">{orderDateError}</div>
               )}
             </div>
           </div>
@@ -1172,27 +1218,6 @@ const AddDelivery = () => {
           <div className="mb-3">
             <label className="form-label">Customer Address:</label>
             <div className="row g-2">
-              <div className="col-md-6">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="House No./Street Name"
-                  name="house_no"
-                  value={form.house_no || ""}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="col-md-6">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Village/Subdivision"
-                  name="street_name"
-                  value={form.street_name || ""}
-                  onChange={handleChange}
-                />
-              </div>
               <div className="col-md-4">
                 <CreatableSelect
                   placeholder="Province"
@@ -1339,10 +1364,94 @@ const AddDelivery = () => {
                   }}
                 />
               </div>
+
+              <div className="col-md-6">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="House No./Street Name"
+                  name="house_no"
+                  value={form.house_no || ""}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Village/Subdivision"
+                  name="street_name"
+                  value={form.street_name || ""}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
           </div>
 
-      
+          <div className="row mb-4">
+            <div className="col-md-6">
+              <label htmlFor="contactNumber" className="form-label">
+                Enter Client's Contact Number:
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                pattern="\d*"
+                className={`form-control ${contactError ? "is-invalid" : ""}`}
+                id="contactNumber"
+                name="customer_contact"
+                value={form.customer_contact}
+                placeholder="Client's Contact No."
+                onChange={handleContactChange}
+                maxLength={11}
+                required
+              />
+
+              {contactError && (
+                <div className="invalid-feedback">{contactError}</div>
+              )}
+            </div>
+            <div className="col-md-6">
+              <label htmlFor="targetDate" className="form-label">
+                Date of Delivery:
+              </label>
+              <input
+                type="date"
+                id="targetDate"
+                name="target_date_delivery"
+                className={`form-control ${
+                  form.target_date_delivery ? "text-black" : "text-muted"
+                } ${dateError ? "is-invalid" : ""}`}
+                value={form.target_date_delivery || ""}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value + "T00:00:00");
+                  const today = new Date(getLocalDate() + "T00:00:00");
+                  const day = selectedDate.getDay();
+
+                  if (isNaN(selectedDate.getTime())) {
+                    setDateError("Please enter a valid date.");
+                  } else if (day === 0 || day === 6) {
+                    setDateError(
+                      "Weekends are not allowed. Please choose another day."
+                    );
+                    e.target.value = "";
+                    setForm((prev) => ({ ...prev, target_date_delivery: "" }));
+                    return;
+                  } else if (selectedDate < today) {
+                    setDateError("Date of delivery cannot be in the past.");
+                  } else {
+                    setDateError("");
+                    handleChange(e);
+                  }
+                }}
+                required
+                min={getLocalDate()}
+              />
+              {dateError && <div className="invalid-feedback">{dateError}</div>}
+            </div>
+          </div>
           <div className="order-details mt-5">
             <h4 className="mb-4">Order Details</h4>
             <table className="order-table table">
@@ -1613,104 +1722,6 @@ const AddDelivery = () => {
                       />
                     </td>
 
-                    <Modal
-                      show={editModal.show}
-                      onHide={() => setEditModal({ ...editModal, show: false })}
-                      centered
-                    >
-                      <Modal.Header closeButton>
-                        <Modal.Title>
-                          Edit
-                          {editModal.type === "product"
-                            ? "Product Type"
-                            : "Item"}
-                        </Modal.Title>
-                      </Modal.Header>
-                      <Modal.Body>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={newValue}
-                          onChange={(e) => setNewValue(e.target.value)}
-                        />
-                      </Modal.Body>
-                      <Modal.Footer>
-                        <Button
-                          className="hover-cancel-btn"
-                          variant="secondary"
-                          onClick={() =>
-                            setEditModal({ ...editModal, show: false })
-                          }
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="success"
-                          onClick={async () => {
-                            try {
-                              await axios.post(
-                                "http://localhost/DeliveryTrackingSystem/update_product.php",
-                                {
-                                  type_of_product_current:
-                                    editModal.type === "product"
-                                      ? editModal.currentValue
-                                      : editModal.typeOfProduct,
-                                  type_of_product_new:
-                                    editModal.type === "product"
-                                      ? newValue
-                                      : editModal.typeOfProduct,
-                                  description_current:
-                                    editModal.type === "item"
-                                      ? editModal.currentValue
-                                      : "",
-                                  description_new:
-                                    editModal.type === "item" ? newValue : "",
-                                }
-                              );
-
-                              if (editModal.type === "product") {
-                                setProductOptions((prev) =>
-                                  prev.map((opt) =>
-                                    opt.value === editModal.currentValue
-                                      ? { label: newValue, value: newValue }
-                                      : opt
-                                  )
-                                );
-
-                                setOrderItems((prev) =>
-                                  prev.map((item) =>
-                                    item.type_of_product ===
-                                    editModal.currentValue
-                                      ? { ...item, type_of_product: newValue }
-                                      : item
-                                  )
-                                );
-
-                                setItemOptions((prev) => {
-                                  const updated = { ...prev };
-                                  if (updated[editModal.currentValue]) {
-                                    updated[newValue] = [
-                                      ...updated[editModal.currentValue],
-                                    ];
-                                    delete updated[editModal.currentValue];
-                                  }
-                                  return updated;
-                                });
-                              }
-
-                              setEditModal({ ...editModal, show: false });
-                              ToastHelper.success("Updated successfully!");
-                            } catch (err) {
-                              console.error(err);
-                              ToastHelper.error("Error updating!");
-                            }
-                          }}
-                        >
-                          Save Changes
-                        </Button>
-                      </Modal.Footer>
-                    </Modal>
-
                     <td>
                       <input
                         type="text"
@@ -1792,146 +1803,8 @@ const AddDelivery = () => {
                 ✚ Add Another Item
               </button>
             </div>
-            <h4 className="mb-4">Delivery Details</h4>
-            <div className="row mb-3">
-              <div className="col-md-4 mb-3">
-                <label className="form-label d-block">Delivery Type:</label>
-                <Select
-                  options={[
-                    { value: "Delivery", label: "For Delivery" },
-                    { value: "Pickup", label: "For Pickup" },
-                  ]}
-                  placeholder="Select Order Type"
-                  isSearchable
-                  value={
-                    [
-                      { value: "Delivery", label: "For Delivery" },
-                      { value: "Pickup", label: "For Pickup" },
-                    ].find((opt) => opt.value === form.order_type) || null
-                  }
-                  onChange={(selected) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      order_type: selected?.value || "",
-                    }));
-                  }}
-                  styles={{
-                    control: (provided) => ({
-                      ...provided,
-                      minHeight: "43px",
-                      height: "43px",
-                    }),
-                    valueContainer: (provided) => ({
-                      ...provided,
-                      height: "43px",
-                      padding: "0 8px",
-                    }),
-                    input: (provided) => ({
-                      ...provided,
-                      margin: 0,
-                      padding: 0,
-                    }),
-                    indicatorsContainer: (provided) => ({
-                      ...provided,
-                      height: "43px",
-                    }),
-                  }}
-                />
-              </div>
 
-              <div className="col-md-4">
-                <label htmlFor="dateOfOrder" className="form-label">
-                  Date of Order:
-                </label>
-                <input
-                  type="date"
-                  className={`form-control ${
-                    form.date_of_order ? "text-black" : "text-muted"
-                  } ${orderDateError ? "is-invalid" : ""}`}
-                  id="dateOfOrder"
-                  name="date_of_order"
-                  value={
-                    form.date_of_order
-                      ? new Date(form.date_of_order).toISOString().split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const selectedDate = new Date(e.target.value + "T00:00:00");
-                    const today = new Date(getLocalDate() + "T00:00:00");
-                    const day = selectedDate.getDay();
-
-                    if (isNaN(selectedDate.getTime())) {
-                      setOrderDateError("Please enter a valid date.");
-                    } else if (day === 0 || day === 6) {
-                      setOrderDateError(
-                        "Weekends are not allowed. Please choose another day."
-                      );
-                      e.target.value = "";
-                      setForm((prev) => ({ ...prev, date_of_order: "" }));
-                      return;
-                    } else if (selectedDate > today) {
-                      setOrderDateError(
-                        "Date of order cannot be in the future."
-                      );
-                    } else {
-                      setOrderDateError("");
-                      handleChange(e);
-                    }
-                  }}
-                  required
-                  max={getLocalDate()}
-                />
-
-                {orderDateError && (
-                  <div className="invalid-feedback">{orderDateError}</div>
-                )}
-              </div>
-              <div className="col-md-4">
-                <label htmlFor="targetDate" className="form-label">
-                  Date of Delivery:
-                </label>
-                <input
-                  type="date"
-                  id="targetDate"
-                  name="target_date_delivery"
-                  className={`form-control ${
-                    form.target_date_delivery ? "text-black" : "text-muted"
-                  } ${dateError ? "is-invalid" : ""}`}
-                  value={form.target_date_delivery || ""}
-                  onChange={(e) => {
-                    const selectedDate = new Date(e.target.value + "T00:00:00");
-                    const today = new Date(getLocalDate() + "T00:00:00");
-                    const day = selectedDate.getDay();
-
-                    if (isNaN(selectedDate.getTime())) {
-                      setDateError("Please enter a valid date.");
-                    } else if (day === 0 || day === 6) {
-                      setDateError(
-                        "Weekends are not allowed. Please choose another day."
-                      );
-                      e.target.value = "";
-                      setForm((prev) => ({
-                        ...prev,
-                        target_date_delivery: "",
-                      }));
-                      return;
-                    } else if (selectedDate < today) {
-                      setDateError("Date of delivery cannot be in the past.");
-                    } else {
-                      setDateError("");
-                      handleChange(e);
-                    }
-                  }}
-                  required
-                  min={getLocalDate()}
-                />
-                {dateError && (
-                  <div className="invalid-feedback">{dateError}</div>
-                )}
-              </div>
-            </div>
-
-            <h4 className="mb-4 mt-5">Payment Details</h4>
+            <h4 className="mb-4">Payment Details</h4>
 
             <div className="row mb-3">
               <div className="col-md-6">
@@ -2211,7 +2084,8 @@ const AddDelivery = () => {
               </div>
 
               <h4 className="mt-5">TRANSACTION RECEIPT</h4>
-              <div className="col-md-6">
+
+              <div className="col-md-6 position-relative">
                 <label
                   htmlFor="receiptNumber"
                   className="form-label"
@@ -2219,17 +2093,136 @@ const AddDelivery = () => {
                 >
                   Enter the Payment Receipt Number:
                 </label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="receiptNumber"
-                  name="payment_receipt_no"
-                  value={form.payment_receipt_no}
-                  onChange={handleChange}
-                  placeholder="e.g., 2025112609876"
-                />
+
+                <div className="d-flex">
+                  <input
+                    type="text"
+                    className={`form-control ${
+                      receiptError ? "is-invalid" : ""
+                    }`}
+                    id="receiptNumber"
+                    name="payment_receipt_no"
+                    value={form.payment_receipt_no}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      const filteredValue = newValue.replace(
+                        /[^a-zA-Z0-9]/g,
+                        ""
+                      );
+
+                      if (newValue !== filteredValue) {
+                        setReceiptError(
+                          "Special characters are not allowed. Input must be letters or numbers only."
+                        );
+                      } else {
+                        setReceiptError("");
+                      }
+
+                      setForm((prev) => ({
+                        ...prev,
+                        payment_receipt_no: filteredValue,
+                      }));
+                    }}
+                    placeholder="e.g., 2025112609876"
+                  />
+
+                  <button
+                    type="button"
+                    className="btn add-receipt-btn ms-2 fs-6 px-4 rounded-1"
+                    onClick={handleAddReceipt}
+                    disabled={!form.payment_receipt_no || receiptError}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {receiptError && (
+                  <div className="invalid-feedback d-block">{receiptError}</div>
+                )}
               </div>
             </div>
+            {receiptNumbers.length > 0 && (
+              <div
+                className="mt-3 p-3 border border-3 bg-light"
+                style={{
+                  maxWidth: "385px",
+                  borderRadius: "8px",
+                }}
+              >
+                <h5 className="mb-3 fw-semibold fs-5">
+                  <i className="fa-solid fa-receipt me-2"></i>
+                  Receipt Numbers
+                </h5>
+
+                <div className="d-flex flex-column gap-2">
+                  {receiptNumbers.map((num, index) => (
+                    <div
+                      key={index}
+                      className="d-flex justify-content-between align-items-center p-3"
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e5e5",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div>
+                        <div className="fw-semibold">{num}</div>
+                        <div
+                          className="text-muted"
+                          style={{ fontSize: "0.85rem" }}
+                        >
+                          Receipt #{index + 1}
+                        </div>
+                      </div>
+
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-warning"
+                          onClick={() => {
+                            setForm((prev) => ({
+                              ...prev,
+                              payment_receipt_no: num,
+                            }));
+
+                            setReceiptNumbers((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            );
+                          }}
+                        >
+                          <FaEdit />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => {
+                            Swal.fire({
+                              title: "Delete Receipt?",
+                              text: "This action cannot be undone.",
+                              icon: "warning",
+                              showCancelButton: true,
+                              confirmButtonColor: "#dc3545",
+                              cancelButtonColor: "#6c757d",
+                              confirmButtonText: "Yes, delete it",
+                            }).then((result) => {
+                              if (result.isConfirmed) {
+                                setReceiptNumbers((prev) =>
+                                  prev.filter((_, i) => i !== index)
+                                );
+                              }
+                            });
+                          }}
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Modal
               show={showPreviewModal}
@@ -2332,9 +2325,10 @@ const AddDelivery = () => {
               <Modal.Body className="bg-white">
                 <div className="summary-content">
                   <p>
-                    <strong>Payment Receipt Number: </strong>{" "}
-                    {form.payment_receipt_no}
+                    <strong>Payment Receipt Number: </strong>
+                    {receiptNumbers.join(", ")}
                   </p>
+
                   <p>
                     <strong>Transaction No.:</strong> {transactionId}
                   </p>
@@ -2360,9 +2354,6 @@ const AddDelivery = () => {
                   </p>
                   <p>
                     <strong>Contact:</strong> {form.customer_contact}
-                  </p>
-                  <p>
-                    <strong>Order Type:</strong> {form.order_type}
                   </p>
                   <p>
                     <strong>Date of Order:</strong> {form.date_of_order}
@@ -2581,9 +2572,16 @@ const AddDelivery = () => {
                 id="receipt-section"
                 className="bg-white text-black p-4"
               >
-                <div className="text-center mb-4">
-                  <h3 className="fw-bold text-success mb-0">ENVIROCOOL</h3>
-                  <p className="mb-0">Official Transaction Receipt</p>
+                <div className="text-center mb-2">
+                  <h3 className="fw-bold text-success mb-0 fs-2">ENVIROCOOL</h3>
+                  <small>
+                    FP Perez, Brgy. Parian, Calamba City, Laguna
+                  </small>{" "}
+                  <br />
+                  <small> Tel: (049) 540-306 / 0917-158-7013</small>
+                  <p className="mb-0 fs-5 fw-semibold">
+                    Official Transaction Receipt
+                  </p>
                   <small>Date Printed: {new Date().toLocaleString()}</small>
                   <br />
                   <small className="text-muted">
@@ -2601,9 +2599,10 @@ const AddDelivery = () => {
 
                 <div className="mb-3">
                   <p>
-                    <b>Payment Receipt Number: </b>{" "}
-                    {receiptData?.payment_receipt_no || ""}
+                    <b>Payment Receipt Number: </b>
+                    {receiptNumbers.join(", ")}
                   </p>
+
                   <p>
                     <b>Customer Name:</b> {receiptData?.customer_name || ""}
                   </p>
@@ -2623,9 +2622,6 @@ const AddDelivery = () => {
                   </p>
                   <p>
                     <b>Contact:</b> {receiptData?.customer_contact || ""}
-                  </p>
-                  <p>
-                    <b>Contact:</b> {receiptData?.order_type || ""}
                   </p>
                   <p>
                     <b>Date of Order:</b> {receiptData?.date_of_order || ""}
@@ -2682,12 +2678,12 @@ const AddDelivery = () => {
                   )}
                 </div>
 
-                <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b>
+                {/* <b className="mt-4 mb-2 fw-bold fs-5">Order Items</b> */}
                 <table className="table table-bordered table-sm">
                   <thead className="table-light text-center">
                     <tr>
                       <th>Qty</th>
-                      <th>Item</th>
+                      <th>Description</th>
                       <th>Unit Price</th>
                       <th>Total</th>
                     </tr>
