@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
@@ -400,7 +401,19 @@ const ViewOrder = () => {
                       {formatDate(orderDetails.rescheduled_date)}
                     </p>
                   )}
-
+                  <br />
+                  <h5 className="text-success fw-bold">Delivery Details</h5>
+                  <p>
+                    <span>Delivery Type:</span> {orderDetails.order_type}
+                  </p>
+                  <p>
+                    <span>Date of Order:</span>{" "}
+                    {formatDate(orderDetails.date_of_order)}
+                  </p>
+                  <p>
+                    <span>Target Delivery Date: </span>
+                    {formatDate(orderDetails.target_date_delivery)}
+                  </p>
                   <br />
                   <h5 className="text-success fw-bold">Delivery Status</h5>
                   <p>
@@ -520,18 +533,6 @@ const ViewOrder = () => {
                     </>
                   )}
                   <br /> <br />
-                  <h5 className="text-success fw-bold">Delivery Details</h5>
-                  <p>
-                    <span>Delivery Type:</span> {orderDetails.order_type}
-                  </p>
-                  <p>
-                    <span>Date of Order:</span>{" "}
-                    {formatDate(orderDetails.date_of_order)}
-                  </p>
-                  <p>
-                    <span>Target Delivery Date: </span>
-                    {formatDate(orderDetails.target_date_delivery)}
-                  </p>
                 </div>
 
                 <div className="col-md-12 order-3 order-md-3 mt-4">
@@ -610,20 +611,21 @@ const ViewOrder = () => {
                 </div>
               </div>
             </div>
-
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
-              {!["Delivered", "Out for Delivery", "Cancelled"].includes(
-                orderDetails.status
-              ) &&
-                (parseFloat(orderDetails.balance) > 0 ||
-                  calculatedBalance > 0) && (
-                  <button
-                    className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                    onClick={handleUpdate}
-                  >
-                    Update Payment
-                  </button>
-                )}
+              {
+              ((orderDetails.status === "Delivered" &&
+                orderDetails.payment_option === "Down Payment") ||
+             
+                (orderDetails.status === "Pending" &&
+                  (parseFloat(orderDetails.balance) > 0 ||
+                    calculatedBalance > 0))) && (
+                <button
+                  className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                  onClick={handleUpdate}
+                >
+                  Update Payment
+                </button>
+              )}
 
               {orderDetails.status === "Cancelled" && (
                 <button
@@ -874,9 +876,11 @@ const ViewOrder = () => {
           }}
         >
           <Button
-            variant="outline-secondary"
-            onClick={() => setShowFAQ(false)}
-            className="px-4"
+            onClick={() => {
+              setShowFAQ(false);
+              setActiveFAQIndex(null);
+            }}
+            className="close-btn py-2 px-4 fs-6 rounded-2"
           >
             Close
           </Button>
