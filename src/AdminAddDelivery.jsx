@@ -7,6 +7,8 @@ import {
   FaArrowLeft,
   FaChevronLeft,
   FaChevronRight,
+  FaTrash,
+  FaEdit,
 } from "react-icons/fa";
 import { Button, Modal, Collapse } from "react-bootstrap";
 import Select from "react-select";
@@ -16,6 +18,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import Swal from "sweetalert2";
 
 const paymentOptions = [
   { label: "Cash", value: "Cash" },
@@ -96,6 +99,16 @@ const AddDelivery = () => {
   const [poId, setPoId] = useState("Loading...");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderType, setOrderType] = useState("");
+
+  const [receiptNumbers, setReceiptNumbers] = useState([]);
+
+  const handleAddReceipt = () => {
+    if (!form.payment_receipt_no || receiptError) return;
+
+    setReceiptNumbers((prev) => [...prev, form.payment_receipt_no]);
+
+    setForm((prev) => ({ ...prev, payment_receipt_no: "" }));
+  };
 
   const [editModal, setEditModal] = useState({
     show: false,
@@ -423,6 +436,8 @@ const AddDelivery = () => {
     if (!value) return "";
     return value.toString().replace(/[^0-9.]/g, "");
   };
+
+  const [receiptError, setReceiptError] = useState("");
 
   const handleConfirmCancel = () => {
     setShowCancelModal(false);
@@ -770,17 +785,39 @@ const AddDelivery = () => {
       return;
     }
 
-    if (form.payment_method && proofFiles.length === 0) {
-      ToastHelper.error("Please upload proof of payment.", {
+    // Must have at least one receipt
+    if (receiptNumbers.length === 0) {
+      ToastHelper.error("Please add at least one receipt number.", {
         className: "toast-error",
       });
       setLoading(false);
       return;
     }
-    if (!form.payment_receipt_no.trim()) {
-      ToastHelper.error("Please enter a receipt number.", {
+
+    // Receipt count must match proof-of-payment file count
+    if (receiptNumbers.length !== proofFiles.length) {
+      ToastHelper.error(
+        `Number of receipt numbers (${receiptNumbers.length}) must match the number of proof of payment images (${proofFiles.length}).`,
+        { className: "toast-error" }
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (receiptNumbers.length === 0) {
+      ToastHelper.error("Please add at least one receipt number.", {
         className: "toast-error",
       });
+      setLoading(false);
+      return;
+    }
+
+    // Receipt count must match proof-of-payment file count
+    if (receiptNumbers.length !== proofFiles.length) {
+      ToastHelper.error(
+        `Number of receipt numbers (${receiptNumbers.length}) must match the number of proof of payment images (${proofFiles.length}).`,
+        { className: "toast-error" }
+      );
       setLoading(false);
       return;
     }
@@ -2210,7 +2247,8 @@ const AddDelivery = () => {
               </div>
 
               <h4 className="mt-5">TRANSACTION RECEIPT</h4>
-              <div className="col-md-6">
+
+              <div className="col-md-6 position-relative">
                 <label
                   htmlFor="receiptNumber"
                   className="form-label"
@@ -2218,17 +2256,136 @@ const AddDelivery = () => {
                 >
                   Enter the Payment Receipt Number:
                 </label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="receiptNumber"
-                  name="payment_receipt_no"
-                  value={form.payment_receipt_no}
-                  onChange={handleChange}
-                  placeholder="e.g., 2025112609876"
-                />
+
+                <div className="d-flex">
+                  <input
+                    type="text"
+                    className={`form-control ${
+                      receiptError ? "is-invalid" : ""
+                    }`}
+                    id="receiptNumber"
+                    name="payment_receipt_no"
+                    value={form.payment_receipt_no}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      const filteredValue = newValue.replace(
+                        /[^a-zA-Z0-9]/g,
+                        ""
+                      );
+
+                      if (newValue !== filteredValue) {
+                        setReceiptError(
+                          "Special characters are not allowed. Input must be letters or numbers only."
+                        );
+                      } else {
+                        setReceiptError("");
+                      }
+
+                      setForm((prev) => ({
+                        ...prev,
+                        payment_receipt_no: filteredValue,
+                      }));
+                    }}
+                    placeholder="e.g., 2025112609876"
+                  />
+
+                  <button
+                    type="button"
+                    className="btn add-receipt-btn ms-2 fs-6 px-4 rounded-1"
+                    onClick={handleAddReceipt}
+                    disabled={!form.payment_receipt_no || receiptError}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {receiptError && (
+                  <div className="invalid-feedback d-block">{receiptError}</div>
+                )}
               </div>
             </div>
+            {receiptNumbers.length > 0 && (
+              <div
+                className="mt-3 p-3 border border-3 bg-light"
+                style={{
+                  maxWidth: "385px",
+                  borderRadius: "8px",
+                }}
+              >
+                <h5 className="mb-3 fw-semibold fs-5">
+                  <i className="fa-solid fa-receipt me-2"></i>
+                  Receipt Numbers
+                </h5>
+
+                <div className="d-flex flex-column gap-2">
+                  {receiptNumbers.map((num, index) => (
+                    <div
+                      key={index}
+                      className="d-flex justify-content-between align-items-center p-3"
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e5e5",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div>
+                        <div className="fw-semibold">{num}</div>
+                        <div
+                          className="text-muted"
+                          style={{ fontSize: "0.85rem" }}
+                        >
+                          Receipt #{index + 1}
+                        </div>
+                      </div>
+
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-warning"
+                          onClick={() => {
+                            setForm((prev) => ({
+                              ...prev,
+                              payment_receipt_no: num,
+                            }));
+
+                            setReceiptNumbers((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            );
+                          }}
+                        >
+                          <FaEdit />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => {
+                            Swal.fire({
+                              title: "Delete Receipt?",
+                              text: "This action cannot be undone.",
+                              icon: "warning",
+                              showCancelButton: true,
+                              confirmButtonColor: "#dc3545",
+                              cancelButtonColor: "#6c757d",
+                              confirmButtonText: "Yes, delete it",
+                            }).then((result) => {
+                              if (result.isConfirmed) {
+                                setReceiptNumbers((prev) =>
+                                  prev.filter((_, i) => i !== index)
+                                );
+                              }
+                            });
+                          }}
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Modal
               show={showPreviewModal}
@@ -2331,8 +2488,8 @@ const AddDelivery = () => {
               <Modal.Body className="bg-white">
                 <div className="summary-content">
                   <p>
-                    <strong>Payment Receipt Number: </strong>{" "}
-                    {form.payment_receipt_no}
+                    <strong className="fs-6">Payment Receipt Number: </strong>
+                    {receiptNumbers.join(", ")}
                   </p>
                   <p>
                     <strong>Transaction No.:</strong> {transactionId}
@@ -2600,8 +2757,8 @@ const AddDelivery = () => {
 
                 <div className="mb-3">
                   <p>
-                    <b>Payment Receipt Number: </b>{" "}
-                    {receiptData?.payment_receipt_no || ""}
+                    <b>Payment Receipt Number: </b>
+                    {receiptNumbers.join(", ")}
                   </p>
                   <p>
                     <b>Customer Name:</b> {receiptData?.customer_name || ""}
@@ -2624,7 +2781,7 @@ const AddDelivery = () => {
                     <b>Contact:</b> {receiptData?.customer_contact || ""}
                   </p>
                   <p>
-                    <b>Contact:</b> {receiptData?.order_type || ""}
+                    <b>Order Type:</b> {receiptData?.order_type || ""}
                   </p>
                   <p>
                     <b>Date of Order:</b> {receiptData?.date_of_order || ""}
