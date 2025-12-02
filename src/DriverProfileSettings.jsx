@@ -374,18 +374,70 @@ function DriverProfileSettings() {
                   <div
                     className="form-control"
                     style={{
-                      borderColor: "#116B8A",
-                      color: "black",
-                      backgroundColor: "#E8F8F5",
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                     
+                      backgroundColor: key === "Age" ? "#c3c3c33d" : "#E8F8F5",
+                      color: key === "Age" ? "#6f6e6eff" : "black",
                     }}
                   >
                     {profile[key] || `Enter your ${label.toLowerCase()}`}
                   </div>
                   <Button
                     style={{
-                      borderColor: "#116B8A",
-                      color: "#116B8A",
-                      backgroundColor: "#E8F8F5",
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                      color: key === "Age" ? "#116B8A" : "#116B8A",
+                      backgroundColor: key === "Age" ? "#e6e1e1ff" : "#E8F8F5",
+                    }}
+                    onClick={() => {
+                      if (key === "Age") return;
+
+                      setModalField(key);
+
+                      if (key === "Birthday" && profile.Birthday) {
+                        const date = new Date(profile.Birthday);
+                        const yyyy = date.getFullYear();
+                        const mm = String(date.getMonth() + 1).padStart(2, "0");
+                        const dd = String(date.getDate()).padStart(2, "0");
+                        setFieldValue(`${yyyy}-${mm}-${dd}`);
+                      } else {
+                        setFieldValue(profile[key]);
+                      }
+                    }}
+                    disabled={key === "Age"}
+                  >
+                    <FaEdit />
+                  </Button>
+                </InputGroup>
+              </div>
+            ))} {[
+              { label: "Full Name", key: "Name" },
+              { label: "Email", key: "Email" },
+              { label: "Contact Number", key: "Contact" },
+              { label: "Age", key: "Age" },
+              { label: "Gender", key: "Gender" },
+              { label: "Birthday", key: "Birthday" },
+            ].map(({ label, key }) => (
+              <div className="mt-3" key={key}>
+                <label className="text-secondary small fw-semibold">
+                  {label}
+                </label>
+                <InputGroup>
+                  <div
+                    className="form-control"
+                    style={{
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                     
+                      backgroundColor: key === "Age" ? "#c3c3c33d" : "#E8F8F5",
+                      color: key === "Age" ? "#6f6e6eff" : "black",
+                    }}
+                  >
+                    {profile[key] || `Enter your ${label.toLowerCase()}`}
+                  </div>
+                  <Button
+                    style={{
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                      color: key === "Age" ? "#116B8A" : "#116B8A",
+                      backgroundColor: key === "Age" ? "#e6e1e1ff" : "#E8F8F5",
                     }}
                     onClick={() => {
                       if (key === "Age") return;
@@ -409,7 +461,7 @@ function DriverProfileSettings() {
                 </InputGroup>
               </div>
             ))}
-
+            
             <div className="mt-3">
               <label className="text-secondary small fw-semibold">
                 Password
