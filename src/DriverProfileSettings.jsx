@@ -374,18 +374,19 @@ function DriverProfileSettings() {
                   <div
                     className="form-control"
                     style={{
-                      borderColor: "#116B8A",
-                      color: "black",
-                      backgroundColor: "#E8F8F5",
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                     
+                      backgroundColor: key === "Age" ? "#c3c3c33d" : "#E8F8F5",
+                      color: key === "Age" ? "#6f6e6eff" : "black",
                     }}
                   >
                     {profile[key] || `Enter your ${label.toLowerCase()}`}
                   </div>
                   <Button
                     style={{
-                      borderColor: "#116B8A",
-                      color: "#116B8A",
-                      backgroundColor: "#E8F8F5",
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                      color: key === "Age" ? "#116B8A" : "#116B8A",
+                      backgroundColor: key === "Age" ? "#e6e1e1ff" : "#E8F8F5",
                     }}
                     onClick={() => {
                       if (key === "Age") return;
