@@ -59,6 +59,7 @@ const Login = () => {
 
       const user = data.user;
       localStorage.setItem("user", JSON.stringify(user));
+         localStorage.setItem("username", user.ad_username);
       sessionStorage.setItem("showLoginNotif", "true");
 
       const elapsed = Date.now() - startTime;
@@ -93,7 +94,10 @@ const Login = () => {
         onClose: () => setShowToastOverlay(false),
       });
 
-      setTimeout(() => {
+         setTimeout(() => {
+      if (user.role === "admin" && user.ad_username === "systemadmin") {
+        navigate("/roles-permission"); // redirect systemadmin to roles page
+      } else {
         switch (user.role) {
           case "admin":
             navigate("/admin-dashboard");
@@ -108,7 +112,8 @@ const Login = () => {
             navigate("/");
             break;
         }
-      }, 1000);
+      }
+    }, 1000);
     } catch (networkError) {
       console.warn("Network error occurred:", networkError.message);
       setErrorMessage(

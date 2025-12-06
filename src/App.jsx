@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 // Public pages
 import Login from "./Login";
 import ForgotPass from "./ForgotPass";
-import ITRolesAndPermission from "./ITRolesAndPermission";
+import SystemAdminRolesAndPermission from "./SystemAdminRolesAndPermission";
 
 // ADMIN
 import AdminDashboard from "./AdminDashboard";
@@ -72,7 +72,7 @@ function App() {
     },
 
     { path: "/admin-settings", element: <AdminSettings />, role: "admin" },
-
+        {path: "/roles-permission", element: <SystemAdminRolesAndPermission />, role: "admin"},
     // OPERATIONAL
     {
       path: "/operational-delivery-details",
@@ -146,7 +146,7 @@ function App() {
 
       <Routes>
         {/* PUBLIC ROUTES */}
-        <Route path="/roles-permission" element={<ITRolesAndPermission />}/>
+
         <Route path="/" element={<Login />} />
         <Route path="/forgotpassword" element={<ForgotPass />} />
         <Route path="/not-authorized" element={<NotAuthorized />} />

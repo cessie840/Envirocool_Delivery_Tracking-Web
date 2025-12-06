@@ -6,12 +6,17 @@ import BackupRestoreTab from "./BackupRestoreTab";
 import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import SystemAdminLayout from "../SystemAdminLayout";
+
 
 import { Button, Modal } from "react-bootstrap";
 
 const AdminSettings = () => {
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+  const username = localStorage.getItem("username");
+  const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
+
 
   const guideqst = [
     {
@@ -106,7 +111,7 @@ const AdminSettings = () => {
   };
 
   return (
-    <AdminLayout
+    <Layout
       title={
         <div className="d-flex align-items-center gap-2">
           <span>Admin Settings</span>
@@ -267,7 +272,7 @@ const AdminSettings = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </AdminLayout>
+    </Layout>
   );
 };
 

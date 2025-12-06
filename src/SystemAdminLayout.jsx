@@ -15,9 +15,13 @@ import {
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
-
-
-const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
+const SystemAdminLayout = ({
+  children,
+  title,
+  searchTerm,
+  onSearchChange,
+  showSearch = true, 
+}) => {
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
@@ -69,6 +73,7 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
         </div>
       )}
 
+ 
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 
           ${isSidebarOpen ? "show" : ""} 
@@ -110,11 +115,12 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
             )}
             <span className="tooltip-text">Delivery Details</span>
           </button>
+
           <button
             className={`nav-btn ${
-              isActive("/personnel-accounts") ? "active" : ""
+              isActive("/user-management") ? "active" : ""
             }`}
-            onClick={() => navigate("/personnel-accounts")}
+            onClick={() => navigate("/user-management")}
           >
             <FaUserFriends className="icon" />
             {!isSidebarCollapsed && (
@@ -124,15 +130,14 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
           </button>
 
           <button
-            className={`nav-btn ${
-              isActive("/it-settings") ? "active" : ""
-            }`}
-            onClick={() => navigate("/it-settings")}
+            className={`nav-btn ${isActive("/admin-settings") ? "active" : ""}`}
+            onClick={() => navigate("/admin-settings")}
           >
             <FaCog className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
             <span className="tooltip-text">Settings</span>
           </button>
+
           <button
             className="nav-btn logout"
             onClick={() => setShowLogoutModal(true)}
@@ -144,6 +149,7 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
         </nav>
       </aside>
 
+
       <main className="main-panel flex-grow-1 p-4">
         <div className="dashboard-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
@@ -153,7 +159,8 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
             <h2 className="fs-2 fw-bold m-0">{title}</h2>
           </div>
 
-          {location.pathname !== "/operational-settings" && (
+   
+          {showSearch && (
             <div className="search-bar position-relative me-3">
               <input
                 type="text"
@@ -169,6 +176,7 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
         {children}
       </main>
 
+  
       <Modal
         show={showLogoutModal}
         onHide={() => setShowLogoutModal(false)}
@@ -199,4 +207,4 @@ const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
   );
 };
 
-export default ITLayout;
+export default SystemAdminLayout;

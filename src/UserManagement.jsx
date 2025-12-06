@@ -7,6 +7,7 @@ import { FaUserPlus, FaFilter } from "react-icons/fa";
 import { Table, Modal, Button, Form } from "react-bootstrap";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import SystemAdminLayout from "./SystemAdminLayout";
 
 const UserManagement = () => {
   const [showFAQ, setShowFAQ] = useState(false);
@@ -25,6 +26,9 @@ const UserManagement = () => {
   const [qbeUsername, setQbeUsername] = useState("");
   const [qbeStatus, setQbeStatus] = useState("");
   const [qbeAssignmentStatus, setQbeAssignmentStatus] = useState("");
+const username = localStorage.getItem("username");
+const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
+
 
   const guideqst = [
     {
@@ -200,19 +204,20 @@ const UserManagement = () => {
   };
 
   return (
-    <AdminLayout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>Delivery Personnel Accounts</span>
-          <HiQuestionMarkCircle
-            style={{ fontSize: "2rem", color: "#07720885", cursor: "pointer" }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-      searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
-    >
+  <Layout
+    title={
+      <div className="d-flex align-items-center gap-2">
+        <span>Delivery Personnel Accounts</span>
+        <HiQuestionMarkCircle
+          style={{ fontSize: "2rem", color: "#07720885", cursor: "pointer" }}
+          onClick={() => setShowFAQ(true)}
+        />
+      </div>
+    }
+    searchTerm={searchTerm}
+    onSearchChange={setSearchTerm}
+  >
+
       {/* Top controls */}
       <div className="d-flex justify-content-end mx-4 my-4 align-items-center gap-2">
         <button
@@ -534,7 +539,7 @@ const UserManagement = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </AdminLayout>
+    </Layout>
   );
 };
 
