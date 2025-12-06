@@ -166,7 +166,7 @@ const AdminLayout = ({
             onClick={() => navigate("/user-management")}
           >
             <FaUserFriends className="icon" />
-            <span className="nav-text"> DELIVERY PERSONNEL ACCOUNTS</span>
+            <span className="nav-text">CREATE DELIVERY PERSONNEL ACCOUNTS</span>
             <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
 

@@ -387,6 +387,9 @@ function DriverProfileSettings() {
                       borderColor: key === "Age" ? "#116B8A" : "#116B8A",
                       color: key === "Age" ? "#116B8A" : "#116B8A",
                       backgroundColor: key === "Age" ? "#e6e1e1ff" : "#E8F8F5",
+                      borderColor: key === "Age" ? "#116B8A" : "#116B8A",
+                      color: key === "Age" ? "#116B8A" : "#116B8A",
+                      backgroundColor: key === "Age" ? "#e6e1e1ff" : "#E8F8F5",
                     }}
                     onClick={() => {
                       if (key === "Age") return;
@@ -410,7 +413,7 @@ function DriverProfileSettings() {
                 </InputGroup>
               </div>
             ))}
-
+            
             <div className="mt-3">
               <label className="text-secondary small fw-semibold">
                 Password

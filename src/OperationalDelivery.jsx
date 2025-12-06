@@ -3,6 +3,7 @@ import { Modal, Button, Form, Tabs, Tab } from "react-bootstrap";
 import OperationalLayout from "./OperationalLayout";
 import axios from "axios";
 import { BsExclamationCircleFill, BsCheckCircleFill } from "react-icons/bs";
+import { FaFilter } from "react-icons/fa";
 import { Toaster } from "sonner";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
@@ -439,12 +440,13 @@ const OperationalDelivery = () => {
 
             <div className="d-flex align-items-center ms-3">
               <Button
-                className="me-2"
-                variant="outline-primary"
+                className="me-3 btn-view py-2 px-3 fs-6"
+                // variant="outline-primary"
                 size="sm"
                 onClick={() => setShowQbeModal(true)}
               >
-                Advanced Filter
+                <FaFilter /> {"  "}
+                Advanced Filter 
               </Button>
 
               <Form.Control
@@ -888,11 +890,16 @@ const OperationalDelivery = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowQbeModal(false)}>
+            <Button
+              className="cancel-btn py-2 rounded rounded-2 px-2"
+              variant="secondary"
+              onClick={() => setShowQbeModal(false)}
+            >
               Cancel
             </Button>
             <Button
-              variant="light"
+              // className="btn secondary-outline"
+              variant="outline-secondary"
               onClick={() => {
                 setQbeName("");
                 setQbeAddress("");
@@ -906,7 +913,8 @@ const OperationalDelivery = () => {
               Clear
             </Button>
             <Button
-              variant="primary"
+              className="add-btn py-2 px-3"
+              variant="success"
               onClick={() => {
                 setShowQbeModal(false); /* filtering is reactive */
               }}
