@@ -5,7 +5,7 @@ import {
   FaBars,
   FaTimes,
   FaUserFriends,
-  FaClipboardList,
+  FaUserShield,
   FaCog,
   FaSignOutAlt,
   FaSearch,
@@ -16,7 +16,8 @@ import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
 
-const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
+
+const ITLayout = ({ children, title, searchTerm, onSearchChange }) => {
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
@@ -99,6 +100,18 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
         <nav className="nav-buttons w-100">
           <button
             className={`nav-btn ${
+              isActive("/roles-permission") ? "active" : ""
+            }`}
+            onClick={() => navigate("/roles-permission")}
+          >
+            <FaUserShield className="icon" />
+            {!isSidebarCollapsed && (
+              <span className="nav-text">USER ROLES AND PERMISSION</span>
+            )}
+            <span className="tooltip-text">Delivery Details</span>
+          </button>
+          <button
+            className={`nav-btn ${
               isActive("/personnel-accounts") ? "active" : ""
             }`}
             onClick={() => navigate("/personnel-accounts")}
@@ -109,23 +122,12 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
             )}
             <span className="tooltip-text">Delivery Personnel Accounts</span>
           </button>
+
           <button
             className={`nav-btn ${
-              isActive("/operational-delivery-details") ? "active" : ""
+              isActive("/it-settings") ? "active" : ""
             }`}
-            onClick={() => navigate("/operational-delivery-details")}
-          >
-            <FaClipboardList className="icon" />
-            {!isSidebarCollapsed && (
-              <span className="nav-text">DELIVERY DETAILS</span>
-            )}
-            <span className="tooltip-text">Delivery Details</span>
-          </button>
-          <button
-            className={`nav-btn ${
-              isActive("/operational-settings") ? "active" : ""
-            }`}
-            onClick={() => navigate("/operational-settings")}
+            onClick={() => navigate("/it-settings")}
           >
             <FaCog className="icon" />
             {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
@@ -197,4 +199,4 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
   );
 };
 
-export default OperationalLayout;
+export default ITLayout;

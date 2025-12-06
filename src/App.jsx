@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 // Public pages
 import Login from "./Login";
 import ForgotPass from "./ForgotPass";
+import ITRolesAndPermission from "./ITRolesAndPermission";
 
 // ADMIN
 import AdminDashboard from "./AdminDashboard";
@@ -145,9 +146,11 @@ function App() {
 
       <Routes>
         {/* PUBLIC ROUTES */}
+        <Route path="/roles-permission" element={<ITRolesAndPermission />}/>
         <Route path="/" element={<Login />} />
         <Route path="/forgotpassword" element={<ForgotPass />} />
         <Route path="/not-authorized" element={<NotAuthorized />} />
+
 
         {/* PROTECTED ROUTES */}
         {routes.map(({ path, element, role }) => (

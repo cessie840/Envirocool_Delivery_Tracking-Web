@@ -394,3 +394,12 @@
 [2025-12-01 05:11:07] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Joshua Reyes | EMAIL: mulawinmiriam75@gmail.com
 [2025-12-01 05:12:01] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Joshua Reyes | EMAIL: mulawinmiriam75@gmail.com
 [2025-12-02 16:51:21] USER: personnel01 | ROLE: DeliveryPersonnel | NAME: Joshua Reyes | EMAIL: mulawinmiriam75@gmail.com
+[2025-12-06 11:36:37] USER: admin101 | ROLE: Admin | NAME: Jessa Carinaga | EMAIL: carinagajessa18@gmail.com
+[2025-12-06 11:39:05] USER: opsmanager101 | ROLE: OperationalManager | NAME: sdsdsds Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-12-06 12:03:21] USER: opsmanager101 | ROLE: OperationalManager | NAME: sdsdsds Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-12-06 12:04:30] USER: opsmanager101 | ROLE: OperationalManager | NAME: sdsdsds Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-12-06 12:12:58] USER: opsmanager101 | ROLE: OperationalManager | NAME: sdsdsds Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-12-06 12:59:42] USER: admin101 | ROLE: Admin | NAME: Jessa Carinaga | EMAIL: carinagajessa18@gmail.com
+[2025-12-06 13:04:56] USER: opsmanager101 | ROLE: OperationalManager | NAME: sdsdsds Reyes | EMAIL: pacienteliezel04@gmail.com
+[2025-12-06 13:11:54] USER: admin101 | ROLE: Admin | NAME: Jessa Carinaga | EMAIL: carinagajessa18@gmail.com
+[2025-12-06 13:44:01] USER: admin101 | ROLE: Admin | NAME: Jessa Carinaga | EMAIL: carinagajessa18@gmail.com
