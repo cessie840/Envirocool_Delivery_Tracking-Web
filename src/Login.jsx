@@ -59,7 +59,7 @@ const Login = () => {
 
       const user = data.user;
       localStorage.setItem("user", JSON.stringify(user));
-         localStorage.setItem("username", user.ad_username);
+      localStorage.setItem("username", user.ad_username);
       sessionStorage.setItem("showLoginNotif", "true");
 
       const elapsed = Date.now() - startTime;
@@ -94,26 +94,26 @@ const Login = () => {
         onClose: () => setShowToastOverlay(false),
       });
 
-         setTimeout(() => {
-      if (user.role === "admin" && user.ad_username === "systemadmin") {
-        navigate("/roles-permission"); // redirect systemadmin to roles page
-      } else {
-        switch (user.role) {
-          case "admin":
-            navigate("/admin-dashboard");
-            break;
-          case "operationalmanager":
-            navigate("/operational-delivery-details");
-            break;
-          case "deliverypersonnel":
-            navigate("/driver-dashboard");
-            break;
-          default:
-            navigate("/");
-            break;
+      setTimeout(() => {
+        if (user.role === "admin" && user.ad_username === "systemadmin") {
+          navigate("/roles-permission"); // redirect systemadmin to roles page
+        } else {
+          switch (user.role) {
+            case "admin":
+              navigate("/admin-dashboard");
+              break;
+            case "operationalmanager":
+              navigate("/operational-delivery-details");
+              break;
+            case "deliverypersonnel":
+              navigate("/driver-dashboard");
+              break;
+            default:
+              navigate("/");
+              break;
+          }
         }
-      }
-    }, 1000);
+      }, 1000);
     } catch (networkError) {
       console.warn("Network error occurred:", networkError.message);
       setErrorMessage(
