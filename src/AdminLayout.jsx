@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import logo from "./assets/envirocool-logo.png";
 import {
   FaClipboardList,
@@ -29,10 +28,15 @@ const AdminLayout = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved === "true";
+  });
+  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
   const location = useLocation();
-
   const isActive = (path) => location.pathname === path;
 
   const confirmLogout = () => {
@@ -54,13 +58,6 @@ const AdminLayout = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     return window.innerWidth > 991;
   });
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    return saved === "true";
-  });
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   useEffect(() => {
     const handleResize = () => {
@@ -78,60 +75,6 @@ const AdminLayout = ({
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
   }, [isSidebarCollapsed]);
-
-  // Allowed paths from backend. null = not fetched yet.
-  const [allowedPaths, setAllowedPaths] = useState(null);
-
-  useEffect(() => {
-    const userRaw = localStorage.getItem("user");
-    if (!userRaw) {
-      // no user — don't request, keep allowedPaths as null (show all while not authenticated)
-      return;
-    }
-
-    let user;
-    try {
-      user = JSON.parse(userRaw);
-    } catch (e) {
-      console.error("Invalid user data in localStorage", e);
-      return;
-    }
-
-    const fetchAllowed = async () => {
-      try {
-        const res = await axios.post(
-          "http://localhost/DeliveryTrackingSystem/get_user_components.php",
-          {
-            username: user.username,
-            role: user.role,
-          }
-        );
-
-        if (res.data && res.data.success && Array.isArray(res.data.data)) {
-          // res.data.data is array of { name, path }
-          setAllowedPaths(res.data.data.map((c) => c.path));
-        } else {
-          console.warn(
-            "Unexpected response from get_user_components.php",
-            res.data
-          );
-          setAllowedPaths([]); // no permissions
-        }
-      } catch (err) {
-        console.error("Failed to fetch allowed components:", err);
-        // keep allowedPaths null so UI remains usable (optimistic)
-        setAllowedPaths([]); // or set null to keep optimistic behavior; choose [] to hide if you prefer
-      }
-    };
-
-    fetchAllowed();
-  }, []);
-
-  // helper: if allowedPaths === null -> allow everything (optimistic), otherwise check inclusion
-  const canShow = (path) => {
-    if (allowedPaths === null) return true;
-    return allowedPaths.includes(path);
-  };
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
@@ -172,87 +115,70 @@ const AdminLayout = ({
         </div>
 
         <nav className="nav-buttons">
-          {canShow("/admin-dashboard") && (
-            <button
-              className={`nav-btn ${
-                isActive("/admin-dashboard") ? "active" : ""
-              }`}
-              onClick={() => navigate("/admin-dashboard")}
-            >
-              <FaHome className="icon" />
-              <span className="nav-text"> DASHBOARD</span>
-              <span className="tooltip-text">Dashboard</span>
-            </button>
-          )}
+          <button
+            className={`nav-btn ${
+              isActive("/admin-dashboard") ? "active" : ""
+            }`}
+            onClick={() => navigate("/admin-dashboard")}
+          >
+            <FaHome className="icon" />
+            <span className="nav-text"> DASHBOARD</span>
+            <span className="tooltip-text">Dashboard</span>
+          </button>
 
-          {canShow("/delivery-details") && (
-            <button
-              className={`nav-btn ${
-                isActive("/delivery-details") ? "active" : ""
-              }`}
-              onClick={() => navigate("/delivery-details")}
-            >
-              <FaClipboardList className="icon" />
-              <span className="nav-text"> DELIVERY DETAILS</span>
-              <span className="tooltip-text">Delivery Details</span>
-            </button>
-          )}
+          <button
+            className={`nav-btn ${
+              isActive("/delivery-details") ? "active" : ""
+            }`}
+            onClick={() => navigate("/delivery-details")}
+          >
+            <FaClipboardList className="icon" />
+            <span className="nav-text"> DELIVERY DETAILS</span>
+            <span className="tooltip-text">Delivery Details</span>
+          </button>
 
-          {canShow("/monitor-delivery") && (
-            <button
-              className={`nav-btn ${
-                isActive("/monitor-delivery") ? "active" : ""
-              }`}
-              onClick={() => navigate("/monitor-delivery")}
-            >
-              <FaTruck className="icon" />
-              <span className="nav-text"> MONITOR DELIVERY</span>
-              <span className="tooltip-text">Monitor Delivery</span>
-            </button>
-          )}
+          <button
+            className={`nav-btn ${
+              isActive("/monitor-delivery") ? "active" : ""
+            }`}
+            onClick={() => navigate("/monitor-delivery")}
+          >
+            <FaTruck className="icon" />
+            <span className="nav-text"> MONITOR DELIVERY</span>
+            <span className="tooltip-text">Monitor Delivery</span>
+          </button>
 
-          {canShow("/generate-report") && (
-            <button
-              className={`nav-btn ${
-                isActive("/generate-report") ? "active" : ""
-              }`}
-              onClick={() => navigate("/generate-report")}
-            >
-              <FaChartBar className="icon" />
-              <span className="nav-text"> DATA ANALYTICS & REPORT</span>
-              <span className="tooltip-text">Data Analytics & Report</span>
-            </button>
-          )}
+          <button
+            className={`nav-btn ${
+              isActive("/generate-report") ? "active" : ""
+            }`}
+            onClick={() => navigate("/generate-report")}
+          >
+            <FaChartBar className="icon" />
+            <span className="nav-text"> DATA ANALYTICS & REPORT</span>
+            <span className="tooltip-text">Data Analytics & Report</span>
+          </button>
 
-          {canShow("/user-management") && (
-            <button
-              className={`nav-btn ${
-                isActive("/user-management") ? "active" : ""
-              }`}
-              onClick={() => navigate("/user-management")}
-            >
-              <FaUserFriends className="icon" />
-              <span className="nav-text">
-                CREATE DELIVERY PERSONNEL ACCOUNTS
-              </span>
-              <span className="tooltip-text">Delivery Personnel Accounts</span>
-            </button>
-          )}
+          <button
+            className={`nav-btn ${
+              isActive("/user-management") ? "active" : ""
+            }`}
+            onClick={() => navigate("/user-management")}
+          >
+            <FaUserFriends className="icon" />
+            <span className="nav-text">CREATE DELIVERY PERSONNEL ACCOUNTS</span>
+            <span className="tooltip-text">Delivery Personnel Accounts</span>
+          </button>
 
-          {canShow("/admin-settings") && (
-            <button
-              className={`nav-btn ${
-                isActive("/admin-settings") ? "active" : ""
-              }`}
-              onClick={() => navigate("/admin-settings")}
-            >
-              <FaCog className="icon" />
-              <span className="nav-text"> SETTINGS</span>
-              <span className="tooltip-text">Settings</span>
-            </button>
-          )}
+          <button
+            className={`nav-btn ${isActive("/admin-settings") ? "active" : ""}`}
+            onClick={() => navigate("/admin-settings")}
+          >
+            <FaCog className="icon" />
+            <span className="nav-text"> SETTINGS</span>
+            <span className="tooltip-text">Settings</span>
+          </button>
 
-          {/* Logout always visible */}
           <button
             className={`nav-btn logout ${isActive("/logout") ? "active" : ""}`}
             onClick={() => setShowLogoutModal(true)}
