@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import AdminLayout from "./AdminLayout";
+import StaffAdminLayout from "./StaffAdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import RescheduleModal from "./RescheduleModal";
 import { Button, Modal, Form } from "react-bootstrap";
@@ -10,6 +11,9 @@ import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 
 const ViewOrder = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isStaffAdmin = user?.ad_username === "staffadmin";
+
   const navigate = useNavigate();
   const { transaction_id } = useParams();
   const [orderDetails, setOrderDetails] = useState(null);
@@ -342,24 +346,8 @@ const ViewOrder = () => {
     },
   ];
 
-  return (
-    <AdminLayout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>View Order Details</span>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-      showSearch={false}
-    >
+  const content = (
+    <>
       <div className="d-flex justify-content-start mt-4 ms-4">
         <button
           className="back-btn btn-success d-flex align-items-center gap-2 rounded-2"
@@ -612,10 +600,8 @@ const ViewOrder = () => {
               </div>
             </div>
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
-              {
-              ((orderDetails.status === "Delivered" &&
+              {((orderDetails.status === "Delivered" &&
                 orderDetails.payment_option === "Down Payment") ||
-             
                 (orderDetails.status === "Pending" &&
                   (parseFloat(orderDetails.balance) > 0 ||
                     calculatedBalance > 0))) && (
@@ -886,6 +872,51 @@ const ViewOrder = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+    </>
+  );
+
+  if (isStaffAdmin) {
+    return (
+      <StaffAdminLayout
+        title={
+          <div className="d-flex align-items-center gap-2">
+            <span>View Order Details</span>
+            <HiQuestionMarkCircle
+              style={{
+                fontSize: "2rem",
+                color: "#07720885",
+                cursor: "pointer",
+                marginLeft: "10px",
+              }}
+              onClick={() => setShowFAQ(true)}
+            />
+          </div>
+        }
+      >
+        {content}
+      </StaffAdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>View Order Details</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+    >
+      {content}
     </AdminLayout>
   );
 };

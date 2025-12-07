@@ -8,7 +8,7 @@ import Login from "./Login";
 import ForgotPass from "./ForgotPass";
 import SystemAdminRolesAndPermission from "./SystemAdminRolesAndPermission";
 
-// ADMIN
+// ADMIN 
 import AdminDashboard from "./AdminDashboard";
 import AddDelivery from "./AdminAddDelivery";
 import DeliveryDetails from "./AdminDeliveryDetails";
@@ -56,81 +56,29 @@ function App() {
     // ADMIN
     { path: "/admin-dashboard", element: <AdminDashboard />, role: "admin" },
     { path: "/add-delivery", element: <AddDelivery />, role: "admin" },
-    { path: "/delivery-details", element: <DeliveryDetails />, role: "admin" },
-    {
-      path: "/view-delivery/:transaction_id",
-      element: <ViewDelivery />,
-      role: "admin",
-    },
-    { path: "/monitor-delivery", element: <MonitorDelivery />, role: "admin" },
+    { path: "/delivery-details", element: <DeliveryDetails />, role: "admin" }, // Shared
+    { path: "/view-delivery/:transaction_id", element: <ViewDelivery />, role: "admin" },
+    { path: "/monitor-delivery", element: <MonitorDelivery />, role: "admin" }, // Shared
     { path: "/generate-report", element: <GenerateReport />, role: "admin" },
     { path: "/user-management", element: <UserManagement />, role: "admin" },
-    {
-      path: "/create-personnel-account",
-      element: <UserCreatePersonnelAccount />,
-      role: "admin",
-    },
+    { path: "/create-personnel-account", element: <UserCreatePersonnelAccount />, role: "admin" },
+    { path: "/admin-settings", element: <AdminSettings />, role: "admin" }, // Shared
+    { path: "/roles-permission", element: <SystemAdminRolesAndPermission />, role: "admin" },
 
-    { path: "/admin-settings", element: <AdminSettings />, role: "admin" },
-        {path: "/roles-permission", element: <SystemAdminRolesAndPermission />, role: "admin"},
     // OPERATIONAL
-    {
-      path: "/operational-delivery-details",
-      element: <OperationalDelivery />,
-      role: "operationalmanager",
-    },
-    {
-      path: "/operational-settings",
-      element: <OperationalSettings />,
-      role: "operationalmanager",
-    },
-    {
-      path: "/register-account",
-      element: <RegisterAccount />,
-      role: "operationalmanager",
-    },
-    {
-      path: "/personnel-accounts",
-      element: <PersonnelAccounts />,
-      role: "operationalmanager",
-    },
-    {
-      path: "/create-personnel-account-ops",
-      element: <CreatePersonnelAccount />,
-      role: "operationalmanager",
-    },
+    { path: "/operational-delivery-details", element: <OperationalDelivery />, role: "operationalmanager" },
+    { path: "/operational-settings", element: <OperationalSettings />, role: "operationalmanager" },
+    { path: "/register-account", element: <RegisterAccount />, role: "operationalmanager" },
+    { path: "/personnel-accounts", element: <PersonnelAccounts />, role: "operationalmanager" },
+    { path: "/create-personnel-account-ops", element: <CreatePersonnelAccount />, role: "operationalmanager" },
 
     // DRIVER
-    {
-      path: "/driver-dashboard",
-      element: <DriverDashboard />,
-      role: "deliverypersonnel",
-    },
-    {
-      path: "/out-for-delivery",
-      element: <OutForDelivery />,
-      role: "deliverypersonnel",
-    },
-    {
-      path: "/successful-delivery",
-      element: <SuccessfulDelivery />,
-      role: "deliverypersonnel",
-    },
-    {
-      path: "/failed-delivery",
-      element: <FailedDeliveries />,
-      role: "deliverypersonnel",
-    },
-    {
-      path: "/driver-profile-settings",
-      element: <DriverProfileSettings />,
-      role: "deliverypersonnel",
-    },
-    {
-      path: "/driver-guide",
-      element: <DriverGuidePage />,
-      role: "deliverypersonnel",
-    },
+    { path: "/driver-dashboard", element: <DriverDashboard />, role: "deliverypersonnel" },
+    { path: "/out-for-delivery", element: <OutForDelivery />, role: "deliverypersonnel" },
+    { path: "/successful-delivery", element: <SuccessfulDelivery />, role: "deliverypersonnel" },
+    { path: "/failed-delivery", element: <FailedDeliveries />, role: "deliverypersonnel" },
+    { path: "/driver-profile-settings", element: <DriverProfileSettings />, role: "deliverypersonnel" },
+    { path: "/driver-guide", element: <DriverGuidePage />, role: "deliverypersonnel" },
 
     // SETTINGS
     { path: "/settings/edit-profile", element: <EditProfileTab /> },
@@ -146,11 +94,9 @@ function App() {
 
       <Routes>
         {/* PUBLIC ROUTES */}
-
         <Route path="/" element={<Login />} />
         <Route path="/forgotpassword" element={<ForgotPass />} />
         <Route path="/not-authorized" element={<NotAuthorized />} />
-
 
         {/* PROTECTED ROUTES */}
         {routes.map(({ path, element, role }) => (

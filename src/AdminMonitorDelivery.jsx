@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import AdminLayout from "./AdminLayout";
+import StaffAdminLayout from "./StaffAdminLayout";
 import { useNavigate } from "react-router-dom";
 import {
   MapContainer,
@@ -145,6 +146,9 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
 };
 
 const MonitorDelivery = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isStaffAdmin = user?.ad_username === "staffadmin";
+
   const [zoomOnNextClick, setZoomOnNextClick] = useState(false);
 
   const [etas, setEtas] = useState({});
@@ -679,26 +683,10 @@ const MonitorDelivery = () => {
 
     setZoomOnNextClick(true);
   }, [activeTab]);
-  return (
-    <AdminLayout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>Monitor Delivery</span>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-      showSearch={false}
-      onAddClick={handleAddDelivery}
-    >
-      <div className="p-4 bg-white rounded-4 border border-secondary-subtle">
+
+  const content = (
+    <>
+      <div className="p-4 bg-white rounded-4 border border-secondary-subtle mt-5">
         <div className="container-fluid p-3">
           <div className="row g-3">
             <div className="col-12 col-md-5">
@@ -1008,6 +996,53 @@ const MonitorDelivery = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+    </>
+  );
+
+if (isStaffAdmin) {
+  return (
+    <StaffAdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Monitor Delivery</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+    >
+      {content}
+    </StaffAdminLayout>
+  );
+}
+
+
+  return (
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Monitor Delivery</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+      onAddClick={handleAddDelivery}
+    >
+      {content}
     </AdminLayout>
   );
 };

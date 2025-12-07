@@ -2,12 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Table, Form, Button, Modal } from "react-bootstrap";
 import AdminLayout from "./AdminLayout";
+import StaffAdminLayout from "./StaffAdminLayout";
 import UpdateOrderModal from "./UpdateOrderModal";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 import { FaFilter } from "react-icons/fa";
 
 const DeliveryDetails = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isStaffAdmin = user?.ad_username === "staffadmin";
+
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
   const [filter, setFiltered] = useState([]);
@@ -397,28 +401,9 @@ const DeliveryDetails = () => {
     startIndex + itemsPerPage
   );
 
-  return (
-    <AdminLayout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>Delivery Details</span>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-      onAddClick={handleAddDelivery}
-      showSearch={true}
-      onSearch={handleSearch}
-    >
-      <div className="mb-3 d-flex justify-content-end align-items-center">
-        {/* Single QBE Button (left of the status filter) */}
+  const content = (
+    <>
+      <div className="mb-3 d-flex justify-content-end align-items-center mt-5">
         <div className="me-2">
           <button
             className="btn d-flex align-items-center"
@@ -589,7 +574,7 @@ const DeliveryDetails = () => {
         onSuccess={refetchData}
         formData={formData}
         setFormData={setFormData}
-        editableItems={editableItems}
+                editableItems={editableItems}
         setEditableItems={setEditableItems}
       />
 
@@ -661,26 +646,15 @@ const DeliveryDetails = () => {
             Cancel
           </Button>
           <Button
-            // className="btn secondary-outline"
             variant="outline-secondary"
-            onClick={() => {
-              setQbeName("");
-              setQbeAddress("");
-              setQbeTracking("");
-              setQbePaymentMode("");
-              setQbeAssignedPersonnel("");
-              setQbeItems("");
-              setQbeTotal("");
-            }}
+            onClick={clearQBE}
           >
             Clear
           </Button>
           <Button
             className="add-btn py-2 px-3"
             variant="success"
-            onClick={() => {
-              setShowQbeModal(false); /* filtering is reactive */
-            }}
+            onClick={handleQBEApply}
           >
             Apply
           </Button>
@@ -807,6 +781,54 @@ const DeliveryDetails = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+    </>
+  );
+
+ if (isStaffAdmin) {
+  return (
+    <StaffAdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Delivery Details</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+    >
+      {content}
+    </StaffAdminLayout>
+  );
+}
+
+
+  return (
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Delivery Details</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      onAddClick={handleAddDelivery}
+      showSearch={true}
+      onSearch={handleSearch}
+    >
+      {content}
     </AdminLayout>
   );
 };

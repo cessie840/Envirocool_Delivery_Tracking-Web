@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../AdminLayout";
+import StaffAdminLayout from "../StaffAdminLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
 import BackupRestoreTab from "./BackupRestoreTab";
@@ -8,15 +9,16 @@ import "./settings.css";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 import SystemAdminLayout from "../SystemAdminLayout";
 
-
 import { Button, Modal } from "react-bootstrap";
 
 const AdminSettings = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isStaffAdmin = user?.ad_username === "staffadmin";
+
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
   const username = localStorage.getItem("username");
   const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
-
 
   const guideqst = [
     {
@@ -110,24 +112,8 @@ const AdminSettings = () => {
     }
   };
 
-  return (
-    <Layout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>Admin Settings</span>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-      showSearch={false}
-    >
+  const content = (
+    <>
       <div className="settings-tabs mt-5">
         <button
           className={activeTab === "edit-profile" ? "active" : ""}
@@ -272,6 +258,51 @@ const AdminSettings = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+    </>
+  );
+
+  if (isStaffAdmin) {
+    return (
+      <StaffAdminLayout
+        title={
+          <div className="d-flex align-items-center gap-2">
+            <span>Admin Settings</span>
+            <HiQuestionMarkCircle
+              style={{
+                fontSize: "2rem",
+                color: "#07720885",
+                cursor: "pointer",
+                marginLeft: "10px",
+              }}
+              onClick={() => setShowFAQ(true)}
+            />
+          </div>
+        }
+      >
+        {content}
+      </StaffAdminLayout>
+    );
+  }
+
+  return (
+    <Layout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Admin Settings</span>
+          <HiQuestionMarkCircle
+            style={{
+              fontSize: "2rem",
+              color: "#07720885",
+              cursor: "pointer",
+              marginLeft: "10px",
+            }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      showSearch={false}
+    >
+      {content}
     </Layout>
   );
 };

@@ -97,6 +97,8 @@ const Login = () => {
       setTimeout(() => {
         if (user.role === "admin" && user.ad_username === "systemadmin") {
           navigate("/roles-permission"); // redirect systemadmin to roles page
+        } else if (user.role === "admin" && user.ad_username === "staffadmin") {
+          navigate("/delivery-details");
         } else {
           switch (user.role) {
             case "admin":
