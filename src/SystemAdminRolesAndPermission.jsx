@@ -11,17 +11,13 @@ const SystemAdminRolesAndPermission = () => {
   const [operationalAccounts, setOperationalAccounts] = useState([]);
   const [deliveryAccounts, setDeliveryAccounts] = useState([]);
 
-  // reference to the horizontally scrollable area
   const scrollRef = useRef(null);
 
-  // FETCH FROM BACKEND -------------------------------------------------------
   useEffect(() => {
     axios
       .get("http://localhost/DeliveryTrackingSystem/get_all_user.php")
       .then((res) => {
         if (res.data.success) {
-          // Use permissions returned by backend (row.permissions) if present,
-          // otherwise fall back to defaults (note: no "Change Password" key here)
           setAdminAccounts(
             res.data.data.admins.map((row, index) => {
               const defaultPerms = {
@@ -35,7 +31,6 @@ const SystemAdminRolesAndPermission = () => {
               return {
                 id: index + 1,
                 username: row.ad_username,
-                // prefer server-sent permissions, else default
                 permissions: row.permissions || defaultPerms,
               };
             })
@@ -86,7 +81,24 @@ const SystemAdminRolesAndPermission = () => {
 
   useEffect(() => {
     setCurrentAccounts(accounts);
+    setCurrentPage(1); 
   }, [accounts, activeTab]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(currentAccounts.length / rowsPerPage)
+  );
+
+  const indexOfLast = currentPage * rowsPerPage;
+  const indexOfFirst = indexOfLast - rowsPerPage;
+  const paginatedAccounts = currentAccounts.slice(indexOfFirst, indexOfLast);
+
+  const changePage = (page) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
 
   const handlePermissionChange = async (accountId, permission) => {
     const updatedAccounts = currentAccounts.map((acc) => {
@@ -101,10 +113,11 @@ const SystemAdminRolesAndPermission = () => {
       }
       return acc;
     });
+
     setCurrentAccounts(updatedAccounts);
 
-    // Save to backend (DB)
     const changedAccount = updatedAccounts.find((acc) => acc.id === accountId);
+
     try {
       await axios.post(
         "http://localhost/DeliveryTrackingSystem/save_user_permission.php",
@@ -130,7 +143,6 @@ const SystemAdminRolesAndPermission = () => {
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
-  // small responsive table min width calculation (so columns don't squish)
   const tableMinWidth = Math.max(600, allPermissions.length * 160 + 200);
 
   return (
@@ -141,9 +153,7 @@ const SystemAdminRolesAndPermission = () => {
           <Tabs
             id="roles-tabs"
             activeKey={activeTab}
-            onSelect={(k) => {
-              setActiveTab(k);
-            }}
+            onSelect={(k) => setActiveTab(k)}
             className="fw-bold custom-tabs mb-4"
           >
             <Tab eventKey="admin" title="Admin" />
@@ -151,9 +161,7 @@ const SystemAdminRolesAndPermission = () => {
             <Tab eventKey="delivery-personnel" title="Delivery Personnel" />
           </Tabs>
 
-          {/* INNER CONTAINER (new) */}
           <div className="inner-container">
-            {/* scrollable area (unchanged behavior) */}
             <div
               ref={scrollRef}
               className="scroll-area"
@@ -185,12 +193,14 @@ const SystemAdminRolesAndPermission = () => {
                     ))}
                   </tr>
                 </thead>
+
                 <tbody>
-                  {currentAccounts.map((account) => (
+                  {paginatedAccounts.map((account) => (
                     <tr key={account.id} className="account-row">
                       <td style={{ minWidth: 200 }}>
                         <div className="cell-content">{account.username}</div>
                       </td>
+
                       {allPermissions.map((perm) => (
                         <td
                           key={perm}
@@ -213,6 +223,28 @@ const SystemAdminRolesAndPermission = () => {
                   ))}
                 </tbody>
               </Table>
+            </div>
+
+            <div className="custom-pagination mt-3">
+              <button
+                className="page-btn"
+                disabled={currentPage === 1}
+                onClick={() => changePage(currentPage - 1)}
+              >
+                ‹
+              </button>
+
+              <span className="page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                className="page-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => changePage(currentPage + 1)}
+              >
+                ›
+              </button>
             </div>
           </div>
         </div>

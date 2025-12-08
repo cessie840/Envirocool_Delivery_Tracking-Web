@@ -1226,11 +1226,7 @@ input[type="date"].is-invalid {
   scrollbar-width: auto;
 }
 
-.inner-container {
-  background-color: rgba(249, 250, 251, 0.8);
-  padding: 10px;
-  border-radius: 8px;
-}
+
 
 /* LARGER DEVICES */
 @media (min-width: 992px) {
