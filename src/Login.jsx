@@ -7,6 +7,48 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./loading-overlay.css";
 import { Toaster, toast } from "react-hot-toast";
 
+// Default permissions per role
+const DEFAULT_PERMISSIONS = {
+  admin: [
+    "AdminDashboard",
+    "AdminDeliveryDetails",
+    "AdminViewOrder",
+    "UpdateOrderModal",
+    "RescheduleModal",
+    "AdminAddDelivery",
+    "AdminMonitorDelivery",
+    "AdminGenerateReport",
+    "AdminSettings",
+    "SystemAdminRolesAndPermission",
+    "UserManagement",
+    "CreatePersonnelAccount",
+  ],
+  operationalManager: [
+    "CreatePersonnelAccount",
+    "RegisterAccount",
+    "OperationalDelivery",
+    "PersonnelAccounts",
+    "ViewPersonnelModal",
+    "OperationalSettings",
+  ],
+  deliveryPersonnel: [
+    "DriverDashboard",
+    "DriverGuidePage",
+    "DriverProfileSettings",
+    "FailedDeliveries",
+    "OutForDelivery",
+    "SuccessfulDelivery",
+  ],
+};
+
+// Helper: map role to default permissions key
+const getPermissionsKey = (role) => {
+  if (role.includes("admin")) return "admin";
+  if (role === "operational-manager") return "operationalManager";
+  if (role === "delivery-personnel") return "deliveryPersonnel";
+  return "admin";
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -41,7 +83,7 @@ const Login = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost/DeliveryTrackingSystem/login.php",
+        "http://localhost/DeliveryTrackingSystem/login2.php",
         { username, password },
         {
           headers: { "Content-Type": "application/json" },
@@ -58,8 +100,20 @@ const Login = () => {
       }
 
       const user = data.user;
+
+      // Assign default permissions if missing
+      if (!user.permissions || Object.keys(user.permissions).length === 0) {
+        const key = getPermissionsKey(user.role);
+        const defaultPerms = {};
+        (DEFAULT_PERMISSIONS[key] || []).forEach(
+          (p) => (defaultPerms[p] = true)
+        );
+        user.permissions = defaultPerms;
+      }
+
+      // Store user in localStorage & session
       localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("username", user.ad_username);
+      localStorage.setItem("username", username);
       sessionStorage.setItem("showLoginNotif", "true");
 
       const elapsed = Date.now() - startTime;
@@ -94,26 +148,26 @@ const Login = () => {
         onClose: () => setShowToastOverlay(false),
       });
 
+      // Redirect based on role
       setTimeout(() => {
-        if (user.role === "admin" && user.ad_username === "systemadmin") {
-          navigate("/roles-permission"); // redirect systemadmin to roles page
-        } else if (user.role === "admin" && user.ad_username === "staffadmin") {
-          navigate("/delivery-details");
-        } else {
-          switch (user.role) {
-            case "admin":
-              navigate("/admin-dashboard");
-              break;
-            case "operationalmanager":
-              navigate("/operational-delivery-details");
-              break;
-            case "deliverypersonnel":
-              navigate("/driver-dashboard");
-              break;
-            default:
-              navigate("/");
-              break;
-          }
+        switch (user.role) {
+          case "system-admin":
+            navigate("/roles-permission");
+            break;
+          case "staff-admin":
+          case "data-admin":
+          case "admin": // legacy admin
+            navigate("/admin-dashboard");
+            break;
+          case "operational-manager":
+            navigate("/operational-delivery-details");
+            break;
+          case "delivery-personnel":
+            navigate("/driver-dashboard");
+            break;
+          default:
+            navigate("/");
+            break;
         }
       }, 1000);
     } catch (networkError) {

@@ -1,255 +1,199 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Tabs, Tab, Table, Form } from "react-bootstrap";
-import { Toaster } from "sonner";
-import ITLayout from "./SystemAdminLayout";
+import React, { useEffect, useState, useContext } from "react";
+import { Tabs, Tab, Table, Form, Spinner } from "react-bootstrap";
 import axios from "axios";
+import { toast, Toaster } from "react-hot-toast";
+import AdminLayout from "./AdminLayout";
+import { UserContext } from "./UserContext";
+
+// All possible permissions per role
+const ALL_PERMISSIONS = {
+  admin: [
+    "AdminDashboard",
+    "AdminDeliveryDetails",
+    "AdminViewOrder",
+    "UpdateOrderModal",
+    "RescheduleModal",
+    "AdminAddDelivery",
+    "AdminMonitorDelivery",
+    "AdminGenerateReport",
+    "AdminSettings",
+    "SystemAdminRolesAndPermission",
+    "UserManagement",
+    "CreatePersonnelAccount",
+  ],
+  operationalManager: [
+    "CreatePersonnelAccount",
+    "RegisterAccount",
+    "OperationalDelivery",
+    "PersonnelAccounts",
+    "ViewPersonnelModal",
+    "OperationalSettings",
+  ],
+  deliveryPersonnel: [
+    "DriverDashboard",
+    "DriverGuidePage",
+    "DriverProfileSettings",
+    "FailedDeliveries",
+    "OutForDelivery",
+    "SuccessfulDelivery",
+  ],
+};
+
+// Human-readable labels
+const PERMISSION_LABELS = {
+  AdminDashboard: "View Admin Dashboard",
+  AdminDeliveryDetails: "View Delivery Details",
+  AdminViewOrder: "View Orders",
+  UpdateOrderModal: "Update Orders",
+  RescheduleModal: "Reschedule Orders",
+  AdminAddDelivery: "Add Delivery",
+  AdminMonitorDelivery: "Monitor Deliveries",
+  AdminGenerateReport: "Generate Reports",
+  AdminSettings: "Manage Admin Settings",
+  SystemAdminRolesAndPermission: "Manage Roles & Permissions",
+  UserManagement: "Manage Users",
+  CreatePersonnelAccount: "Create Personnel Account",
+  RegisterAccount: "Register Account",
+  OperationalDelivery: "Manage Operational Delivery",
+  PersonnelAccounts: "Manage Personnel Accounts",
+  ViewPersonnelModal: "View Personnel Details",
+  OperationalSettings: "Manage Operational Settings",
+  DriverDashboard: "View Driver Dashboard",
+  DriverGuidePage: "View Driver Guide",
+  DriverProfileSettings: "Manage Driver Profile Settings",
+  FailedDeliveries: "View Failed Deliveries",
+  OutForDelivery: "View Out-for-Delivery",
+  SuccessfulDelivery: "View Successful Deliveries",
+};
+
+// Role labels
+const Roles = {
+  "data-admin": "Data Admin",
+  "staff-admin": "Staff Admin",
+  "system-admin": "System Admin",
+  "operational-manager": "Operational Manager",
+  "delivery-personnel": "Delivery Personnel",
+};
+
+// Map role key to ALL_PERMISSIONS key
+const getRolePermissionsKey = (role) => {
+  if (role.includes("admin")) return "admin";
+  if (role === "operational-manager") return "operationalManager";
+  if (role === "delivery-personnel") return "deliveryPersonnel";
+  return "admin";
+};
 
 const SystemAdminRolesAndPermission = () => {
-  const [activeTab, setActiveTab] = useState("admin");
-
-  const [adminAccounts, setAdminAccounts] = useState([]);
-  const [operationalAccounts, setOperationalAccounts] = useState([]);
-  const [deliveryAccounts, setDeliveryAccounts] = useState([]);
-
-  const scrollRef = useRef(null);
+  const { user, setUser } = useContext(UserContext);
+  const [activeRole, setActiveRole] = useState("data-admin");
+  const [permissions, setPermissions] = useState({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     axios
-      .get("http://localhost/DeliveryTrackingSystem/get_all_user.php")
+      .post(
+        "http://localhost/DeliveryTrackingSystem/get_role_permissions.php",
+        { role: activeRole }
+      )
       .then((res) => {
-        if (res.data.success) {
-          setAdminAccounts(
-            res.data.data.admins.map((row, index) => {
-              const defaultPerms = {
-                "Create Transaction": true,
-                "Update Transaction": true,
-                "View Deliveries": true,
-                "Monitor Deliveries": true,
-                "Generate Reports": false,
-                "Create Delivery Account": false,
-              };
-              return {
-                id: index + 1,
-                username: row.ad_username,
-                permissions: row.permissions || defaultPerms,
-              };
-            })
-          );
+        if (res.data.success && res.data.permissions) {
+          setPermissions(res.data.permissions);
+        } else {
+          // Default all permissions to true if not saved
+          const allPerms =
+            ALL_PERMISSIONS[getRolePermissionsKey(activeRole)] || [];
+          const defaultPerms = {};
+          allPerms.forEach((p) => (defaultPerms[p] = true));
+          setPermissions(defaultPerms);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [activeRole]);
 
-          setOperationalAccounts(
-            res.data.data.managers.map((row, index) => {
-              const defaultPerms = {
-                "Assign Delivery": true,
-                "View Delivery Details": true,
-                "Create Delivery Account": false,
-                "Reschedule Deliverie": true,
-              };
-              return {
-                id: index + 1,
-                username: row.manager_username,
-                permissions: row.permissions || defaultPerms,
-              };
-            })
-          );
+  const togglePermission = (perm) => {
+    const newPermissions = { ...permissions, [perm]: !permissions[perm] };
+    setPermissions(newPermissions);
 
-          setDeliveryAccounts(
-            res.data.data.personnel.map((row, index) => {
-              const defaultPerms = {
-                "View Assigned Deliveries": true,
-                "Update Delivery Status": true,
-              };
-              return {
-                id: index + 1,
-                username: row.pers_username,
-                permissions: row.permissions || defaultPerms,
-              };
-            })
+    // Save updated permissions to backend
+    axios
+      .post(
+        "http://localhost/DeliveryTrackingSystem/save_role_permissions.php",
+        {
+          role: activeRole,
+          permissions: newPermissions,
+        }
+      )
+      .then(() => {
+        toast.success(`${PERMISSION_LABELS[perm]} updated!`, {
+          duration: 1000,
+          style: { fontSize: "0.9rem" },
+        });
+
+        // If logged-in user is affected, update UserContext
+        if (activeRole === user.role) {
+          setUser({ ...user, permissions: newPermissions });
+          localStorage.setItem(
+            "user",
+            JSON.stringify({ ...user, permissions: newPermissions })
           );
         }
       })
-      .catch((err) => console.log(err));
-  }, []);
-
-  let accounts =
-    activeTab === "admin"
-      ? adminAccounts
-      : activeTab === "operational-manager"
-      ? operationalAccounts
-      : deliveryAccounts;
-
-  const [currentAccounts, setCurrentAccounts] = useState([]);
-
-  useEffect(() => {
-    setCurrentAccounts(accounts);
-    setCurrentPage(1); 
-  }, [accounts, activeTab]);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(currentAccounts.length / rowsPerPage)
-  );
-
-  const indexOfLast = currentPage * rowsPerPage;
-  const indexOfFirst = indexOfLast - rowsPerPage;
-  const paginatedAccounts = currentAccounts.slice(indexOfFirst, indexOfLast);
-
-  const changePage = (page) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+      .catch(console.error);
   };
 
-  const handlePermissionChange = async (accountId, permission) => {
-    const updatedAccounts = currentAccounts.map((acc) => {
-      if (acc.id === accountId) {
-        return {
-          ...acc,
-          permissions: {
-            ...acc.permissions,
-            [permission]: !acc.permissions[permission],
-          },
-        };
-      }
-      return acc;
-    });
-
-    setCurrentAccounts(updatedAccounts);
-
-    const changedAccount = updatedAccounts.find((acc) => acc.id === accountId);
-
-    try {
-      await axios.post(
-        "http://localhost/DeliveryTrackingSystem/save_user_permission.php",
-        {
-          username: changedAccount.username,
-          role: activeTab,
-          permissions: changedAccount.permissions,
-        }
-      );
-    } catch (err) {
-      console.error("Failed to save permissions:", err);
-    }
-  };
-
-  const allPermissions =
-    currentAccounts.length > 0
-      ? Object.keys(currentAccounts[0].permissions)
-      : [];
-
-  const formatPermissionName = (perm) =>
-    perm
-      .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-
-  const tableMinWidth = Math.max(600, allPermissions.length * 160 + 200);
+  const filteredPermissions =
+    ALL_PERMISSIONS[getRolePermissionsKey(activeRole)] || [];
 
   return (
-    <>
-      <Toaster position="top-center" richColors />
-      <ITLayout title={<span>User Roles & Permission</span>}>
-        <div className="compact-container container mt-5 pb-5 px-3 rounded-2">
-          <Tabs
-            id="roles-tabs"
-            activeKey={activeTab}
-            onSelect={(k) => setActiveTab(k)}
-            className="fw-bold custom-tabs mb-4"
-          >
-            <Tab eventKey="admin" title="Admin" />
-            <Tab eventKey="operational-manager" title="Operational Manager" />
-            <Tab eventKey="delivery-personnel" title="Delivery Personnel" />
-          </Tabs>
+    <AdminLayout
+      title="User Roles and Permissions"
+      permissions={user?.permissions}
+    >
+      <Toaster position="top-right" />
+      <div className="container mt-4">
+        <Tabs
+          activeKey={activeRole}
+          onSelect={(k) => setActiveRole(k)}
+          className="mb-3 custom-tabs mt-5 gap-2"
+          fill
+        >
+          {Object.entries(Roles).map(([key, label]) => (
+            <Tab eventKey={key} title={label} key={key} />
+          ))}
+        </Tabs>
 
-          <div className="inner-container">
-            <div
-              ref={scrollRef}
-              className="scroll-area"
-              style={{
-                overflowX: "auto",
-                scrollBehavior: "smooth",
-                paddingBottom: 8,
-              }}
-            >
-              <Table
-                bordered
-                hover
-                responsive
-                className="delivery-table bg-white"
-                style={{
-                  minWidth: tableMinWidth,
-                  fontSize: 14,
-                  whiteSpace: "nowrap",
-                  tableLayout: "auto",
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th style={{ minWidth: 200 }}>Accounts</th>
-                    {allPermissions.map((perm) => (
-                      <th key={perm} style={{ minWidth: 160 }}>
-                        {formatPermissionName(perm)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {paginatedAccounts.map((account) => (
-                    <tr key={account.id} className="account-row">
-                      <td style={{ minWidth: 200 }}>
-                        <div className="cell-content">{account.username}</div>
-                      </td>
-
-                      {allPermissions.map((perm) => (
-                        <td
-                          key={perm}
-                          className="text-center"
-                          style={{ minWidth: 160 }}
-                        >
-                          <div className="cell-content">
-                            <Form.Check
-                              type="checkbox"
-                              checked={!!account.permissions[perm]}
-                              onChange={() =>
-                                handlePermissionChange(account.id, perm)
-                              }
-                              className="big-checkbox"
-                            />
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-
-            <div className="custom-pagination mt-3">
-              <button
-                className="page-btn"
-                disabled={currentPage === 1}
-                onClick={() => changePage(currentPage - 1)}
-              >
-                ‹
-              </button>
-
-              <span className="page-info">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                className="page-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => changePage(currentPage + 1)}
-              >
-                ›
-              </button>
-            </div>
+        {loading ? (
+          <div className="d-flex justify-content-center py-5">
+            <Spinner animation="border" variant="primary" />
           </div>
-        </div>
-      </ITLayout>
-    </>
+        ) : (
+          <Table bordered hover responsive className="text-left delivery-table">
+            <thead className="table-light">
+              <tr>
+                <th>Action</th>
+                <th className="text-center">Access</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPermissions.map((perm) => (
+                <tr key={perm}>
+                  <td className="p-2">{PERMISSION_LABELS[perm] || perm}</td>
+                  <td className="text-center">
+                    <Form.Check
+                      type="checkbox"
+                      checked={permissions[perm] ?? true}
+                      onChange={() => togglePermission(perm)}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </div>
+    </AdminLayout>
   );
 };
 

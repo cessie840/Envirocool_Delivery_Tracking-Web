@@ -76,7 +76,6 @@ const UserCreatePersonnelAccount = () => {
       return;
     }
 
-    // Submit form
     try {
       const response = await axios.post(
         "http://localhost/DeliveryTrackingSystem/create_delivery_personnel.php",
@@ -85,7 +84,7 @@ const UserCreatePersonnelAccount = () => {
 
       if (response.data.status === "success") {
         ToastHelper.success(`Account created successfully!`);
-        navigate("/user-management"); // Redirect to User Management
+        navigate("/user-management"); 
       } else if (response.data.status === "existing_account") {
         setErrorMessage(response.data.message);
       } else {

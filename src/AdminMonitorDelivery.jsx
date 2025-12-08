@@ -146,8 +146,8 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
 };
 
 const MonitorDelivery = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const isStaffAdmin = user?.ad_username === "staffadmin";
+  // const user = JSON.parse(localStorage.getItem("user"));
+  // const isStaffAdmin = user?.ad_username === "staffadmin";
 
   const [zoomOnNextClick, setZoomOnNextClick] = useState(false);
 
@@ -999,28 +999,28 @@ const MonitorDelivery = () => {
     </>
   );
 
-if (isStaffAdmin) {
-  return (
-    <StaffAdminLayout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>Monitor Delivery</span>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-    >
-      {content}
-    </StaffAdminLayout>
-  );
-}
+// if (isStaffAdmin) {
+//   return (
+//     <StaffAdminLayout
+//       title={
+//         <div className="d-flex align-items-center gap-2">
+//           <span>Monitor Delivery</span>
+//           <HiQuestionMarkCircle
+//             style={{
+//               fontSize: "2rem",
+//               color: "#07720885",
+//               cursor: "pointer",
+//               marginLeft: "10px",
+//             }}
+//             onClick={() => setShowFAQ(true)}
+//           />
+//         </div>
+//       }
+//     >
+//       {content}
+//     </StaffAdminLayout>
+//   );
+// }
 
 
   return (

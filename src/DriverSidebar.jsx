@@ -5,6 +5,25 @@ import axios from "axios";
 import "./loading-overlay.css";
 import { ToastHelper } from "./helpers/ToastHelper";
 
+const MENU_ITEMS = [
+  {
+    key: "OutForDelivery",
+    name: "Out For Delivery",
+    path: "/out-for-delivery",
+  },
+  {
+    key: "SuccessfulDelivery",
+    name: "Successful Delivered",
+    path: "/successful-delivery",
+  },
+  {
+    key: "FailedDeliveries",
+    name: "Failed Deliveries",
+    path: "/failed-delivery",
+  },
+  { key: "DriverGuidePage", name: "System Guide", path: "/driver-guide" },
+];
+
 const Sidebar = ({ show, onHide }) => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({
@@ -13,29 +32,28 @@ const Sidebar = ({ show, onHide }) => {
     contact: "",
     profilePic: "",
   });
-
+  const [permissions, setPermissions] = useState({});
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Load user profile and permissions
   useEffect(() => {
-    const storedProfile = localStorage.getItem("user");
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-    if (storedProfile) {
-      const parsed = JSON.parse(storedProfile);
+    if (storedUser) {
+      setPermissions(storedUser.permissions || {});
 
       axios
         .post(
           "http://localhost/DeliveryTrackingSystem/check_delivery_personnel.php",
           {
-            pers_username: parsed.pers_username,
+            pers_username: storedUser.pers_username,
           }
         )
         .then((response) => {
           const data = response.data;
-
           if (data.success) {
             const user = data.user;
-
             const profilePicUrl = user.pers_profile_pic
               ? `http://localhost//DeliveryTrackingSystem/uploads/personnel_profile_pic/${user.pers_profile_pic}`
               : `http://localhost//DeliveryTrackingSystem/default-profile-pic.png`;
@@ -49,7 +67,7 @@ const Sidebar = ({ show, onHide }) => {
             });
 
             const updatedUser = {
-              ...parsed,
+              ...storedUser,
               pers_profile_pic: user.pers_profile_pic,
             };
             localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -57,17 +75,16 @@ const Sidebar = ({ show, onHide }) => {
             console.warn("User not a delivery personnel:", data.message);
           }
         })
-        .catch((error) => {
-          console.error("Axios error:", error);
-        });
+        .catch(console.error);
     }
   }, []);
 
+  // Handle profile picture upload
   const handleProfileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const formData = new FormData();
     formData.append("profile_pic", file);
     formData.append("pers_username", storedUser.pers_username);
@@ -76,16 +93,11 @@ const Sidebar = ({ show, onHide }) => {
       const response = await axios.post(
         "http://localhost/DeliveryTrackingSystem/upload_profile_pic.php",
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (response.data.success) {
         const newPicUrl = response.data.image_url;
-
         setProfile((prev) => ({ ...prev, profilePic: newPicUrl }));
 
         const updatedUser = { ...storedUser, pers_profile_pic: newPicUrl };
@@ -108,7 +120,7 @@ const Sidebar = ({ show, onHide }) => {
       setLoading(false);
       localStorage.removeItem("user");
       navigate("/");
-    }, 800); //
+    }, 800);
   };
 
   const userName = profile.name;
@@ -133,15 +145,9 @@ const Sidebar = ({ show, onHide }) => {
       >
         <style>
           {`
-            .custom-offcanvas.offcanvas {
-              z-index: 1060 !important; 
-            }
-            .custom-backdrop {
-              z-index: 1059 !important; 
-            }
-            .offcanvas .btn-close {
-              filter: brightness(0) invert(3);
-            }
+            .custom-offcanvas.offcanvas { z-index: 1060 !important; }
+            .custom-backdrop { z-index: 1059 !important; }
+            .offcanvas .btn-close { filter: brightness(0) invert(3); }
           `}
         </style>
 
@@ -225,44 +231,48 @@ const Sidebar = ({ show, onHide }) => {
           >
             <h6 className="fw-bold mb-3 text-secondary">Navigation</h6>
             <ListGroup variant="flush">
-              {[
-                { name: "Assigned Delivery", path: "/driver-dashboard" },
-                { name: "Out For Delivery", path: "/out-for-delivery" },
-                { name: "Successful Delivered", path: "/successful-delivery" },
-                { name: "Failed Deliveries", path: "/failed-delivery" },
-                { name: "System Guide", path: "/driver-guide" },
-                { name: "Logout", path: "logout" },
-              ].map((item, i) => (
-                <ListGroup.Item
-                  key={i}
-                  action
-                  style={{
-                    fontSize: "1.1rem",
-                    color: "#198754",
-                    fontWeight: "500",
-                    transition: "background-color 0.3s, color 0.3s",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = "#e6f4f9";
-                    e.currentTarget.style.color = "#0d4f65";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = "";
-                    e.currentTarget.style.color = "#198754";
-                  }}
-                  onClick={() => {
-                    if (item.name === "Logout") {
-                      setShowLogoutModal(true);
-                      onHide();
-                    } else {
+              {MENU_ITEMS.map((item, i) =>
+                permissions[item.key] ? (
+                  <ListGroup.Item
+                    key={i}
+                    action
+                    style={{
+                      fontSize: "1.1rem",
+                      color: "#198754",
+                      fontWeight: "500",
+                      transition: "background-color 0.3s, color 0.3s",
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = "#e6f4f9";
+                      e.currentTarget.style.color = "#0d4f65";
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = "";
+                      e.currentTarget.style.color = "#198754";
+                    }}
+                    onClick={() => {
                       navigate(item.path);
                       onHide();
-                    }
-                  }}
-                >
-                  {item.name}
-                </ListGroup.Item>
-              ))}
+                    }}
+                  >
+                    {item.name}
+                  </ListGroup.Item>
+                ) : null
+              )}
+              <ListGroup.Item
+                action
+                style={{
+                  fontSize: "1.1rem",
+                  color: "#198754",
+                  fontWeight: "500",
+                }}
+                onClick={() => {
+                  setShowLogoutModal(true);
+                  onHide();
+                }}
+              >
+                Logout
+              </ListGroup.Item>
             </ListGroup>
           </div>
         </Offcanvas.Body>

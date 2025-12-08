@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { UserContext } from "./UserContext";
 import logo from "./assets/envirocool-logo.png";
 import {
   FaClipboardList,
@@ -15,8 +16,10 @@ import {
   FaTimes,
   FaPlus,
   FaUserFriends,
+  FaUserShield,
 } from "react-icons/fa";
 import { Modal, Button } from "react-bootstrap";
+import axios from "axios";
 import "./loading-overlay.css";
 
 const AdminLayout = ({
@@ -26,18 +29,61 @@ const AdminLayout = ({
   onSearch,
   children,
 }) => {
+  const { user, setUser } = useContext(UserContext);
+  const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => localStorage.getItem("sidebarCollapsed") === "true"
+  );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => window.innerWidth > 991
+  );
+
   const navigate = useNavigate();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    return saved === "true";
-  });
-  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
+
+  // Load logged-in user's permissions from backend if not already present
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      if (!user) return;
+      if (!user.permissions) {
+        try {
+          const res = await axios.post(
+            "http://localhost/DeliveryTrackingSystem/get_user_permissions.php",
+            {
+              username: user.username,
+              role: user.role,
+            }
+          );
+          if (res.data.success) {
+            const updatedUser = {
+              ...user,
+              permissions: res.data.permissions || {},
+            };
+            setUser(updatedUser);
+            setPermissions(updatedUser.permissions);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        setPermissions(user.permissions);
+      }
+    };
+    fetchUserPermissions();
+  }, [user, setUser]);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (onSearch) onSearch(value);
+  };
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
@@ -45,29 +91,13 @@ const AdminLayout = ({
     setTimeout(() => {
       setLoading(false);
       localStorage.removeItem("user");
+      setUser(null);
       navigate("/");
     }, 500);
   };
 
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    if (onSearch) onSearch(value);
-  };
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    return window.innerWidth > 991;
-  });
-
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth <= 991) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-
+    const handleResize = () => setIsSidebarOpen(window.innerWidth > 991);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -75,6 +105,52 @@ const AdminLayout = ({
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
   }, [isSidebarCollapsed]);
+
+  // Sidebar buttons config
+  const navButtons = [
+    {
+      permission: "AdminDashboard",
+      icon: <FaHome />,
+      text: "DASHBOARD",
+      path: "/admin-dashboard",
+    },
+    {
+      permission: "AdminDeliveryDetails",
+      icon: <FaClipboardList />,
+      text: "DELIVERY DETAILS",
+      path: "/delivery-details",
+    },
+    {
+      permission: "AdminMonitorDelivery",
+      icon: <FaTruck />,
+      text: "MONITOR DELIVERY",
+      path: "/monitor-delivery",
+    },
+    {
+      permission: "AdminGenerateReport",
+      icon: <FaChartBar />,
+      text: "DATA ANALYTICS & REPORT",
+      path: "/generate-report",
+    },
+    {
+      permission: "CreatePersonnelAccount",
+      icon: <FaUserFriends />,
+      text: "DELIVERY PERSONNEL ACCOUNTS",
+      path: "/user-management",
+    },
+    {
+      permission: "SystemAdminRolesAndPermission",
+      icon: <FaUserShield />,
+      text: "USER ROLES AND PERMISSION",
+      path: "/roles-permission",
+    },
+    {
+      permission: "AdminSettings",
+      icon: <FaCog />,
+      text: "SETTINGS",
+      path: "/admin-settings",
+    },
+  ];
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
@@ -87,9 +163,9 @@ const AdminLayout = ({
       )}
 
       <aside
-        className={`sidebar d-flex flex-column align-items-center p-3 
-    ${isSidebarOpen ? "show" : ""} 
-    ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
+        className={`sidebar d-flex flex-column align-items-center p-3 ${
+          isSidebarOpen ? "show" : ""
+        } ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
       >
         <button
           className="btn close-sidebar d-lg-none align-self-end mb-3"
@@ -97,94 +173,39 @@ const AdminLayout = ({
         >
           <FaTimes />
         </button>
-
         <div className="sidebar-header d-flex justify-content-between align-items-center w-100 mb-4">
-          <img
-            src={logo}
-            alt="Envirocool Logo"
-            className="logo img-fluid"
-            width="250px"
-          />
+          <img src={logo} alt="Logo" className="logo img-fluid" width="250px" />
           <button
             className="btn collapse-toggle d-none d-lg-flex p-3"
             onClick={toggleCollapse}
-            aria-label="Toggle sidebar collapse"
           >
-            {isSidebarCollapsed ? <FaAlignJustify /> : <FaAlignRight />}{" "}
+            {isSidebarCollapsed ? <FaAlignJustify /> : <FaAlignRight />}
           </button>
         </div>
 
-        <nav className="nav-buttons">
+        <nav className="nav-buttons w-100">
+          {navButtons.map(
+            (btn) =>
+              permissions[btn.permission] && (
+                <button
+                  key={btn.permission}
+                  className={`nav-btn ${isActive(btn.path) ? "active" : ""}`}
+                  onClick={() => navigate(btn.path)}
+                >
+                  {btn.icon}
+                  {!isSidebarCollapsed && (
+                    <span className="nav-text">{btn.text}</span>
+                  )}
+                  <span className="tooltip-text">{btn.text}</span>
+                </button>
+              )
+          )}
           <button
-            className={`nav-btn ${
-              isActive("/admin-dashboard") ? "active" : ""
-            }`}
-            onClick={() => navigate("/admin-dashboard")}
-          >
-            <FaHome className="icon" />
-            <span className="nav-text"> DASHBOARD</span>
-            <span className="tooltip-text">Dashboard</span>
-          </button>
-
-          <button
-            className={`nav-btn ${
-              isActive("/delivery-details") ? "active" : ""
-            }`}
-            onClick={() => navigate("/delivery-details")}
-          >
-            <FaClipboardList className="icon" />
-            <span className="nav-text"> DELIVERY DETAILS</span>
-            <span className="tooltip-text">Delivery Details</span>
-          </button>
-
-          <button
-            className={`nav-btn ${
-              isActive("/monitor-delivery") ? "active" : ""
-            }`}
-            onClick={() => navigate("/monitor-delivery")}
-          >
-            <FaTruck className="icon" />
-            <span className="nav-text"> MONITOR DELIVERY</span>
-            <span className="tooltip-text">Monitor Delivery</span>
-          </button>
-
-          <button
-            className={`nav-btn ${
-              isActive("/generate-report") ? "active" : ""
-            }`}
-            onClick={() => navigate("/generate-report")}
-          >
-            <FaChartBar className="icon" />
-            <span className="nav-text"> DATA ANALYTICS & REPORT</span>
-            <span className="tooltip-text">Data Analytics & Report</span>
-          </button>
-
-          <button
-            className={`nav-btn ${
-              isActive("/user-management") ? "active" : ""
-            }`}
-            onClick={() => navigate("/user-management")}
-          >
-            <FaUserFriends className="icon" />
-            <span className="nav-text">CREATE DELIVERY PERSONNEL ACCOUNTS</span>
-            <span className="tooltip-text">Delivery Personnel Accounts</span>
-          </button>
-
-          <button
-            className={`nav-btn ${isActive("/admin-settings") ? "active" : ""}`}
-            onClick={() => navigate("/admin-settings")}
-          >
-            <FaCog className="icon" />
-            <span className="nav-text"> SETTINGS</span>
-            <span className="tooltip-text">Settings</span>
-          </button>
-
-          <button
-            className={`nav-btn logout ${isActive("/logout") ? "active" : ""}`}
+            className="nav-btn logout"
             onClick={() => setShowLogoutModal(true)}
           >
             <FaSignOutAlt className="icon" />
-            <span className="nav-text"> LOGOUT</span>
+            <span className="nav-text">LOGOUT</span>
             <span className="tooltip-text">Logout</span>
           </button>
         </nav>
@@ -201,6 +222,7 @@ const AdminLayout = ({
             </button>
             <h2 className="fs-1 fw-bold m-0">{title}</h2>
           </div>
+
           {showSearch && (
             <div className="search-bar position-relative me-3">
               <input

@@ -12,8 +12,8 @@ import SystemAdminLayout from "../SystemAdminLayout";
 import { Button, Modal } from "react-bootstrap";
 
 const AdminSettings = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const isStaffAdmin = user?.ad_username === "staffadmin";
+  // const user = JSON.parse(localStorage.getItem("user"));
+  // const isStaffAdmin = user?.ad_username === "staffadmin";
 
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
@@ -261,31 +261,31 @@ const AdminSettings = () => {
     </>
   );
 
-  if (isStaffAdmin) {
-    return (
-      <StaffAdminLayout
-        title={
-          <div className="d-flex align-items-center gap-2">
-            <span>Admin Settings</span>
-            <HiQuestionMarkCircle
-              style={{
-                fontSize: "2rem",
-                color: "#07720885",
-                cursor: "pointer",
-                marginLeft: "10px",
-              }}
-              onClick={() => setShowFAQ(true)}
-            />
-          </div>
-        }
-      >
-        {content}
-      </StaffAdminLayout>
-    );
-  }
+  // if (isStaffAdmin) {
+  //   return (
+  //     <StaffAdminLayout
+  //       title={
+  //         <div className="d-flex align-items-center gap-2">
+  //           <span>Admin Settings</span>
+  //           <HiQuestionMarkCircle
+  //             style={{
+  //               fontSize: "2rem",
+  //               color: "#07720885",
+  //               cursor: "pointer",
+  //               marginLeft: "10px",
+  //             }}
+  //             onClick={() => setShowFAQ(true)}
+  //           />
+  //         </div>
+  //       }
+  //     >
+  //       {content}
+  //     </StaffAdminLayout>
+  //   );
+  // }
 
   return (
-    <Layout
+    <AdminLayout
       title={
         <div className="d-flex align-items-center gap-2">
           <span>Admin Settings</span>
@@ -303,7 +303,7 @@ const AdminSettings = () => {
       showSearch={false}
     >
       {content}
-    </Layout>
+    </AdminLayout>
   );
 };
 

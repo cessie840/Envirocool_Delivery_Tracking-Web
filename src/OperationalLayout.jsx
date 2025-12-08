@@ -8,35 +8,68 @@ import {
   FaClipboardList,
   FaCog,
   FaSignOutAlt,
-  FaSearch,
   FaAlignRight,
   FaAlignJustify,
+  FaSearch,
 } from "react-icons/fa";
 import { Modal, Button } from "react-bootstrap";
 import "./loading-overlay.css";
 
+const BUTTONS = [
+  {
+    key: "CreatePersonnelAccount",
+    label: "DELIVERY PERSONNEL ACCOUNTS",
+    path: "/personnel-accounts",
+    icon: FaUserFriends,
+  },
+  {
+    key: "OperationalDelivery",
+    label: "DELIVERY DETAILS",
+    path: "/operational-delivery-details",
+    icon: FaClipboardList,
+  },
+  {
+    key: "OperationalSettings",
+    label: "SETTINGS",
+    path: "/operational-settings",
+    icon: FaCog,
+  },
+];
 
 const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
-  const [loading, setLoading] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
+  const [loading, setLoading] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     () => window.innerWidth > 991
   );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    return saved === "true";
-  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => localStorage.getItem("sidebarCollapsed") === "true"
+  );
+  const [permissions, setPermissions] = useState({});
+
+  // Load permissions
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const perms = storedUser.permissions || {};
+    setPermissions(perms);
+
+    // Redirect to first accessible page if current path is not allowed
+    const currentButton = BUTTONS.find((btn) => btn.path === location.pathname);
+    if (!currentButton || !perms[currentButton.key]) {
+      const firstAccessible = BUTTONS.find((btn) => perms[btn.key]);
+      if (firstAccessible) {
+        navigate(firstAccessible.path, { replace: true });
+      }
+    }
+  }, [location.pathname, navigate]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsSidebarOpen(window.innerWidth > 991);
-    };
+    const handleResize = () => setIsSidebarOpen(window.innerWidth > 991);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -69,9 +102,9 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
       )}
 
       <aside
-        className={`sidebar d-flex flex-column align-items-center p-3 
-          ${isSidebarOpen ? "show" : ""} 
-          ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
+        className={`sidebar d-flex flex-column align-items-center p-3 ${
+          isSidebarOpen ? "show" : ""
+        } ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
       >
         <button
           className="btn close-sidebar d-lg-none align-self-end mb-3"
@@ -97,40 +130,22 @@ const OperationalLayout = ({ children, title, searchTerm, onSearchChange }) => {
         </div>
 
         <nav className="nav-buttons w-100">
-          <button
-            className={`nav-btn ${
-              isActive("/personnel-accounts") ? "active" : ""
-            }`}
-            onClick={() => navigate("/personnel-accounts")}
-          >
-            <FaUserFriends className="icon" />
-            {!isSidebarCollapsed && (
-              <span className="nav-text">DELIVERY PERSONNEL ACCOUNTS</span>
-            )}
-            <span className="tooltip-text">Delivery Personnel Accounts</span>
-          </button>
-          <button
-            className={`nav-btn ${
-              isActive("/operational-delivery-details") ? "active" : ""
-            }`}
-            onClick={() => navigate("/operational-delivery-details")}
-          >
-            <FaClipboardList className="icon" />
-            {!isSidebarCollapsed && (
-              <span className="nav-text">DELIVERY DETAILS</span>
-            )}
-            <span className="tooltip-text">Delivery Details</span>
-          </button>
-          <button
-            className={`nav-btn ${
-              isActive("/operational-settings") ? "active" : ""
-            }`}
-            onClick={() => navigate("/operational-settings")}
-          >
-            <FaCog className="icon" />
-            {!isSidebarCollapsed && <span className="nav-text">SETTINGS</span>}
-            <span className="tooltip-text">Settings</span>
-          </button>
+          {BUTTONS.map((btn) =>
+            permissions[btn.key] ? (
+              <button
+                key={btn.key}
+                className={`nav-btn ${isActive(btn.path) ? "active" : ""}`}
+                onClick={() => navigate(btn.path)}
+              >
+                <btn.icon className="icon" />
+                {!isSidebarCollapsed && (
+                  <span className="nav-text">{btn.label}</span>
+                )}
+                <span className="tooltip-text">{btn.label}</span>
+              </button>
+            ) : null
+          )}
+
           <button
             className="nav-btn logout"
             onClick={() => setShowLogoutModal(true)}

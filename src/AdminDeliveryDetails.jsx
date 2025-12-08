@@ -9,8 +9,8 @@ import { HiQuestionMarkCircle } from "react-icons/hi";
 import { FaFilter } from "react-icons/fa";
 
 const DeliveryDetails = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const isStaffAdmin = user?.ad_username === "staffadmin";
+  // const user = JSON.parse(localStorage.getItem("user"));
+  // const isStaffAdmin = user?.ad_username === "staffadmin";
 
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
@@ -784,28 +784,28 @@ const DeliveryDetails = () => {
     </>
   );
 
- if (isStaffAdmin) {
-  return (
-    <StaffAdminLayout
-      title={
-        <div className="d-flex align-items-center gap-2">
-          <span>Delivery Details</span>
-          <HiQuestionMarkCircle
-            style={{
-              fontSize: "2rem",
-              color: "#07720885",
-              cursor: "pointer",
-              marginLeft: "10px",
-            }}
-            onClick={() => setShowFAQ(true)}
-          />
-        </div>
-      }
-    >
-      {content}
-    </StaffAdminLayout>
-  );
-}
+//  if (isStaffAdmin) {
+//   return (
+//     <StaffAdminLayout
+//       title={
+//         <div className="d-flex align-items-center gap-2">
+//           <span>Delivery Details</span>
+//           <HiQuestionMarkCircle
+//             style={{
+//               fontSize: "2rem",
+//               color: "#07720885",
+//               cursor: "pointer",
+//               marginLeft: "10px",
+//             }}
+//             onClick={() => setShowFAQ(true)}
+//           />
+//         </div>
+//       }
+//     >
+//       {content}
+//     </StaffAdminLayout>
+//   );
+// }
 
 
   return (

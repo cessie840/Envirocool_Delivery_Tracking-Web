@@ -26,9 +26,8 @@ const UserManagement = () => {
   const [qbeUsername, setQbeUsername] = useState("");
   const [qbeStatus, setQbeStatus] = useState("");
   const [qbeAssignmentStatus, setQbeAssignmentStatus] = useState("");
-const username = localStorage.getItem("username");
-const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
-
+  const username = localStorage.getItem("username");
+  const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
 
   const guideqst = [
     {
@@ -204,22 +203,21 @@ const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
   };
 
   return (
-  <Layout
-    title={
-      <div className="d-flex align-items-center gap-2">
-        <span>Delivery Personnel Accounts</span>
-        <HiQuestionMarkCircle
-          style={{ fontSize: "2rem", color: "#07720885", cursor: "pointer" }}
-          onClick={() => setShowFAQ(true)}
-        />
-      </div>
-    }
-    searchTerm={searchTerm}
-    onSearchChange={setSearchTerm}
-  >
-
+    <AdminLayout
+      title={
+        <div className="d-flex align-items-center gap-2">
+          <span>Delivery Personnel Accounts</span>
+          <HiQuestionMarkCircle
+            style={{ fontSize: "2rem", color: "#07720885", cursor: "pointer" }}
+            onClick={() => setShowFAQ(true)}
+          />
+        </div>
+      }
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+    >
       {/* Top controls */}
-      <div className="d-flex justify-content-end mx-4 my-4 align-items-center gap-2">
+      <div className="d-flex justify-content-end mx-4 mt-5 mb-4 align-items-center gap-2">
         <button
           className="btn d-flex align-items-center"
           title="Advanced Filter (QBE)"
@@ -539,7 +537,7 @@ const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
           </Button>
         </Modal.Footer>
       </Modal>
-    </Layout>
+    </AdminLayout>
   );
 };
 
