@@ -17,48 +17,34 @@ const SystemAdminRolesAndPermission = () => {
   // FETCH FROM BACKEND -------------------------------------------------------
   useEffect(() => {
     axios
-      .get("http://localhost/DeliveryTrackingSystem/get_all_user.php")
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_all_user.php",
+        { withCredentials: true }
+      )
       .then((res) => {
         if (res.data.success) {
-          // Convert fetched usernames into your SAME structure
+          // Map the fetched data to same structure
           setAdminAccounts(
             res.data.data.admins.map((row, index) => ({
               id: index + 1,
-              username: row.ad_username,
-              permissions: {
-                "Create Transaction": true,
-                "Update Transaction": true,
-                "View Deliveries": true,
-                "Monitor Deliveries": true,
-                "Generate Reports": false,
-                "Change Password": false,
-                "Create Delivery Account": false,
-              },
+              username: row.username,
+              permissions: row.permissions,
             }))
           );
 
           setOperationalAccounts(
             res.data.data.managers.map((row, index) => ({
               id: index + 1,
-              username: row.manager_username,
-              permissions: {
-                "Assign Delivery": true,
-                "View Delivery Details": true,
-                "Create Delivery Account": false,
-                "Reschedule Deliverie": true,
-                "Change Password": false,
-              },
+              username: row.username,
+              permissions: row.permissions,
             }))
           );
 
           setDeliveryAccounts(
             res.data.data.personnel.map((row, index) => ({
               id: index + 1,
-              username: row.pers_username,
-              permissions: {
-                "View Assigned Deliveries": true,
-                "Update Delivery Status": true,
-              },
+              username: row.username,
+              permissions: row.permissions,
             }))
           );
         }
@@ -66,7 +52,6 @@ const SystemAdminRolesAndPermission = () => {
       .catch((err) => console.log(err));
   }, []);
 
- 
   let accounts =
     activeTab === "admin"
       ? adminAccounts
@@ -76,29 +61,46 @@ const SystemAdminRolesAndPermission = () => {
 
   const [currentAccounts, setCurrentAccounts] = useState([]);
 
-
   useEffect(() => {
     setCurrentAccounts(accounts);
   }, [accounts, activeTab]);
 
-
+  // Toggle & save permission to DB
   const handlePermissionChange = (accountId, permission) => {
+    const account = currentAccounts.find((a) => a.id === accountId);
+    const newValue = !account.permissions[permission];
+
     setCurrentAccounts((prev) =>
       prev.map((acc) =>
         acc.id === accountId
           ? {
               ...acc,
-              permissions: {
-                ...acc.permissions,
-                [permission]: !acc.permissions[permission],
-              },
+              permissions: { ...acc.permissions, [permission]: newValue },
             }
           : acc
       )
     );
+
+    // Save to backend
+    axios
+      .post("http://localhost/DeliveryTrackingSystem/update_permission.php", {
+        username: account.username,
+        role:
+          activeTab === "admin"
+            ? "admin"
+            : activeTab === "operational-manager"
+            ? "operationalmanager"
+            : "deliverypersonnel",
+        permission: permission,
+        value: newValue ? 1 : 0,
+      })
+      .then((res) => {
+        if (!res.data.success) console.error(res.data.message);
+      })
+      .catch((err) => console.error(err));
+
   };
 
-  
   const allPermissions =
     currentAccounts.length > 0
       ? Object.keys(currentAccounts[0].permissions)
@@ -106,7 +108,6 @@ const SystemAdminRolesAndPermission = () => {
 
   const permsPerPage = 4;
   const totalPages = Math.ceil(allPermissions.length / permsPerPage);
-
   const indexOfLast = currentPage * permsPerPage;
   const indexOfFirst = indexOfLast - permsPerPage;
   const currentPermissions = allPermissions.slice(indexOfFirst, indexOfLast);
@@ -154,27 +155,31 @@ const SystemAdminRolesAndPermission = () => {
               </tr>
             </thead>
             <tbody>
-              {currentAccounts.map((account) => (
-                <tr key={account.id} className="account-row">
-                  <td>
-                    <div className="cell-content">{account.username}</div>
-                  </td>
-                  {currentPermissions.map((perm) => (
-                    <td key={perm} className="text-center">
-                      <div className="cell-content">
-                        <Form.Check
-                          type="checkbox"
-                          checked={account.permissions[perm]}
-                          onChange={() =>
-                            handlePermissionChange(account.id, perm)
-                          }
-                          className="big-checkbox"
-                        />
-                      </div>
+              {currentAccounts
+                .filter(
+                  (account) => account.username.toLowerCase() !== "systemadmin"
+                ) // <-- hide systemadmin
+                .map((account) => (
+                  <tr key={account.id} className="account-row">
+                    <td>
+                      <div className="cell-content">{account.username}</div>
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {currentPermissions.map((perm) => (
+                      <td key={perm} className="text-center">
+                        <div className="cell-content">
+                          <Form.Check
+                            type="checkbox"
+                            checked={account.permissions[perm]}
+                            onChange={() =>
+                              handlePermissionChange(account.id, perm)
+                            }
+                            className="big-checkbox"
+                          />
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
             </tbody>
           </Table>
 

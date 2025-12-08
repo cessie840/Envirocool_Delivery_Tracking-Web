@@ -6,7 +6,7 @@ import ViewTermsTab from "./ViewTermsTab";
 import "./settings.css";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 import { Button, Modal } from "react-bootstrap";
-
+import axios from "axios";
 const OperationalSettings = () => {
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
@@ -62,7 +62,24 @@ const OperationalSettings = () => {
     },
   ];
   const [activeTab, setActiveTab] = useState("edit-profile");
+  const [userPermissions, setUserPermissions] = useState({}); // <-- Add this
 
+  // Fetch user permissions
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+        { withCredentials: true }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setUserPermissions(res.data.permissions);
+        } else {
+          setUserPermissions({});
+        }
+      })
+      .catch((err) => console.error("Error fetching permissions:", err));
+  }, []);
   useEffect(() => {
     document.title = "Operational Manager Settings";
   }, []);
@@ -104,12 +121,15 @@ const OperationalSettings = () => {
         >
           Edit Profile
         </button>
-        <button
-          className={activeTab === "change-password" ? "active" : ""}
-          onClick={() => setActiveTab("change-password")}
-        >
-          Change Password
-        </button>
+        {userPermissions["Change Password"] !== 0 && (
+          <button
+            className={activeTab === "change-password" ? "active" : ""}
+            onClick={() => setActiveTab("change-password")}
+          >
+            Change Password
+          </button>
+        )}
+
         <button
           className={activeTab === "terms" ? "active" : ""}
           onClick={() => setActiveTab("terms")}

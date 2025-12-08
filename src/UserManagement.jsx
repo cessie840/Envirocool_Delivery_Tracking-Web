@@ -203,6 +203,24 @@ const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
     setShowQbeModal(false);
   };
 
+  const [userPermissions, setUserPermissions] = useState({});
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+        { withCredentials: true }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setUserPermissions(res.data.permissions);
+        } else {
+          console.log("Not logged in");
+          setUserPermissions({});
+        }
+      })
+      .catch((err) => console.error("Error fetching permissions:", err));
+  }, []);
+
   return (
   <Layout
     title={
@@ -239,13 +257,14 @@ const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
           Advanced Filter
         </button>
 
-        <Button
-          variant="success"
-          className="d-flex align-items-center gap-2"
-          onClick={() => navigate("/create-personnel-account")}
-        >
-          <FaUserPlus /> Create Account
-        </Button>
+          {userPermissions["Create Delivery Account"] !== 0 && (
+                <button
+                  className="add-delivery rounded rounded-2 px-4 py-2 d-flex align-items-center gap-2"
+                  onClick={() => navigate("/create-personnel-account-ops")}
+                >
+                  <FaUserPlus /> Create Account
+                </button>
+              )}
       </div>
 
       {/* Personnel Table */}

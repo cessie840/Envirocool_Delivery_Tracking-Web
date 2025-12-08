@@ -8,6 +8,7 @@ import RescheduleModal from "./RescheduleModal";
 import { Button, Modal, Form } from "react-bootstrap";
 import { ToastHelper } from "./helpers/ToastHelper";
 import { HiQuestionMarkCircle } from "react-icons/hi";
+import axios from "axios";
 
 const ViewOrder = () => {
   const navigate = useNavigate();
@@ -47,7 +48,23 @@ const ViewOrder = () => {
   const [showProofViewModal, setShowProofViewModal] = useState(false);
   const [proofUrl, setProofUrl] = useState("");
   const [modalTitle, setModalTitle] = useState("");
-
+const [userPermissions, setUserPermissions] = useState({});
+useEffect(() => {
+  axios
+    .get(
+      "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+      { withCredentials: true }
+    )
+    .then((res) => {
+      if (res.data.success) {
+        setUserPermissions(res.data.permissions);
+      } else {
+        console.log("Not logged in");
+        setUserPermissions({});
+      }
+    })
+    .catch((err) => console.error("Error fetching permissions:", err));
+}, []);
   const refetchData = () => {
     setRefetchTrigger((prev) => prev + 1);
   };
@@ -612,29 +629,31 @@ const ViewOrder = () => {
               </div>
             </div>
             <div className="buttons d-flex justify-content-center gap-5 mt-4">
-              {
-              ((orderDetails.status === "Delivered" &&
-                orderDetails.payment_option === "Down Payment") ||
-             
-                (orderDetails.status === "Pending" &&
-                  (parseFloat(orderDetails.balance) > 0 ||
-                    calculatedBalance > 0))) && (
-                <button
-                  className="btn upd-btn btn-success px-5 py-2 rounded-2"
-                  onClick={handleUpdate}
-                >
-                  Update Payment
-                </button>
-              )}
+              {/* Update Payment Button */}
+              {userPermissions["Update Transaction"] !== 0 &&
+                ((orderDetails.status === "Delivered" &&
+                  orderDetails.payment_option === "Down Payment") ||
+                  (orderDetails.status === "Pending" &&
+                    (parseFloat(orderDetails.balance) > 0 ||
+                      calculatedBalance > 0))) && (
+                  <button
+                    className="btn upd-btn btn-success px-5 py-2 rounded-2"
+                    onClick={handleUpdate}
+                  >
+                    Update Payment
+                  </button>
+                )}
 
-              {orderDetails.status === "Cancelled" && (
-                <button
-                  className="btn btn-view px-5 py-2 rounded-3 fs-5"
-                  onClick={() => setShowReschedule(true)}
-                >
-                  Reschedule
-                </button>
-              )}
+              {/* Reschedule Button */}
+              {userPermissions["Reschedule Delivery"] !== 0 &&
+                orderDetails.status === "Cancelled" && (
+                  <button
+                    className="btn btn-view px-5 py-2 rounded-3 fs-5"
+                    onClick={() => setShowReschedule(true)}
+                  >
+                    Reschedule
+                  </button>
+                )}
             </div>
           </div>
         </div>

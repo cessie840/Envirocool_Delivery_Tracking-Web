@@ -40,6 +40,8 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import axios from "axios";
+
 
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -68,8 +70,26 @@ const PERIODS = [
 const COLORS = ["#4CAF50", "#E57373", "#FFC107", "#2196F3", "#9C27B0"];
 
 const GenerateReport = () => {
-  const [showFAQ, setShowFAQ] = useState(false);
+   const [userPermissions, setUserPermissions] = useState({});
+   useEffect(() => {
+     axios
+       .get(
+         "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+         { withCredentials: true }
+       )
+       .then((res) => {
+         if (res.data.success) {
+           setUserPermissions(res.data.permissions);
+         } else {
+           console.log("Not logged in");
+           setUserPermissions({});
+         }
+       })
+       .catch((err) => console.error("Error fetching permissions:", err));
+   }, []);
 
+  const [showFAQ, setShowFAQ] = useState(false);
+  const handleAddDelivery = () => navigate("/add-delivery");
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
 
   const guideqst = [
@@ -3703,22 +3723,27 @@ const GenerateReport = () => {
           >
             <FaFilter /> Filter Reports
           </Button>
-          <Button
-            variant="danger"
-            className="btn cancel-btn px-3 py-2 rounded"
-            onClick={() => generateReport(reportType)}
-          >
-            <FaFilePdf /> Generate PDF
-          </Button>
+
+          {userPermissions["Generate Reports"] !== 0 && (
+            <Button
+              variant="danger"
+              className="btn cancel-btn px-3 py-2 rounded"
+              onClick={() => generateReport(reportType)}
+            >
+              <FaFilePdf /> Generate PDF
+            </Button>
+          )}
         </div>
-        <Button
-          variant="success"
-          onClick={() => navigate("/add-delivery")}
-          className="d-flex align-items-center gap-2 btn add-delivery px-3 py-2 rounded"
-          style={{ fontSize: "15px" }}
-        >
-          <FaPlus /> Add New Delivery
-        </Button>
+        {userPermissions["Create Transaction"] === 1 && (
+          <Button
+            variant="success"
+            onClick={() => navigate("/add-delivery")}
+            className="d-flex align-items-center gap-2 btn add-delivery px-3 py-2 rounded"
+            style={{ fontSize: "15px" }}
+          >
+            <FaPlus /> Add New Delivery
+          </Button>
+        )}
       </div>
       <div className="period-title text-center" ref={reportRef}>
         <h5 className="text-success fs-1 mt-3 mb-4 fw-semibold">

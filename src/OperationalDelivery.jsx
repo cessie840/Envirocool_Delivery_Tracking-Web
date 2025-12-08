@@ -387,6 +387,23 @@ const OperationalDelivery = () => {
   const filteredAssignedOrders = filterDate
     ? finalAssigned.filter((o) => o.target_date_delivery === filterDate)
     : finalAssigned;
+const [userPermissions, setUserPermissions] = useState({});
+
+useEffect(() => {
+  axios
+    .get(
+      "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+      { withCredentials: true }
+    )
+    .then((res) => {
+      if (res.data.success) {
+        setUserPermissions(res.data.permissions || {});
+      } else {
+        setUserPermissions({});
+      }
+    })
+    .catch((err) => console.error("Error fetching permissions:", err));
+}, []);
 
   return (
     <>
@@ -446,7 +463,7 @@ const OperationalDelivery = () => {
                 onClick={() => setShowQbeModal(true)}
               >
                 <FaFilter /> {"  "}
-                Advanced Filter 
+                Advanced Filter
               </Button>
 
               <Form.Control
@@ -576,13 +593,15 @@ const OperationalDelivery = () => {
                             {order.tracking_number}
                           </p>
 
-                          <Button
-                            className="btn btn-view px-3 py-1"
-                            size="sm"
-                            onClick={() => openDetailModal(order)}
-                          >
-                            View Details
-                          </Button>
+                          {userPermissions["View Delivery Details"] !== 0 && (
+                            <Button
+                              className="btn btn-view px-3 py-1"
+                              size="sm"
+                              onClick={() => openDetailModal(order)}
+                            >
+                              View Details
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -708,21 +727,24 @@ const OperationalDelivery = () => {
                     </ul>
 
                     {(selectedOrder.status === "Pending" ||
-                      selectedOrder.status === "To Ship") && (
-                      <div className="text-center mt-3">
-                        <Button
-                          variant="warning"
-                          className="btn btn-view px-3 py-1 rounded-2"
-                          onClick={handleOpenAssignModal}
-                        >
-                          Change Personnel
-                        </Button>
-                      </div>
-                    )}
+                      selectedOrder.status === "To Ship") &&
+                      userPermissions["Assign Delivery"] !== 0 && (
+                        <div className="text-center mt-3">
+                          <Button
+                            variant="warning"
+                            className="btn btn-view px-3 py-1 rounded-2"
+                            onClick={handleOpenAssignModal}
+                          >
+                            Change Personnel
+                          </Button>
+                        </div>
+                      )}
                   </div>
                 ) : (
+                  /* Assign Personnel Button (only if user has permission) */
                   (selectedOrder.status === "Pending" ||
-                    selectedOrder.status === "To Ship") && (
+                    selectedOrder.status === "To Ship") &&
+                  userPermissions["Assign Delivery"] !== 0 && (
                     <div className="text-center mt-4">
                       <Button
                         variant="success"

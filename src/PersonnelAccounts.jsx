@@ -15,7 +15,7 @@ const PersonnelAccounts = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [userPermissions, setUserPermissions] = useState({}); // <-- Add this
   const navigate = useNavigate();
 
   // QBE state
@@ -45,7 +45,21 @@ const PersonnelAccounts = () => {
         "This situation is beyond the system’s control, as it requires direct communication with the delivery personnel involved since they are the account holder responsible for the delivery.",
     },
   ];
-
+useEffect(() => {
+  axios
+    .get(
+      "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+      { withCredentials: true }
+    )
+    .then((res) => {
+      if (res.data.success) {
+        setUserPermissions(res.data.permissions);
+      } else {
+        setUserPermissions({});
+      }
+    })
+    .catch((err) => console.error("Error fetching permissions:", err));
+}, []);
   useEffect(() => {
     document.title = "Delivery Personnel Accounts";
     fetchPersonnel();
@@ -210,12 +224,14 @@ const PersonnelAccounts = () => {
           Advanced Filter
         </Button>
 
-        <button
-          className="add-delivery rounded rounded-2 px-4 py-2 d-flex align-items-center gap-2"
-          onClick={() => navigate("/create-personnel-account-ops")}
-        >
-          <FaUserPlus /> Create Account
-        </button>
+        {userPermissions["Create Delivery Account"] !== 0 && (
+          <button
+            className="add-delivery rounded rounded-2 px-4 py-2 d-flex align-items-center gap-2"
+            onClick={() => navigate("/create-personnel-account-ops")}
+          >
+            <FaUserPlus /> Create Account
+          </button>
+        )}
       </div>
 
       <Table

@@ -174,6 +174,21 @@ function DriverDashboard() {
     setFilteredDeliveries(filtered);
   };
 
+  const [userPermissions, setUserPermissions] = useState({});
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+        { withCredentials: true }
+      )
+      .then((res) => {
+        if (res.data.success) setUserPermissions(res.data.permissions);
+        else setUserPermissions({});
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+
   return (
     <div style={{ backgroundColor: "#f0f4f7", minHeight: "100vh" }}>
       <HeaderAndNav
@@ -232,105 +247,122 @@ function DriverDashboard() {
       </Modal>
 
       <Container className="py-4">
-        <br />
-        <h2 className="text-center text-success fw-bold mb-3">
-          ASSIGNED DELIVERIES
-        </h2>
-        <br />
-
-        {filteredDeliveries.length === 0 ? (
-          <p className="text-muted text-center">No Assigned Deliveries.</p>
+        {userPermissions["View Assigned Deliveries"] !== 1 ? (
+          <p className="text-center text-danger mt-4">
+            You do not have permission to view your assigned deliveries.
+          </p>
         ) : (
-          filteredDeliveries.map((delivery, idx) => (
-            <Card
-              key={idx}
-              id={`transaction-${delivery.transactionNo}`}
-              className="mb-4 p-3 border border-info rounded"
-              style={{
-                backgroundColor:
-                  highlightedTxn === delivery.transactionNo
-                    ? "#90cda6ff"
-                    : "#eaf7f7",
-                transition: "background-color 0.5s ease",
-              }}
-            >
-              <h5 className="text-center fw-bold text-dark mb-3">
-                TRANSACTION NO. {delivery.transactionNo}
-              </h5>
+          <>
+            <br />
+            <h2 className="text-center text-success fw-bold mb-3">
+              ASSIGNED DELIVERIES
+            </h2>
+            <br />
 
-              <div className="border p-3 rounded bg-white">
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Truck Device:</strong>
-                  <span>
-                    {delivery.device_id
-                      ? delivery.device_id.replace(/device[-_]?/i, "Truck ")
-                      : "Not Assigned"}
-                  </span>
-                </div>
-
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Customer:</strong>
-                  <span>{delivery.customerName}</span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Address:</strong>
-                  <span>{delivery.address}</span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Contact:</strong>
-                  <span>{delivery.contact}</span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <strong>Payment:</strong>
-                  <span>{delivery.paymentMode}</span>
-                </div>
-
-                <strong className="d-block mb-1">Items:</strong>
-                {delivery.items.map((item, i) => (
-                  <div
-                    key={i}
-                    className="d-flex justify-content-between mb-1 ps-3"
-                  >
-                    <span>
-                      {item.name}{" "}
-                      <span style={{ fontWeight: "bold", color: "#198754" }}>
-                        x{item.qty}
-                      </span>
-                    </span>
-                    <span style={{ display: "flex", gap: "10px" }}>
-                      <span>{formatCurrency(item.unitCost)}</span> |
-                      <span>{formatCurrency(item.qty * item.unitCost)}</span>
-                    </span>
-                  </div>
-                ))}
-
-                <hr className="my-2" style={{ borderTop: "2px dashed #999" }} />
-
-                <div className="d-flex justify-content-between mb-3">
-                  <strong>Total:</strong>
-                  <span className="fw-bold">
-                    {formatCurrency(delivery.totalCost)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="d-flex justify-content-center gap-2 mt-3">
-                <Button
-                  size="sm"
+            {filteredDeliveries.length === 0 ? (
+              <p className="text-muted text-center">No Assigned Deliveries.</p>
+            ) : (
+              filteredDeliveries.map((delivery, idx) => (
+                <Card
+                  key={idx}
+                  id={`transaction-${delivery.transactionNo}`}
+                  className="mb-4 p-3 border border-info rounded"
                   style={{
-                    backgroundColor: "#198754",
-                    borderColor: "#198754",
-                    borderRadius: "10px",
+                    backgroundColor:
+                      highlightedTxn === delivery.transactionNo
+                        ? "#90cda6ff"
+                        : "#eaf7f7",
+                    transition: "background-color 0.5s ease",
                   }}
-                  onClick={() =>
-                    handleOutForDeliveryClick(delivery.transactionNo)
-                  }
                 >
-                  Out for Delivery
-                </Button>
-              </div>
-            </Card>
-          ))
+                  <h5 className="text-center fw-bold text-dark mb-3">
+                    TRANSACTION NO. {delivery.transactionNo}
+                  </h5>
+
+                  <div className="border p-3 rounded bg-white">
+                    <div className="d-flex justify-content-between mb-1">
+                      <strong>Truck Device:</strong>
+                      <span>
+                        {delivery.device_id
+                          ? delivery.device_id.replace(/device[-_]?/i, "Truck ")
+                          : "Not Assigned"}
+                      </span>
+                    </div>
+
+                    <div className="d-flex justify-content-between mb-1">
+                      <strong>Customer:</strong>
+                      <span>{delivery.customerName}</span>
+                    </div>
+                    <div className="d-flex justify-content-between mb-1">
+                      <strong>Address:</strong>
+                      <span>{delivery.address}</span>
+                    </div>
+                    <div className="d-flex justify-content-between mb-1">
+                      <strong>Contact:</strong>
+                      <span>{delivery.contact}</span>
+                    </div>
+                    <div className="d-flex justify-content-between mb-1">
+                      <strong>Payment:</strong>
+                      <span>{delivery.paymentMode}</span>
+                    </div>
+
+                    <strong className="d-block mb-1">Items:</strong>
+                    {delivery.items.map((item, i) => (
+                      <div
+                        key={i}
+                        className="d-flex justify-content-between mb-1 ps-3"
+                      >
+                        <span>
+                          {item.name}{" "}
+                          <span
+                            style={{ fontWeight: "bold", color: "#198754" }}
+                          >
+                            x{item.qty}
+                          </span>
+                        </span>
+                        <span style={{ display: "flex", gap: "10px" }}>
+                          <span>{formatCurrency(item.unitCost)}</span> |
+                          <span>
+                            {formatCurrency(item.qty * item.unitCost)}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+
+                    <hr
+                      className="my-2"
+                      style={{ borderTop: "2px dashed #999" }}
+                    />
+
+                    <div className="d-flex justify-content-between mb-3">
+                      <strong>Total:</strong>
+                      <span className="fw-bold">
+                        {formatCurrency(delivery.totalCost)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="d-flex justify-content-center gap-2 mt-3">
+                    {userPermissions["Update Delivery Status"] !== 0 && (
+                      <Button
+                        size="sm"
+                        style={{
+                          backgroundColor: "#198754",
+                          borderColor: "#198754",
+                          borderRadius: "10px",
+                        }}
+                        onClick={() =>
+                          handleOutForDeliveryClick(delivery.transactionNo)
+                        }
+                      >
+                        Out for Delivery
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              ))
+            )}
+          </>
         )}
       </Container>
     </div>

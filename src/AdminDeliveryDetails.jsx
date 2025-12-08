@@ -48,6 +48,7 @@ const DeliveryDetails = () => {
   const [qbePaymentOption, setQbePaymentOption] = useState("");
   const [qbeItems, setQbeItems] = useState("");
   const [qbeTotal, setQbeTotal] = useState("");
+const [userPermissions, setUserPermissions] = useState({});
 
   const guideqst = [
     {
@@ -396,6 +397,23 @@ const DeliveryDetails = () => {
     startIndex,
     startIndex + itemsPerPage
   );
+useEffect(() => {
+  fetch(
+    "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+    {
+      credentials: "include",
+    }
+  )
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success) {
+        setUserPermissions(data.permissions);
+      } else {
+        setUserPermissions({});
+      }
+    })
+    .catch((err) => console.error("Error fetching permissions:", err));
+}, []);
 
   return (
     <AdminLayout
@@ -413,10 +431,21 @@ const DeliveryDetails = () => {
           />
         </div>
       }
-      onAddClick={handleAddDelivery}
+      onAddClick={
+        userPermissions["Create Transaction"] === 1
+          ? handleAddDelivery
+          : undefined
+      }
       showSearch={true}
       onSearch={handleSearch}
     >
+      {userPermissions["Create Transaction"] !== 1 && (
+        <>
+          <br />
+          <br />
+        </>
+      )}
+
       <div className="mb-3 d-flex justify-content-end align-items-center">
         {/* Single QBE Button (left of the status filter) */}
         <div className="me-2">
@@ -530,24 +559,26 @@ const DeliveryDetails = () => {
                         View
                       </button>
 
-                      <button
-                        className="btn upd-btn"
-                        onClick={() => handleUpdate(group.transaction_id)}
-                        disabled={
-                          group.delivery_status === "Out for Delivery" ||
-                          group.delivery_status === "Cancelled" ||
-                          (group.delivery_status === "Delivered" &&
-                            group.payment_option === "Full Payment") ||
-                          numericBalance <= 0
-                        }
-                        style={
-                          numericBalance <= 0
-                            ? { opacity: 0.5, cursor: "not-allowed" }
-                            : {}
-                        }
-                      >
-                        Update Payment
-                      </button>
+                      {userPermissions["Update Transaction"] !== 0 && (
+                        <button
+                          className="btn upd-btn"
+                          onClick={() => handleUpdate(group.transaction_id)}
+                          disabled={
+                            group.delivery_status === "Out for Delivery" ||
+                            group.delivery_status === "Cancelled" ||
+                            (group.delivery_status === "Delivered" &&
+                              group.payment_option === "Full Payment") ||
+                            numericBalance <= 0
+                          }
+                          style={
+                            numericBalance <= 0
+                              ? { opacity: 0.5, cursor: "not-allowed" }
+                              : {}
+                          }
+                        >
+                          Update Payment
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

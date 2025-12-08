@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import logo from "./assets/envirocool-logo.png";
 import {
   FaClipboardList,
@@ -28,16 +29,50 @@ const AdminLayout = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    return saved === "true";
+    return localStorage.getItem("sidebarCollapsed") === "true";
   });
-  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => window.innerWidth > 991
+  );
+
+  const [userPermissions, setUserPermissions] = useState({});
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+  const navigate = useNavigate();
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
+
+  // Fetch current user permissions
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+        {
+          withCredentials: true,
+        }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setUserPermissions(res.data.permissions);
+        } else {
+          console.log("Not logged in");
+          setUserPermissions({});
+        }
+      })
+      .catch((err) => console.error("Error fetching permissions:", err))
+      .finally(() => setPermissionsLoaded(true));
+  }, []);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleCollapse = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (onSearch) onSearch(value);
+  };
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
@@ -49,25 +84,8 @@ const AdminLayout = ({
     }, 500);
   };
 
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    if (onSearch) onSearch(value);
-  };
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    return window.innerWidth > 991;
-  });
-
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth <= 991) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-
+    const handleResize = () => setIsSidebarOpen(window.innerWidth > 991);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -88,8 +106,8 @@ const AdminLayout = ({
 
       <aside
         className={`sidebar d-flex flex-column align-items-center p-3 
-    ${isSidebarOpen ? "show" : ""} 
-    ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
+        ${isSidebarOpen ? "show" : ""} 
+        ${isSidebarCollapsed ? "collapsed-lg" : ""}`}
       >
         <button
           className="btn close-sidebar d-lg-none align-self-end mb-3"
@@ -110,83 +128,104 @@ const AdminLayout = ({
             onClick={toggleCollapse}
             aria-label="Toggle sidebar collapse"
           >
-            {isSidebarCollapsed ? <FaAlignJustify /> : <FaAlignRight />}{" "}
+            {isSidebarCollapsed ? <FaAlignJustify /> : <FaAlignRight />}
           </button>
         </div>
 
         <nav className="nav-buttons">
-          <button
-            className={`nav-btn ${
-              isActive("/admin-dashboard") ? "active" : ""
-            }`}
-            onClick={() => navigate("/admin-dashboard")}
-          >
-            <FaHome className="icon" />
-            <span className="nav-text"> DASHBOARD</span>
-            <span className="tooltip-text">Dashboard</span>
-          </button>
+          {!permissionsLoaded ? (
+            <div className="text-center text-muted">Loading menu...</div>
+          ) : (
+            <>
+              {/* DASHBOARD - always visible */}
+              <button
+                className={`nav-btn ${
+                  isActive("/admin-dashboard") ? "active" : ""
+                }`}
+                onClick={() => navigate("/admin-dashboard")}
+              >
+                <FaHome className="icon" />
+                <span className="nav-text"> DASHBOARD</span>
+              </button>
 
-          <button
-            className={`nav-btn ${
-              isActive("/delivery-details") ? "active" : ""
-            }`}
-            onClick={() => navigate("/delivery-details")}
-          >
-            <FaClipboardList className="icon" />
-            <span className="nav-text"> DELIVERY DETAILS</span>
-            <span className="tooltip-text">Delivery Details</span>
-          </button>
+              {/* DELIVERY DETAILS */}
+              {userPermissions["View Deliveries"] !== 0 && (
+                <button
+                  className={`nav-btn ${
+                    isActive("/delivery-details") ? "active" : ""
+                  }`}
+                  onClick={() => navigate("/delivery-details")}
+                >
+                  <FaClipboardList className="icon" />
+                  <span className="nav-text"> DELIVERY DETAILS</span>
+                </button>
+              )}
 
-          <button
-            className={`nav-btn ${
-              isActive("/monitor-delivery") ? "active" : ""
-            }`}
-            onClick={() => navigate("/monitor-delivery")}
-          >
-            <FaTruck className="icon" />
-            <span className="nav-text"> MONITOR DELIVERY</span>
-            <span className="tooltip-text">Monitor Delivery</span>
-          </button>
+              {/* MONITOR DELIVERY */}
+              {userPermissions["Monitor Deliveries"] !== 0 && (
+                <button
+                  className={`nav-btn ${
+                    isActive("/monitor-delivery") ? "active" : ""
+                  }`}
+                  onClick={() => navigate("/monitor-delivery")}
+                >
+                  <FaTruck className="icon" />
+                  <span className="nav-text"> MONITOR DELIVERY</span>
+                </button>
+              )}
 
-          <button
-            className={`nav-btn ${
-              isActive("/generate-report") ? "active" : ""
-            }`}
-            onClick={() => navigate("/generate-report")}
-          >
-            <FaChartBar className="icon" />
-            <span className="nav-text"> DATA ANALYTICS & REPORT</span>
-            <span className="tooltip-text">Data Analytics & Report</span>
-          </button>
+           
+            
+                <button
+                  className={`nav-btn ${
+                    isActive("/generate-report") ? "active" : ""
+                  }`}
+                  onClick={() => navigate("/generate-report")}
+                >
+                  <FaChartBar className="icon" />
+                  <span className="nav-text"> DATA ANALYTICS & REPORT</span>
+                </button>
+           
+              {/* CREATE DELIVERY PERSONNEL ACCOUNTS */}
+             
+                <button
+                  className={`nav-btn ${
+                    isActive("/user-management") ? "active" : ""
+                  }`}
+                  onClick={() => navigate("/user-management")}
+                >
+                  <FaUserFriends className="icon" />
+                  <span className="nav-text">
+                    DELIVERY PERSONNEL ACCOUNTS
+                  </span>
+                </button>
+            
 
-          <button
-            className={`nav-btn ${
-              isActive("/user-management") ? "active" : ""
-            }`}
-            onClick={() => navigate("/user-management")}
-          >
-            <FaUserFriends className="icon" />
-            <span className="nav-text">CREATE DELIVERY PERSONNEL ACCOUNTS</span>
-            <span className="tooltip-text">Delivery Personnel Accounts</span>
-          </button>
+              {/* SETTINGS */}
+              
+                <button
+                  className={`nav-btn ${
+                    isActive("/admin-settings") ? "active" : ""
+                  }`}
+                  onClick={() => navigate("/admin-settings")}
+                >
+                  <FaCog className="icon" />
+                  <span className="nav-text"> SETTINGS</span>
+                </button>
+              
 
-          <button
-            className={`nav-btn ${isActive("/admin-settings") ? "active" : ""}`}
-            onClick={() => navigate("/admin-settings")}
-          >
-            <FaCog className="icon" />
-            <span className="nav-text"> SETTINGS</span>
-            <span className="tooltip-text">Settings</span>
-          </button>
-
-          <button
-            className={`nav-btn logout ${isActive("/logout") ? "active" : ""}`}
-            onClick={() => setShowLogoutModal(true)}
-          >
-            <FaSignOutAlt className="icon" />
-            <span className="nav-text"> LOGOUT</span>
-            <span className="tooltip-text">Logout</span>
-          </button>
+              {/* LOGOUT - always visible */}
+              <button
+                className={`nav-btn logout ${
+                  isActive("/logout") ? "active" : ""
+                }`}
+                onClick={() => setShowLogoutModal(true)}
+              >
+                <FaSignOutAlt className="icon" />
+                <span className="nav-text"> LOGOUT</span>
+              </button>
+            </>
+          )}
         </nav>
       </aside>
 
@@ -214,16 +253,18 @@ const AdminLayout = ({
           )}
         </div>
 
-        {onAddClick && (
-          <div className="text-end mx-4 my-5 d-flex justify-content-end">
-            <button
-              className="add-delivery rounded-2 px-3 py-2 fs-6 d-flex align-items-center gap-2"
-              onClick={onAddClick}
-            >
-              <FaPlus /> Add New Delivery
-            </button>
-          </div>
-        )}
+       
+        {
+          onAddClick && (
+            <div className="text-end mx-4 my-5 d-flex justify-content-end">
+              <button
+                className="add-delivery rounded-2 px-3 py-2 fs-6 d-flex align-items-center gap-2"
+                onClick={onAddClick}
+              >
+                <FaPlus /> Add New Delivery
+              </button>
+            </div>
+          )}
 
         {children}
       </main>

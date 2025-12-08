@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import AdminLayout from "../AdminLayout";
 import EditProfileTab from "./EditProfileTab";
 import ChangePasswordTab from "./ChangePasswordTab";
@@ -8,15 +9,50 @@ import "./settings.css";
 import { HiQuestionMarkCircle } from "react-icons/hi";
 import SystemAdminLayout from "../SystemAdminLayout";
 
-
 import { Button, Modal } from "react-bootstrap";
 
 const AdminSettings = () => {
+  const [userPermissions, setUserPermissions] = useState({});
   const [showFAQ, setShowFAQ] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("adminActiveTab") || "edit-profile";
+  });
+
   const username = localStorage.getItem("username");
   const Layout = username === "systemadmin" ? SystemAdminLayout : AdminLayout;
 
+  // Fetch user permissions
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+        { withCredentials: true }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setUserPermissions(res.data.permissions);
+          // If active tab is change-password but permission is 0, switch to edit-profile
+          if (
+            res.data.permissions["Change Password"] === 0 &&
+            activeTab === "change-password"
+          ) {
+            setActiveTab("edit-profile");
+          }
+        } else {
+          setUserPermissions({});
+        }
+      })
+      .catch((err) => console.error("Error fetching permissions:", err));
+  }, []);
+
+  useEffect(() => {
+    document.title = "Admin Settings";
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("adminActiveTab", activeTab);
+  }, [activeTab]);
 
   const guideqst = [
     {
@@ -26,13 +62,18 @@ const AdminSettings = () => {
         "Then, click the 'Edit' button to enable the input fields where you can update your credentials such as Username, First Name, Last Name, Email, and Phone.\n\n" +
         "After making changes, click 'Save' and confirm to apply your updates.",
     },
-    {
-      question: "How can I change my password?",
-      answer:
-        "Go to the 'Change Password' tab to open the password settings.\n\n" +
-        "Enter your current password, then your new password, and confirm it again.\n\n" +
-        "The system validates your input, and once correct, click 'Change Password' to update it.",
-    },
+    // Only include Change Password FAQ if permission is not 0
+    ...(userPermissions["Change Password"] !== 0
+      ? [
+          {
+            question: "How can I change my password?",
+            answer:
+              "Go to the 'Change Password' tab to open the password settings.\n\n" +
+              "Enter your current password, then your new password, and confirm it again.\n\n" +
+              "The system validates your input, and once correct, click 'Change Password' to update it.",
+          },
+        ]
+      : []),
     {
       question: "What if I forgot my password before logging in?",
       answer:
@@ -83,18 +124,6 @@ const AdminSettings = () => {
     },
   ];
 
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem("adminActiveTab") || "edit-profile";
-  });
-
-  useEffect(() => {
-    document.title = "Admin Settings";
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("adminActiveTab", activeTab);
-  }, [activeTab]);
-
   const renderTabContent = () => {
     switch (activeTab) {
       case "edit-profile":
@@ -135,12 +164,17 @@ const AdminSettings = () => {
         >
           Edit Profile
         </button>
-        <button
-          className={activeTab === "change-password" ? "active" : ""}
-          onClick={() => setActiveTab("change-password")}
-        >
-          Change Password
-        </button>
+
+        {/* Only render Change Password tab if permission is not 0 */}
+        {userPermissions["Change Password"] !== 0 && (
+          <button
+            className={activeTab === "change-password" ? "active" : ""}
+            onClick={() => setActiveTab("change-password")}
+          >
+            Change Password
+          </button>
+        )}
+
         <button
           className={activeTab === "backup-restore" ? "active" : ""}
           onClick={() => setActiveTab("backup-restore")}
@@ -217,14 +251,12 @@ const AdminSettings = () => {
                         transition: "all 0.3s ease",
                       }}
                       onMouseOver={(e) => {
-                        if (activeFAQIndex !== index) {
+                        if (activeFAQIndex !== index)
                           e.currentTarget.style.backgroundColor = "#d9eff1";
-                        }
                       }}
                       onMouseOut={(e) => {
-                        if (activeFAQIndex !== index) {
+                        if (activeFAQIndex !== index)
                           e.currentTarget.style.backgroundColor = "#e9f6f8";
-                        }
                       }}
                     >
                       {faq.question}
@@ -256,10 +288,7 @@ const AdminSettings = () => {
         </Modal.Body>
 
         <Modal.Footer
-          style={{
-            backgroundColor: "#f8f9fa",
-            borderTop: "1px solid #dee2e6",
-          }}
+          style={{ backgroundColor: "#f8f9fa", borderTop: "1px solid #dee2e6" }}
         >
           <Button
             onClick={() => {

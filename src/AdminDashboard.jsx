@@ -42,6 +42,9 @@ const AdminDashboard = () => {
 
   const [activeFAQIndex, setActiveFAQIndex] = useState(null);
 
+  // At the top of AdminDashboard.jsx, your state is already correct:
+  const [userPermissions, setUserPermissions] = useState({});
+
   const guideqst = [
     {
       question: "How can I add a new delivery?",
@@ -168,6 +171,23 @@ const AdminDashboard = () => {
   };
 
   const COLORS = ["#4CAF50", "#E57373"];
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+        { withCredentials: true }
+      )
+      .then((res) => {
+        if (res.data.success) {
+          
+          setUserPermissions(res.data.permissions);
+        } else {
+          console.log("Not logged in");
+          setUserPermissions({});
+        }
+      })
+      .catch((err) => console.error("Error fetching permissions:", err));
+  }, []);
 
   return (
     <AdminLayout
@@ -186,8 +206,18 @@ const AdminDashboard = () => {
         </div>
       }
       showSearch={false}
-      onAddClick={handleAddDelivery}
+      onAddClick={
+        userPermissions["Create Transaction"] === 1
+          ? handleAddDelivery
+          : undefined
+      }
     >
+      {userPermissions["Create Transaction"] !== 1 && (
+        <>
+          <br />
+          <br />
+        </>
+      )}
       <div className="container-fluid">
         <Row className="mb-4 g-3">
           <Col xl={3} lg={6} md={6} sm={12}>

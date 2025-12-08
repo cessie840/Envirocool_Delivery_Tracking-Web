@@ -679,6 +679,26 @@ const MonitorDelivery = () => {
 
     setZoomOnNextClick(true);
   }, [activeTab]);
+
+  const [userPermissions, setUserPermissions] = useState({});
+useEffect(() => {
+  axios
+    .get(
+      "http://localhost/DeliveryTrackingSystem/get_current_user_permission.php",
+      { withCredentials: true }
+    )
+    .then((res) => {
+      if (res.data.success) {
+        setUserPermissions(res.data.permissions);
+      } else {
+        console.log("Not logged in");
+        setUserPermissions({});
+      }
+    })
+    .catch((err) => console.error("Error fetching permissions:", err));
+}, []);
+
+
   return (
     <AdminLayout
       title={
@@ -696,8 +716,19 @@ const MonitorDelivery = () => {
         </div>
       }
       showSearch={false}
-      onAddClick={handleAddDelivery}
+      onAddClick={
+        userPermissions["Create Transaction"] === 1
+          ? handleAddDelivery
+          : undefined
+      }
     >
+      {userPermissions["Create Transaction"] !== 1 && (
+        <>
+          <br />
+          <br />
+        </>
+      )}
+
       <div className="p-4 bg-white rounded-4 border border-secondary-subtle">
         <div className="container-fluid p-3">
           <div className="row g-3">
